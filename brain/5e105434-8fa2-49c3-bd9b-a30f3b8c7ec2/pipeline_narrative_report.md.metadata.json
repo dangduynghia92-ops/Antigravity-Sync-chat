@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Báo cáo toàn diện phân tích quy trình các bước trong pipeline Narrative (Niche Tiểu Sự Nhân Vật), đánh dấu các module có thể dùng chung và các module mang tính đặc thù. Báo cáo bao gồm sơ đồ luồng dữ liệu (mermaid flowchart).",
+  "updatedAt": "2026-04-10T11:33:49.763893200Z"
+}

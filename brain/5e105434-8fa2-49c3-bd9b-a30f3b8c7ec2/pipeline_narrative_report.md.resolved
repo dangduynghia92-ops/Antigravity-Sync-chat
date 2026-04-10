@@ -1,0 +1,72 @@
+# Phân tích Kiến trúc Pipeline Narrative: Niche Tiểu Sử Nhân Vật
+
+Báo cáo này phân rã toàn bộ luồng hoạt động (Workflow) của chế độ **Script Creation - Narrative**, chỉ rõ các trạng thái dữ liệu ở mỗi bước và đánh dấu chi tiết liệu bước đó đang dùng hệ thống/prompt **Chung (Shared Core)** hay **Riêng biệt (Niche-Specific)**.
+
+## Sơ đồ Quy trình (Pipeline Flowchart)
+
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef chung fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a
+    classDef rieng fill:#fae8ff,stroke:#c026d3,stroke-width:2px,color:#0f172a
+    classDef system fill:#f8fafc,stroke:#64748b,stroke-width:1px,color:#0f172a
+    
+    Start((Bắt đầu)) --> InputType
+
+    subgraph Phase1 [Phase 1: Thu thập & Tróc xuất Dữ liệu]
+        InputType{Loại đầu vào?} 
+        InputType -- "Có Text gốc (Rewrite)" --> Ext[1a. Extract Blueprint<br/>Tróc xuất Data cốt lõi]:::rieng
+        InputType -- "Từ khoá trắng (New Content)" --> Res[1b. Research Blueprint<br/>Cào Data Google/AI]:::rieng
+        
+        Ext --> CombineBlueprint((Blueprint .json))
+        Res --> CombineBlueprint
+    end
+
+    subgraph Phase2 [Phase 2: So khớp Khung sườn]
+        CombineBlueprint --> Rec[2. Framework Recommendation<br/>Chấm điểm & Phân tích tính cách]:::chung
+        Rec --> UI_Pick[/User/Auto chọn Framework/]:::system
+    end
+
+    subgraph Phase3 [Phase 3: Xây dựng Kịch bản thô]
+        UI_Pick --> PPlan[3. Phase Plan Generation<br/>Chia kỳ cuộc đời theo mốc thời gian]:::rieng
+        PPlan --> Val[4. Validate Data<br/>Xác thực Sub_key khớp mốc thời gian]:::rieng
+        Val --> Out[5. Outline Generation<br/>Gắn Drama Structure / Ending type]:::rieng
+        Out --> Aud[6. Outline Audit<br/>Kiểm toán chất lượng Outline]:::rieng
+    end
+
+    subgraph Phase4 [Phase 4: Thực thi Viết kịch bản]
+        Aud --> LoopStart((Vòng lặp chạy từng Chapter))
+        LoopStart --> CheckG[7. Cập nhật Fact/Giá cả<br/>Google Check API]:::chung
+        CheckG --> Write[8. Narrative Write<br/>Viết nội dung truyền Context]:::rieng
+        Write --> LoopEnd((Gắn file vào Full Script))
+    end
+
+    subgraph Phase5 [Phase 5: Hậu kiểm & Vá lỗi]
+        LoopEnd --> Full[Full_Script.txt]
+        Full --> Rev[9. Full Script Review<br/>Truy tìm vết xước Timeline/Tone]:::chung
+        Rev --> HasIssue{Có lỗi Critical?}
+        HasIssue -- "Có (Auto-Patch Bật)" --> Patch[10. Auto Patch<br/>Sửa/Khoét lại đoạn văn bị lặp]:::chung
+        Patch --> FinalOutput
+        HasIssue -- "Không" --> FinalOutput((Thành phẩm))
+    end
+```
+
+*(Chú thích: Khối màu hồng viền tím là các Prompt **BẮT BUỘC RIÊNG BÊN TỪNG NICHE**, Khối phân vùng xanh viền xanh là **DÙNG CHUNG / MÃ NGUỒN CHUNG**)*
+
+---
+
+## Phân Tích Sự Rạch Ròi Giữa [Chung] và [Riêng]
+
+| Bước | Mô tả Hành động | Tên Prompt File / Hàm cốt lõi (Theo Codebase) | Phân loại | Giải thích Kiến trúc |
+| :--- | :--- | :--- | :---: | :--- |
+| **1a. Extract Blueprint** | Biến đổi Script thô/Video cũ người dùng nạp vào thành bảng Data JSON có cấu trúc. | `system_extract_blueprint_biography.txt` | **RIÊNG** | JSON Format trả về của Tiểu sử cần `dual_nature` (tính 2 mặt), `childhood` (tuổi thơ). Các Niche khác (trận đánh, bí ẩn) cấm dùng chung bộ khung Data này. |
+| **1b. Research Blueprint** | Tìm kiếm từ tên nhân vật bằng Cỗ máy AI / Google Search (Dành cho New Content). | `system_research_blueprint_biography.txt` | **RIÊNG** | AI cần biết nó phải Focus research vào việc moi móc các Myth, Tiểu sử đời tư. |
+| **2. Framework Recommendation** | AI đọc Blueprint và chấm điểm 10/10 xem cuộc đời người đó thích hợp viết thể loại gì (Bản án, Sử thi, Sự lụi tàn). | `system_recommend_framework_biography.txt` | **CHUNG** (Về Logic) | Logic đằng sau hoàn toàn Generic (Trọng tài so sánh Blueprint vs File quy tắc JSON). Niche nào cũng cần bước Recommendation này trỏ vào 1 prompt chung. |
+| **3. Phase Plan Generation** | Ánh xạ mốc thời gian cuộc đời vào trục khung (vd: 5 hay 15 chương). | `system_narrative_phase_plan_biography.txt` | **RIÊNG** | Cột mốc chia của tiểu sử tuân thủ tuyến tính Thời gian sinh-tử (Chronological). Niche điều tra bí ẩn sẽ chia theo thứ tự phát hiện manh mối vật chứng. |
+| **4. Validate Sub-key** | Kiểm tra chéo xem các sự kiện thêm dắt (vợ con, tai tiếng) có bị nhảy nhầm mốc timeline của nhân vật không. | `system_validate_sub_key_biography.txt` | **RIÊNG** | Validator này check logic sinh học và timeline cá nhân. Niche thương hiệu công ty sẽ validate khác. |
+| **5. Outline Generation** | Rót 'Kỹ thuật điện ảnh' vào Outline thô (Cài Hook, Cài Twist, Cliffhanger để chặn cuối chương). | `system_narrative_outline_biography.txt` | **RIÊNG** | Các bộ đóng đinh (ending type) như "Sự lụi tàn", "Bức hại" chỉ khớp với con người. Niche về trận đánh sẽ cần Hook/Twist kiểu "Chiến thuật bị bắt bài". |
+| **6. Outline Audit** | Nhờ AI làm Auditor duyệt trước bản outline thô trước khi tiến vào vòng sinh text (Tránh break script). | `system_narrative_audit_biography.txt` | **RIÊNG** | Tiêu chuẩn Auditor của Bio là "có tôn trọng hành trình đời sống không". |
+| **7. Google Check API** | Truy vấn công cụ Google Search thời gian thực nếu kịch bản có yêu cầu check số liệu. | Các hàm Python trong `core.rewriter` gọi Google. | **CHUNG** | Hệ thống code hoàn toàn generic chọc API search. |
+| **8. Narrative Write** | Đổ `previous_context` vào và nhả text của từng Chapter (Áp dụng đủ mọi luật khắt khe: nhịp ngắt câu, show don't tell). | `system_narrative_write_biography.txt` | **RIÊNG** | Bắt buộc khác. Hành văn của Tiểu sử yêu cầu Voice Tone "Trầm tư thấu thị", "Micro-Callback quá khứ". Hành văn Trận đánh cần Tone hồi hộp ngột ngạt. Khác biệt tận xương tuỷ. |
+| **9. Full Script Review** | Review toàn cảnh tất cả các file nối tiếp nhau: Tìm vết xước lặp ý, lặp từ mạnh, hổng timeline. | `system_narrative_review_biography.txt` | **CHUNG** (Về mục đích) | Phát hiện "Sự trùng lặp/Plot-hole" là bài toán chung. |
+| **10. Auto Patch** | Dùng hệ thống cắt lại script, gọi AI "vá" lại phân đoạn hư hại dựa trên góp ý tại Review. | Hàm `patch_chapter_overlap` bằng code Python. | **CHUNG** | Thao tác trên mảng Text, sửa chắp nối - 100% Core engine dùng chung. |
