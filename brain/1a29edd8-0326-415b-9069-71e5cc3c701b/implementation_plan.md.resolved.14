@@ -1,0 +1,153 @@
+# Concurrent Rewrite — Flow & UI Chi Tiết
+
+## Giao Diện Hiện Tại
+```
+┌─────────────────────────────────────────────────────────┐
+│ [Scan Folder] [+ Add] [▶ Rewrite] [■ Stop]  [Excel]    │
+├─────────────────────────────────────────────────────────┤
+│ Chapter List (input files)                              │
+│   ✓ Chapter 1 - Number 9 Mossberg...    ⏳ Pending  —  │
+│   ✓ Chapter 2 - Number 8 FOSTC...       ⏳ Pending  —  │
+│   ...                                                   │
+├─────────────────────────────────────────────────────────┤
+│ Processing Log                                          │
+│ [10:55:11] [Review] Step 1/12: Full text...             │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Giao Diện Mới (thêm Job Bar)
+```
+┌─────────────────────────────────────────────────────────┐
+│ [Scan Folder] [+ Add] [▶ Rewrite] [■ Stop ▼] [Excel]   │
+├─────────────────────────────────────────────────────────┤
+│ Jobs:                                                   │
+│  ⚙ Lever-Action Rifles...  Step 8/12    [■]            │
+│  ✍ Shot Show 2026 Leaks... Ch 3/8 done  [■]            │
+│  ✓ Best Budget Pistols...  Done          [✓]            │
+├─────────────────────────────────────────────────────────┤
+│ Chapter List (of SELECTED job)                          │
+│   ✓ Chapter 1 - ...                ⚙ Processing  3/12  │
+│   ✓ Chapter 2 - ...                ⚙ Processing  3/12  │
+├─────────────────────────────────────────────────────────┤
+│ Processing Log (all jobs, prefixed)                     │
+│ [10:55:11] [Review:LeverAction] Step 8/12: Outline...   │
+│ [10:55:12] [Review:ShotShow] ✓ Ch.3/8: IWI Tavor...    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Flow Chi Tiết
+
+### Bước 1: User bấm Rewrite lần đầu
+```
+User: [Scan Folder] → chọn "Lever-Action Rifles"
+      → chọn framework, language, country
+      → bấm [▶ Rewrite]
+
+System:
+  1. Tạo Job #1 { id: "job_1", folder: "Lever-Action Rifles", stop: Event() }
+  2. Submit vào ThreadPoolExecutor(max_workers=3)
+  3. Job #1 bắt đầu chạy NGAY LẬP TỨC
+  4. Job Bar hiện: ⚙ Lever-Action Rifles...  Step 1/12  [■]
+  5. Nút Rewrite VẪN ENABLE (có thể bấm tiếp)
+```
+
+### Bước 2: User add thêm folder ĐANG chạy
+```
+User: [+ Add] → chọn "Shot Show 2026 Leaks"
+      → bấm [▶ Rewrite]
+
+System:
+  1. Tạo Job #2 { id: "job_2", folder: "Shot Show 2026", stop: Event() }
+  2. Submit vào pool → chạy NGAY (slot 2/3 còn trống)
+  3. Job Bar thêm: ⚙ Shot Show 2026...  Step 1/12  [■]
+
+Job Bar lúc này:
+  ⚙ Lever-Action Rifles...  Step 5/12  [■]
+  ⚙ Shot Show 2026 Leaks... Step 1/12  [■]
+```
+
+### Bước 3: User add thêm folder thứ 3
+```
+User: [+ Add] → "Best Budget Pistols" → [▶ Rewrite]
+
+System: Job #3 chạy ngay (slot 3/3)
+
+Job Bar:
+  ⚙ Lever-Action Rifles...  Ch 2/8 done  [■]
+  ⚙ Shot Show 2026 Leaks... Step 5/12    [■]
+  ⚙ Best Budget Pistols...  Step 1/12    [■]
+```
+
+### Bước 4 (nếu add thêm khi đầy slot):
+```
+User: [+ Add] → "New Folder" → [▶ Rewrite]
+
+System: Pool đầy (3/3) → Job #4 tự đợi trong hàng
+
+Job Bar:
+  ⚙ Lever-Action Rifles...  Ch 5/8 done  [■]
+  ⚙ Shot Show 2026...       Ch 1/10 done [■]
+  ⚙ Best Budget Pistols...  Step 3/12    [■]
+  ⏳ New Folder...           Queued        [✗]    ← đợi slot
+```
+
+### Bước 5: Job hoàn thành
+```
+Job #1 xong:
+Job Bar:
+  ✓ Lever-Action Rifles...  Done  8 chapters  [✓]   ← xanh, xong
+  ⚙ Shot Show 2026...       Ch 5/10 done      [■]
+  ⚙ Best Budget Pistols...  Ch 2/8 done       [■]
+  ⚙ New Folder...           Step 2/12         [■]   ← tự chạy vì slot trống
+```
+
+## Stop Behavior
+
+### 1 job đang chạy:
+```
+User bấm [■ Stop] → dừng job đó ngay
+```
+
+### >1 jobs đang chạy:
+```
+User bấm [■ Stop ▼] → hiện menu:
+  ┌──────────────────────────┐
+  │ Stop: Lever-Action...    │
+  │ Stop: Shot Show 2026...  │
+  │ Stop: Budget Pistols...  │
+  │ ─────────────────────── │
+  │ ■ Stop All               │
+  └──────────────────────────┘
+
+User chọn "Stop: Shot Show 2026" → chỉ dừng job đó
+  → Các job khác vẫn tiếp tục
+```
+
+### Job bị Stop hiện trong Job Bar:
+```
+  ⚙ Lever-Action Rifles...  Ch 3/8 done   [■]
+  ✗ Shot Show 2026...        Stopped       [✗]   ← đỏ
+  ⚙ Best Budget Pistols...  Step 5/12     [■]
+```
+
+## Cấu Trúc Code
+
+### Job Dict
+```python
+job = {
+    "id": "job_abc123",
+    "folder_name": "Lever-Action Rifles",
+    "group_path": "/full/path/to/folder",
+    "mode": "review",          # review hoặc renew
+    "stop_event": Event(),     # per-job stop
+    "status": "running",       # queued/running/done/error/stopped
+    "progress": "Step 5/12",
+    "future": Future,          # from executor.submit()
+}
+```
+
+### Thay đổi code chính
+1. `self._stop_flag` → `job["stop_event"].is_set()`
+2. `threading.Thread(target=_run)` → `self._job_pool.submit(_run)`
+3. Nút Rewrite: luôn enabled, tạo job mới mỗi lần bấm
+4. Log callback: thêm folder name prefix

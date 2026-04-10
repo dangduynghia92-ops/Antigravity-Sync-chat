@@ -1,0 +1,47 @@
+# Review Pipeline Flow — Walkthrough
+
+## Dispatch Logic
+
+Khi user chọn mode **Renew**, system đọc style JSON:
+- `"pipeline": "review"` → gọi [_do_renew_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1815-2214) (**flow mới**)
+- Không có hoặc khác → gọi [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1374-1812) (**flow cũ, không sửa**)
+
+## Review Flow (10 steps)
+
+| Step | Function | Prompt |
+|------|----------|--------|
+| 1 | Concat text | — |
+| 2 | [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#969-1010) | [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) (chung) |
+| 3 | [recommend_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1446-1501) | [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) |
+| 4 | [check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1503-1555) | [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) |
+| 5 | [convert_units()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1557-1684) | — (pure Python) |
+| 6 | [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1740-1811) | [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) |
+| 7 | [audit_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1072-1138) | [system_audit_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline.txt) (reuse) |
+| 8 | [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1813-1912) × N | [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) (**NEW**) |
+| 9 | [verify_facts()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1686-1738) | [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt) |
+| 10 | Merge → FULL_SCRIPT.txt | — |
+
+## Files Changed
+
+### New files (không ảnh hưởng code cũ)
+- [prompts/system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — prompt viết chapter review
+
+### Modified files
+
+| File | What changed |
+|------|-------------|
+| [Review_trang thiết bị quân sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_trang%20thiết%20bị%20quân%20sự.json) | Added `"pipeline": "review"` |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Added [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1813-1912) at end |
+| [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | Added Country combo, dispatch, [_do_renew_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1815-2214) |
+
+### NOT modified (narrative flow intact)
+- [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1140-1219) — untouched
+- [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt) — restored to original
+- [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1374-1812) — untouched
+- [_do_narrative_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1098-1356) — untouched
+- [_do_toplist_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#918-1095) — untouched
+
+## UI Changes
+- **Country combo** (US/EU): only visible when style has `pipeline: review`
+- **Button text**: "▶ Review" when review style, "▶ Renew" when narrative
+- **Framework combo**: dynamically populated from style JSON frameworks

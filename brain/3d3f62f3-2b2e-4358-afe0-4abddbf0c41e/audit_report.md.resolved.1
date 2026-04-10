@@ -1,0 +1,104 @@
+# Audit Report — Style Analyzer + Rewrite Tab
+
+## 🐛 Bugs
+
+### 1. Save Style: đề xuất tên sai
+**File:** [style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/style_tab.py#L476)
+```python
+suggested = os.path.basename(os.path.dirname(guide_path)).replace(" ", "_").lower()
+```
+`guide_path` = `output_dir/_STYLE_GUIDE.json` → `os.path.dirname` = `output_dir` → `os.path.basename(output_dir)` = tên folder output (VD: `style_analysis`).
+
+**Kết quả:** Tên gợi ý luôn là `style_analysis` thay vì tên liên quan đến nội dung.
+
+> [!CAUTION]
+> **Fix:** Nên đọc JSON và lấy `script_name` từ trong file, hoặc gợi ý từ folder scripts đã analyze.
+
+---
+
+### 2. Dropdown mode không refresh sau Save Style
+**File:** [style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/style_tab.py#L497)
+
+Sau khi save style vào `styles/`, dropdown ở Rewrite tab không tự cập nhật. User phải restart app mới thấy style mới.
+
+> [!IMPORTANT]
+> **Fix:** Gọi [_refresh_mode_dropdown](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#482-509) trên Rewrite tab sau khi save. Cần emit signal hoặc dùng cơ chế khác (VD: refresh khi user switch tab).
+
+---
+
+### 3. Style mode chưa xử lý trường hợp chọn style nhưng file bị xóa
+**File:** [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L1148)
+
+Nếu chọn "✦ Historical Thriller" nhưng file `styles/historical_thriller.json` đã bị xóa → `style_prompt = None` → rewrite chạy bình thường nhưng dùng prompt Top/List mặc định (âm thầm, không có cảnh báo rõ).
+
+> [!WARNING]
+> **Fix:** Nếu `style_prompt` vẫn `None` sau khi load, nên **dừng** và báo lỗi thay vì fallback.
+
+---
+
+## ⚠️ Logic Issues
+
+### 4. Style mode fallback về Top/List thay vì narrative  
+**File:** [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L1075-L1078)
+
+```python
+def _do_rewrite_all(self):
+    if self._get_mode_type() == "narrative":
+        self._do_narrative_rewrite()
+        return
+    # ... continues with Top/List flow
+```
+
+Khi chọn style, [_get_mode_type()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#510-527) trả về `style:xxx.json` → **không vào narrative flow** → luôn chạy như Top/List (song song, không có outline/reorder). Có thể user muốn style guide + narrative flow.
+
+> [!NOTE]
+> Hiện tại hợp lý: style guide = mỗi chapter là kịch bản riêng. Nếu sau này cần style + narrative → cần thêm mode mới.
+
+---
+
+### 5. Verify sau rewrite Top/List gửi cả 3 section word count
+**File:** [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L1193-L1198)
+
+```python
+review = verify_chapter(
+    ch["text"], rewritten, api2,
+    word_count_rule=wc_rule,  # ← wc_rule = 3 dòng: "Opening: ... Body: ... Closing: ..."
+```
+
+`wc_rule` cho Top/List là chuỗi 3 dòng kết hợp. Prompt verify có thể không hiểu cấu trúc này.
+
+> [!NOTE]
+> **Fix tiềm năng:** Gửi tổng word count (sum cả 3 section) cho verify thay vì chuỗi 3 dòng.
+
+---
+
+### 6. [_refresh_mode_dropdown](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#482-509) chỉ gọi lúc build UI
+**File:** [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L171)
+
+Dropdown styles chỉ scan `styles/` folder **1 lần** khi khởi tạo. Nếu user thêm style mới (qua Save Style) mà không restart → không thấy.
+
+> [!IMPORTANT]
+> **Fix:** Gọi [_refresh_mode_dropdown()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#482-509) khi combo_mode được focus/opened, hoặc khi tab được activated.
+
+---
+
+## ✅ Code Đã OK
+
+| Component | Status |
+|---|---|
+| UI layout 2 dòng (Row 1: mode/lang/add/transfer, Row 2: Open/Body/End) | ✅ |
+| Config save/load cho 6 word count values | ✅ |
+| [_get_mode_type()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#510-527) routing logic | ✅ |
+| [_get_word_count_rule(section)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#533-547) | ✅ |
+| Narrative position-based word count (open/body/end) | ✅ |
+| Style guide prompt building + `system_prompt_override` | ✅ |
+| Save Style button + copy to styles/ | ✅ |
+| `_STYLE_GUIDE.json` luôn lưu ở output_dir | ✅ |
+| 4-step analysis flow (analyze → cache → generate → review) | ✅ |
+| Error handling trong analysis flow | ✅ |
+
+## 🔧 Đề xuất fix ngay (low-risk)
+
+1. **Bug #1:** Sửa suggested name trong Save Style
+2. **Bug #2 + #6:** Refresh dropdown khi user mở combo box
+3. **Bug #3:** Dừng rewrite nếu file style không tồn tại

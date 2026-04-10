@@ -1,0 +1,26 @@
+# Pipeline Redesign Tasks
+
+## Phase 1: Fix Core Logic
+- [x] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) — tách visual_bible và character_bible thành 2 biến riêng
+- [x] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) — truyền style_content vào generate_visual_bible()
+- [x] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) — khi cả 2 bật: chạy Character Pipeline trước, Visual Bible sau (exclude characters có sheet)
+- [x] [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) — generate_visual_bible() nhận style_content + exclude_characters
+- [ ] Bỏ _locations.txt riêng (gộp vào Visual Bible)
+
+## Phase 2: Update Prompt Generation 
+- [x] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) — _build_user_message() nhận thêm character_bible riêng
+- [x] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) — Separate sections: VISUAL BIBLE vs CHARACTER BIBLE
+- [x] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) — PROTAGONIST/NAMED → LABEL only, MILITARY → uniform description
+
+## Phase 3: JSON Output
+- [ ] Thiết kế JSON schema final
+- [ ] Update prompt instruction để AI output JSON
+- [ ] Parse JSON response + save output
+
+## Phase 4: Update Prompts
+- [ ] [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) — adapt style instructions
+- [ ] Character sheet prompt — adapt theo style
+
+## Phase 5: Verify
+- [x] Import check — passed
+- [ ] Test chạy thử

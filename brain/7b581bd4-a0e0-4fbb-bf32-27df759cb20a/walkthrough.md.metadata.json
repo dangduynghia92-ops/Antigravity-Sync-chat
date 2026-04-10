@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Walkthrough documenting the complete migration of download backend from yt-dlp to pytubefix + youtube-transcript-api, with all test results.",
+  "updatedAt": "2026-03-20T16:30:47.913586400Z",
+  "version": "2"
+}

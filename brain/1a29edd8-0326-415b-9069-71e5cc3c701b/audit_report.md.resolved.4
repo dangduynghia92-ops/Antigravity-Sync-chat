@@ -1,0 +1,73 @@
+# Audit: 12-Step Pipeline — Niche Isolation
+
+## Tóm tắt
+
+| Step | Tên | Prompt/Function | Mystery-safe? |
+|------|------|-----------------|---------------|
+| 1 | Load text | code only | ✅ Generic |
+| 2 | Detect framework | [system_detect_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_framework.txt) | ✅ Generic |
+| 3 | Extract blueprint | [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) | ❌ **PRODUCT** |
+| 4 | Rank frameworks | [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) | ✅ Generic |
+| 5 | Reality check | [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt) | ❌ **PRODUCT** |
+| 6 | Check blueprint | [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) | ❌ **PRODUCT** |
+| 7 | Convert units | code in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | ⚠️ Partial |
+| 8 | Create outline | [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) | ✅ **ROUTED** |
+| 9 | Audit outline | [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt) | ❌ **PRODUCT** |
+| 10 | Write chapters | [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | ✅ **ROUTED** |
+| 11 | Cross-chapter review | [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) | ❌ **PRODUCT** |
+| 12 | Merge | code only | ✅ Generic |
+
+**5 bước có vấn đề** — prompt hardcode "product", "specs", "ranking".
+
+---
+
+## Chi tiết từng bước có vấn đề
+
+### ❌ Step 3: Extract Blueprint ([system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt))
+- Line 1: "product review data extraction specialist"
+- Toàn bộ output schema: `product_evaluation`, `key_specs`, `ranking_criteria`, `benchmark`
+- Mystery history **KHÔNG CÓ products** → prompt sẽ extract sai hoặc trống
+- **Cần**: Tạo `system_extract_blueprint_mystery.txt` hoặc route đến [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) (generic)
+
+### ❌ Step 5: Reality Check ([system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt))
+- Line 1: "military/firearms product data specialist"
+- Check `product_evaluation` array, product status, product names
+- Mystery history không có product_evaluation → **sẽ crash hoặc return empty**
+- **Cần**: Tạo `system_reality_check_mystery.txt` hoặc **skip step** cho mystery
+
+### ❌ Step 6: Check Blueprint ([system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt))
+- Line 1: "data completeness auditor" checking "product evaluation data"
+- Check `product_evaluation`, `key_specs`, `detailed_facts` per product
+- **Cần**: Tạo mystery version hoặc **skip step** cho mystery
+
+### ❌ Step 9: Audit Outline ([system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt))
+- References: "product per chapter", "products_covered", "product_evaluation"
+- **Cần**: Tạo `system_audit_outline_mystery.txt` hoặc make generic
+
+### ❌ Step 11: Cross-chapter Review ([system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt))
+- Line 1: "quality reviewer for product review scripts"
+- Checks: product specs consistency, comparison consistency, benchmark
+- **Cần**: Tạo mystery version hoặc make generic
+
+### ⚠️ Step 7: Convert Units
+- Chuyển đổi đơn vị đo lường — hoạt động generic
+- Nhưng check `product_evaluation` để tìm `source_units`
+- Mystery sẽ trả `product_evaluation: []` → step sẽ **skip silently** (OK nhưng không optimal)
+
+---
+
+## Phương án sửa
+
+### Option A: Tạo prompt mới cho mỗi step (tốt nhất)
+- `system_extract_blueprint_mystery.txt`
+- `system_reality_check_mystery.txt` (hoặc skip)
+- `system_check_blueprint_mystery.txt` (hoặc skip)
+- `system_audit_outline_mystery.txt`
+- `system_review_cross_chapter_mystery.txt`
+
+### Option B: Dùng prompt generic có sẵn + skip steps không cần
+- Step 3: Route đến [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) (generic, đã có)
+- Step 5: **Skip** (reality check sản phẩm không áp dụng cho mystery)
+- Step 6: **Skip** (check completeness sản phẩm không áp dụng)
+- Step 9: Dùng outline audit generic hoặc tạo mới
+- Step 11: Tạo mới (cross-chapter consistency vẫn cần cho mystery)

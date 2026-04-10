@@ -1,0 +1,130 @@
+# Rewrite Tab — Analyze → Rewrite → Verify Pipeline
+
+Thêm tab **"✍️ Rewrite"** vào tool. Input = group folder (output của Regroup).
+
+## Full Pipeline
+
+```
+Group folder
+    │
+    ├─ 1. Analyze  → AI chọn method + hook cho mỗi chapter
+    │                (kết quả lưu _REWRITE_STATUS.json)
+    │
+    ├─ 2. Rewrite  → AI viết lại từng chapter
+    │                (auto-export mỗi file xong → folder output)
+    │
+    ├─ 3. Verify   → AI review chất lượng
+    │                (score + issues cho mỗi chapter)
+    │
+    └─ 4. Merge    → Gộp tất cả chapters thành 1 file kịch bản
+                     (FINAL_SCRIPT.txt)
+```
+
+## Tracking — `_REWRITE_STATUS.json`
+
+Lưu trong group folder, đánh dấu trạng thái từng chapter:
+
+```json
+{
+  "chapters": {
+    "Chapter 1 - Franco-British Union.txt": {
+      "status": "verified",
+      "method": "inquiry_arc",
+      "hook": "Could two nations merge overnight?",
+      "analyzed_at": "2026-02-28 18:30",
+      "rewritten_at": "2026-02-28 18:32",
+      "verified_at": "2026-02-28 18:33",
+      "verify_score": 8.5,
+      "output_file": "Chapter 1 - Franco-British Union_rewritten.txt"
+    },
+    "Chapter 2 - Gleiwitz Incident.txt": {
+      "status": "analyzed",
+      "method": "cognitive_arc",
+      "hook": "What if a single radio broadcast started a world war?"
+    }
+  },
+  "merged_file": "FINAL_SCRIPT.txt"
+}
+```
+
+**Statuses:** `pending` → `analyzed` → `rewritten` → `verified`
+
+Khi mở lại group folder → tool đọc file này → biết chapter nào đã xong, chưa xong.
+
+---
+
+## Proposed Changes
+
+### Prompts
+
+#### [NEW] [system_analyze.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_analyze.txt)
+AI đọc chapter → chọn method + hook + counter-argument. Output JSON.
+
+#### [NEW] [system_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt)
+Viết lại chapter theo method đã chọn, 1300-1800 words, tone mystery.
+
+#### [NEW] [system_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt)
+Review chất lượng: score 1-10, danh sách issues.
+
+---
+
+### Core Logic
+
+#### [NEW] [rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Chức năng:
+- `load_group_chapters(group_path)` → list chapter files
+- `load_rewrite_status(group_path)` → đọc _REWRITE_STATUS.json
+- `save_rewrite_status(group_path, status)` → ghi _REWRITE_STATUS.json
+- `analyze_chapter(text, api_client, log_cb)` → `{method, hook, counter_arg}`
+- `rewrite_chapter(text, analysis, api_client, log_cb)` → rewritten text
+- [verify_chapter(original, rewritten, api_client, log_cb)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#630-678) → `{score, issues}`
+- `save_rewritten_file(output_dir, filename, text)` → auto-export file
+- `merge_all_chapters(output_dir, status)` → gộp thành FINAL_SCRIPT.txt
+
+---
+
+### UI
+
+#### [NEW] [rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+
+```
+┌──────────────────────────────────────────────────────┐
+│ Input Group: [___________] [Browse]                   │
+│ Output:      [___________] [Browse]  Tier: [Flash ▼] │
+│                                                       │
+│ ┌──────────────────────────────────────────────────┐  │
+│ │ ☑ Tên Chapter       │ Method   │ Status  │ Score │  │
+│ │ ☑ Chapter 1 - Fra.. │ Inquiry  │ ✓ Done  │  8.5  │  │
+│ │ ☑ Chapter 2 - Gle.. │ Cogniti..│ Writing │  —    │  │
+│ │ ☐ Chapter 4 - Muk.. │ —        │ Pending │  —    │  │
+│ └──────────────────────────────────────────────────┘  │
+│                                                       │
+│ [1.Analyze] [2.Rewrite] [3.Verify] [4.Merge]         │
+│ Chọn tất cả │ Bỏ chọn │ Open Output                  │
+└──────────────────────────────────────────────────────┘
+```
+
+- Resume: mở group → đọc `_REWRITE_STATUS.json` → hiện trạng thái đã làm
+- Chỉ xử lý chapters được tick ☑
+- Mỗi bước xong → auto-update status + auto-export file
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+Thêm tab `"✍️ Rewrite"` + connect signals.
+
+---
+
+## Verification Plan
+
+### Automated
+```bash
+python -c "from ui.main_window import MainWindow; print('OK')"
+```
+
+### Manual
+1. Browse group folder → hiện chapters + status từ tracking file
+2. Analyze → method hiện trong cột, status = analyzed
+3. Rewrite → file xuất tự động, status = rewritten
+4. Verify → score hiện, status = verified
+5. Merge → 1 file FINAL_SCRIPT.txt gộp tất cả
+6. Đóng/mở lại → trạng thái vẫn giữ

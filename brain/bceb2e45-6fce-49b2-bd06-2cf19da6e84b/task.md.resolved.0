@@ -1,0 +1,23 @@
+# Resume Pipeline Feature
+
+- [/] **UI: Add Resume button** (auto_pipeline_tab.py)
+  - [ ] Add `_btn_resume` (hidden, blue/cyan) after Stop button
+  - [ ] Add `_resume_mode` flag
+  - [ ] Show button in `_on_pipeline_done()` when errors exist
+  - [ ] `_on_resume()`: reset error items → pending, set resume flag, re-run
+  - [ ] Hide button on new Run Queue or queue clear
+  - [ ] Pass `resume_mode` to `_run_rewrite()` via job dict
+
+- [ ] **Rewrite: Cache-aware steps** (rewrite_style_tab.py)
+  - [ ] Add `_resume_mode` check in `_do_renew_review()`
+  - [ ] Step 2: Load `_detection.json` if exists
+  - [ ] Step 3: Load `_blueprint_raw.json` if exists
+  - [ ] Step 4: Load `_rankings.json` + determine `selected_fw`
+  - [ ] Step 5: Load `_blueprint.json` if ALL sub-outputs exist
+  - [ ] Step 6: Skip (informational only)
+  - [ ] Step 7: Load `_blueprint_converted.json` if exists
+  - [ ] Step 8: Load `_review_outline.json` if exists
+  - [ ] Step 9: Load `_review_outline_audited.json` if exists
+  - [ ] Steps 10-12: No cache skip (chapter writing, cross-review, merge)
+
+- [ ] **Test**: Verify resume flow works correctly

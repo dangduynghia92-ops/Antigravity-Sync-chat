@@ -1,0 +1,58 @@
+# API Tier Audit Report
+
+Tổng cộng **52 APIClient** instances trên **7 tab**, trong đó **15 hardcoded** (10 flash, 5 pro), **37 dùng user-selected**.
+
+## Hardcoded FLASH (10 calls)
+
+| # | Tab | Line | Bước | Mục đích | Đề xuất |
+|---|---|---|---|---|---|
+| 1 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | L1673 | Niche Detection | Ping nhanh ~30 tokens, timeout=15s | ✅ **Giữ nguyên** — flash đủ, response <1s |
+| 2 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | L2985 | Framework Detection (Review) | detect_framework() — input lớn nhưng output nhỏ | ✅ **Giữ nguyên** — flash đủ chính xác |
+| 3 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | L3058 | Framework Ranking (Review) | recommend_framework() — so sánh blueprints | ⚠️ **Cân nhắc → user-selected** — pro cho ranking chính xác hơn |
+| 4 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | L3868 | Patch Chapter (Narrative review) | patch_chapter_overlap() — sửa issue nhỏ | ✅ **Giữ nguyên** — patch nhanh, flash đủ |
+| 5 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L919 | Verify (Top/List Retry) | verify_chapter() sau rewrite | ✅ **Giữ nguyên** — verify chỉ chấm điểm |
+| 6 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L1170 | Auto-Verify (Top/List) | verify_chapter() sau rewrite | ✅ **Giữ nguyên** — verify chỉ chấm điểm |
+| 7 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L1353 | Analyze (Narrative pipeline) | analyze_chapter() trong narrative flow | ⚠️ **Cân nhắc → user-selected** — phân tích cần chất lượng cao |
+| 8 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L1423 | Verify (Narrative pipeline) | verify_chapter() sau narrative rewrite | ✅ **Giữ nguyên** |
+| 9 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L1882 | Verify (Narrative review) | verify sau cross-chapter review | ✅ **Giữ nguyên** |
+| 10 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L2226 | Summarize (Merge) | summarize_chapter() cho merge flow | ✅ **Giữ nguyên** — summary nhẹ |
+
+## Hardcoded PRO (5 calls)
+
+| # | Tab | Line | Bước | Mục đích | Đề xuất |
+|---|---|---|---|---|---|
+| 1 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | L573 | Niche Detect (TTS) | detect_niche() cho TTS cleanup | ❌ **Nên → flash** — niche detect nhẹ, không cần pro |
+| 2 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | L798 | TTS Verify | verify_tts_content() sau cleanup | ✅ **Giữ nguyên** — verify cần chính xác cao |
+| 3 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | L1149 | TTS Rewrite-Fix | Sửa lại file failed | ✅ **Giữ nguyên** — fix cần pro quality |
+| 4 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | L1179 | TTS Re-Verify | verify sau fix | ✅ **Giữ nguyên** |
+| 5 | [video_cutter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py) | L775 | Chapter Split (AI) | split_chapters() — AI phân chia chapter | ✅ **Giữ nguyên** — split cần reasoning |
+
+> [!NOTE]
+> [video_cutter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py) L767 (`classify_script_type`) dùng flash ✅ — đúng vì classify nhẹ.
+
+## User-Selected Tier (37 calls) ✅
+
+Các bước sau dùng đúng `tier=tier` từ UI:
+
+| Tab | Số calls | Bước chính |
+|---|---|---|
+| [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | 15 | Detection, Blueprint, Outline, Audit, Write, Review, Patch |
+| [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | 15 | Analyze, Rewrite, Outline, Reorder, Review, Patch, Final |
+| [style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/style_tab.py) | 1 | Full analysis pipeline |
+| [chat_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chat_tab.py) | 1 | Chat (user chọn Flash/Pro) |
+| [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | 1 | TTS Cleanup chính |
+
+## Đề xuất thay đổi
+
+### Nên sửa (2 items)
+
+| # | File | Line | Hiện tại | Đề xuất | Lý do |
+|---|---|---|---|---|---|
+| 1 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | L573 | [pro](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#646-735) | → `flash` | Niche detect chỉ cần ping nhẹ |
+| 2 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | L1353 | `flash` | → `tier` (user-selected) | Analyze trong narrative flow cần chất lượng |
+
+### Cân nhắc (1 item)
+
+| # | File | Line | Hiện tại | Đề xuất | Lý do |
+|---|---|---|---|---|---|
+| 1 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | L3058 | `flash` | → `tier` | Framework ranking có thể chính xác hơn với pro, nhưng flash cũng OK |

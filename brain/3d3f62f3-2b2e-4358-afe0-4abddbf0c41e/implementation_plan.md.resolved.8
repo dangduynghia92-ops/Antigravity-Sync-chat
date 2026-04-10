@@ -1,0 +1,35 @@
+# Style Mode: Song Song → Tuần Tự
+
+## Hiện tại Narrative flow (7 bước):
+```
+1. Generate Outline     ← xem tổng thể kịch bản
+2. Reorder Suggestion   ← gợi ý sắp xếp lại
+3. Analyze + Rewrite    ← tuần tự, chapter sau nhận context chapter trước
+4. Verify               ← tuần tự
+5. Cross-chapter Review ← review chồng lấn
+6. Merge v1             ← ghép thành 1 file
+7. Final Review         ← review lần cuối + popup
+```
+
+## Style mode cần gì?
+
+Style mode dùng style guide JSON làm prompt → **không cần analyze** (step 3a). Nhưng vẫn cần viết **tuần tự** vì chapters liên kết nhau.
+
+> [!IMPORTANT]
+> **Câu hỏi:** Style mode có cần các bước 1 (Outline), 2 (Reorder), 5-7 (Review/Patch/Merge) không?
+> - Nếu **có** → dùng chung [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1277-1591), chỉ thay prompt
+> - Nếu **không** → tạo flow riêng gọn hơn (chỉ rewrite tuần tự + verify)
+
+## Đề xuất: Dùng chung narrative flow, thay prompt
+
+Thay vì tạo flow mới, sửa [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1277-1591) để hỗ trợ cả 2:
+
+### Thay đổi trong [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1277-1591):
+1. **Step 3 (Rewrite):** Nếu style mode → bỏ analyze, dùng `system_prompt_override` thay vì [rewrite_chapter_narrative](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#871-952)
+2. **Step 1-2, 5-7:** Giữ nguyên (outline, reorder, review, merge đều hữu ích)
+
+### Thay đổi trong [_do_rewrite_all](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#983-1133):
+1. Style mode redirect sang [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1277-1591) thay vì chạy song song
+
+### File cần sửa:
+- [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py): [_do_rewrite_all](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#983-1133) + [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1277-1591)

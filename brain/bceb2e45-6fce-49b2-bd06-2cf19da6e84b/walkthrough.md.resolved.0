@@ -1,0 +1,70 @@
+# Anti-Plagiarism System — Walkthrough
+
+## Problem
+Kịch bản viết lại dùng **cùng góc khai thác** (editorial angles) như bản gốc: cùng product đảm nhận cùng "vai trò" (DP-12 = nặng, 1301 = nhanh, M4 = #1 reliability), cùng ưu/nhược điểm được highlight. Dù rhetoric đã được đổi, **editorial decision** (chọn fact nào làm backbone) vẫn bị copy.
+
+## Root Cause
+1. Outline AI nhận **full blueprint** có `author_rhetoric` → bị ảnh hưởng angle gốc
+2. `depth_focus` chỉ dùng cho Catalog framework → các framework khác không có lead angle
+3. Writer dùng `alternative_rhetoric` như **phụ trợ**, không phải **lead**
+
+## Changes Made
+
+### Firearms (5 commits)
+
+| # | File | Change |
+|---|------|--------|
+| 1 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L4270-4280) | Strip `author_rhetoric` + `original`/`data_source` from blueprint **before writer** |
+| 2 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1898-1918) | Skip `alternative_rhetoric`/`author_rhetoric` in `_find_empty_fields()` enrichment scan |
+| 3 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L4024-4035) | Strip `author_rhetoric` from blueprint **before outline** |
+| 4 | [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt#L61) | `depth_focus` → ALL frameworks, MUST reference `alternative_rhetoric` |
+| 5 | [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt#L111-L118) | Rules 14 + 17: Editorial Angle Diversification + Thesis Reframing |
+| 6 | [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt#L154-L161) | Rule 12: DEPTH_FOCUS LEAD mandatory for body chapters |
+
+### Military (1 commit, 5 files)
+
+| File | Change |
+|------|--------|
+| [system_extract_blueprint_military.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_military.txt#L32-L37) | Added `author_rhetoric` field + separation instructions |
+| [system_transform_rhetoric_military.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_transform_rhetoric_military.txt) | **[NEW]** — Rhetoric transform prompt adapted from firearms |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1993-1996) | Added military/quân sự/defense/tank to `_NICHE_TRANSFORM_RHETORIC_MAP` |
+| [system_review_outline_military.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_military.txt#L61) | `depth_focus` + Rules 14, 16, 17 (matching firearms) |
+| [system_write_review_military.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_military.txt#L149-L154) | Rule 12 expanded with alternative_rhetoric + depth_focus lead |
+
+### Workflow Update
+
+| File | Change |
+|------|--------|
+| [new-niche.md](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/.agent/workflows/new-niche.md#L30-L80) | Step 5.5 rewritten with **decision tree** — evaluates risk by content pattern, not blindly |
+
+---
+
+## 5-Layer Architecture (Final)
+
+```
+Layer 1: EXTRACT — separate detailed_facts from author_rhetoric
+                    ↓
+Layer 2: TRANSFORM — generate alternative_rhetoric from facts
+                    ↓
+Layer 3: CODE SANITIZE — strip author_rhetoric before outline + writer see it
+                    ↓
+Layer 4: OUTLINE — depth_focus MUST come from alternative_rhetoric (new angle)
+                    ↓
+Layer 5: WRITER — first paragraph MUST develop depth_focus before specs
+```
+
+## Risk Assessment (All Niches)
+
+| Niche | Mode | Risk | Protected by |
+|-------|------|------|-------------|
+| **Firearms** | Review | ⚠️ HIGH | ✅ 5-layer system |
+| **Military** | Review | ⚠️ HIGH | ✅ 5-layer system |
+| **Mystery** | Review | 🟢 LOW | Extract discards rhetoric (rules 11-12), 7 structures × 4 closings × tone arc |
+| **Biography** | Narrative | 🟢 LOW | 8 structures × 6 closings, framework restructure, personal profile enrichment |
+| **Battle** | Narrative | 🟢 LOW | Framework restructure, scene construction from raw data |
+
+## Not Changed (Evaluated and Rejected)
+
+- **Spec-dump → Experiential writing**: Evaluated but rejected — risk of AI exaggeration/fabrication outweighs benefit. Spec-first is safer for factual accuracy.
+- **Mystery anti-plagiarism**: Not needed — structural diversity provides natural protection.
+- **Narrative anti-plagiarism**: Not needed — framework restructure + personal profile + scene construction provides natural protection.

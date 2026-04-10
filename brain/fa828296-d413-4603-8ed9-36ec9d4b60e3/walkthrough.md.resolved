@@ -1,0 +1,68 @@
+# Auto Pipeline — Audit Report
+
+## Methodology
+Full cross-audit of [core/auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py) and [ui/auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py) against the 3 existing tabs:
+- **YouTube tab** ([ui/youtube_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py)) — Download flow
+- **Chapter tab** ([ui/chapter_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)) — Split flow  
+- **Style Rewrite tab** ([ui/rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)) — Rewrite delegation
+
+---
+
+## ✅ No Duplication Issues Found
+
+The new code **reuses** all existing functions with zero code duplication:
+
+| Module | Functions Reused | Verified |
+|--------|-----------------|----------|
+| [yt_downloader.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py) | [get_video_info](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545), [get_transcript_ytdlp](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169), [get_transcript](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1178-1240), [download_video](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#768-862), [download_thumbnail_file](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952), [extract_timestamps](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#572-613), [build_transcript_file](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649), [safe_filename](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py#110-116) | ✅ |
+| [chapter_splitter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py) | [classify_script_type](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#150-187), [split_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#552-735), [verify_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#737-785), [punctuate_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#787-884), [save_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#894-940), [merge_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#942-968), [save_summary](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#970-1041) | ✅ |
+| [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | [_do_renew_review](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2605-3524), [_do_renew_style](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2056-2559), [_do_cut_video_for_group](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1056-1148) (via delegation) | ✅ |
+| [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py) | `APIClient` | ✅ |
+| [config_manager.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py) | [load_api_keys](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py#44-64), [save_config](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py#16-21), [load_config](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py#23-33) | ✅ |
+
+---
+
+## 🐛 Bugs Found & Fixed
+
+### Bug 1: Transcript Parser Header Mismatch (CRITICAL)
+- **File**: [auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py)
+- **Issue**: Parser searched for `"Timestamps:"` and `"Transcript:"` but [build_transcript_file()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649) outputs `"Timestamp"` and `"Transcript"` (no colon, singular)
+- **Impact**: Phase 2 would silently fail to extract transcript text, treating entire file as raw content
+- **Fix**: Case-insensitive matching with `stripped.lower().startswith("timestamp")`
+
+### Bug 2: Parent Widget Traversal Broken (CRITICAL)
+- **File**: [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py) [_get_rewrite_tab()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#1023-1033)
+- **Issue**: `.parent()` returns a QObject, but `hasattr(widget, 'parent')` is always True for any QObject — need `callable()` check to avoid infinite loop
+- **Impact**: Could crash or loop forever when looking for MainWindow
+- **Fix**: Added `callable(widget.parent)` guard
+
+### Bug 3: Main Thread UI Deadlock (CRITICAL)
+- **File**: [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py) [_on_run()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#586-655)
+- **Issue**: `_mode_event.wait()` was called on the main thread, blocking the entire Qt event loop. The signal `_sig_ask_mode` would emit to show a dialog, but the dialog could never display because the main thread was blocked waiting
+- **Impact**: App would freeze permanently when entering multiple URLs
+- **Fix**: Moved the mode selection dialog inline before spawning the worker thread
+
+### Bug 4: Output Directory State Conflict (MEDIUM)
+- **File**: [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py) [_run_rewrite()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#917-1014)
+- **Issue**: `rw_tab._txt_output.setText()` was called but `_group_path` wasn't set, causing [_resolve_output_dir()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#560-579) to fall back incorrectly
+- **Impact**: Rewrite output could go to wrong directory
+- **Fix**: Save/restore both `_txt_output` and `_group_path` on the rewrite tab
+
+### Bug 5: Unused [_show_mode_dialog](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#547-581) Signal (MINOR)
+- **File**: `_sig_ask_mode` signal and [_show_mode_dialog](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#547-581) slot were defined but became dead code after Bug 3 fix
+- **Status**: Kept for potential future use (no harm)
+
+---
+
+## ✅ Verified Correct (No Issues)
+
+| Area | Check | Status |
+|------|-------|--------|
+| Download flow | Same 3-tier transcript fallback as YouTube tab | ✅ |
+| [build_transcript_file](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649) params | All 5 params match exactly | ✅ |
+| Chapter file naming | [save_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#894-940) → `"Chapter N - Title.txt"`, [build_chapter_dicts()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py#496-530) filters `startswith("Chapter ")` | ✅ |
+| `_task_counter` / `_jobs` | Both initialized in `RewriteStyleTab.__init__` | ✅ |
+| [_do_cut_video_for_group](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1056-1148) | Exists in [RewriteStyleTab](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#45-3524) (line 1056) | ✅ |
+| Threading model | Worker thread → signals for UI updates | ✅ |
+| Stop/cancel propagation | `stop_event` + [_watch_stop](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#1015-1022) thread monitors [_stop_flag](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/process_controller.py#190-193) | ✅ |
+| Config sync | All 15+ widgets properly synced to RewriteStyleTab | ✅ |

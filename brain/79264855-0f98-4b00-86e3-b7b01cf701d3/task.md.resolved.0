@@ -1,0 +1,18 @@
+# YouTube Downloader & Scanner Tab
+
+## Planning
+- [x] Explore existing codebase structure
+- [x] Understand tab pattern (build_ui, signals, config, log_section)
+- [/] Write implementation plan
+- [ ] Get user approval
+
+## Execution
+- [ ] Create `core/yt_downloader.py` — backend logic (yt-dlp wrapper)
+- [ ] Create `ui/youtube_tab.py` — UI tab with 2 sub-tabs (Download + Scanner)
+- [ ] Register tab in [ui/main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- [ ] Update [requirements.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt) with yt-dlp
+
+## Verification
+- [ ] Launch app, confirm new tab appears
+- [ ] Test scan a YouTube channel/playlist
+- [ ] Test download video/thumbnail/subtitle

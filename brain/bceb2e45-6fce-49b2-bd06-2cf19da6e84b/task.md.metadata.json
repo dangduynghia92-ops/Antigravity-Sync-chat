@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_TASK",
+  "summary":  "Task tracking for Resume Pipeline feature — UI and cache-aware rewrite steps.",
+  "updatedAt":  "2026-04-05T02:34:13.445599500Z",
+  "version":  "1"
+}

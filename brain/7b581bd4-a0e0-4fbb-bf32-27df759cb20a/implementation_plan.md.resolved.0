@@ -1,0 +1,83 @@
+# Thêm chế độ "Folder Mode" cho tab Regroup
+
+Thêm chế độ mới cho phép nhóm **toàn bộ thư mục kịch bản** (thay vì từng chapter riêng lẻ) theo ngách chủ đề. AI sẽ đọc summary của tất cả chapters trong mỗi thư mục để phân loại cả folder vào ngách phù hợp.
+
+## So sánh 2 chế độ
+
+| | Chapter Mode (hiện tại) | Folder Mode (mới) |
+|---|---|---|
+| **Đơn vị phân loại** | Từng chapter | Toàn bộ thư mục (script) |
+| **AI nhận** | Summary từng chapter | Summary ghép tất cả chapters trong thư mục |
+| **Kết quả** | Chapters rải vào các ngách khác nhau | Toàn bộ folder vào 1 ngách |
+| **Copy** | Copy file chapter → folder ngách | Copy (hoặc move) toàn bộ folder → folder ngách |
+
+## Proposed Changes
+
+### Core Logic
+
+#### [MODIFY] [regroup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py)
+
+1. **Thêm dataclass `FolderEntry`**:
+   ```python
+   @dataclass
+   class FolderEntry:
+       folder_name: str          # Tên subfolder
+       folder_path: str          # Đường dẫn tuyệt đối
+       chapter_count: int        # Số chapters
+       total_chars: int          # Tổng ký tự
+       combined_summary: str     # Summary gộp tất cả chapters
+       chapters: list = field(default_factory=list)  # List[ChapterEntry]
+   ```
+
+2. **Thêm hàm `scan_output_folder_as_folders()`**: 
+   - Duyệt folder giống [scan_output_folder()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#133-229), nhưng gom chapters theo subfolder
+   - Trả về `list[FolderEntry]` thay vì `list[ChapterEntry]`
+   - Mỗi FolderEntry có `combined_summary` = ghép summary tất cả chapters
+
+3. **Thêm hàm `classify_folders()`**:
+   - Tương tự [classify_chapters()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#375-535) nhưng gửi FolderEntry lên AI
+   - Mỗi folder = 1 item trong prompt: `#N: [folder_name] — chapter_count chapters — combined_summary`
+   - AI trả về JSON cùng format, nhưng ID map về FolderEntry
+
+4. **Thêm hàm `copy_folder_to_group()`**:
+   - Copy (hoặc symlink/move) toàn bộ subfolder vào folder ngách
+   - Tạo `_GROUP_INFO.json` với thông tin folders thay vì chapters
+
+---
+
+### AI Prompt
+
+#### [NEW] [system_regroup_folder.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup_folder.txt)
+
+Prompt AI riêng cho folder mode — nhấn mạnh phân loại theo **tổng thể nội dung kịch bản** (toàn bộ chapters), không phải từng chapter.
+
+---
+
+### UI
+
+#### [MODIFY] [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py)
+
+1. **Thêm toggle mode** ở Row 2: `QComboBox` hoặc `QCheckBox` chuyển giữa "Chapter" và "Folder"
+2. **Scan**: Gọi `scan_output_folder_as_folders()` khi ở folder mode
+3. **Tree display**: Hiển thị folder-level (không có children chapters) khi ở folder mode  
+4. **Classify**: Gọi `classify_folders()` thay vì [classify_chapters()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#375-535)
+5. **Copy**: Gọi `copy_folder_to_group()` — copy toàn bộ thư mục
+6. **Config**: Lưu thêm `group_mode` vào config
+
+> [!IMPORTANT]
+> Chế độ Folder mode sẽ **copy toàn bộ thư mục** (bao gồm tất cả chapter files, summary, v.v.) vào folder ngách output. Điều này khác với Chapter mode chỉ copy từng file riêng lẻ. Bạn có muốn **copy** (giữ nguyên bản gốc) hay **move** (di chuyển, xóa bản gốc)?
+
+---
+
+## Verification Plan
+
+### Manual Verification
+Vì ứng dụng là PyQt6 desktop app và không có test suite:
+
+1. **Chạy app**: `python main.py` từ thư mục project
+2. **Mở tab Regroup** → chọn mode **Folder** từ dropdown mới
+3. **Bước 1 - Scan**: Chọn scan folder → bấm "Scan Chapters" → verify tree hiển thị folder-level (mỗi node = 1 thư mục, không có child chapters)
+4. **Bước 2 - Classify**: Chọn ngách → bấm "AI Classify" → verify tree chuyển sang hiển thị theo ngách, mỗi item vẫn là folder
+5. **Bước 3 - Copy**: Chọn output → bấm "Copy to Group" → verify folder gốc được copy nguyên vẹn vào output
+6. **Chuyển mode**: Đổi lại "Chapter" → verify hoạt động như cũ
+7. **Save/Load config**: Verify mode được lưu và khôi phục đúng

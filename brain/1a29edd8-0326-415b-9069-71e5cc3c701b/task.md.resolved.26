@@ -1,0 +1,24 @@
+# Mystery History Pipeline
+
+## Đã hoàn thành
+- [x] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) (Step 8)
+- [x] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) (Step 10)
+- [x] [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1973-2108) trong [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Đăng ký niche `"mystery"` trong `_niche_prompt_map`
+- [x] Style guide `Review_bí_ẩn_lịch_sử.json` + `topic_keywords`
+- [x] Niche detection prompt fix
+
+## Cần tạo prompt mới
+- [ ] Step 3: `system_extract_blueprint_mystery.txt`
+- [ ] Step 5: `system_reality_check_mystery.txt`
+- [ ] Step 6: `system_check_blueprint_mystery.txt`
+- [ ] Step 9: `system_audit_outline_mystery.txt`
+- [ ] Step 11: `system_review_cross_chapter_mystery.txt`
+
+## Cần sửa code routing
+- [ ] Route Step 3 blueprint extraction by niche
+- [ ] Route Step 5 reality check by niche
+- [ ] Route Step 6 blueprint check by niche
+- [ ] Route Step 9 outline audit by niche
+- [ ] Route Step 11 cross-chapter review by niche
+- [ ] Compile check

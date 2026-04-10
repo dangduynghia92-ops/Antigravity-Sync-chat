@@ -1,0 +1,14 @@
+# Split Writer Prompt Into Base + 7 Structures
+
+- [/] Read current writer prompt to identify base vs structure content
+- [ ] Create `base_mystery_writer.txt` (shared rules)
+- [ ] Create `mystery_structures/` directory with 7 files:
+  - [ ] `structure_mythbuster.txt`
+  - [ ] `structure_detective_trail.txt`
+  - [ ] `structure_bureaucratic_anomaly.txt`
+  - [ ] `structure_human_anchor.txt`
+  - [ ] `structure_conflicting_accounts.txt`
+  - [ ] `structure_ticking_clock.txt`
+  - [ ] `structure_innocent_facade.txt`
+- [ ] Modify [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) to load base + structure dynamically
+- [ ] Verify JSON + test prompt loading

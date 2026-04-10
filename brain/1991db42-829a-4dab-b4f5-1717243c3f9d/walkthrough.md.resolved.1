@@ -1,0 +1,35 @@
+# Rewrite Tab — Implementation Walkthrough
+
+## Files Created
+
+| File | Purpose |
+|---|---|
+| [system_analyze.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_analyze.txt) | Prompt: AI chọn storytelling method |
+| [system_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt) | Prompt: AI viết lại chapter |
+| [system_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt) | Prompt: AI review chất lượng |
+| [rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Core logic: analyze, rewrite, verify, merge, tracking |
+| [rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | UI tab with tree, 4 buttons, selection controls |
+
+## Files Modified
+
+| File | Change |
+|---|---|
+| [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) | Added [RewriteTab](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#24-592) import + tab registration + signal wiring |
+
+## Pipeline Flow
+
+```
+1. Load Group  → đọc chapters + _REWRITE_STATUS.json
+2. Analyze     → AI chọn method (Inquiry/Cognitive/Relic) cho mỗi chapter
+3. Rewrite     → AI viết lại → auto-export file
+4. Verify      → AI review score + issues
+5. Merge       → gộp thành FINAL_SCRIPT.txt
+```
+
+## Tracking: `_REWRITE_STATUS.json`
+- Lưu trạng thái từng chapter: `pending → analyzed → rewritten → verified`
+- Resume khi mở lại group folder
+
+## Verification
+- ✅ Compile test passed
+- ⏳ Manual test cần user restart app

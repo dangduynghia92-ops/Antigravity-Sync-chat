@@ -1,0 +1,7 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Root cause analysis of two pipeline bottlenecks:\n\n1. Verify Loop: Re-splits produce identical marker positions because marker-based splitting is deterministic. The AI returns the same start_markers because the text boundaries haven't changed. ~6.5 minutes wasted per run.\n\n2. Audit Outline JSON fail: The prompt requires the AI to echo back the entire outline (~5-10KB JSON) alongside audit_issues. Flash model generates malformed JSON for such large outputs. ~10 minutes wasted per run.\n\nFixes proposed: (1) Compare chapter positions before re-verifying to detect no-ops. (2) Split audit into 2 passes — first detect issues (small output), then fix outline only if needed.",
+  "updatedAt": "2026-03-30T05:35:47.362274700Z",
+  "version": "1",
+  "requestFeedback": true
+}

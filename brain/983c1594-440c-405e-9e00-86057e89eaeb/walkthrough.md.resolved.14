@@ -1,0 +1,155 @@
+# Pipeline: New Content — Tiểu Sử Nhân Vật
+
+## Tổng quan
+
+```mermaid
+flowchart TB
+    subgraph "Step 1: Research"
+        A1["research_blueprint_multicall()"] --> A2["_blueprint.json"]
+    end
+
+    subgraph "Step 2: Framework Selection"
+        B1["recommend_framework()"] --> B2["_rankings.json"]
+        B2 --> B3["Chọn v1: General fw<br/>Chọn v2: Specialized fw nếu score ≥ 8.5"]
+    end
+
+    subgraph "Steps 3-6: Per Framework Pipeline"
+        direction TB
+        C1["Step A: Phase Plan"] --> C2["Step B: Outline"]
+        C2 --> C3["Audit"]
+        C3 --> C4["Write Chapters"]
+        C4 --> C5["Cross-chapter Review + Patch"]
+        C5 --> C6["Merge FULL_SCRIPT.txt"]
+    end
+
+    A2 --> B1
+    B3 -->|"v1 fw"| C1
+    B3 -->|"v2 fw (parallel)"| C1
+```
+
+---
+
+## Step 1: Research Blueprint
+
+| | |
+|---|---|
+| **Function** | `research_blueprint_multicall()` |
+| **Prompt** | Không dùng prompt file — multi-call research |
+| **Input** | Topic name (e.g. "Vlad the Impaler") |
+| **Output** | `_pipeline/_blueprint.json` (~60K chars) |
+| **Nội dung** | `life_phases[]` (key_events, achievements, conflicts, turning_points), `relationships[]`, `myths_vs_reality[]`, `personal_profile`, `dual_nature` |
+| **Language** | Luôn research bằng English |
+
+---
+
+## Step 2: Framework Selection
+
+| | |
+|---|---|
+| **Function** | `recommend_framework()` |
+| **Input** | Blueprint + style JSON (chứa tất cả frameworks) |
+| **Output** | `_pipeline/_rankings.json` |
+| **Logic** | AI chấm điểm từng framework cho nhân vật này |
+| **Bio rule** | v1 = best General (Sử Thi / Sự Lụi Tàn), v2 = best Specialized nếu score ≥ 8.5 |
+
+---
+
+## Steps 3-6: Shared Pipeline (per framework)
+
+Chạy PARALLEL nếu có 2+ frameworks.
+
+### Step A: Phase Plan
+
+| | |
+|---|---|
+| **Function** | `generate_phase_plan()` |
+| **Prompt** | `system_narrative_phase_plan_biography.txt` |
+| **Temperature** | 0.0 |
+| **Input** | Blueprint + style JSON (1 framework) + chapter_range + lang |
+| **Output** | `_pipeline/_phase_plan.json` |
+| **Nội dung** | Mỗi framework step → `main_key_data[]`, `sub_key_data[]`, `node_count`, `chapters[]` |
+| **Logic mới** | NARRATIVE BEATS classification: main = milestones (shift life trajectory), sub = texture. Split dựa trên `len(main_key_data) > 3` |
+
+### Step B: Outline
+
+| | |
+|---|---|
+| **Function** | `generate_renew_outline_v2()` |
+| **Prompt** | `system_narrative_outline_biography.txt` |
+| **Temperature** | 0.3 |
+| **Input** | Blueprint + style JSON + framework + phase_plan + chapter_range + lang |
+| **Output** | `_pipeline/_renew_outline.json` |
+| **Nội dung** | `chapters[]` (title, summary, key_data, chapter_structure, closing_type, ends_with, ...) + `canonical_names` |
+| **Logic mới** | Nhận `main_key_data`/`sub_key_data` từ phase plan → `main_key_data` = key_data cho chapters, `sub_key_data` = writer dệt vào |
+
+### Audit
+
+| | |
+|---|---|
+| **Function** | `audit_outline()` |
+| **Prompt** | `system_narrative_audit_biography.txt` |
+| **Temperature** | 0.1 |
+| **Tier** | Flash |
+| **Input** | Outline + blueprint + style JSON |
+| **Output** | `_pipeline/_audit.json` + `_renew_outline_audited.json` |
+| **Nội dung** | Diff-based fixes (set, remove, add, swap_chapters, remove_chapter) |
+
+### Save Phase Data
+
+Sau audit, extract `phase_chapter_plan` từ outline → save từng phase thành file riêng:
+```
+_pipeline/_phase_data/
+  phase_01_Di_Sản_Hiện_Đại.json
+  phase_02_Nguồn_Gốc.json
+  ...
+  _summary.txt
+```
+
+### Write Chapters
+
+| | |
+|---|---|
+| **Function** | `write_from_blueprint()` |
+| **Prompt** | `base_biography_writer.txt` + `system_write_review_biography.txt` |
+| **Temperature** | (default) |
+| **Input** | Blueprint + outline + chapter_outline + previous_context (last 2 chapters) + word_count_rule |
+| **Output** | `ch_01_Intro.txt`, `ch_02_...txt`, ... |
+| **Logic** | Sequential: mỗi chapter nhận 2 chapters trước làm context |
+
+### Cross-chapter Review + Patch
+
+| | |
+|---|---|
+| **Function** | `review_narrative_full()` → `patch_chapter_overlap()` |
+| **Input** | Tất cả chapters viết xong |
+| **Output** | `_pipeline/_review.json` + auto-patched chapter files |
+| **Logic** | Phát hiện trùng lặp/mâu thuẫn cross-chapter → auto-patch critical/major issues |
+
+### Merge
+
+Output: `FULL_SCRIPT.txt` = tất cả chapters ghép lại.
+
+---
+
+## Output Structure
+
+```
+Biography_[Name]_[Date]/
+├── _pipeline/
+│   ├── _blueprint.json          ← Step 1
+│   ├── _rankings.json           ← Step 2
+│   └── _research_sections/      ← Raw research
+├── v1_Sử_Thi/
+│   ├── _pipeline/
+│   │   ├── _phase_plan.json     ← Step A
+│   │   ├── _renew_outline.json  ← Step B
+│   │   ├── _audit.json          ← Audit
+│   │   ├── _renew_outline_audited.json
+│   │   ├── _phase_data/         ← Phase breakdown
+│   │   └── _review.json         ← Review
+│   ├── ch_01_Intro.txt
+│   ├── ch_02_....txt
+│   └── FULL_SCRIPT.txt
+└── v2_Hai_Mặt/                  ← (if v2 selected)
+    └── ...
+```

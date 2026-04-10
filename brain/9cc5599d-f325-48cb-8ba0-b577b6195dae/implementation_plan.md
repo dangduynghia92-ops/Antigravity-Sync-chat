@@ -1,0 +1,111 @@
+# Cải thiện Chapter Splitting cho SRT Tab (Narrative mode)
+
+3 vấn đề cần sửa:
+1. Không cảnh báo khi format script không khớp mode đã chọn
+2. CTA/intro/outro bị tách thành chapter riêng
+3. Quá nhiều chapter nhỏ (narrative)
+
+## Proposed Changes
+
+### Format Validation — Cảnh báo chọn sai mode
+
+#### [MODIFY] [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+
+**Trước khi split** (sau L481), thêm bước kiểm tra format:
+
+AI đọc script → trả JSON `{"script_type": "top_list" | "narrative" | "other", "reasoning": "..."}`.
+
+Nếu AI detect type **khác** user chọn → popup:
+```
+⚠ Format không khớp
+
+Bạn chọn: Top/List
+AI phát hiện: Narrative
+Lý do: "Script kể theo trình tự sự kiện, không có danh sách liệt kê"
+
+[Tiếp tục với Top/List]  [Đổi sang Narrative]  [Hủy]
+```
+
+- **Tiếp tục**: giữ mode user chọn
+- **Đổi**: dùng mode AI suggest
+- **Hủy**: dừng pipeline
+
+Cần thêm:
+- `_sig_format_warning = pyqtSignal(str, str, str)` — (user_type, ai_type, reasoning)
+- `threading.Event` cho sync (giống framework ranking popup)
+- Prompt file mới: `system_detect_script_type.txt`
+
+#### [NEW] [system_detect_script_type.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_script_type.txt)
+
+Prompt ngắn để AI classify script type trước khi split.
+
+---
+
+#### [MODIFY] [system_narrative.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative.txt)
+
+Thêm rules:
+- **Merge rule**: CTA, intro, lời chào, sponsor, outro → gộp vào chapter kề bên (intro → ch.1, outro → ch cuối)
+- **Min size**: Mỗi chapter (trừ mở đầu/kết) nên ≥200 từ
+- **Max chapters**: Ưu tiên 5–12 chapters cho script trung bình
+
+---
+
+### Validation Logic
+
+#### [MODIFY] [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+
+**Chỉ áp dụng cho mode `narrative`** (top/list giữ nguyên logic).
+
+Sau khi `split_chapters()` trả kết quả (L491), thêm validation:
+
+```python
+# Validation thresholds (narrative only)
+MIN_WORDS = 200       # chapter body (trừ first/last)
+MAX_CHAPTERS = 15
+```
+
+**Flow:**
+1. Đếm số từ mỗi chapter → tìm "short chapters" (trừ first/last)
+2. Kiểm tra tổng chapters > 15
+3. Nếu có vi phạm → **re-split** (gọi `split_chapters()` lần 2 với feedback)
+4. Kiểm tra lại sau re-split
+5. Nếu **vẫn** vi phạm → emit signal → popup + CSV
+
+**Signal mechanism** (giống framework ranking popup):
+- `_sig_chapter_warning = pyqtSignal(str, str)` — (csv_path, summary)
+- Worker thread ghi CSV → emit signal → main thread show popup
+- Popup chỉ thông báo (OK button), không block pipeline
+- Pipeline vẫn **tiếp tục** với kết quả hiện có
+
+**CSV format** (`_chapter_report.csv`):
+```
+Chapter,Title,Words,Status
+1,Introduction,89,⚠ Short (<200)
+2,The Battle Begins,523,✓ OK
+...
+```
+
+---
+
+### Popup (thông báo, không block)
+
+#### [MODIFY] [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+
+Dialog đơn giản:
+```
+⚠ Cảnh báo chia chapter (Narrative)
+
+Sau 2 lần chia, vẫn còn vấn đề:
+- 3 chapter dưới 200 từ
+- Tổng 18 chapters (khuyến nghị ≤15)
+
+File báo cáo: _chapter_report.csv
+[OK]
+```
+
+## Verification Plan
+
+### Manual Verification
+- Chạy SRT tab với 1 file narrative dài
+- Kiểm tra prompt mới có giảm chapter nhỏ không
+- Nếu vẫn vi phạm → xác nhận popup + CSV xuất hiện

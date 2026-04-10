@@ -1,0 +1,122 @@
+# Audit: 7 MASSIVE Ancient Megaliths We Cannot Explain
+
+> Script viết **trước v2 changes** — dùng để so sánh baseline.
+
+## Tổng quan
+
+| Metric | Đánh giá |
+|--------|----------|
+| Chất lượng viết | ⭐⭐⭐⭐ Tốt — engaging, data-rich |
+| Structure variety | ⚠️ Trung bình — hầu hết cùng pattern |
+| Closing variety | ⚠️ Trung bình — 3 loại nhưng phân bố lệch |
+| Pivot diversity | ✅ Tốt — đa dạng |
+| 2nd-person usage | ✅ Tốt — đúng context |
+| Framework leak | ❌ Lặp "investigation" |
+| Vocabulary control | ✅ Tốt — analogies kịp thời |
+
+---
+
+## Chi tiết từng chương
+
+| Ch | Title | Structure thực tế | Closing thực tế | Pivot phrase |
+|---|---|---|---|---|
+| 01 | Intro | Hook: 2nd-person + thesis | N/A | N/A |
+| 02 | Shattered Titan | Scene→Evidence→**Mainstream→Counter**→3 Questions | **Rhetorical** (3 câu) | "the true anomaly... is not how it was raised" |
+| 03 | Laser-Cut Desert | Two stories→Data→**Mainstream→Counter**→3 Questions | **Rhetorical** (3 câu) | "It does not account for the *precision*" |
+| 04 | Factory on Roof | Scene→Evidence→**Mainstream→Counter**→Declarative | **Cold Fact** | "It does not confront the sheer, machine-like otherworldliness" |
+| 05 | Keyhole Kingdom | System build→Detail→**Mainstream→Gap**→Irony | **Irony** ✅ | "It does not prepare you for the profound silence" |
+| 06 | Republic of Tombs | Witness→Evidence→**Mainstream→Counter**→3 Questions | **Rhetorical** (3 câu) | "It struggles to account for a *republic*" |
+| 07 | Anchor of Eternity | Facade→Descend→Evidence→**Mainstream→Counter**→Cold | **Cold Fact** | "requires believing that... in a perfect vacuum" |
+| 08 | Mountain Temple | Legend→Evidence→**Mainstream→Counter**→Dual enigma | **Cold Fact** | "utterly fails to account for the timeline" |
+| 09 | Outro CTA | Echo + callback | N/A | N/A |
+
+---
+
+## Vấn đề phát hiện
+
+### 1. ❌ FRAMEWORK LEAK: "investigation" lặp 8 lần
+
+| Chương | Câu |
+|--------|-----|
+| Ch01 | "This **investigation** will open seven case files" |
+| Ch02 | "Our first file opens..." (case file language) |
+| Ch03 | "our **investigation** now moves to..." |
+| Ch04 | "our **investigation** now ascends..." |
+| Ch05 | "our **investigation** now turns to..." |
+| Ch06 | "our **investigation** turns to one..." |
+| Ch07 | "our **investigation** now travels west..." |
+| Ch08 | "our final **investigation** escalates..." |
+
+> **Fix (v2)**: `anti_framework_leak` giờ cấm "investigation" + WORD VARIETY rule.
+
+### 2. ⚠️ Closing type phân bố lệch
+
+| Type | Số lần | Chapters |
+|------|--------|----------|
+| Rhetorical Questions (3 câu) | 3 | Ch02, Ch03, Ch06 |
+| Cold Fact | 3 | Ch04, Ch07, Ch08 |
+| Irony | 1 | Ch05 |
+| Physical Consequence | 0 | — |
+
+> **Fix (v2)**: Outline assign closing_type, cấm 2 liên tiếp cùng loại.
+
+### 3. ⚠️ Structure lặp
+
+Tất cả body chapters đều dùng cùng formula cốt lõi:
+**Scene → Evidence → Mainstream Theory → Counter-evidence → Closing**
+
+Một số chương có biến tấu tự nhiên:
+- Ch05 (**Bureaucratic Anomaly** tự phát — gap là institutional silence)
+- Ch07 (**Innocent Facade** tự phát — peel back layers)
+- Ch08 (**Ticking Clock** tự phát — legend sets deadline)
+
+Nhưng KHÔNG CÓ outline chỉ định — AI tự nhiên thỉnh thoảng vary.
+
+> **Fix (v2)**: Outline assign `chapter_structure` bắt buộc — đảm bảo variety chủ động.
+
+### 4. ⚠️ Transition mở đầu lặp template
+
+6/7 body chapters mở bằng: **"From [summary ch trước], our investigation now [verb] to..."**
+
+> **Fix (v2)**: anti_framework_leak cấm "our investigation" + STRUCTURAL VARIETY rule.
+
+### 5. ✅ Pivot phrases — ĐA DẠNG TỐT
+
+| Chapter | Pivot |
+|---------|-------|
+| Ch02 | "the true anomaly is not X. It is Y" |
+| Ch03 | "It does not account for the *precision*" |
+| Ch04 | "It does not confront the sheer..." |
+| Ch05 | "It does not prepare you for..." |
+| Ch06 | "It struggles to account for..." |
+| Ch07 | "requires believing that..." |
+| Ch08 | "utterly fails to account for..." |
+
+Mỗi pivot khác nhau — nhưng 3/7 dùng template "It does not [verb]..."
+
+### 6. ✅ 2nd-person — ĐÚNG CONTEXT
+
+- Ch01: "You are standing in a quarry" — discovery ✅
+- Ch05: "You are not looking at a single monument. You are surrounded" — entering space ✅
+- Ch07: "you must leave the sunlight and descend" — entering forbidden space ✅
+- Các chương khác dùng 3rd-person cho phân tích — đúng
+
+### 7. ✅ Vocabulary control — TỐT
+
+Analogy ngay sau technical terms:
+- "330 tons — heavier than a fully loaded Boeing 747" ✅
+- "517 metric tons — heavier than two fully loaded Boeing 747s" ✅
+- "200-ton capstones — the equivalent of a dozen school buses" ✅
+
+---
+
+## Kết luận
+
+Script chất lượng **tốt** — engaging, data-rich, citations đầy đủ. Các vấn đề phát hiện là **chính xác những gì v2 changes nhắm vào**:
+
+1. Framework leak → ✅ Fixed by updated `anti_framework_leak`
+2. Closing type lệch → ✅ Fixed by outline assign `closing_type`
+3. Structure lặp → ✅ Fixed by outline assign `chapter_structure`
+4. Transition template → ✅ Fixed by WORD VARIETY rule
+
+**Khuyến nghị**: Chạy lại pipeline với script này sau v2 changes để so sánh trực tiếp.

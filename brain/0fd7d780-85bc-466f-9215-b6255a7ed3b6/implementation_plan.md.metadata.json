@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to rename all language codes (en/es) to full names (english/spanish) throughout the system: folders, UI dropdowns, code mappings, and niche rules. Also fixes 2 files with language mixing (verify, history) and makes niche rules language-aware.",
+  "updatedAt": "2026-03-14T13:26:28.119794Z",
+  "version": "3"
+}

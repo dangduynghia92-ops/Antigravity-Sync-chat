@@ -1,0 +1,72 @@
+# Audit: Style Rewrite Parameters — Battle of Lepanto
+
+## Kết luận tổng quan: ✅ Tool hiểu đúng và truyền tham số chính xác
+
+Pipeline hoạt động chính xác cho niche **Narrative Phân Tích Trận Đánh** với video "63 How Christians Crushed the Ottoman Empire — Battle of Lepanto 1571".
+
+---
+
+## 1. UI Parameters vs Actual Output
+
+| Tham số | UI Setting | Thực tế trong output | Đúng? |
+|---------|-----------|---------------------|-------|
+| **Mode** | Narrative | Blueprint đầy đủ dạng narrative (không phải review) | ✅ |
+| **Style** | ✦ Narrative Phân Tích Trận Đánh | Blueprint chứa đủ các trường battle analysis: `battle_phases`, `commanders`, `weapon_asymmetry`, `geography`, `technology_and_weapons` | ✅ |
+| **Framework** | Auto (detect & switch) | Detection → "The Investigative Deep-Dive" → Rankings → chọn top 2: The Pendulum (9.8), The Zoom Lens (9.5) | ✅ |
+| **Lang** | Español | Toàn bộ output viết bằng tiếng Tây Ban Nha | ✅ |
+| **Word Count** | Open: 250, Body: 600, End: 250 | Chapters có dung lượng phù hợp (5-7KB/chapter) | ✅ |
+| **Enrich Data** | ☑ Enabled | `_enrichment.json` có dữ liệu Google Search (1 field filled) | ✅ |
+
+---
+
+## 2. Chi tiết Pipeline
+
+### `_detection.json` — Framework Detection
+- Detected: **The Investigative Deep-Dive** (confidence: high)
+- Reasoning chính xác: mô tả đúng cấu trúc Reveal → Rewind → Build → Climax → Legacy
+
+### `_rankings.json` — Framework Ranking
+5 framework được xếp hạng, tất cả ≥ 8.5:
+
+| # | Framework | Score |
+|---|-----------|-------|
+| 1 | **The Pendulum** | 9.8 |
+| 2 | **The Zoom Lens** | 9.5 |
+| 3 | The Trial | 9.2 |
+| 4 | The Domino Chain | 9.0 |
+| 5 | The Investigative Deep-Dive | 8.5 |
+
+→ Top 2 được chọn tự động cho dual-version output ✅
+
+### `_blueprint.json` — 386 dòng, cực kỳ chi tiết
+- **11 commanders** (Don Juan, Ali Pasha, Bragadin, Cervantes, etc.)
+- **5 battle phases** (Preludio → Galeazas → Flanco Norte → Centro → Aftermath)
+- **5 weapons/tech** (Galeaza, Arcabuz, Arco compuesto, Galera, Redes)
+- **3 weapon asymmetries** với so sánh chi tiết
+- **4 emotional drivers** (Venganza, Gloria, Honor, Fervor religioso)
+- **8 must-include items** — tất cả key moments của trận Lepanto
+
+### `_enrichment.json` — Google Search Enrichment
+- Filled 1 field: bổ sung thông tin chính xác về Uluç Ali (fate, key decisions)
+- Còn 3 fields trống (side_b commanders, evidence_against)
+
+---
+
+## 3. Chất lượng Output
+
+### v1_The_Pendulum (6 chapters, ~40KB)
+- Audit: Merge ch6+ch7 thành 1 chapter (framework fit fix) ✅
+- Review score: **8.5/10** — 2 issues phát hiện:
+  - 🔴 **Major**: Ch3 setup (cắt espolones) chưa được payoff ở ch4-5
+  - 🟡 **Minor**: Ch1→Ch2 lặp câu mở đầu
+
+### v2_The_Zoom_Lens (7 chapters, ~48KB)
+- Audit: Merge ch3+ch4 (fix repeated framework step) ✅
+- Review score: **9.5/10** — **0 issues** 🎯
+
+---
+
+## 4. Vấn đề nhỏ cần lưu ý
+
+> [!NOTE]
+> Config file (`rewrite_style_config_config.json`) lưu `lang: "English"` nhưng UI session đang chọn **Español**. Đây là behavior đúng — config lưu giá trị mặc định, còn session override (Español) được truyền trực tiếp khi chạy.

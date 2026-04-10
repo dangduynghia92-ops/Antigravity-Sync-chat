@@ -1,0 +1,17 @@
+# SRT Chapter Tab Fixes
+
+## Completed
+- [x] Auto-detect SRT format regardless of file extension
+- [x] Add (mm:ss) timecodes to SRT text for chapter guide matching
+- [x] Strip timecodes from saved chapter output
+- [x] Add AI punctuation step for SRT content  
+- [x] Fix pipeline order (Verify before Punctuate)
+- [x] Optimize API tier usage (Flash for lightweight steps)
+- [x] Parallelize punctuation (4 threads + retry)
+- [x] Fix timeout issue (use default 600s)
+- [x] Implement resume/checkpoint system
+  - [x] Save checkpoint after Split completes
+  - [x] Save checkpoint after Verify completes
+  - [x] Save checkpoint after Punctuate completes
+  - [x] Resume from last checkpoint on re-run
+  - [x] Clean up checkpoint after full completion

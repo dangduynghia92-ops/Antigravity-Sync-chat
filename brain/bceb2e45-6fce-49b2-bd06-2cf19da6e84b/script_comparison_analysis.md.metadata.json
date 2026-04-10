@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Forensic comparison of original English shotgun script vs Spanish rewritten version. Identifies three layers of content mirroring that triggered content moderation flags: (1) rhetorical comparisons copied verbatim (DP-12 vs M4 collapsed benchmark), (2) argument structure mirrored per product (Saiga sanctions narrative arc, VR80 competition-vs-combat pivot, TS12 training-cost framing), (3) emotional arcs replicated (M4 chapter is near carbon-copy). Root cause traced to extract blueprint prompt's 'include EVERYTHING' rule, which fails to distinguish between verifiable specs and author's creative rhetoric. Proposes 3-layer fix: extract prompt separates fact vs rhetoric, outline prompt forces original argument angles, writer prompt strengthens anti-mirroring rule.",
+  "updatedAt":  "2026-04-03T00:55:50.894991200Z",
+  "requestFeedback":  true
+}

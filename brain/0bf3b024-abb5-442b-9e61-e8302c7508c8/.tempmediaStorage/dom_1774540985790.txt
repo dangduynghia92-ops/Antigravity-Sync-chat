@@ -1,0 +1,62 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+📖 User Manual
+SRT Chapter Splitter v1.0
+[0] (139,111)<div >Auto Pipeline />
+	[1] (34,111)<span >🚀 />
+[2] (139,151)<div >YouTube />
+	[3] (34,151)<span >📥 />
+[4] (139,191)<div >SRT Chapter />
+	[5] (34,191)<span >📂 />
+[6] (139,232)<div >Regroup />
+	[7] (34,232)<span >🔀 />
+[8] (139,272)<div >Rewrite />
+	[9] (34,272)<span >✍️ />
+[10] (139,312)<div >Style Rewrite />
+	[11] (30,312)<span >✦ />
+[12] (139,353)<div >Video Cutter />
+	[13] (32,353)<span >✂ />
+[14] (139,393)<div >TTS Cleanup />
+	[15] (34,393)<span >🔊 />
+[16] (139,433)<div >Style Analyzer />
+	[17] (34,433)<span >🔍 />
+[18] (139,474)<div >Cookies />
+	[19] (34,474)<span >🍪 />
+[20] (139,514)<div >Chat />
+	[21] (34,514)<span >💬 />
+📥 YouTube
+Tab này có 2 sub-tab:
+Download
+và
+Scanner
+.
+Download
+Tải transcript/subtitle từ video YouTube.
+Paste URL video vào ô input.
+Nhấn
+Add
+để thêm vào danh sách.
+Nhấn
+▶ Download
+để bắt đầu tải.
+Transcript sẽ được lưu vào thư mục Output đã chọn.
+Batch mode
+— Thêm nhiều URL cùng lúc (mỗi dòng 1 URL).
+Format
+— Chọn định dạng: SRT, TXT, hoặc cả hai.
+Scanner
+Quét playlist hoặc channel YouTube để tìm video mới.
+Paste URL playlist hoặc channel.
+Nhấn
+Scan
+để quét danh sách video.
+Kết quả xuất ra file Excel (
+.xlsx
+) với thông tin: tiêu đề, view count, ngày đăng.
+ℹ️ Scanner cần cookies YouTube để truy cập một số playlist riêng tư. Xem tab
+Cookies
+.
+
+</current_dom>

@@ -1,0 +1,11 @@
+# Full Code Audit
+
+- [/] Audit chapter_tab.py + chapter_splitter.py
+- [ ] Audit regroup_tab.py + regroup.py
+- [ ] Audit rewrite_tab.py + rewriter.py
+- [ ] Audit tts_tab.py + tts_cleanup.py
+- [ ] Audit settings_dialog.py + config_manager.py
+- [ ] Audit api_client.py
+- [ ] Audit main_window.py + theme.py
+- [ ] Check redundant imports across all files
+- [ ] Report findings

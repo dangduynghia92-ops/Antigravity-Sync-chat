@@ -1,0 +1,19 @@
+# Tasks
+
+- [x] Thread Safety Fixes
+  - [x] Fix [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py) — scan, classify
+  - [x] Fix [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) — analyze, rewrite, narrative, fix_rewrite, ai_merge, manual_merge
+  - [x] Fix [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) — process_item via `_proc_cfg`, summarize
+
+- [x] Content Length Filter (Regroup tab)
+  - [x] Add `min_content_length` param to [scan_output_folder](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#133-209)
+  - [x] Add checkbox + spinbox UI
+  - [x] Fix chapter pattern to match renamed files (`72_Chapter...`)
+
+- [x] Chapter Reorder Suggestion (Narrative)
+  - [x] Create [system_reorder.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reorder.txt) prompt
+  - [x] Add [suggest_chapter_order()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#544-592) + [export_reorder_csv()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#594-625) to [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+  - [x] Add signal + popup dialog to [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+  - [x] Integrate into `_do_narrative_pipeline` (Step 2/7)
+  - [x] Renumber steps 1-7
+  - [x] Verify imports

@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Implementation plan to add Google Search Grounding verification to the Prompt_Image pipeline. Covers: adding call_gemini_native to api_client.py, creating historical_verifier.py module with verify_bible_google() function, creating gemini_keys.json config, modifying process_controller.py pipeline to insert verification after bible generation but before prompt generation, and adding Google Check checkbox to config_section.py UI. The verification uses Gemini API + Google Search to fact-check uniforms, weapons, banners, architecture against real historical records for the specific era depicted in the SRT content.",
+  "updatedAt": "2026-03-30T11:35:31.210162Z",
+  "requestFeedback": true
+}

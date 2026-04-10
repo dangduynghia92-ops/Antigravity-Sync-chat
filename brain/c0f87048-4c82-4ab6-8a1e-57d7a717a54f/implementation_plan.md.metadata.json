@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan for dual-framework parallel execution in Narrative pipeline. Auto-selects top 2 frameworks with score ≥ 8.5, runs steps 5-8 in parallel threads with shared data in parent dir and framework-specific output in v1_/v2_ subdirectories.",
+  "updatedAt": "2026-03-24T23:49:02.398584600Z",
+  "version": "2"
+}

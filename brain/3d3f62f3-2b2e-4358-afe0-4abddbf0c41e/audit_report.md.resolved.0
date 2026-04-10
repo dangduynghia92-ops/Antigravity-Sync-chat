@@ -1,0 +1,52 @@
+# Code Audit Report
+
+## ✅ No Critical Bugs Found
+All 17 files pass syntax check. No runtime errors detected beyond already-fixed issues.
+
+---
+
+## 🔴 Bugs / Potential Runtime Errors
+
+| # | File | Issue |
+|---|------|-------|
+| 1 | [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#L406) | `QMessageBox` imported inline (L406) — nếu có chỗ khác dùng QMessageBox trước dòng 406, sẽ crash. Nên import ở đầu file |
+| 2 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L136) | `QCheckBox` imported inline **2 lần** (L136, L1572) — thừa, đã có thể import ở đầu file |
+| 3 | [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#L2276) | `import re as _re` inline (L2276) — nên import [re](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#685-863) ở đầu file |
+
+---
+
+## 🟡 Unused Imports (code thừa)
+
+| File | Line | Import |
+|------|------|--------|
+| [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) | L13 | `QTimer` |
+| [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) | L17 | [srt_to_text](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/srt_parser.py#82-91), [srt_to_full_text](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/srt_parser.py#93-100) |
+| [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) | L18 | `read_file`, `read_google_doc` |
+| [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) | L20 | `load_settings` |
+| [chapter_splitter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py) | L8 | `field` |
+| [regroup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py) | L10 | `field`, `asdict` |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | L9 | `datetime` |
+| [tts_cleanup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py) | L7 | `json` |
+
+---
+
+## 🟢 Code Smells (không gây lỗi nhưng nên sửa)
+
+| # | File | Issue |
+|---|------|-------|
+| 1 | rewrite_tab.py | `import shutil` inline (L2288) — nên ở đầu file |
+| 2 | rewrite_tab.py | `import glob` inline (L2227) — nên ở đầu file |
+| 3 | rewrite_tab.py | `import subprocess` inline 2 lần (L404, L1858) |
+| 4 | rewrite_tab.py | `import csv` inline (L1795) |
+| 5 | regroup_tab.py | `import csv` inline (L391) |
+| 6 | chapter_tab.py | `import glob` inline (L503) |
+
+---
+
+## ✅ Verified Clean
+
+- `setFixedWidth` — chỉ dùng cho icon labels (18px) → đúng
+- `_MERGE_STATUS.json` — không bị vô tình xử lý bởi TTS cleanup (đã filter `_MERGE`, `_STATUS`)
+- Old `ch_info["merged"]` — không còn reference nào trong core files
+- [save_rewrite_status](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#122-127) — không còn ghi merged field
+- Tất cả nút đều có tooltip

@@ -1,0 +1,170 @@
+# Audit: Toàn Bộ 7 Prompt Niche Tiểu Sử
+
+## Pipeline Order
+```
+1. research  → 2. extract  → 3. enrich  → 4. outline  → 5. audit  → 6. write  → 7. review
+```
+
+---
+
+## 1. [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt) (355 dòng)
+
+**Mục đích**: AI tự research từ knowledge → tạo blueprint JSON cho New Content pipeline.
+
+**Vai trò hiện tại**: `"You are a biographical research specialist"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ⚠️ Khô khan | Chỉ là job title, không có persona |
+| Tone | ⚠️ Encyclopedic | Lặp "Include ALL" 13 lần → incentivize data dump |
+| Output quality | ⚠️ Quá nhiều data | Sinh ra 60K chars, gấp 2.5x blueprint gốc |
+| Hiệu quả | ✅ Đủ các field | Cấu trúc JSON rõ ràng, đầy đủ 20 sections |
+
+**Vấn đề chính**: 
+- `"Include ALL known details. Do NOT skip ANY known fact"` (dòng 4, 10, 14-29) → nguồn gốc data bloat
+- Không có hướng dẫn về **narrative value** — AI dump mọi thứ, kể cả chi tiết không kịch tính
+
+**Đề xuất**:
+- ⚡ Giữ nguyên (prompt này CẦN thu thập đầy đủ data — nó là research, không phải writing)
+- Vấn đề data bloat nên giải quyết ở bước **expand** (trong code `_build_research_expand_prompt`) hoặc thêm bước curation
+
+---
+
+## 2. [system_extract_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_biography.txt) (269 dòng)
+
+**Mục đích**: Đọc transcript → trích xuất blueprint JSON cho Rewrite pipeline.
+
+**Vai trò hiện tại**: `"You are a biographical data extraction specialist"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ Phù hợp | Extraction = đúng job, không cần persona sáng tạo |
+| Tone | ✅ Chính xác | "Extract DATA ONLY", không copy sentences |
+| Source tagging | ✅ Tốt | Phân biệt "transcript" vs "ai_knowledge" |
+| Hiệu quả | ✅ Hoạt động tốt | Tạo ra blueprint 24K chars (gọn, chất lượng) |
+
+**Không có vấn đề đáng kể.** Prompt này hoạt động đúng vì nó extract TỪ transcript đã có sẵn dramatic tone.
+
+---
+
+## 3. [system_enrich_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_biography.txt) (50 dòng)
+
+**Mục đích**: Bổ sung data thiếu vào blueprint (từ AI knowledge hoặc Google Search).
+
+**Vai trò hiện tại**: `"You are a biographical research enrichment specialist"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ Phù hợp | Enrichment = fill gaps |
+| Priority order | ✅ Tốt | myths > turning_points > dual_nature > gaps |
+| Scope | ✅ Rõ ràng | "ONLY ADD, do NOT remove" |
+| Hiệu quả | ✅ Tốt | Bổ sung mà không phá data gốc |
+
+**Không có vấn đề đáng kể.** Gọn, focused, có priority.
+
+---
+
+## 4. [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt) (204 dòng)
+
+**Mục đích**: Tạo outline chi tiết (chapter plan) từ blueprint + framework.
+
+**Vai trò hiện tại**: `"You are a biography narrative outline generator"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ OK | Generator = functional, phù hợp |
+| Structure rules | ✅ Xuất sắc | 8 structures, assignment rules, variety checks |
+| Open loop protocol | ✅ Chặt chẽ | Chain integrity, no orphans |
+| Framework integration | ✅ Tốt | Steps → chapters mapping with `phase_chapter_plan` |
+| Output JSON | ✅ Rất chi tiết | Mọi field cần thiết cho writer |
+
+**Vấn đề nhỏ**:
+- Dòng 117: `"MICRO-CONFLICT: Every chapter must have at least 1 tension shift"` — nhưng không giải thích micro-conflict là gì. Writer prompt mới đã có MICRO-TENSION, cần đảm bảo 2 prompt dùng cùng 1 khái niệm.
+
+**Đề xuất**: Không cần sửa lớn. Có thể thêm 1 dòng giải thích micro-conflict.
+
+---
+
+## 5. [system_narrative_audit_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_biography.txt) (65 dòng)
+
+**Mục đích**: Kiểm tra outline → phát hiện lỗi cấu trúc trước khi viết.
+
+**Vai trò hiện tại**: `"You are an expert biography narrative script structure auditor"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ Phù hợp | Auditor = kiểm tra, không sáng tạo |
+| Checklist | ✅ Đầy đủ | 15 checks covering mọi aspect |
+| Actions | ✅ Rõ ràng | Fix variety, redistribute myths, fix loops |
+| Constraints | ✅ Tốt | "DO NOT ADD chapters" — chỉ modify |
+
+**Không có vấn đề.** Prompt audit rất focused và effective.
+
+---
+
+## 6. [system_narrative_write_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt) (288 dòng) ← VỪA REFACTOR
+
+**Mục đích**: Viết chapter chi tiết từ blueprint + outline.
+
+**Vai trò hiện tại**: `"You are not just a writer — you are the voice that pulls a stranger into another person's life and makes them CARE..."`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ Mạnh | Persona rõ, có cảm xúc |
+| Writing craft | ✅ Mới thêm | 7 rules gộp, không trùng lặp |
+| Structures | ✅ Tốt | 8 structures với BAD/GOOD |
+| Closings | ✅ Tốt | 6 types với anti-patterns |
+| Golden sample | ✅ Mới | Few-shot anchoring |
+| Priority order | ✅ Mới | Word count > Structure > Show > Engagement |
+
+**Đã fix xong.** Không còn vấn đề trùng lặp.
+
+---
+
+## 7. [system_narrative_review_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_biography.txt) (55 dòng)
+
+**Mục đích**: Đọc TẤT CẢ chapters → phát hiện lỗi cross-chapter.
+
+**Vai trò hiện tại**: `"You are a quality reviewer for biography narrative scripts"`
+
+| Hạng mục | Đánh giá | Chi tiết |
+|---|---|---|
+| Role | ✅ Phù hợp | Reviewer = quality check |
+| Checks | ✅ Đầy đủ | 15 checks: facts, loops, myths, vocab, pacing |
+| Output | ✅ Actionable | Severity levels, specific fix suggestions |
+
+**Vấn đề**:
+- ⚠️ **Chỉ kiểm tra consistency, KHÔNG kiểm tra writing quality.** Reviewer check "dates match?" và "vocabulary ban?" nhưng KHÔNG check:
+  - Có thực sự show don't tell không?
+  - Có micro-tension trong từng paragraph không?
+  - Có data dump nào không?
+  - Tone có giống Wikipedia không?
+
+**Đề xuất**: Thêm 2-3 writing quality checks:
+```
+16. SHOW DON'T TELL CHECK — Flag any paragraph that summarizes events 
+    without a scene (no action, no dialogue, no sensory detail).
+17. DATA DUMP CHECK — Flag any paragraph with 3+ dates/facts 
+    listed consecutively without narrative framing.
+18. TONE CHECK — Flag any passage that reads like an encyclopedia 
+    entry rather than a documentary voiceover.
+```
+
+---
+
+## Tổng Kết
+
+| Prompt | Dòng | Trạng thái | Cần sửa? |
+|---|---|---|---|
+| 1. research | 355 | ⚠️ Data bloat | Không sửa (fix ở bước expand/curation) |
+| 2. extract | 269 | ✅ OK | Không |
+| 3. enrich | 50 | ✅ OK | Không |
+| 4. outline | 204 | ✅ OK | Nhỏ (giải thích micro-conflict) |
+| 5. audit | 65 | ✅ OK | Không |
+| **6. write** | **288** | **✅ Vừa fix** | Không |
+| 7. review | 55 | ⚠️ Thiếu quality checks | ⭐ Nên thêm 2-3 checks |
+
+### Action Items
+
+1. **Review prompt (#7)** — thêm writing quality checks (show/tell, data dump, tone) ← QUAN TRỌNG vì step review là "lần cuối" có thể bắt lỗi trước khi output final
+2. **Research prompt (#1)** — giữ nguyên, nhưng cân nhắc sửa `_build_research_expand_prompt` trong code để Pro expand **curate** thay vì ADD MORE

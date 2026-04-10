@@ -1,0 +1,118 @@
+# Redesign Character Pipeline Flow
+
+## Mục tiêu
+Xây dựng lại toàn bộ flow từ SRT → prompt ảnh, phân biệt rõ cái nào dùng ảnh tham chiếu (label), cái nào mô tả full text.
+
+## Flow mới khi bật Character Sheet
+
+```
+SRT files
+  │
+  ├─ Step 1: SCAN CHARACTERS ──────────────────────────────
+  │  Input:  Toàn bộ nội dung SRT
+  │  Output: Danh sách nhân vật (max 10)
+  │          - PROTAGONIST: nhân vật chính (có tên)
+  │          - NAMED: nhân vật phụ quan trọng (có tên)
+  │          - MILITARY: 1 đại diện/phe (quân phục + vũ khí)
+  │
+  ├─ Step 2: SCAN LOCATIONS ───────────────────────────────
+  │  Input:  Toàn bộ nội dung SRT
+  │  Output: Danh sách địa điểm + mô tả
+  │
+  ├─ Step 3: CHARACTER BIBLE ──────────────────────────────
+  │  Input:  Danh sách nhân vật từ Step 1
+  │  Output: _character_bible.csv
+  │          Mỗi nhân vật có:
+  │          - 4 thuộc tính (headwear, hair/face, outfit, weapon)
+  │          - SHEET_PROMPT (prompt tạo ảnh 3 views)
+  │
+  ├─ Step 4: VISUAL BIBLE (MỚI - luôn chạy song song) ───
+  │  Input:  Toàn bộ nội dung SRT 
+  │  Output: _visual_bible.txt
+  │          MÔ TẢ mọi thứ KHÔNG có character sheet:
+  │          - Trang phục dân thường, quan lại
+  │          - Kiến trúc, công trình
+  │          - Đồ vật, phương tiện
+  │          - Bối cảnh thời đại, màu sắc
+  │          KHÔNG mô tả nhân vật đã có trong character bible
+  │
+  ├─ Step 5: GENERATE PROMPTS ─────────────────────────────
+  │  Input:  Segment text + Style + Character Bible + Visual Bible + Locations
+  │  
+  │  AI viết prompt theo quy tắc:
+  │  ┌─────────────────────────────────────────────────────┐
+  │  │ PROTAGONIST/NAMED → Chỉ ghi LABEL                  │
+  │  │   VD: "Christian-Commander-A stands on deck..."     │
+  │  │   User sẽ đính --cref với ảnh sheet                 │
+  │  │                                                     │
+  │  │ MILITARY → Mô tả quân phục + vũ khí từ char bible  │
+  │  │   VD: "soldiers in morion helmets, red vests,       │
+  │  │        carrying arquebuses..."                      │
+  │  │   User sẽ đính --sref với ảnh sheet                 │
+  │  │                                                     │
+  │  │ Mọi thứ khác → Mô tả đầy đủ từ visual bible       │
+  │  │   VD: "stone Mediterranean building with arched     │
+  │  │        doorways, terracotta roof tiles..."          │
+  │  └─────────────────────────────────────────────────────┘
+  │
+  └─ Output: {chapter}_prompts.csv
+```
+
+## Flow khi CHỈ bật Historical (không Character Sheet)
+
+```
+SRT → Visual Bible (mô tả tất cả) → Generate Prompts
+```
+Không tạo character sheet. Visual Bible bao gồm mô tả nhân vật luôn.
+
+## Flow khi không bật gì
+
+```
+SRT → Generate Prompts (chỉ dùng style + segment text)
+```
+
+## Proposed Changes
+
+### Prompt Files
+
+#### [MODIFY] [character_scan_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_scan_prompt.txt)
+Đã sửa xong: chỉ PROTAGONIST, NAMED, MILITARY. Max 10.
+
+#### [MODIFY] [character_group_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt)
+Đã sửa xong: 3 groups, MILITARY focus uniform + weapon.
+
+#### [MODIFY] Style prompt (srt_default.txt hoặc logic trong prompt_generator.py)
+Thêm quy tắc cho AI khi viết prompt ảnh:
+- Nhân vật có trong character bible PROTAGONIST/NAMED → dùng LABEL
+- MILITARY → mô tả quân phục (copy từ character bible)
+- Mọi thứ khác → mô tả đầy đủ (từ visual bible)
+
+---
+
+### Core Logic
+
+#### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+Khi Character Sheet ON: chạy CẢ character pipeline + visual bible (hiện tại chỉ chạy 1 trong 2).
+
+#### [MODIFY] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+Update [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-279):
+- Gửi character bible labels + descriptions
+- Gửi visual bible
+- Thêm instruction phân biệt LABEL vs mô tả full
+
+---
+
+## Output Files Summary
+
+| File | Khi nào tạo | Nội dung |
+|---|---|---|
+| [_character_bible.csv](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_character_bible.csv) | Character Sheet ON | Nhân vật + sheet prompt |
+| `_visual_bible.txt` | Historical ON hoặc Character Sheet ON | Bối cảnh (trừ nhân vật đã có sheet) |
+| [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) | Character Sheet ON | Địa điểm |
+| `{chapter}_prompts.csv` | Luôn tạo | Prompt ảnh cho từng segment |
+
+## Verification Plan
+- Chạy pipeline với kịch bản Battle of Lepanto
+- Kiểm tra character_bible.csv ≤ 10 nhân vật
+- Kiểm tra visual_bible.txt có mô tả civilians, architecture
+- Kiểm tra prompts.csv: PROTAGONIST/NAMED dùng LABEL, MILITARY mô tả quân phục, civilians mô tả đầy đủ

@@ -1,0 +1,56 @@
+# SRT Chapter Splitter — Walkthrough
+
+## Summary
+
+Built a complete PyQt6 desktop application for splitting YouTube SRT subtitle files into chapters using AI. The app supports two script types (Top/List and Narrative), batch processing, automatic chapter verification, and multi-endpoint API failover.
+
+## Project Structure
+
+```
+2.Script_Split_Chapter/
+├── main.py                         # Entry point
+├── requirements.txt                # PyQt6, requests
+├── core/
+│   ├── api_client.py               # Multi-endpoint API router + failover
+│   ├── config_manager.py           # JSON config save/load per-tab
+│   ├── srt_parser.py               # SRT file parser
+│   ├── chapter_splitter.py         # AI chapter splitting + verification
+│   └── process_controller.py       # ThreadPoolExecutor + start/pause/stop
+├── ui/
+│   ├── theme.py                    # Dark/Light QSS theme system
+│   ├── icons/arrow_down.svg        # ComboBox/SpinBox arrows
+│   ├── icons/arrow_up.svg
+│   ├── searchable_combo.py         # Searchable QComboBox
+│   ├── log_section.py              # Processing Log panel
+│   ├── header_bar.py               # App title + Restart + Settings
+│   ├── settings_dialog.py          # API endpoints + theme + dependencies
+│   ├── projects_section.py         # Tree view with folder grouping
+│   ├── chapter_tab.py              # Main tab: config + projects + actions
+│   └── main_window.py              # Main window assembly
+└── prompts/
+    ├── system_toplist.txt           # Top/List script prompt
+    ├── system_narrative.txt         # Narrative script prompt
+    ├── system_verify.txt            # Verification prompt
+    └── fallback_chapter.txt         # Fallback default prompt
+```
+
+## Key Features
+
+| Feature | Implementation |
+|---------|---------------|
+| Dark/Light theme | [ui/theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/theme.py) — centralized QSS with [apply_theme()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/theme.py#392-398) |
+| Multi-endpoint failover | [core/api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py) — auto-switch on 429/5xx |
+| Batch processing | [core/process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/process_controller.py) — ThreadPoolExecutor |
+| Start/Pause/Stop | State machine with `threading.Event` |
+| Config persistence | Per-tab JSON files (`chapter_config.json`) |
+| API logging | Optional JSONL logging to `logs/api_history.jsonl` |
+| Auto-save | Results saved per-item immediately on completion |
+| Chapter verification | AI verification step before final output |
+| External prompts | [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt) files in `prompts/` — editable without code changes |
+| File management | Scan folder, add files, dedup, tree view grouping |
+| Output | Per-chapter [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt), merged file, summary file |
+
+## Verification
+
+- **Import check**: `python -c "from ui.main_window import MainWindow; ..."` — **passed**
+- **App launch**: `python main.py` — **running without errors**

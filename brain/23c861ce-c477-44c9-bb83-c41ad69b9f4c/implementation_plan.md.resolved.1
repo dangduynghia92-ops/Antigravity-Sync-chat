@@ -1,0 +1,107 @@
+# Tách Prompt Riêng Theo Niche
+
+Refactor từ binary `_is_mystery` dispatch sang niche-based dispatch map. Mỗi niche (firearms, military, mystery) sẽ có bộ prompt riêng hoàn toàn.
+
+## Proposed Changes
+
+### New Prompt Files
+
+Tạo **10 file mới** bằng cách copy từ shared prompts:
+
+| Shared Prompt (giữ làm fallback) | → Firearms Copy | → Military Copy | Mystery (đã có) |
+|---|---|---|---|
+| [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) | `system_extract_blueprint_firearms.txt` [NEW] | `system_extract_blueprint_military.txt` [NEW] | [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt) ✅ |
+| [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt) | `system_reality_check_firearms.txt` [NEW] | `system_reality_check_military.txt` [NEW] | [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt) ✅ |
+| [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) | `system_check_blueprint_firearms.txt` [NEW] | `system_check_blueprint_military.txt` [NEW] | [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt) ✅ |
+| [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) | `system_review_outline_firearms.txt` [NEW] | `system_review_outline_military.txt` [NEW] | [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) ✅ |
+| [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt) | `system_audit_outline_firearms.txt` [NEW] | `system_audit_outline_military.txt` [NEW] | [system_audit_outline_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_mystery.txt) ✅ |
+| [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) | `system_review_cross_chapter_firearms.txt` [NEW] | `system_review_cross_chapter_military.txt` [NEW] | [system_review_cross_chapter_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter_mystery.txt) ✅ |
+
+> [!NOTE]
+> Giữ nguyên shared prompts làm **fallback** cho niche mới chưa có prompt riêng.
+
+---
+
+### Python Code Changes
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Thay thế tất cả binary `_is_mystery` dispatch bằng **niche prompt map** pattern thống nhất:
+
+```python
+# Helper function (add once at top of file)
+_NICHE_PROMPT_MAP = {
+    "extract_blueprint": {
+        "firearms": "system_extract_blueprint_firearms.txt",
+        "military": "system_extract_blueprint_military.txt",
+        "mystery":  "system_extract_blueprint_mystery.txt",
+        "_default": "system_extract_blueprint_review.txt",
+    },
+    "reality_check": {
+        "firearms": "system_reality_check_firearms.txt",
+        "military": "system_reality_check_military.txt",
+        "mystery":  "system_reality_check_mystery.txt",
+        "_default": "system_reality_check.txt",
+    },
+    "check_blueprint": {
+        "firearms": "system_check_blueprint_firearms.txt",
+        "military": "system_check_blueprint_military.txt",
+        "mystery":  "system_check_blueprint_mystery.txt",
+        "_default": "system_check_blueprint.txt",
+    },
+    "audit_outline": {
+        "firearms": "system_audit_outline_firearms.txt",
+        "military": "system_audit_outline_military.txt",
+        "mystery":  "system_audit_outline_mystery.txt",
+        "_default": "system_audit_outline_review.txt",
+    },
+    "cross_chapter": {
+        "firearms": "system_review_cross_chapter_firearms.txt",
+        "military": "system_review_cross_chapter_military.txt",
+        "mystery":  "system_review_cross_chapter_mystery.txt",
+        "_default": "system_review_cross_chapter.txt",
+    },
+    "outline": {
+        "firearms": "system_review_outline_firearms.txt",
+        "military": "system_review_outline_military.txt",
+        "mystery":  "system_mystery_outline.txt",
+        "_default": "system_review_outline.txt",
+    },
+}
+
+def _get_niche_prompt(step: str, niche: str) -> str:
+    """Get the prompt file for a specific step + niche combo."""
+    step_map = _NICHE_PROMPT_MAP.get(step, {})
+    niche_lower = (niche or "").lower()
+    for key, fname in step_map.items():
+        if key != "_default" and key in niche_lower:
+            return fname
+    return step_map.get("_default", "")
+```
+
+**Sửa 5 hàm** — thay `_is_mystery` logic:
+
+| Function | Line | Old | New |
+|---|---|---|---|
+| [extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1295-1341) | L1310-1311 | `_is_mystery` binary | `_get_niche_prompt("extract_blueprint", niche)` |
+| [audit_outline_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1343-1396) | L1358-1359 | `_is_mystery` binary | `_get_niche_prompt("audit_outline", niche)` |
+| [review_cross_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1398-1442) | L1411-1412 | `_is_mystery` binary | `_get_niche_prompt("cross_chapter", niche)` |
+| [check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1938-1993) | L1951-1952 | `_is_mystery` binary | `_get_niche_prompt("check_blueprint", niche)` |
+| [reality_check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2132-2182) | L2144-2145 | `_is_mystery` binary | `_get_niche_prompt("reality_check", niche)` |
+
+**Merge outline functions**: [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2708-2840) (L2708) và [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2571-2706) (L2571) hiện là 2 hàm riêng. Thêm `niche` param cho [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2708-2840) và dispatch từ map — hoặc giữ nguyên 2 hàm riêng (ít risk hơn).
+
+> [!IMPORTANT]
+> Giữ nguyên 2 hàm outline riêng ([create_review_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2708-2840) + [create_mystery_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2571-2706)) vì logic khác nhau nhiều. Chỉ refactor 5 hàm dùng binary dispatch.
+
+---
+
+## Verification Plan
+
+### Automated
+- Grep tất cả `_is_mystery` → phải = 0 sau refactor
+- Grep `_get_niche_prompt` → phải = 5 (1 per function)
+
+### Manual
+- Chạy pipeline với niche firearms → verify đúng prompt file được load
+- Chạy pipeline với niche mystery → verify không regression

@@ -1,0 +1,118 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+Scrape Creators Documentation
+Documentation
+Search...
+[0] (500,500)<div  />
+[1] (828,500)<div class='h-full overflow-y-auto' scrollable='true' />
+	TikTok Shop
+	[2] (820,93)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/shop/search' />
+		[3] (833,93)<div  />
+			[4] (721,93)<span >GET />
+			[5] (791,93)<span >Shop Search />
+	[6] (820,136)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/shop/products' />
+		[7] (833,136)<div  />
+			[8] (721,136)<span >GET />
+			[9] (799,136)<span >Shop Products />
+	[10] (820,180)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/product' />
+		[11] (833,180)<div  />
+			[12] (721,180)<span >GET />
+			[13] (801,180)<span >Product Details />
+	[14] (820,224)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/shop/product/reviews' />
+		[15] (833,224)<div  />
+			[16] (721,224)<span >GET />
+			[17] (805,224)<span >Product Reviews />
+	Instagram
+	[18] (820,328)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/profile' />
+		[19] (833,328)<div  />
+			[20] (721,328)<span >GET />
+			[21] (768,328)<span >Profile />
+	[22] (820,372)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/basic-profile' />
+		[23] (833,372)<div  />
+			[24] (721,372)<span >GET />
+			[25] (789,372)<span >Basic Profile />
+	[26] (820,415)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/user/posts' />
+		[27] (833,415)<div  />
+			[28] (721,415)<span >GET />
+			[29] (763,415)<span >Posts />
+	[30] (820,459)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/post' />
+		[31] (833,459)<div  />
+			[32] (721,459)<span >GET />
+			[33] (796,459)<span >Post/Reel Info />
+	[34] (820,503)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/media/transcript' />
+		[35] (833,503)<div  />
+			[36] (721,503)<span >GET />
+			[37] (780,503)<span >Transcript />
+	[38] (820,546)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/reels/search' />
+		[39] (833,546)<div  />
+			[40] (721,546)<span >GET />
+			[41] (791,546)<span >Search Reels />
+	[42] (820,590)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/post/comments' />
+		[43] (833,590)<div  />
+			[44] (721,590)<span >GET />
+			[45] (785,590)<span >Comments />
+	[46] (820,634)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/reels' />
+		[47] (833,634)<div  />
+			[48] (721,634)<span >GET />
+			[49] (763,634)<span >Reels />
+	[50] (820,677)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlights' />
+		[51] (833,677)<div  />
+			[52] (721,677)<span >GET />
+			[53] (804,677)<span >Story Highlights />
+	[54] (820,721)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlight/detail' />
+		[55] (833,721)<div  />
+			[56] (721,721)<span >GET />
+			[57] (810,721)<span >Highlights Details />
+	[58] (820,778)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/song/reels' />
+		[59] (833,778)<div  />
+			[60] (721,778)<span >GET />
+			[61] (851,778)<span >Reels using Song (Deprecated) />
+	[62] (820,834)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/embed' />
+		[63] (833,834)<div  />
+			[64] (721,834)<span >GET />
+			[65] (795,834)<span >Embed HTML />
+	YouTube
+	[66] (820,939)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel' />
+		[67] (833,939)<div  />
+			[68] (721,939)<span >GET />
+			[69] (802,939)<span >Channel Details />
+	[70] (820,983)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel-videos' />
+		[71] (833,983)<div  />
+			[72] (721,983)<span >GET />
+			[73] (802,983)<span >Channel Videos />
+API Documentation
+Introduction
+Welcome to the
+Scrape Creators API documentation
+. Our comprehensive REST API provides powerful endpoints to extract
+public data
+from
+27
++ social media platforms including
+TikTok, TikTok Shop, Instagram, YouTube, LinkedIn
+, and more
+.
+🚀 Quick Start Guide
+Get started in minutes with our
+free API key
+. Extract profile data, posts, videos, and more from any public social media account.
+Supported Platforms
+TikTok
+TikTok Shop
+Instagram
+YouTube
+LinkedIn
+Facebook
+Facebook Ad Library
+Google Ad Library
+LinkedIn Ad Library
+Twitter
+Reddit
+Truth Social
+Threads
+Bluesky
+Pinterest
+
+</current_dom>

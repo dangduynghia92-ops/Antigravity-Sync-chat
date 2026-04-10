@@ -1,0 +1,87 @@
+# Phase Plan: Main/Sub Event Classification
+
+## Vấn đề
+Blueprint Vlad có 36 key_events. Phase plan hiện tại đếm TẤT CẢ là nodes → 15 chapters. Nhiều events là quá trình/bối cảnh, không cần scene riêng.
+
+## Giải pháp
+Phân loại events thành `main_key_data` (cần scene) và `sub_key_data` (dệt vào scene khác). Split decision dựa trên main count.
+
+---
+
+## Proposed Changes
+
+### 1. Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+
+**Thay thế đoạn `NODE COUNTING RULE`** bằng:
+
+```
+NODE COUNTING RULE (CINEMATIC PACING):
+You are plotting a MOVIE, not writing a textbook.
+Count ONLY "SCENE-LEVEL" events.
+An event is a NODE if the audience can VISUALIZE it happening on a specific day.
+
+[COUNT AS 1 NODE]:
+  ✓ turning_points and conflicts (Always count as 1 node)
+  ✓ key_events with a SPECIFIC ACTION/DATE
+    (e.g., "Killed X in combat", "Arrested on Easter Sunday", "Handed over as a hostage").
+
+[DO NOT COUNT AS NODES] (Background Texture):
+  ✗ GRADUAL PROCESSES over months/years
+    (e.g., "Educated in Turkish", "Developed a deep hatred", "Spent years waiting").
+    These will be woven into Scene-Level events later.
+  ✗ DIRECT CONSEQUENCES of a previous node
+    (e.g., "Forced to flee" is just the ending of the "Seized throne" node. Do not double-count).
+  ✗ achievements, relationships, quotes, myths, personal_profile, dual_nature.
+```
+
+**Thay thế đoạn `OUTPUT FORMAT`** — thêm main/sub fields:
+
+```json
+{
+  "phase": "Framework step name",
+  "main_key_data": ["scene-worthy events — these determine chapter count"],
+  "sub_key_data": ["texture events — woven into scenes, writer decides detail level"],
+  "node_count": 4,
+  "capacity_check": "4 main nodes > 3 threshold → SPLIT into 2 chapters",
+  "chapters": [3, 4],
+  "reason_for_split": "null if 1 chapter, otherwise explain"
+}
+```
+
+**Bỏ field `mapped_nodes`**, thay bằng `main_key_data` + `sub_key_data`.
+`node_count` = `len(main_key_data)`.
+
+---
+
+### 2. Outline Prompt (truyền phân loại xuống)
+
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+Thêm hướng dẫn: phase plan cung cấp `main_key_data` và `sub_key_data`. Outline sử dụng `main_key_data` làm `key_data` cho chapters. `sub_key_data` được giao cho writer dệt vào — outline không cần gán chúng vào key_data.
+
+---
+
+### 3. Code — Validation nhẹ (không hard cap)
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Chỉ thêm LOG cảnh báo nếu `node_count != len(main_key_data)` — để debug, KHÔNG tự sửa.
+
+---
+
+## Không thay đổi
+- Không hard cap chapters/phase
+- Không hard cap total chapters  
+- Không thay đổi writer prompt (writer tự quyết sub detail level)
+- Không thay đổi temperature (giữ 0.0 cho phase plan)
+
+## Verification Plan
+
+### Test
+Chạy lại Vlad + Sử Thi, kiểm tra:
+- Phase plan output có main/sub fields
+- node_count = len(main_key_data)
+- Total chapters giảm so với 15ch hiện tại
+- Sub events vẫn xuất hiện trong script (không bị mất)

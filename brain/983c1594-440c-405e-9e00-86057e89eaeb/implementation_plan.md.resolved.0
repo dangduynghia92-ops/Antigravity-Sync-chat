@@ -1,0 +1,158 @@
+# Niche-Specific Prompts cho Narrative Pipeline
+
+## Mục tiêu
+
+Tạo prompt riêng cho **4 bước** × **2 niches** (battle, mystery) trong Narrative pipeline, thay vì dùng 1 prompt generic cho tất cả.
+
+## Hiện trạng
+
+| Step | Function | Prompt hiện tại | Niche? |
+|------|----------|----------------|:---:|
+| Outline | `generate_renew_outline_v2()` | `system_renew_outline.txt` (2.9KB) | ❌ Generic |
+| Audit | `audit_outline()` | `system_audit_outline.txt` (2KB) | ❌ Generic |
+| Writer | `write_from_blueprint()` | `system_write_from_blueprint.txt` (3.3KB) | ❌ Generic |
+| Cross-review | `review_narrative_full()` | `system_narrative_review.txt` (2.7KB) | ❌ Generic |
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Niche "mystery"**: Review pipeline **đã có** prompt niche-specific rất chi tiết cho mystery ở TẤT CẢ các bước (`system_mystery_outline.txt` 12.7KB, `system_write_review_mystery.txt` 19KB, `system_audit_outline_mystery.txt`, `system_review_cross_chapter_mystery.txt`). Tuy nhiên, những prompt này được thiết kế cho **Review mode** (product-per-chapter — mỗi mystery là 1 "product"). Narrative mode có cấu trúc khác — không có `products_covered`, `countdown_position`, etc.
+>
+> **Câu hỏi**: Trong Narrative mode, mystery niche hoạt động khác Review mode ở điểm nào? Có flow riêng không, hay logic tương tự Review mystery? Đặc biệt:
+> - Narrative mystery outline có cần `tone_slot`, `chapter_structure`, `closing_type` giống review mystery không?
+> - Hay chỉ cần mở rộng schema hiện tại (thêm vài fields)?
+
+> [!WARNING]
+> **Naming convention**: Review pipeline dùng `system_review_outline_firearms.txt`, `system_write_review_firearms.txt`. Narrative cần naming khác để tránh conflict. Đề xuất: `system_narrative_outline_battle.txt`, `system_narrative_write_battle.txt`.
+
+---
+
+## Proposed Changes
+
+### Prompt Files — Battle Niche
+
+#### [NEW] `system_narrative_outline_battle.txt`
+Outline cho battle/war/military history narratives. Dựa trên framework từ `system_renew_outline.txt` + enriched schema:
+- **Thêm fields**: `battle_phase`, `forces_involved`, `tactical_focus`, `pacing_style` (blitz vs siege), `narrative_techniques`, `emotional_arc_position`, `callback_to` (reference previous chapter), `foreshadow`
+- **Chronological rules**: Battle narratives PHẢI theo timeline → thêm `timeline_position` field
+- **Framework step mapping**: Mỗi chapter map rõ ràng đến framework step
+- Prompt size target: ~6-8KB (gấp đôi generic)
+
+#### [NEW] `system_narrative_audit_battle.txt`
+Audit outline cho battle. Dựa trên `system_audit_outline.txt` + battle-specific checks:
+- **Battle-specific checklist**: timeline consistency, forces balance, location continuity, casualty tracking
+- **Front coverage**: Verify ALL fronts/phases from blueprint được cover
+- **Pacing check**: Không 2 chapter liên tiếp cùng pacing_style
+
+#### [NEW] `system_narrative_write_battle.txt`
+Writer prompt cho battle chapters. Dựa trên `system_write_from_blueprint.txt` + battle-specific rules:
+- **Chapter-type-specific sections**: HOOK (battlefield scene), BODY (battle phases), END (legacy/aftermath)
+- **Required elements**: `[CONTEXT]` (political/strategic), `[FORCES]` (who & what), `[ACTION]` (tactical detail), `[TURNING_POINT]` (what changed), `[COST]` (casualties/consequences)
+- **Pattern selection** based on pacing_style: Pattern A: Escalation (build-up), Pattern B: In Medias Res, Pattern C: Dual Perspective, Pattern D: Cause-Effect Chain
+- **Weapon/technology grounding**: Physical descriptions, how_it_works required
+- Prompt size target: ~8-10KB (gấp 3 generic)
+
+#### [NEW] `system_narrative_review_battle.txt`
+Cross-chapter review cho battle. Dựa trên `system_narrative_review.txt` + battle-specific checks:
+- **Timeline consistency**: Same event/date cited consistently
+- **Force tracking**: Casualty numbers don't exceed original forces
+- **Geography continuity**: Locations referenced consistently
+- **Commander tracking**: No commander appears in the wrong battle phase
+
+---
+
+### Prompt Files — Mystery Niche
+
+#### [NEW] `system_narrative_outline_mystery.txt`
+Adapts the Review mystery outline (`system_mystery_outline.txt` 12.7KB) for Narrative mode:
+- **Keep**: tone_slot (sine wave), chapter_structure assignment (mythbuster, detective_trail, etc.), closing_type, mystery_escalation, core_impossibility
+- **Remove**: products_covered, evaluation_criteria, countdown_position (Review-specific)
+- **Add**: `callback_to`, `foreshadow`, `narrative_arc_position`
+- **KEY DIFFERENCE vs Review**: Narrative mystery chapters có thể span multiple mysteries hoặc weave sub-mysteries, không bắt buộc 1 mystery/chapter
+
+#### [NEW] `system_narrative_audit_mystery.txt`
+Adapts `system_audit_outline_mystery.txt` for Narrative:
+- **Keep**: Chapter count, escalation order, structure variety, closing variety
+- **Adapt**: "Mystery per chapter" → more flexible for narrative (can have sub-threads)
+- **Add**: narrative thread tracking, foreshadow/callback consistency
+
+#### [NEW] `system_narrative_write_mystery.txt`
+Adapts the Review mystery writer (`system_write_review_mystery.txt` 19KB) for Narrative:
+- **Keep**: ALL 7 chapter structures (mythbuster, detective_trail, etc.), closing types, 2nd-person adrenaline test, vocabulary ban, evidence requirements
+- **Remove**: products_covered, countdown_position field mapping
+- **Adapt**: Field names (mystery_subjects ← products_covered, key_evidence ← depth_focus)
+- **Add**: Narrative-specific rules — longer arcs, inter-chapter callbacks, foreshadowing techniques
+
+#### [NEW] `system_narrative_review_mystery.txt`
+Adapts `system_review_cross_chapter_mystery.txt` for Narrative:
+- **Keep**: Data consistency, citation consistency, pivot diversity, closing diversity, 2nd-person adrenaline test, vocabulary density
+- **Adapt**: Chapter labeling ([CHAPTER_FILE N])
+- **Add**: Narrative thread resolution tracking, foreshadow payoff check
+
+---
+
+### Code Changes
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+1. **Add to `_NICHE_PROMPT_MAP`** (L49-80): Add 4 new step keys:
+   ```python
+   "narrative_outline": {
+       "battle": "system_narrative_outline_battle.txt",
+       "military": "system_narrative_outline_battle.txt",
+       "mystery": "system_narrative_outline_mystery.txt",
+   },
+   "narrative_audit": {
+       "battle": "system_narrative_audit_battle.txt",
+       "military": "system_narrative_audit_battle.txt",
+       "mystery": "system_narrative_audit_mystery.txt",
+   },
+   "narrative_writer": {
+       "battle": "system_narrative_write_battle.txt",
+       "military": "system_narrative_write_battle.txt",
+       "mystery": "system_narrative_write_mystery.txt",
+   },
+   "narrative_review": {
+       "battle": "system_narrative_review_battle.txt",
+       "military": "system_narrative_review_battle.txt",
+       "mystery": "system_narrative_review_mystery.txt",
+   },
+   ```
+
+2. **Update `generate_renew_outline_v2()`** (L1593): Add `niche` parameter, use niche dispatch with fallback to generic prompt
+
+3. **Update `audit_outline()`** (L1653): Add `niche` parameter, use niche dispatch with fallback to generic prompt
+
+4. **Update `write_from_blueprint()`** (L1721): Add `niche` parameter, use niche dispatch with fallback to generic prompt. Handle enriched chapter schema fields
+
+5. **Update `review_narrative_full()`** (L1888): Add `niche` + `lang` parameter, use niche dispatch with fallback. Add `[CHAPTER_FILE N]` labeling
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+Pass `niche=_niche` to all 4 narrative functions in `_do_renew_style()` / `_run_fw_pipeline()`:
+- `generate_renew_outline_v2(..., niche=_niche)`
+- `audit_outline(..., niche=_niche)`
+- `write_from_blueprint(..., niche=_niche)`
+- `review_narrative_full(..., niche=_niche)`
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Mystery narrative vs mystery review**: Narrative mystery hiện tại có đang chạy qua `_do_renew_style` (narrative pipeline) hay `_do_renew_review` (review pipeline)? Nếu mystery chủ yếu chạy qua review pipeline thì chỉ cần tạo prompt battle cho narrative, không cần mystery narrative.
+> 
+> 2. **Battle niche variants**: Ngoài battle/war, có niche nào khác cũng chạy Narrative mode không? (ví dụ: biography, science history, etc.) Nếu có, cần tạo prompt riêng cho chúng hay dùng battle prompt?
+>
+> 3. **Thứ tự ưu tiên**: Muốn tạo tất cả 8 files cùng lúc, hay từng niche một (battle trước, mystery sau)?
+
+## Verification Plan
+
+### Automated Tests
+- Chạy `python -c "from core.rewriter import _get_niche_prompt; print(_get_niche_prompt('narrative_outline', 'battle'))"` để verify dispatch
+- Chạy pipeline trên 1 sample battle script → check output files
+
+### Manual Verification  
+- So sánh outline output trước/sau khi thay prompt
+- Check writer output có follow pattern selection không
+- Verify cross-review output có check battle-specific issues không

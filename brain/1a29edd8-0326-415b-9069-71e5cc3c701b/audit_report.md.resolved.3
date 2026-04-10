@@ -1,0 +1,123 @@
+# Audit Report: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**File**: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) (2,919 lines)
+**Date**: 2026-03-18
+
+---
+
+## 🔴 Crash Bugs (3)
+
+### 1. Bare [log()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) called before lambda definition
+
+| Pipeline | Line | Code |
+|---|---|---|
+| Narrative | 1543 | [log("No chapters selected")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) |
+| Narrative | 1564 | [log("✗ No frameworks found...")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) |
+| Review | 2086 | [log("No chapters selected")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) |
+| Review | 2106 | [log("✗ No frameworks found...")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) |
+
+**Problem**: [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) is defined as a lambda inside [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2125-2914) (lines 1598, 2139). But these lines are OUTSIDE [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2125-2914) — they're in the parent method body where [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) is not defined. If checked is empty or frameworks missing → **NameError: name 'log' is not defined**.
+
+**Fix**: Replace with `self._log.log(...)`.
+
+---
+
+### 2. `self._stop_flag = False` reset in [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2125-2914) causes race condition
+
+| Pipeline | Line |
+|---|---|
+| Narrative | 1590 |
+| Review | 2131 |
+
+**Problem**: When multiple jobs run in parallel, each [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2125-2914) resets `self._stop_flag = False` on entry. If user clicks Stop for job 1 (sets `_stop_flag = True`), and job 2 starts after → it resets `_stop_flag = False`, accidentally un-stopping job 1.
+
+**Impact**: Low — per-job `stop_event` already handles this correctly. `_stop_flag` is "legacy compat" (line 59). But still incorrect.
+
+**Fix**: Remove or guard with `if not stop_event:`.
+
+---
+
+### 3. `self._running = True` shared across parallel jobs
+
+| Line | Code |
+|---|---|
+| 1570, 2112 | `self._running = True` |
+| 2913 (finally) | `self._running = False` |
+
+**Problem**: If 3 jobs run in parallel, the first to finish sets `self._running = False` while 2 others still running.
+
+**Impact**: Low if nothing checks `self._running`. Currently only used for UI state → could cause "Rewrite" button to re-enable prematurely.
+
+**Fix**: Count active jobs instead of boolean flag.
+
+---
+
+## 🟡 Logic Issues (3)
+
+### 4. Narrative pipeline has product naming logic (shouldn't)
+
+**Lines**: 1841-1858
+
+The narrative pipeline uses `products_covered` for chapter filenames. But narrative mode doesn't have product reviews — it has chapters with topics. The `products_covered` field will likely be empty → always falls back to title. **Not a bug**, but dead/misleading code.
+
+### 5. Narrative word count doesn't prioritize `chapter_type`
+
+**Lines**: 1861-1868 (Narrative) vs 2627-2638 (Review)
+
+| Pipeline | Logic |
+|---|---|
+| **Review** | `chapter_type` first → position fallback ✅ |
+| **Narrative** | Position only (i==0 → open) ❌ |
+
+If narrative outline has `chapter_type: "hook"` at position 2, it won't get "open" word count.
+
+**Fix**: Copy review's `chapter_type` priority logic to narrative pipeline.
+
+### 6. Duplicate `ch_type` assignment in review pipeline
+
+**Lines**: 2608 and 2628
+
+```python
+ch_type = ch_outline.get("chapter_type", "body")  # line 2608
+# ... filename logic ...
+ch_type = ch_outline.get("chapter_type", "body")  # line 2628 — duplicate
+```
+
+**Impact**: None (same value). Just wasteful.
+
+---
+
+## 🟢 Code Cleanliness (2)
+
+### 7. Duplicate `os.makedirs(output_dir)` calls
+
+**Lines**: 1634 and 1658 (Narrative pipeline)
+
+Called twice — first for detection JSON, then for blueprint JSON. Harmless with `exist_ok=True` but unnecessary.
+
+### 8. Extra blank line in button row
+
+**Line**: 257-258
+
+```python
+        self._btn_rewrite.clicked.connect(self._do_rewrite)
+        btn_row.addWidget(self._btn_rewrite)
+                                              # ← extra blank line
+```
+
+Purely cosmetic.
+
+---
+
+## Summary
+
+| Severity | Count | Action |
+|---|---|---|
+| 🔴 Crash | 3 | Fix immediately |
+| 🟡 Logic | 3 | Fix when convenient |
+| 🟢 Cosmetic | 2 | Optional |
+
+### Recommended fix priority:
+1. **Bare [log()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#63-83) calls** (4 locations) — will crash if edge cases hit
+2. **`_stop_flag` race condition** — remove legacy flag
+3. **Narrative word count logic** — copy from review pipeline

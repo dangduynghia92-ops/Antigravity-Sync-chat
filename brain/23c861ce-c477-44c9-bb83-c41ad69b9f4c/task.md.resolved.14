@@ -1,0 +1,5 @@
+# Fix Cross-Chapter Review Bugs
+
+- [x] Strip `[CHAPTER_FILE]` labels from patched content in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Fix index misalignment in mystery pipeline ([rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) L3683)
+- [x] Fix index misalignment in narrative pipeline ([rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) L2557)

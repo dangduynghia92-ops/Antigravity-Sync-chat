@@ -1,0 +1,8 @@
+# Progress Tracking
+- [ ] Open dashboard.html in the browser.
+- [ ] Wait for page load and capture initial screenshot (Tổng quan).
+- [ ] Naviate to "Tài khoản" tab and capture screenshot.
+- [ ] Navigate to "Models" tab and capture screenshot.
+- [ ] Navigate to "Cấu hình" tab and capture screenshot.
+- [ ] Check console logs for errors (CORS, etc.).
+- [ ] Final report.

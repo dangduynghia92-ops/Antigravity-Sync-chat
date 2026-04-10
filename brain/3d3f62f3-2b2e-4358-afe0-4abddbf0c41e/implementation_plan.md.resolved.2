@@ -1,0 +1,86 @@
+# Multi-Language Support for Rewrite Pipeline
+
+Add Language dropdown to Rewrite tab. Prompts organized by language folder. Initial languages: English, Español.
+
+## Prompt Analysis
+
+| Prompt File | Needs localization? | Reason |
+|---|---|---|
+| [system_rewrite.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt) | ✅ Yes | US audience, Grade 8-10, "In English", sentence length rules |
+| [system_narrative_rewrite.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_rewrite.txt) | ✅ Yes | Same as above + "In English" |
+| [system_analyze.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_analyze.txt) | ✅ Yes | Hook/method should match target language style |
+| [system_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt) | ⚠️ Partially | Word count rules differ; output stays Vietnamese |
+| [system_narrative_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review.txt) | ❌ No | Internal review, Vietnamese output |
+| [system_narrative_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline.txt) | ❌ No | Structural analysis, language-neutral |
+| [system_reorder.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reorder.txt) | ❌ No | Ordering logic, language-neutral |
+| [system_toplist.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_toplist.txt) | ❌ No | Chapter splitting, language-neutral |
+| [system_narrative.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative.txt) | ❌ No | Chapter splitting |
+| [system_order.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_order.txt) | ❌ No | Merge ordering |
+| [system_regroup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt) | ❌ No | Classification |
+| [system_verify.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify.txt) | ❌ No | Verification |
+| [fallback_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/fallback_chapter.txt) | ❌ No | Fallback |
+
+**→ 3 prompts need full localization, 1 partial**
+
+## Proposed Changes
+
+### Prompt Organization
+
+```
+prompts/
+├── en/                          ← [NEW] English prompts
+│   ├── system_rewrite.txt
+│   ├── system_narrative_rewrite.txt
+│   ├── system_analyze.txt
+│   └── system_review.txt
+├── es/                          ← [NEW] Español prompts
+│   ├── system_rewrite.txt
+│   ├── system_narrative_rewrite.txt
+│   ├── system_analyze.txt
+│   └── system_review.txt
+├── system_narrative_review.txt  ← shared (unchanged)
+├── system_narrative_outline.txt ← shared (unchanged)
+├── ... other shared prompts
+```
+
+---
+
+### Core Logic
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+- Change [_load_prompt(name)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#106-111) → [_load_prompt(name, lang="en")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#106-111)
+- Logic: try `prompts/{lang}/{name}` first, fallback to `prompts/{name}`
+- Pass `lang` parameter through: [analyze_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#135-185), [rewrite_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#189-232), [rewrite_chapter_narrative()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#686-766), [verify_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#226-272)
+
+---
+
+### UI
+
+#### [MODIFY] [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+
+- Add `Language` combo box: `English | Español`
+- Read value on main thread before threads start
+- Pass `lang` to all core functions
+
+---
+
+### Prompt Content — Español
+
+Key differences from English prompts:
+
+| Aspect | English | Español |
+|---|---|---|
+| Audience | US, 30+ | Hispanohablante, 25+ |
+| Vocabulary | Grade 8-10 | Vocabulario claro, accesible |
+| Sentence limit | 25 words | 30 palabras |
+| Tone | Calm, subtle | Más expresivo, cálido |
+| Output | "In English" | "En español" |
+| Cultural refs | US/UK references | España/LATAM references |
+
+## Verification Plan
+
+### Manual
+- Select English → verify rewrite outputs in English
+- Select Español → verify rewrite outputs in Spanish with adapted style
+- Verify language selection persists across sessions (saved config)

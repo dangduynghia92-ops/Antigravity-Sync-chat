@@ -1,0 +1,37 @@
+# Visual Bible Feature — Walkthrough
+
+## Changes Made
+
+### New Files
+| File | Purpose |
+|---|---|
+| [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) | Generate, save, and load Visual Bible documents |
+| [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) | Prompt template for AI analysis |
+
+### Modified Files
+| File | Changes |
+|---|---|
+| [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) | Added [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#68-74) param throughout; prepends as reference in user messages |
+| [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | Integrated Visual Bible step with cache, stop checks, and Pro tier |
+
+---
+
+## Self-Audit Results
+
+### 🔴 Fixed (3 issues)
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) log calls crash on Windows Unicode | Added [_safe_log()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#20-34) helper with Unicode fallback |
+| 2 | Long SRT files overflow API token limit | Added `_MAX_SRT_CHARS = 30000` truncation with log warning |
+| 3 | User Stop not respected during Visual Bible generation | Added `check_stopped` param + stop checks before/after API call |
+
+### 🟡 Acknowledged (2 items)
+
+| # | Item | Note |
+|---|---|---|
+| 4 | Visual Bible + Context + Segment = large user message | Acceptable — Gemini Pro supports 1M tokens; Visual Bible is ~2-4K chars, context is bounded by `context_seconds` |
+| 5 | Truncated SRT may miss characters at end of video | Acceptable for very long videos — `30K chars ≈ 500+ subtitles` covers most cases; AI can still infer from available text |
+
+### ✅ Verification
+All modules import successfully after fixes.

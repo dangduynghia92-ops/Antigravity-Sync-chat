@@ -1,0 +1,8 @@
+# Incremental Save + Rate Limit Recovery
+
+- [x] Incremental save — save results after each successful segment
+- [x] Rate limit popup — when all endpoints fail:
+  - [x] Retry → auto-enable disabled endpoints → resume
+  - [x] If all ON → ask to add new endpoint
+  - [x] If no → save & stop
+- [x] Wire callback from api_client through process_controller to UI

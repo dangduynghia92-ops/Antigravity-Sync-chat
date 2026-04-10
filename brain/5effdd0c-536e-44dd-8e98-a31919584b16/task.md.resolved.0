@@ -1,0 +1,5 @@
+# Pipeline Optimization: Verify Loop + Audit Outline
+
+- `[/]` Fix 1: Smart verify loop — detect identical re-splits in `auto_pipeline.py`
+- `[ ]` Fix 2: 2-pass audit outline in `rewriter.py`
+- `[ ]` Verify changes

@@ -1,0 +1,60 @@
+# Style Preview Image Feature
+
+Thêm ô ảnh mẫu (preview thumbnail) hiển thị khi chọn style, giúp người dùng tham khảo trực quan phong cách trước khi generate.
+
+## Proposed Changes
+
+### Preview Infrastructure
+
+#### [NEW] `styles/previews/` directory
+- Thư mục chứa ảnh preview cho mỗi style
+- Tên ảnh khớp tên style file: `Cinematic.png`, `Autochrome 1900s First Color.png`, ...
+- Hỗ trợ `.png`, `.jpg`, `.webp`
+- Nếu chưa có ảnh → hiện placeholder "No preview"
+
+---
+
+### Product Tab UI Changes
+
+#### [MODIFY] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+**Layout thay đổi:** Chuyển từ 2-panel (Objects | Results) sang 3-panel:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Config Bar (Style, Output, Tier, Count, Threads)    │
+├────────────┬──────────────────────┬──────────────────┤
+│  Objects   │  Results (Prompts)   │ Style Preview    │
+│  (left)    │  (center)            │ (right, 200px)   │
+│  weight=2  │  weight=3            │ fixed width      │
+├────────────┴──────────────────────┴──────────────────┤
+│  Action Buttons                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Chi tiết thay đổi:**
+1. Thêm cột thứ 3 vào `middle` grid (column 2, fixed width ~200px)
+2. Preview panel gồm:
+   - Label header "🖼 Style Preview"
+   - CTkImage label hiển thị ảnh thumbnail (200×200)
+   - Label tên style dưới ảnh
+3. Bind `style_combo` callback → khi chọn style mới → load ảnh từ `styles/previews/{style_name}.ext`
+4. Dùng `PIL.Image` (đã có Pillow trong requirements.txt) để resize ảnh fit 200×200
+
+---
+
+### SRT Tab Preview (Config Section)
+
+#### [MODIFY] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+
+- Thêm ảnh preview nhỏ (150×150) bên dưới style hint text
+- Reuse cùng logic load ảnh từ `styles/previews/`
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- Run app, chọn các style khác nhau → xem ảnh preview thay đổi
+- Test với style không có ảnh → placeholder hiện đúng
+- Test resize cửa sổ → preview giữ tỷ lệ

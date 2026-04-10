@@ -1,0 +1,155 @@
+# Mystery History Pipeline v2 — Nâng Cấp Chất Lượng Viết
+
+## Bối cảnh
+
+Output v1 bị lặp cấu trúc: 7/8 chương dùng Pattern A, mọi chương kết bằng 3 câu hỏi tu từ, pivot phrases giống nhau, thiếu 2nd-person immersion. Cần áp dụng hệ thống 3 layers mới.
+
+## Hệ thống 3 Layers
+
+```
+Layer 1 — OUTLINE (system_mystery_outline.txt):
+  Macro Tone Arc → quyết định THỨ TỰ + TONE mỗi vị trí
+
+Layer 2 — WRITER (system_write_review_mystery.txt):
+  7 Chapter Structures → quyết định CÁCH KỂ mỗi chương
+
+Layer 3 — WRITER (system_write_review_mystery.txt):
+  4 Closing types → quyết định CÁCH KẾT mỗi chương
+```
+
+---
+
+## Proposed Changes
+
+### Outline Prompt
+
+#### [MODIFY] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt)
+
+**Thay escalation tuyến tính → Macro Tone Arc:**
+
+| Vị trí | Tone Slot | Mục đích | Chọn mystery kiểu |
+|--------|-----------|----------|-------------------|
+| #1 | **Banger** (Shock) | Chống thoát video | Bạo lực, dễ hình dung |
+| #2-3 | **Fascinator** (Awe) | Kích trí tuệ | Kinh ngạc khoa học |
+| #4-5 | **Creep** (Dark) | Đổi vị, rùng rợn thầm | Hệ thống/quan liêu |
+| #6 | **Fascinator** (Awe) | Phục hồi nhịp | Khám phá bất ngờ |
+| Áp chót | **Epic** (Climax) | Đỉnh điểm năng lượng | Hoành tráng sử thi |
+| Cuối | **Philosophical** | Sức nặng tư tưởng | Trầm ngâm, biểu tượng |
+| Outro | **Echo** | Kéo về hiện tại | Cảnh tỉnh |
+
+**Thêm fields mới vào output JSON mỗi chapter:**
+- `tone_slot`: Banger / Fascinator / Creep / Epic / Philosophical
+- `chapter_structure`: 1 trong 7 structures (assign sẵn, không để AI tự chọn khi viết)
+- `closing_type`: 1 trong 4 closings (assign sẵn)
+- `pov_hook`: loại hook mở đầu (Victim, Conqueror, Archive, Science, Innocent Facade)
+
+**Thêm constraint**: Không 2 chapter liên tiếp cùng tone_slot hoặc cùng chapter_structure.
+
+---
+
+### Writer Prompt
+
+#### [MODIFY] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt)
+
+**Thay Pattern A/B/C/D → 7 Chapter Structures:**
+
+| # | Structure | Mô hình | Khi nào dùng |
+|---|-----------|---------|-------------|
+| 1 | **The Mythbuster** | Lầm tưởng → Khoa học phản bác → Bí ẩn thực | Khán giả nghĩ họ biết (Ninja, Thuggee) |
+| 2 | **The Detective Trail** | Hiện trường cổ → Điều tra TK21 → Khám phá rùng rợn | Có nghiên cứu khoa học hiện đại |
+| 3 | **The Bureaucratic Anomaly** | Hệ thống khổng lồ → Chi tiết vô lý → Im lặng có chủ đích | Venice, Vatican, thể chế |
+| 4 | **The Eyewitness Report** | Nhân chứng → Y học bất lực → Vũ khí bị xóa | Chinh phục bị hoảng sợ |
+| 5 | **The Conflicting Accounts** | Phe A → Phe B trái ngược → Khoa học hé lộ | Tài liệu mâu thuẫn nhau |
+| 6 | **The Ticking Clock** | Mốc diệt vong → Nỗ lực tuyệt vọng → Biến mất vĩnh viễn | Bí mật chết theo đế chế |
+| 7 | **The Innocent Facade** | Vật thể vô hại → Bóc vỏ → Vũ khí chết người | Ngụy trang (Aqua Tofana) |
+
+**Thay 3 câu hỏi tu từ → 4 Closing Types (luân phiên):**
+
+| Closing | Cách dùng |
+|---------|----------|
+| **Rhetorical Questions** | 2-4 câu hỏi tu từ (KHÔNG phải lúc nào cũng 3) |
+| **Cold Fact** | Kết bằng sự thật lạnh lùng, tàn nhẫn |
+| **Physical Consequence** | Miêu tả cái còn lại / đã mất về vật lý |
+| **Irony** | Kẻ bảo vệ bí mật lại giết chết bí mật |
+
+**Thêm POV Hook rotation** (thay scene opening generic):
+
+| Hook | Ví dụ |
+|------|-------|
+| Victim/Crime Scene | Đưa người xem vào nguy hiểm, không hiểu chuyện gì |
+| Terrified Conqueror | Kẻ mạnh nhất lại sợ hãi |
+| Archive Anomaly | Sự hoàn hảo của hồ sơ... trừ 1 lỗ hổng |
+| Modern Science | Phòng thí nghiệm TK21 phát hiện điều phi lý |
+| Innocent Facade | Vật thể đời thường → bóc vỏ |
+
+**Anti-repetition rules cứng:**
+- Cấm "This/That explanation, however" > 2 lần toàn video
+- Cấm 2 chương liên tiếp cùng pivot construction
+- Yêu cầu ≥3/8 body chapters dùng 2nd-person immersion
+- Outro: callback by THEME/PATTERN, không liệt kê tên
+
+**Pivot Phrase Blacklist** (cấm lặp > 2 lần):
+- `"This/That explanation, however, [verb]s..."`
+- `"The mainstream/conventional explanation holds that..."`
+- `"The mainstream historical view classifies/dismisses..."`
+- Thay bằng: data contradiction, scale comparison, temporal paradox, methodological impossibility
+
+---
+
+### Blueprint Extraction Prompt (Fix: Copy so sánh từ gốc)
+
+#### [MODIFY] [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+
+- **Vấn đề**: Blueprint extract cả **phép so sánh, ẩn dụ, cách lập luận đặc thù** từ script gốc → writer copy y xì các phép so sánh thay vì tự tạo
+- **Giữ nguyên**: `mainstream_theory`, `counter_evidence` (đây là dữ liệu thực tế)
+- **Fix 1**: Xóa field `comparisons` khỏi output schema (hoặc giới hạn chỉ ghi "so sánh với ai về phương diện gì" — không copy câu so sánh nguyên văn)
+- **Fix 2**: Thêm rule: "Do NOT extract analogies, metaphors, rhetorical comparisons, or argumentative framings from the script. Extract ONLY discrete factual data (dates, numbers, names, locations, sources). The WRITER will create original analogies."
+- **Fix 3**: Trong `detailed_facts`, cấm ghi entries dạng "compared X to Y using analogy Z" — chỉ ghi raw facts
+
+---
+
+### Cross-Chapter Review Prompt
+
+#### [MODIFY] [system_review_cross_chapter_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter_mystery.txt)
+
+- Thêm check: pivot phrase diversity (flag nếu >2 chương dùng cùng pivot template)
+- Thêm check: closing type variety (flag nếu >2 chương kết cùng kiểu)
+- Thêm check: 2nd-person immersion count (flag nếu <3/8 body chapters)
+
+---
+
+### Style Guide
+
+#### [MODIFY] [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_bí_ẩn_lịch_sử.json)
+
+- Thêm `macro_tone_arc` object mô tả 6 tone slots
+- Thêm `chapter_structures` array (7 structures)
+- Thêm `closing_types` array (4 types)
+- Thêm `pov_hooks` array (5 hooks)
+- Thêm `pivot_blacklist` array (phrases bị cấm lặp)
+
+---
+
+### Outline Function
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) — [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1988-2123)
+
+- Truyền `macro_tone_arc`, `chapter_structures`, `closing_types` từ style guide vào outline prompt
+- Outline prompt sẽ assign tone_slot + structure + closing cho từng chapter
+
+---
+
+## Verification Plan
+
+### Automated
+- Compile check cả [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) và [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- JSON validity check cho style guide
+
+### Manual
+- Chạy pipeline với cùng script "10 Terrifying Ancient Weapons"
+- So sánh output v2 vs v1:
+  - Đa dạng structure giữa các chương?
+  - Không lặp closing type?
+  - Pivot phrases khác nhau?
+  - Có 2nd-person hooks?
+  - Macro Tone Arc đúng nhịp (sóng hình sin)?

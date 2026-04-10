@@ -1,0 +1,126 @@
+# Style Rewrite Pipeline Redesign: Từ "Sao Chép" → "Viết Mới"
+
+## Vấn đề
+
+Pipeline hiện tại gửi **nguyên văn bản gốc** cho AI kèm lệnh "rewrite" → AI chỉ paraphrase, không tạo nội dung mới thực sự.
+
+### Root causes
+
+| # | Vấn đề | File | Dòng |
+|---|--------|------|------|
+| 1 | [_build_style_prompt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#678-717) nói "Rewrite the chapter below" + gửi toàn bộ text gốc | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | 708 |
+| 2 | [rewrite_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#246-293) gửi user message `"ORIGINAL CHAPTER:\n\n{chapter_text}"` | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | 273 |
+| 3 | Renew mode gửi `full_text` (toàn bộ script gốc) làm input cho mỗi chapter | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | 1314-1315 |
+
+**Kết quả**: Dù style guide không có content cụ thể, AI vẫn bám sát nguyên bản vì nhận nguyên văn → paraphrase.
+
+## Giải pháp: Pipeline 2 bước "Extract → Write"
+
+Thay vì gửi nguyên văn bản → "rewrite", tách thành 2 bước:
+
+```mermaid
+graph LR
+    A["Original Chapter"] --> B["Step 1: Extract Blueprint"]
+    B --> C["Blueprint: topics, facts,\n key events, emotional arc"]
+    C --> D["Step 2: Write New"]
+    E["Style Guide JSON"] --> D
+    F["Angle/Perspective"] --> D
+    D --> G["New Chapter\n(cùng nội dung, khác cách viết)"]
+```
+
+**Bước 1 — Extract Blueprint**: Rút trích thông tin cốt lõi từ chapter gốc thành "blueprint" — CHỈ chứa facts, topics, key events, NOT câu chữ.
+
+**Bước 2 — Write New**: Dùng blueprint + style guide + angle mới → viết chapter hoàn toàn mới. AI KHÔNG nhìn thấy text gốc ở bước này.
+
+> [!IMPORTANT]
+> Điểm then chốt: **Bước 2 KHÔNG nhận text gốc** — chỉ nhận blueprint abstracted. Đây là cách buộc AI phải sáng tạo thay vì paraphrase.
+
+## Proposed Changes
+
+### Prompt Templates
+
+#### [NEW] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+
+Prompt yêu cầu AI đọc chapter gốc và rút trích:
+- **Core topic**: Chủ đề chính (1-2 câu)
+- **Key facts/events**: Danh sách sự kiện/dữ kiện (KHÔNG dùng câu văn gốc)
+- **Arguments/theories**: Các lý thuyết/quan điểm nếu có
+- **Emotional essence**: Cảm xúc chủ đạo cần truyền tải
+- **Must-include details**: Chi tiết BẮT BUỘC phải có (số liệu, năm, tên)
+- **Angle suggestions**: 2-3 góc nhìn mới khác biệt có thể dùng
+
+---
+
+#### [NEW] [system_style_write_new.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_write_new.txt)
+
+Prompt cho bước viết mới. Nhận:
+- Style guide JSON
+- Blueprint (từ bước 1)
+- Chosen angle/perspective
+- Chapter position context (nếu narrative mode)
+- Previous chapters context (nếu sequential)
+
+**Quan trọng**: Prompt sẽ **CẤM TUYỆT ĐỐI** việc nhận text gốc. AI chỉ viết từ blueprint.
+
+---
+
+### Core Logic
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Thêm 2 hàm mới:
+
+1. **`extract_blueprint(chapter_text, api_client, lang, log_callback)`**
+   - Gửi text gốc → AI trả về JSON blueprint
+   - Parse và trả về dict
+
+2. **`write_from_blueprint(blueprint, style_json, api_client, angle, wc_rule, lang, chapter_context, log_callback)`**
+   - Nhận blueprint (dict) + style guide (string) + angle
+   - KHÔNG nhận text gốc
+   - Trả về text mới
+
+---
+
+### UI Changes
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+1. **Thêm Angle dropdown** trong UI ([_build_ui](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#54-242)):
+   - "Auto" (AI tự chọn từ suggestions)
+   - "Fresh Perspective" (hoàn toàn mới)
+   - "Deeper Analysis" (phân tích sâu hơn)
+   - "Storytelling" (kể chuyện hấp dẫn)
+   - "Investigative" (điều tra, phản biện)
+
+2. **Sửa [_do_toplist_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#729-906)**: Thay pipeline cũ bằng:
+   ```
+   For each chapter:
+     1. extract_blueprint(original_text) → blueprint
+     2. write_from_blueprint(blueprint, style, angle) → new_text
+     3. verify_chapter(original_text, new_text) → score
+   ```
+
+3. **Sửa [_do_narrative_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#909-1167)**: Tương tự nhưng thêm prev_context
+
+4. **Sửa [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1185-1467)**: Bước outline giữ nguyên, nhưng bước viết dùng `write_from_blueprint`
+
+## Verification Plan
+
+> [!WARNING]
+> Project không có unit tests. Verification sẽ cần manual testing trên app thực tế.
+
+### Manual Verification
+
+Vì đây là thay đổi prompt engineering + pipeline, verification cần chạy thực tế:
+
+1. **Chuẩn bị**: Chọn 1-2 chapter gốc làm test case
+2. **Test Top/List mode**: Chạy rewrite với cùng chapter, so sánh output cũ vs mới
+3. **Test Narrative mode**: Chạy 3-4 chapters sequential, kiểm tra continuity
+4. **Đánh giá chất lượng**: Output mới phải:
+   - Chứa đúng thông tin/sự kiện từ gốc
+   - Cách viết/góc nhìn khác biệt rõ ràng
+   - Không có câu/đoạn copy từ gốc
+   - Vẫn đạt verify score ≥ 7.0
+
+> [!NOTE]
+> Tôi sẽ cần bạn test manual vì cần API keys và chapter files thực tế. Tôi sẽ verify code logic bằng cách đọc lại code sau khi implement.

@@ -1,0 +1,43 @@
+# Download Backend Migration — Walkthrough
+
+## Summary
+
+Migrated 5 core functions from `yt-dlp` subprocess to **[pytubefix](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-231)** + **`youtube-transcript-api`** as primary, keeping `yt-dlp` as fallback.
+
+## Changes Made
+
+### [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)
+
+| Function | Primary → | Fallback |
+|---|---|---|
+| [get_transcript_ytdlp()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169) | `youtube-transcript-api` (new [_get_transcript_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#992-1059)) | yt-dlp subprocess |
+| [get_video_info()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545) | `pytubefix.YouTube` (new [_get_video_info_pytubefix()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#454-487)) | yt-dlp subprocess |
+| [download_thumbnail_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952) | [pytubefix](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-231) `yt.thumbnail_url` + requests | yt-dlp subprocess |
+| [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#119-314) | [pytubefix](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-231) stream download (new [_download_video_pytubefix()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#669-766)) | yt-dlp subprocess |
+| [scan_playlist()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#233-448) | `pytubefix.Playlist` (new [_scan_playlist_pytubefix()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-231)) | yt-dlp two-phase |
+
+### [video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+
+- [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#119-314) → pytubefix primary (1080p video-only mp4), yt-dlp fallback with cookie rotation
+
+## Test Results
+
+| Test | Result | Details |
+|---|---|---|
+| Transcript (English) | ✅ | 380 segments, [(0:00) text](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#30-34) format |
+| Transcript (invalid video) | ✅ | API fails → yt-dlp fallback → proper error |
+| Video info | ✅ | title, id, description, channel_url |
+| Video info (invalid) | ✅ | pytubefix fails → yt-dlp fallback |
+| Thumbnail | ✅ | `thumbnail.jpg` (77,850 bytes) |
+| Video download (1080p) | ✅ | `273.9 MB` mp4, video-only stream |
+| Playlist scan | ✅ | 2 videos with title, date, duration, views |
+
+## Dependencies Added
+
+```
+pip install youtube-transcript-api pytubefix
+```
+
+> [!NOTE]
+> [pytubefix](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-231) includes `nodejs-wheel-binaries` (41MB, bundled Node.js for BotGuard).
+> `yt-dlp` is still required as fallback but no longer the primary download engine.

@@ -1,0 +1,82 @@
+# Biography Pipeline — Session Walkthrough
+
+## Changes Made
+
+### 1. Naming Consistency (`key_data` → `main_key_data`)
+- **File**: [outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt) line 14
+- Fixed last reference: "use as key_data for chapters" → "use as main_key_data for chapters"
+- All biography prompts now use `main_key_data` + `sub_key_data` exclusively
+
+---
+
+### 2. Hard Limit Relaxations
+- **File**: [writer](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt)
+
+| What | Before | After |
+|---|---|---|
+| sub_key_data scope rule | "1-2 sentences max per item" | "NOT as standalone scenes" (no sentence limit) |
+| Bridge | "1-2 sentences max" / "Maximum: 2 sentences" | "keep it brief" / "brief" |
+| Scene minimum | "Minimum: 80 words per scene" | Removed |
+| POV shift duration | "Max 3-4 sentences" | "3-6 sentences" |
+| Anti-duplication | "Reference it in 1 sentence max" | "Reference it briefly" |
+
+---
+
+### 3. Outline: DISTRIBUTE, Not RE-PICK
+- **File**: [outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+- **Old**: `main_key_data: "Max 3 items — pick data from the SAME life_phase_covered... Less is more"`
+- **New**: `"DISTRIBUTE from phase plan's main_key_data. ALL phase plan main events MUST appear. Do NOT re-pick from blueprint. Do NOT drop events."`
+- DEDUP RULE → DISTRIBUTION RULE: phase plan events cannot be dropped
+
+---
+
+### 4. Bridge Disconnect Fix (TRANSITION RULE)
+- **File**: [writer](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt) OPENING section
+- Added: NEVER start chapter with blind pronoun ("This caused...", "It changed...", "NÓ...")
+- Must use **Explicit Noun** (preferred) or **Thematic Echo** (alternative)
+
+---
+
+### 5. CLOSING Enforcement (`ends_with` = final idea)
+- **File**: [writer](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt) CLOSING section
+- **Old**: "ends_with must be WOVEN into your final paragraph"
+- **New**: "ends_with is the FINAL IDEA. Do NOT add extra sentences AFTER it. Nothing comes after."
+
+---
+
+### 6. Hook ANCHOR → TWIST Fix (Root Cause)
+**Problem**: Ch1 always opened with "Pero..." (But...) — skipping setup.
+
+**Root cause traced through 3 layers:**
+
+| Layer | Problem | Fix |
+|---|---|---|
+| **Phase plan** | Hook phase had `main_key_data: []` | Must have 2 items: ANCHOR + TWIST |
+| **Outline** | Hook data was all contrast/twist, no setup | ANCHOR → TWIST order enforced |
+| **Writer** | "ALREADY KNOWS" → AI assumed context | "ESTABLISH the subject's NAME or concrete fact" |
+
+**Files changed:**
+- [phase_plan](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt): HOOK PHASE rule
+- [outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt): HOOK main_key_data ANCHOR→TWIST
+- [writer](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt): HOOK STRUCTURE + ANTI-PATTERNS
+
+---
+
+### 7. Consequence Classification (SCENE TEST)
+- **File**: [phase_plan](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+- **Old**: "DIRECT CONSEQUENCES of a previous node → sub" (too aggressive, demoted "Forced to flee")
+- **New**: SCENE TEST — Can the consequence be developed into its own SCENE? YES → main. NO → sub.
+
+---
+
+### 8. ANTI-MERGE Rule
+- **File**: [phase_plan](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+- Each blueprint event = one separate array item. Do NOT compress distinct events into single items.
+- Protects node count accuracy → correct split decisions
+
+---
+
+## Verification
+- ✅ Hook fix verified: after phase plan fix, Ch1 now opens with ANCHOR ("Drácula. El monstruo inmortal...") before TWIST
+- ⚠️ Atmospheric opening still possible — fixed by changing "concrete image" → "subject's NAME or concrete fact"
+- ⏳ Full pipeline re-run needed to verify all fixes together

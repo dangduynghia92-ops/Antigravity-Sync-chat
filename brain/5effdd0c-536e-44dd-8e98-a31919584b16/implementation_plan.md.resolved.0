@@ -1,0 +1,64 @@
+# Fix Auto Pipeline để chạy song song với Style Rewrite
+
+## Vấn đề hiện tại
+
+Auto Pipeline tab **ghi đè trực tiếp** lên state của Style Rewrite tab khi chạy rewrite, gây xung đột nếu chạy song song.
+
+### Các điểm xung đột cụ thể
+
+| Shared State | File | Line | Vấn đề |
+|---|---|---|---|
+| `rw_tab._group_path` | auto_pipeline_tab.py | 1051 | Ghi đè, restore ở finally (1101) |
+| `rw_tab._chapters` | auto_pipeline_tab.py | 1052 | Ghi đè |
+| `rw_tab._txt_output` | auto_pipeline_tab.py | 1131 | Set text qua signal |
+| UI widgets (mode, style, lang...) | auto_pipeline_tab.py | 1141-1190 | `_sync_config_to_rewrite_tab()` |
+| `rw_tab._task_counter` | auto_pipeline_tab.py | 1002 | Increment counter |
+| `rw_tab._jobs` | auto_pipeline_tab.py | 1053 | Add job |
+
+### Phân tích hàm `_do_renew_review` và `_do_renew_style`
+
+Cả 2 hàm đều đã có design pattern `job` dict properly:
+- Khi `job` is not None → đọc tất cả config từ `job` dict (tier, lang, country, framework, word counts, style...)
+- Khi `job` is None → đọc từ UI widgets (trường hợp Style Rewrite tab chạy trực tiếp)
+
+**→ Kết luận: Hàm rewrite KHÔNG CẦN UI widgets khi có job dict.** Việc sync UI là hoàn toàn dư thừa.
+
+## Proposed Changes
+
+### [MODIFY] [auto_pipeline_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+#### 1. Loại bỏ `_sync_config_to_rewrite_tab()` (line 1141-1190) & signal sync
+
+Xoá toàn bộ logic sync UI:
+- Xoá signal `_sig_sync_config` declaration (line 42)
+- Xoá `_sig_sync_config.connect(...)` (line 351)
+- Xoá sync event & emit call trong `_run_rewrite()` (lines 990-992)
+- Xoá `_do_sync_config_on_main_thread()` (lines 1123-1139)
+- Xoá `_sync_config_to_rewrite_tab()` (lines 1141-1190)
+
+#### 2. Tách state trong `_run_rewrite()`
+
+Thay vì ghi đè `rw_tab._group_path` và `rw_tab._chapters`:
+- Xoá line 1050-1052 (overwrites)
+- Xoá line 1101 (restore in finally)
+- **Giữ** `rw_tab._jobs[job["id"]] = job` vì job tracking là safe (dict key unique per job)
+
+#### 3. Load style JSON trực tiếp trong `_run_rewrite()` thay vì từ signal
+
+Đọc style file trực tiếp từ filesystem (thay vì gọi `rw_tab._load_style_json_raw()` qua main thread signal):
+```python
+# Load style JSON from file directly (no UI dependency)
+style_path = os.path.join(styles_dir, cfg.style_file)
+with open(style_path, "r", encoding="utf-8") as f:
+    style_raw = f.read()
+```
+
+#### 4. Tách `_task_counter`
+
+Tạo counter riêng cho Auto Pipeline thay vì dùng `rw_tab._task_counter`.
+
+## Verification Plan
+
+### Manual Verification
+- Chạy Auto Pipeline 1 URL → kiểm tra output tạo đúng
+- Chạy Style Rewrite tab song song → kiểm tra không có lỗi xung đột, cả 2 output đều đúng

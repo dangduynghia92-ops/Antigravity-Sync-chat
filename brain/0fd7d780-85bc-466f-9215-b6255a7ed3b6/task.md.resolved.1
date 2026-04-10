@@ -1,0 +1,29 @@
+# Niche-Based TTS Cleanup — Tasks
+
+## Planning
+- [x] Review existing TTS Cleanup code
+- [x] Study threading.Event popup pattern from chapter_tab.py
+- [x] Write implementation plan
+- [x] Get user approval
+
+## Prompt Files
+- [x] Update [system_tts_cleanup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt) — add gap rules + `{NICHE_RULES}` + `---UNCERTAIN---`
+- [x] Create [prompts/system_tts_detect_niche.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_detect_niche.txt)
+- [x] Create [prompts/tts_niche_rules/firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt)
+- [x] Create [prompts/tts_niche_rules/history.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/history.txt)
+
+## Core Module
+- [/] Add `detect_niche()` to [core/tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+- [/] Update [cleanup_for_tts()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#58-117) — accept niche_rules, return uncertain terms
+- [/] Add `load_niche_rules()` and `export_uncertain_csv()`
+
+## UI Tab
+- [ ] Add niche confirm + uncertain terms signals/events
+- [ ] Implement `_show_niche_popup()` dialog
+- [ ] Implement `_show_uncertain_popup()` dialog
+- [ ] Modify [_run_cleanup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#480-705) — detect niche → popup → sequential process
+- [ ] Update config save/load for niche setting
+
+## Verification
+- [ ] Test with sample firearms script
+- [ ] Test popup flows

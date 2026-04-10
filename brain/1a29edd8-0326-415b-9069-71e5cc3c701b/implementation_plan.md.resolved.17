@@ -1,0 +1,62 @@
+# Unused Chapters Feature
+
+Auto-save chapters containing unused items + Delete button to clean up after script completion.
+
+## Proposed Changes
+
+### UI — Unused Chapters Folder Selector + Delete Button
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**1. Add folder path widget** (near output folder selector):
+- TextInput `_txt_unused_dir` + Browse button
+- Default empty — user picks folder once, remembered via save/restore config
+
+**2. Add Delete button**:
+- Red/orange color (`background: #e74c3c`) — visually distinct
+- State-dependent popup:
+  - No folder set → *"Chưa chọn thư mục unused chapters"*
+  - Pipeline not run yet → *"Chưa hoàn thành kịch bản — không có file để xoá"*
+  - Folder empty → *"Thư mục rỗng — không có file để xoá"*
+  - Has files → *"Xoá {N} file trong {folder}? Không thể hoàn tác."* + confirm/cancel
+
+---
+
+### Pipeline — Auto-Copy Unused Chapter Files
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+After outline selects products (line ~2258), add step:
+
+```
+all_products = {p["product_name"] for p in blueprint["product_evaluation"]}
+selected_products = {names from outline chapters}
+unused_products = all_products - selected_products
+
+If unused_products AND unused_dir is set:
+  For each source chapter file:
+    If chapter text mentions any unused product name:
+      Copy file → unused_dir (skip if same name already exists, add _2 suffix)
+  Log: "✓ Copied {N} unused chapters to {folder}"
+```
+
+**Works for both merge and single-folder**: any time the outline uses fewer items than the blueprint contains.
+
+---
+
+### Source Tracking — Map Products to Chapter Files
+
+The input text tags each chapter: `=== PART {i}: {filename} ===`. Need to map unused `product_name` → source chapter file:
+
+- Option A: **Text matching** — search each chapter text for product name → simple, ~95% accurate
+- Option B: **Add `source_parts` to blueprint prompt** — AI tags which PART each product came from → more accurate but modifies blueprint schema
+
+**Chosen: Option A** (simple, no prompt changes needed). Fallback: if a product can't be matched to any single chapter, skip it (don't copy).
+
+## Verification Plan
+
+### Manual Testing
+- Run pipeline with 10 items, chapter_range set to 7-8
+- Verify ~2-3 chapters copied to unused folder
+- Click Delete button → verify popup + deletion
+- Re-run → verify new unused files added without overwriting

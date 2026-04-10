@@ -1,0 +1,26 @@
+# Military Equipment Review Style Guide
+
+## Created
+[Review_trang thiết bị quân sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_trang%20thi%E1%BA%BFt%20b%E1%BB%8B%20qu%C3%A2n%20s%E1%BB%B1.json)
+
+## What Was Done
+Enriched user's style analysis into the full system schema matching [narrative_phân_tích_trận_đánh.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_ph%C3%A2n_t%C3%ADch_tr%E1%BA%ADn_%C4%91%C3%A1nh.json).
+
+## Components
+
+| Section | Count | Details |
+|---------|-------|---------|
+| `core_rules` | 9 keys | identity, tone, rhythm, vocabulary, pov_rules, anti_copy, **data_density**, anti_framework_leak, step_names_are_internal |
+| `frameworks` | 4 | Contrarian Takedown, Underdog Champion, High-Stakes Scenario, Legacy Justification |
+| `openings` | 5 | Contrarian Hook, High-Stakes Scenario, Insider Reveal, Paradoxical Hook, Immediate Justification |
+| `closings` | 4 | Problem-Solution Cliffhanger, Definitive Verdict, Long-Range Foreshadowing, Hard Cut Hand-off |
+| `techniques` | 8 | Contrast, Data-Driven, Feature-to-Benefit, Anticipatory Rebuttal, Social Proof, Visceral Analogy, Scenario Painting, Problem-Solution |
+| `transitions` | 3 rules | chapter_endings, chapter_openings, callback_rule |
+| `diversity_rules` | 4 rules | opening_rotation, technique_distribution, anti_repetition, framework_rule |
+| `checklist` | 10+8 | 10 always, 8 never |
+
+Each framework includes: `structure`, `hook`, `pov_strategy`, `pacing`, `language`, `outline_rules`, `steps` (6 each), `tension_curve`, `cliffhanger_types` (3 each), `technique_emphasis`, `opening_closing_fit`, `counter_argument`, `anti_patterns`.
+
+## Verification
+- JSON valid
+- All framework sub-fields present and compatible with [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt)

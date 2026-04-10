@@ -1,0 +1,45 @@
+# Implement ▶ Renew Feature
+
+Add a "Renew" button alongside "Rewrite" in the Style Rewrite tab. Renew reads all input text as one script, asks AI to create a new chapter outline, then writes each chapter sequentially based on the outline + style guide.
+
+## Proposed Changes
+
+### Prompt
+
+#### [NEW] [system_renew_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_renew_outline.txt)
+- Instructs AI to read the full original script and create a new chapter breakdown
+- Output: JSON with `total_chapters`, `narrative_arc`, `chapters: [{number, title, summary, key_points}]`
+- Different from existing [system_narrative_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline.txt) (which analyzes existing chapters for overlap) — this one **creates new structure**
+
+---
+
+### Core
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- Add `generate_renew_outline(full_text, api_client, log_callback)` function
+- Takes the full concatenated script text, sends to AI with the new prompt
+- Returns outline JSON
+
+---
+
+### UI
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- Add **▶ Renew** button next to ▶ Rewrite
+- Add `_do_renew_style()` method with flow:
+  1. Ghép tất cả checked chapters text → 1 khối
+  2. Call `generate_renew_outline()` → outline JSON
+  3. Loop qua outline chapters, viết từng chapter:
+     - Word count: i==0 → open, i==last → end, else → body
+     - Style prompt: dùng chung [_build_style_prompt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#601-640) + outline context
+     - Prev context: 2 chapter trước đã viết
+  4. Save mỗi chapter: `section_01_title.txt`
+  5. Verify từng chapter
+  6. Cross-chapter review + auto patch
+  7. Final review
+- Import `generate_renew_outline` from `core.rewriter`
+
+## Verification Plan
+
+### Automated Tests
+- `python -c "from ui.rewrite_style_tab import RewriteStyleTab; print('OK')"`

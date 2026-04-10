@@ -1,0 +1,9 @@
+# Code Audit: rewrite_style_tab.py
+
+- [/] Audit UI + init (lines 1-350)
+- [ ] Audit config/browse/tree (lines 350-950)
+- [ ] Audit mode switching + entry points (lines 950-1470)
+- [ ] Audit job creation + niche check (lines 1470-1540)
+- [ ] Audit narrative pipeline (lines 1540-2044)
+- [ ] Audit review pipeline (lines 2044-2937)
+- [ ] Compile findings into report

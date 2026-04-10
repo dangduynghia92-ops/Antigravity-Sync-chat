@@ -1,0 +1,23 @@
+# Review Pipeline Overhaul
+
+## Mode Separation (Code)
+- [x] [detect_framework](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#930-1002) — review uses dynamic frameworks list
+- [x] [extract_blueprint_review](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1088) — separate prompt, product data only
+- [x] [audit_outline_review](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1090-1140) — separate prompt + chapter_range
+- [x] [review_cross_chapter](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1142-1183) — separate prompt, data consistency focus
+- [x] Review pipeline calls all review-specific functions
+- [x] Narrative pipeline untouched
+
+## Prompts Overhaul
+- [x] [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — framework-driven, universal rules (ranking_reason, target_user, cons_to_mention, category_awards)
+- [x] [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — framework-driven, no-invent-specs, ends_with, chapter_template following
+- [x] [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) — product data only
+- [x] [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt) — review logic + chapter_range
+- [x] [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) — data consistency
+
+## Code Updates
+- [x] [write_review_chapter](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2096-2201) — pass ranking_reason, target_user, cons_to_mention
+- [x] CSV export for reality check corrections
+
+## Frameworks Enrichment
+- [ ] Enrich 10 frameworks missing `chapter_template`, `transitions`, `pacing`

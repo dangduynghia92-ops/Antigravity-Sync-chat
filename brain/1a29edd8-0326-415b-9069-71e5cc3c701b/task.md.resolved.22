@@ -1,0 +1,12 @@
+# Re-ch: Rewrite Chapter Feature
+
+- [ ] Add "🔄 Re-ch" button to UI (btn_row)
+- [ ] Implement `_do_rewrite_chapter()` handler
+  - [ ] Get checked chapters from right panel (output tree)
+  - [ ] Find `_pipeline/` folder
+  - [ ] Load pipeline data (blueprint, outline, style, framework)
+  - [ ] Detect mode (review vs narrative) from pipeline files
+  - [ ] Map filename → chapter index
+  - [ ] For each chapter: read adjacent context, call writer, overwrite
+- [ ] Log all steps
+- [ ] Compile check

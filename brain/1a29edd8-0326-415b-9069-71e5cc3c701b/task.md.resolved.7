@@ -1,0 +1,27 @@
+# Build Review Pipeline Flow
+
+## Style Guide
+- [x] `evaluation_focus` per framework
+- [ ] Add `"pipeline": "review"` to Review style JSON
+
+## Prompts
+- [x] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) — conditional product_evaluation
+- [x] [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt)
+- [x] [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt)
+- [x] [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt)
+- [x] [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt)
+- [ ] `system_write_from_blueprint_review.txt` — NEW, review-specific
+
+## Functions (rewriter.py)
+- [x] [recommend_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1446-1501)
+- [x] [check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1503-1555)
+- [x] [convert_units()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1557-1684)
+- [x] [verify_facts()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1686-1738)
+- [x] [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1740-1811)
+- [ ] `write_review_chapter()` — NEW, uses review prompt
+
+## UI (rewrite_style_tab.py)
+- [ ] Dispatch: pipeline check in [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1320-1758)
+- [ ] `_do_renew_review()` — 10-step worker
+- [ ] Target Country combo (US/EU)
+- [ ] Framework combo: populate from style JSON

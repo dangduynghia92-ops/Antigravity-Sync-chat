@@ -1,0 +1,6 @@
+# Task: Fix Parallel Execution
+
+- `[/]` Edit `rewrite_style_tab.py` — guard shared state with `if not job` checks
+- `[ ]` Edit `auto_pipeline_tab.py` — remove shared state mutations, self-load style JSON
+- `[ ]` Verify app starts without errors
+- `[ ]` Run /auto-git-backup

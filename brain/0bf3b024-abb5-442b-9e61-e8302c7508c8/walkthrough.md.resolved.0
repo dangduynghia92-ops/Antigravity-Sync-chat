@@ -1,0 +1,91 @@
+# Rà soát: Chức năng điền mặc định khi chọn Mode/Niche — Tab Style Rewrite
+
+## Luồng xử lý
+
+```mermaid
+sequenceDiagram
+    participant Init as __init__
+    participant Load as _load_saved_config
+    participant Mode as _on_mode_changed
+    participant Niche as _apply_niche_config
+
+    Init->>Load: 1. Load global config (rewrite_style_config.json)
+    Load->>Load: Set _config_loaded = True
+    Init->>Mode: 2. Trigger mode setup
+    Mode->>Mode: 3. Set UI visibility (checkboxes, country, etc.)
+    Mode->>Mode: 4. Set hardcoded defaults (SKIPPED vì _config_loaded=True)
+    Mode->>Mode: 5. Refresh style dropdown + framework combo
+    Mode->>Niche: 6. Load per-niche config (niche_configs/{style}.json)
+    Niche->>Niche: 7. Override fields: lang, framework, tier, threads, country, ch, wc
+```
+
+## Phân tích chi tiết
+
+### 1. Defaults cứng per Mode ([_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L1383-L1463))
+
+Các giá trị này **chỉ áp dụng lần đầu** (khi `_config_loaded == False`), tức là khi chưa có file config đã lưu:
+
+| Field | Top/List Review | Narrative |
+|-------|----------------|-----------|
+| Ch min~max | 7 ~ 10 | 5 ~ 20 |
+| Open min~max | 0 ~ 200 | 1300 ~ 1800 |
+| Body min~max | 0 ~ 400 | 1300 ~ 1800 |
+| End min~max | 0 ~ 200 | 1200 ~ 1500 |
+
+### 2. Visibility/Defaults luôn áp dụng (không bị guard bởi `_config_loaded`)
+
+| Widget | Review | Narrative |
+|--------|--------|-----------|
+| 🎬 Cut Video | ✅ checked, visible | ❌ unchecked, hidden |
+| 📊 Excel | ✅ checked, visible | ❌ unchecked, hidden |
+| 💰 Price Check | ✅ checked, visible | ❌ unchecked, hidden |
+| 🔍 Enrich Data | ❌ unchecked, hidden | ✅ checked, visible |
+| Country combo | visible | hidden |
+| ↔ Transitions | visible | hidden |
+
+> [!WARNING]
+> **Mỗi lần đổi mode hoặc đổi style (niche)**, các checkbox visibility/checked state bị **reset cứng** về defaults, bất kể user đã toggle thủ công. Ví dụ: nếu user bỏ tick "Cut Video" rồi chọn lại style khác, nó sẽ bị tick lại.
+
+### 3. Per-Niche Config ([_apply_niche_config](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L734-L776))
+
+Được gọi ở **cuối** [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1383-1464), override giá trị mode defaults bằng file `niche_configs/{style_filename}.json`.
+
+**Các trường được lưu/load per-niche:**
+[lang](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#471-473), `framework`, `tier`, `threads`, `country`, `ch_min`, `ch_max`, `wc_open_min/max`, `wc_body_min/max`, `wc_end_min/max`
+
+> [!IMPORTANT]
+> **Các checkbox** (`excel_update`, `transitions`, [cut_video](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1131-1226), `price_check`, `enrich_data`) **KHÔNG** nằm trong niche config → không thể lưu per-niche, luôn bị reset về defaults khi đổi mode/style.
+
+### 4. Trạng thái hiện tại của 4 niche configs
+
+| File | lang | ch | Open | Body | End |
+|------|------|----|------|------|-----|
+| [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niche_configs/Review_súng_đạn.json) | Español | 8~11 | 0~250 | 0~450 | 0~150 |
+| [Review_trang_thiết_bị_quân_sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niche_configs/Review_trang_thiết_bị_quân_sự.json) | Español | 8~11 | 0~250 | 0~450 | 0~150 |
+| [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niche_configs/Review_bí_ẩn_lịch_sử.json) | English | 8~11 | 0~200 | 500~0 | 0~150 |
+| [narrative_phân_tích_trận_đánh.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niche_configs/narrative_phân_tích_trận_đánh.json) | Español | 0~0 | 250~0 | 600~0 | 250~0 |
+
+> [!CAUTION]
+> **`Review_bí_ẩn_lịch_sử`**: `wc_body_min=500, wc_body_max=0` → "min 500 words, no max" — pattern bất thường, có thể là lỗi cấu hình (các niche Review khác dùng `0~450`).
+> 
+> **`narrative_phân_tích_trận_đánh`**: `ch_min=0, ch_max=0` → "— ~ —" (không giới hạn số chapters). Tất cả wc max = 0 → chỉ min, không max. Khác biệt lớn so với hardcoded narrative defaults (1300~1800).
+
+### 5. Trigger chain khi đổi Style combo
+
+```
+Style combo changed → _on_mode_changed(current_mode) → reset checkboxes → refresh styles → load frameworks → set word count defaults (skipped) → _apply_niche_config
+```
+
+Line 142-144 trong [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L142-L144):
+```python
+self._combo_style.currentTextChanged.connect(
+    lambda _: self._on_mode_changed(self._combo_mode.currentText())
+)
+```
+
+### Kết luận
+
+Luồng hoạt động **đúng thiết kế**: Mode → hardcoded defaults (chỉ lần đầu) → niche config override. Tuy nhiên có 2 điểm cần lưu ý:
+
+1. **Checkbox states bị reset** mỗi lần đổi mode/style vì chúng nằm ngoài niche config
+2. Một số niche config có giá trị word count **khác thường** (body min mà không có max)

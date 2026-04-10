@@ -1,0 +1,71 @@
+# Transition Toggle Feature
+
+Add a "↔ Transitions" checkbox (Top/List Review mode only). When **OFF**, chapters open directly with topic name — no bridge sentences between chapters.
+
+## Proposed Changes
+
+### UI Layer
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+1. **Add checkbox** (after `_chk_excel_update`, ~line 293):
+   ```python
+   self._chk_transitions = QCheckBox("↔ Transitions")
+   self._chk_transitions.setChecked(True)  # ON by default
+   self._chk_transitions.setToolTip("Add bridge sentences between chapters (Top/List only)")
+   btn_row.addWidget(self._chk_transitions)
+   ```
+
+2. **Visibility toggle** in [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1100-1167) (~line 1100):
+   ```python
+   self._chk_transitions.setVisible(is_review)
+   ```
+
+3. **Save/Load config** (~lines 630-697):
+   - Save: `"transitions": self._chk_transitions.isChecked()`
+   - Load: `self._chk_transitions.setChecked(cfg.get("transitions", True))`
+
+4. **Pass flag to writer** at both call sites (lines 1682 and 2982):
+   ```python
+   use_transitions=self._chk_transitions.isChecked()
+   ```
+
+---
+
+### Backend Layer
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+1. **Add parameter** to [write_review_chapter](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2259-2406) signature (~line 2258):
+   ```python
+   use_transitions: bool = True,
+   ```
+
+2. **Conditionally strip/replace TRANSITIONS section** after template loading (~line 2377):
+   - If `use_transitions=False`: replace the TRANSITIONS block with a direct-opening rule
+   - The replacement text varies by niche:
+     - **Mystery**: "Open each body chapter directly with the mystery name and its assigned structure."
+     - **Firearms/Military**: "Open each body chapter directly with its rank number (#N) and product/system name, then proceed with the assigned structure."
+
+> [!NOTE]
+> For firearms and military prompts, transitions are handled differently — via `ends_with` field and pattern selection rules (lines 71-89 in each prompt). When `use_transitions=False`, the `previous_context` and `ends_with` connection rules should also be relaxed.
+
+---
+
+### Prompt Changes
+
+**Mystery** prompt has a clear `═══ TRANSITIONS BETWEEN CHAPTERS ═══` section (lines 42-59) that can be cleanly replaced.
+
+**Firearms/Military** prompts embed transition logic in pattern selection. For these, when transitions are OFF, the system_prompt post-processing will inject an override:
+```
+CHAPTER OPENING RULE: Open directly with rank number + product name.
+Do NOT write bridge sentences connecting to the previous chapter.
+```
+
+## Verification Plan
+
+### Manual Verification
+- Toggle checkbox ON → run 1 chapter → verify bridge sentence present  
+- Toggle checkbox OFF → run 1 chapter → verify chapter opens directly with topic name  
+- Verify checkbox saves/loads with config  
+- Verify checkbox only visible in Top/List Review mode

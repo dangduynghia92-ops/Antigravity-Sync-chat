@@ -1,0 +1,64 @@
+# Phân tích: Mystery & Battle có vấn đề Scoring như Biography?
+
+## Kết quả kiểm tra
+
+### Bí ẩn lịch sử (Mystery) — 5 frameworks
+
+| Framework | `evaluation_focus` | `primary_data_field` | `tier_field` |
+|---|---|---|---|
+| Bóc Tách | ❌ KHÔNG CÓ | ❌ | ❌ |
+| Mắt Xích Bị Lãng Quên | ❌ KHÔNG CÓ | ❌ | ❌ |
+| Công Tố | ❌ KHÔNG CÓ | ❌ | ❌ |
+| Khai Quật | ❌ KHÔNG CÓ | ❌ | ❌ |
+| Cầu Nối Thời Gian | ❌ KHÔNG CÓ | ❌ | ❌ |
+
+### Phân tích trận đánh (Battle) — 5 frameworks
+
+| Framework | `evaluation_focus` | `primary_data_field` | `tier_field` |
+|---|---|---|---|
+| The Investigative Deep-Dive | ❌ KHÔNG CÓ | ❌ | ❌ |
+| The Domino Chain | ❌ KHÔNG CÓ | ❌ | ❌ |
+| The Zoom Lens | ❌ KHÔNG CÓ | ❌ | ❌ |
+| The Trial | ❌ KHÔNG CÓ | ❌ | ❌ |
+| The Pendulum | ❌ KHÔNG CÓ | ❌ | ❌ |
+
+## Vấn đề gì xảy ra?
+
+Khi `recommend_framework()` chạy (line 2490):
+```python
+"evaluation_focus": fw.get("evaluation_focus", {})  # → {} rỗng!
+```
+
+AI nhận được `evaluation_focus: {}` → **không có tiêu chí chấm điểm có cấu trúc**.
+Scoring hoàn toàn dựa vào `use_when` text + AI judgment chủ quan.
+
+## Có giống vấn đề Biography không?
+
+**Khác nhau:**
+- Biography: CÓ `evaluation_focus` nhưng **dùng field CHUNG** → bias hệ thống (Sử Thi luôn thắng)
+- Mystery & Battle: **KHÔNG CÓ** `evaluation_focus` → AI scoring hoàn toàn chủ quan
+
+**Giống nhau:**
+- Cả 2 đều **không có tiêu chí rõ ràng** để AI đánh giá framework nào phù hợp nhất
+- AI có thể luôn chọn framework "an toàn nhất" (VD: framework có mô tả phù hợp nhất với keyword phổ biến)
+
+## Câu hỏi cho bạn
+
+> [!IMPORTANT]
+> Bạn muốn thiết kế Impact Tiers cho Mystery và/hoặc Battle không?
+> 
+> Nếu **có**: cần xác định cho mỗi framework → **câu hỏi trung tâm** + **primary_data_field riêng** + **3 tiers**
+> 
+> Nếu **chưa**: hệ thống hiện tại vẫn hoạt động, chỉ là AI chấm subjective thay vì dựa trên data cụ thể.
+
+### Ví dụ ý tưởng (chỉ gợi ý, chưa áp dụng):
+
+**Mystery** — mỗi framework có thể dùng field riêng:
+- **Bóc Tách**: "mystery phức tạp đến mức nào?" → số lớp evidence layers
+- **Công Tố**: "có cover-up/conspiracy cụ thể không?" → mức độ cố tình che giấu
+- **Khai Quật**: "bằng chứng vật lý mạnh đến mức nào?" → mức độ anomaly vs mainstream
+
+**Battle** — tương tự:
+- **Investigative Deep-Dive**: "có sai lầm/quyết định gây tranh cãi không?"
+- **The Trial**: "ai đúng ai sai — có scholarly debate không?"
+- **Zoom Lens**: "có cá nhân/khoảnh khắc quyết định không?"

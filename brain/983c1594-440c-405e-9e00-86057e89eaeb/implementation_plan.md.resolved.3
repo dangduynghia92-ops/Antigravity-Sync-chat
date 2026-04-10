@@ -1,0 +1,304 @@
+# Narrative Mystery — Implementation Plan v3
+
+> Nguồn: Internal codebase (battle narrative + review mystery) + 8 external research sources + user feedback
+
+---
+
+## Tổng quan: Narrative Mystery là gì?
+
+**1 video = 1 bí ẩn duy nhất**, phân tích sâu 7-12 chapters. Khác với Review (mỗi ch = 1 bí ẩn khác nhau).
+
+Bao gồm: bí ẩn lịch sử, lịch sử thay thế, giả thuyết lịch sử, thuyết âm mưu có cơ sở, khảo cổ bí ẩn.
+
+---
+
+## 1. INVESTIGATION ARC (5 Phases)
+
+```
+HOOK ──── Fact impossible/paradox → Tại sao?
+  │
+FOUNDATION ──── Bối cảnh + mainstream theory (trình bày công bằng)
+  │
+DEEP DIVE ──── Evidence layers (1-3 chapters, mỗi chapter = 1 góc mới)
+  │
+CONFRONTATION ──── Theory vs Theory → peak tension
+  │
+VERDICT ──── Để evidence nói, audience tự kết luận + CTA
+```
+
+| Phase | Chapters | % Video | Tempo |
+|-------|----------|---------|-------|
+| HOOK | 1 | ~8% | Fast, punchy |
+| FOUNDATION | 1 | ~12% | Measured |
+| DEEP_DIVE | 2-4 | ~45% | Escalating |
+| CONFRONTATION | 1-2 | ~20% | Intense |
+| VERDICT | 1 | ~15% | Reflective |
+
+### Plot Twist Position
+
+> [!IMPORTANT]
+> Plot twist (revelation thay đổi cách hiểu) đặt ở **30-40% video** (chapter 3 của 8), KHÔNG ở giữa.
+> Lý do: nếu đợi đến 50%, nhiều viewer đã tắt. Twist sớm = reset curiosity, giữ chân cho nửa sau.
+
+---
+
+## 2. FIVE FRAMEWORKS
+
+### Framework 1: BÓC TÁCH (The Peeling Onion)
+
+**Dùng khi**: Bí ẩn có nhiều lớp — mỗi lớp reveal deeper mystery. Càng biết nhiều càng bí ẩn hơn.
+
+| Element | Chi tiết |
+|---------|----------|
+| **Emotional arc** | Tò mò → Ngạc nhiên → Hoang mang → "Không thể nào..." |
+| **Hook** | Bắt đầu từ lớp NGOÀI CÙNG — fact đơn giản nhưng kỳ lạ |
+| **Body** | Mỗi chapter bóc 1 lớp: Lớp 1 (hiện tượng) → Lớp 2 (ai liên quan) → Lớp 3 (tại sao) → Lớp 4 (cái gì bị giấu) |
+| **End** | Lớp cuối cùng: câu hỏi mà ngay cả cuộc bóc tách cũng không trả lời được |
+| **Pacing** | Chậm đầu → tăng tốc mỗi lớp → peak ở lớp sâu nhất |
+| **Language** | Từ ngữ "bóc vỏ": "Nhưng bên dưới lớp X, còn có..." |
+| **Technique emphasis** | Evidence excavation, primary source analysis, open loops mạnh (mỗi lớp = 1 loop mới) |
+| **Best for** | Bí ẩn khảo cổ, OOPArts, văn minh thất truyền, kho báu ẩn |
+| **Structure hook** | evidence_excavation (bắt đầu từ artifact/document) |
+| **Structure body** | xoay vòng: evidence_excavation → theory_building → counter_investigation → human_anchor |
+| **Plot twist** | Lớp 3: "Điều bạn tưởng là bí ẩn... thực ra chỉ là vỏ bọc cho bí ẩn THẬT SỰ" |
+
+---
+
+### Framework 2: CÔNG TỐ (The Prosecutor)
+
+**Dùng khi**: Bí ẩn mà mainstream theory MẠNH nhưng có lỗ hổng rõ ràng. Cần phá vỡ "vụ án đã đóng".
+
+| Element | Chi tiết |
+|---------|----------|
+| **Emotional arc** | Tin tưởng → Nghi ngờ → Phẫn nộ → Đòi hỏi sự thật |
+| **Hook** | "Vụ án đã đóng. Lịch sử đã viết xong. Nhưng..." |
+| **Body** | Ch2: Present mainstream (steelman — MẠNH NHẤT). Ch3: Bằng chứng 1 phá vỡ. Ch4: Bằng chứng 2. Ch5: Nhân chứng/chuyên gia. Ch6: "Nếu mainstream đúng, tại sao X không giải thích được?" |
+| **End** | Tổng hợp "hồ sơ" evidence — để audience "tuyên án" |
+| **Pacing** | Methodical, systematic — mỗi chapter = 1 lập luận rõ ràng |
+| **Language** | Pháp lý: "bằng chứng", "mâu thuẫn", "không thể giải thích", "nếu...thì tại sao..." |
+| **Technique emphasis** | Counter investigation (steelman), credibility trial, evidence stacking |
+| **Best for** | Thuyết âm mưu có cơ sở, cái chết bí ẩn, sự kiện bị che đậy |
+| **Structure hook** | counter_investigation (mở bằng mainstream confident → "nhưng...") |
+| **Structure body** | counter_investigation → evidence_excavation → human_anchor → credibility_trial |
+| **Plot twist** | Ch3 (30%): 1 bằng chứng PHÁ VỠ trụ cột chính của mainstream |
+
+---
+
+### Framework 3: CẦU NỐI THỜI GIAN (The Time Bridge)
+
+**Dùng khi**: Bí ẩn kết nối 2+ thời kỳ — artifact cổ đại liên quan đến khám phá hiện đại, hoặc sự kiện quá khứ vẫn có hệ quả.
+
+| Element | Chi tiết |
+|---------|----------|
+| **Emotional arc** | Kinh ngạc → "Không thể trùng hợp" → Kính sợ |
+| **Hook** | 2 facts từ 2 thời kỳ KHÔNG THỂ liên quan... nhưng giống nhau đáng sợ |
+| **Body** | Toggle giữa QUÁ KHỨ và HIỆN ĐẠI. Ch2: Bối cảnh cổ đại. Ch3: Phát hiện hiện đại. Ch4: Khi 2 dòng giao nhau. Ch5: Science giải thích được gì? Ch6: Science không giải thích được gì? |
+| **End** | "Cầu nối" cuối cùng: quá khứ và hiện tại gặp nhau — audience tự cảm nhận |
+| **Pacing** | Nhịp toggle: past→present→past→present → collision |
+| **Language** | Thời gian: "X nghìn năm trước", "nhưng năm 2019...", "khoảng cách Z nghìn năm" |
+| **Technique emphasis** | Timeline reconstruction, evidence excavation, Nén Thời Gian & Đối Chiếu |
+| **Best for** | Lịch sử thay thế, artifact cổ đại + phân tích hiện đại, "what if" |
+| **Structure hook** | timeline_reconstruction (2 timelines song song) |
+| **Structure body** | primary_source → evidence_excavation → timeline_reconstruction → theory_building |
+| **Plot twist** | Ch3 (30%): Phát hiện hiện đại confirm điều cổ đại — "Wait, they KNEW?" |
+
+---
+
+### Framework 4: BIỆN HỘ (The Devil's Advocate)
+
+**Dùng khi**: Bí ẩn có 2+ giả thuyết CÙNG MẠNH. Không rõ bên nào đúng. Audience cần nghe CẢ HAI bên.
+
+| Element | Chi tiết |
+|---------|----------|
+| **Emotional arc** | "Rõ ràng rồi" → "Khoan đã..." → "Cái nào cũng có lý" → Tự suy ngẫm |
+| **Hook** | Present CÙNG fact — 2 cách hiểu hoàn toàn KHÁC NHAU |
+| **Body** | Ch2: Giả thuyết A (steelman). Ch3: Giả thuyết B (steelman). Ch4: Bằng chứng support A. Ch5: Bằng chứng support B. Ch6: Đối chiếu trực tiếp — cùng evidence, 2 cách đọc |
+| **End** | KHÔNG chọn phe — trình bày evidence cuối cùng, để audience tự cảm nhận |
+| **Pacing** | Cân bằng — mỗi bên được CÙNG thời lượng và sự tôn trọng |
+| **Language** | Công bằng: "Nếu nhìn từ góc A...", "Nhưng cùng evidence, từ góc B..." |
+| **Technique emphasis** | Credibility trial, conflicting accounts, Đối Chiếu & Phản Bác (cả 2 chiều) |
+| **Best for** | Tranh luận học thuật, sự kiện có nhiều tường thuật, lịch sử giả thuyết |
+| **Structure hook** | credibility_trial (2 perspectives cùng fact) |
+| **Structure body** | counter_investigation → counter_investigation → credibility_trial → theory_building |
+| **Plot twist** | Ch3 (30%): Bằng chứng mới khiến theory mà audience đang nghiêng về... lung lay |
+
+---
+
+### Framework 5: KHAI QUẬT (The Archaeologist)
+
+**Dùng khi**: Bí ẩn có hành trình khám phá rõ ràng — ai đó tìm ra cái gì đó, dẫn đến discovery chain.
+
+| Element | Chi tiết |
+|---------|----------|
+| **Emotional arc** | Tò mò → Phát hiện → Kinh ngạc → Kính sợ → Trân trọng |
+| **Hook** | Moment khám phá: "Khi [người] mở [vật], [điều impossible] xảy ra" |
+| **Body** | Follow HÀNH TRÌNH: Ch2: Ai, ở đâu, tại sao tìm kiếm. Ch3: Phát hiện đầu tiên. Ch4: Phát hiện dẫn đến phát hiện mới. Ch5: "Rabbit hole" — mỗi câu trả lời tạo 10 câu hỏi mới. Ch6: Scale lớn — bí ẩn này nối vào bức tranh lớn hơn |
+| **End** | Hành trình chưa kết thúc — "Còn bao nhiêu thứ chưa được khai quật?" |
+| **Pacing** | Tăng dần — mỗi phát hiện lớn hơn cái trước |
+| **Language** | Sensory: cảm giác chạm, nhìn, nghe — reconstruct moment discovery |
+| **Technique emphasis** | Human anchor, evidence excavation, Immersive Direct Address (2nd person ở moment khám phá) |
+| **Best for** | Khảo cổ, kho báu, bản thảo mã hóa, lăng mộ, thành phố mất tích |
+| **Structure hook** | human_anchor (bắt đầu từ người phát hiện) |
+| **Structure body** | human_anchor → evidence_excavation → primary_source → theory_building |
+| **Plot twist** | Ch3 (30%): Phát hiện đầu tiên KHÔNG PHẢI là bí ẩn thật — nó là cánh cửa vào bí ẩn LỚN HƠN |
+
+---
+
+## 3. FRAMEWORK COMPARISON
+
+| Framework | Best for | Tone | Twist style |
+|-----------|----------|------|-------------|
+| **Bóc Tách** | Multi-layer mysteries (OOPArts, lost civilizations) | Tò mò → Hoang mang | "Lớp ngoài chỉ là vỏ" |
+| **Công Tố** | Conspiracy, cover-ups, "case closed" mysteries | Nghi ngờ → Phẫn nộ | "Bằng chứng phá mainstream" |
+| **Cầu Nối Thời Gian** | Past-present connections, alternative history | Kinh ngạc → Kính sợ | "Cổ đại đã biết" |
+| **Biện Hộ** | Scholarly debates, multiple valid theories | Phân vân → Suy ngẫm | "Theory đang tin → lung lay" |
+| **Khai Quật** | Discovery stories, excavation, coded manuscripts | Tò mò → Phát hiện | "Bí ẩn nhỏ → cánh cửa lớn" |
+
+---
+
+## 4. CHAPTER STRUCTURES (8 structures)
+
+Mỗi body chapter được gán 1 structure. Writer PHẢI follow structure đó.
+
+| # | Structure | Flow | Best for |
+|---|-----------|------|----------|
+| 1 | **evidence_excavation** | Bằng chứng → Truy nguồn → Đánh giá | Foundation, early Deep Dive |
+| 2 | **theory_building** | Thu thập evidence → Kết nối → Xây giả thuyết → Test | Deep Dive |
+| 3 | **counter_investigation** | Mainstream (steelman) → Attack bằng evidence → What remains | Deep Dive → Confrontation |
+| 4 | **human_anchor** | 1 người → Trải nghiệm → Larger implications | Deep Dive (alternate với analytical) |
+| 5 | **primary_source** | Tài liệu gốc → Context → What it reveals vs hides | Foundation, Deep Dive |
+| 6 | **timeline_reconstruction** | Official timeline → Anomalies → Revised → Implications | Deep Dive |
+| 7 | **credibility_trial** | Source A vs Source B → Cross-examine → Rate | Confrontation |
+| 8 | **verdict_synthesis** | Confirmed → Probable → Unknown → Legacy | Verdict |
+
+### Rules:
+- 2 chapters liên tiếp KHÔNG ĐƯỢC dùng cùng structure
+- Deep Dive chapters PHẢI alternate giữa **analytical** (evidence, timeline) và **sensory** (human_anchor, primary_source)
+
+---
+
+## 5. CLOSING TYPES (5 types)
+
+| # | Type | Mô tả |
+|---|------|--------|
+| 1 | **RHETORICAL_QUESTIONS** | 2-3 câu hỏi chưa giải — mỗi chapter format KHÁC |
+| 2 | **COLD_FACT** | 1 fact lạnh lùng, không bình luận |
+| 3 | **EVIDENCE_CLIFF** | Reveal evidence MỚI cuối chapter → chưa phân tích → ch tiếp |
+| 4 | **IMPOSSIBILITY_STATEMENT** | Khẳng định 1 điều không thể giải thích |
+| 5 | **PERSPECTIVE_SHIFT** | "Nhưng nếu nhìn từ góc..." → chuyển lens |
+
+Rules: 2 chapter liên tiếp KHÔNG cùng closing type. Verdict dùng `"echo"` (callback hook).
+
+---
+
+## 6. RETENTION — OPEN LOOP PROTOCOL
+
+Mỗi chapter:
+1. **MỞ ĐẦU**: Resolve open loop từ chapter trước (câu đầu tiên)
+2. **NỘI DUNG**: Evidence + narrative
+3. **KẾT THÚC**: Mở loop MỚI → kéo sang chapter tiếp
+
+```
+Ch.N kết: "...nhưng chi tiết kỳ lạ nhất chưa phải điều đó."
+Ch.N+1 mở: "Chi tiết đó nằm ở [cụ thể]."
+           ...nội dung...
+           "Và điều này mở ra câu hỏi khó chịu hơn..."
+```
+
+---
+
+## 7. HOOK & END RULES
+
+### Hook (4 opening methods):
+| Method | Khi nào |
+|--------|---------|
+| **PARADOX DROP** | Fact impossible nhưng true |
+| **CRIME SCENE** | Location/artifact cụ thể, vivid |
+| **IMPOSSIBLE QUESTION** | 1 câu hỏi clear, không thể trả lời |
+| **TIMELINE BREAK** | 2 events phá vỡ chronology |
+
+### End rules:
+- Trình bày evidence cuối cùng — **KHÔNG đánh giá, KHÔNG chấm điểm, KHÔNG chọn phe**
+- Để audience TỰ CẢM NHẬN dựa trên toàn bộ evidence đã trình bày
+- Callback về hook → audience hiểu sâu hơn
+- Grand Thesis: mystery này nói gì về lịch sử/con người?
+- Open question → CTA
+- NEVER: kết luận tuyệt đối, tease video tiếp, "Tóm lại..."
+
+---
+
+## 8. VOCABULARY & LANGUAGE
+
+### Banned:
+- "cuộc điều tra" / "investigation" (framework leak)
+- "hồ sơ" / "case file" / "dossier" (framework leak)
+- "Tóm lại..." / "Kết luận..." (signal ending → drop-off)
+- "Như đã đề cập..." (boring recap)
+
+### 2nd Person (YOU) — chỉ dùng khi:
+- **Vivid reconstruction**: "Bạn đứng trước cánh cửa hầm mộ..."
+- **Thought experiment**: "Hãy tưởng tượng bạn mở chiếc hộp đó..."
+- **Impossible scale**: "Nhìn lên — 2.3 triệu khối đá xếp chồng..."
+
+### Steelman Protocol:
+- ALWAYS trình bày mainstream ở dạng MẠNH NHẤT trước khi phá
+- Name experts + credentials
+- Attack bằng EVIDENCE, không bằng tu từ
+
+---
+
+## 9. FILES CẦN TẠO
+
+| # | File | Size est |
+|---|------|----------|
+| 1 | `system_narrative_outline_mystery.txt` | ~14KB |
+| 2 | `system_narrative_audit_mystery.txt` | ~4KB |
+| 3 | `system_narrative_write_mystery.txt` | ~16KB |
+| 4 | `system_narrative_review_mystery.txt` | ~5KB |
+
+### Code changes:
+- Thêm keywords vào `_NICHE_PROMPT_MAP`: `"mystery"`, `"bí ẩn"`, `"enigma"`, `"conspiracy"`, `"âm mưu"`, `"giả thuyết"`, `"alternative"`, `"thay thế"`
+- Blueprint: dùng `system_extract_blueprint_mystery.txt` có sẵn (không cần tạo mới)
+
+---
+
+## 10. ENRICHED CHAPTER SCHEMA
+
+```json
+{
+  "chapter_number": 1,
+  "chapter_type": "hook | body | end",
+  "title": "Evocative title",
+  "summary": "2-3 sentences",
+  
+  "investigation_phase": "foundation | deep_dive | confrontation | verdict",
+  "evidence_layer": "What layer this chapter peels (1 sentence)",
+  "evidence_type": "physical | documentary | testimonial | scientific",
+  "key_evidence": ["Evidence 1", "Evidence 2"],
+  "theories_addressed": ["Theory 1"],
+  "sources_featured": ["Expert + credentials"],
+  
+  "open_loop_plant": "Question planted at END",
+  "open_loop_resolve": "Loop resolved at START (null for ch.1)",
+  
+  "chapter_structure": "1 of 8 structures",
+  "closing_type": "1 of 5 types",
+  "pacing_texture": "analytical | sensory | adversarial | reflective",
+  
+  "emotional_beat": "curiosity | doubt | shock | awe | dread | resolution",
+  "callback_to": "Previous chapter reference",
+  "foreshadow": "Hint at future",
+  "ends_with": "Transition text",
+  "word_count_target": 400
+}
+```
+
+---
+
+## Phê duyệt
+
+Bạn review plan này và cho ý kiến:
+1. **5 frameworks** — đã đủ/phù hợp chưa? Cần thêm/bỏ/sửa framework nào?
+2. **8 structures** — OK?
+3. **Plot twist ở 30%** — OK?
+4. **Còn thiếu gì khác không?**

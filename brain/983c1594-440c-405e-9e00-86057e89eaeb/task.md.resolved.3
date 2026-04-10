@@ -1,0 +1,19 @@
+# Narrative Mystery — Task List
+
+## Phase 1: Style JSON
+- [x] Create `styles/narrative_bí_ẩn_lịch_sử.json` with 5 frameworks + core_rules + openings + closings + techniques
+
+## Phase 2: Prompt Files
+- [x] Create `prompts/system_narrative_outline_mystery.txt`
+- [x] Create `prompts/system_narrative_audit_mystery.txt`  
+- [x] Create `prompts/system_narrative_write_mystery.txt`
+- [x] Create `prompts/system_narrative_review_mystery.txt`
+
+## Phase 3: Code Wiring
+- [x] Add mystery keywords to `_NICHE_PROMPT_MAP` (all 4 maps merged into single dicts)
+- [x] Fix duplicate dict key bug (battle vs mystery sharing same step keys)
+
+## Phase 4: Verify
+- [x] Syntax check (rewriter.py → SYNTAX OK)
+- [x] JSON validation (style JSON → 504 lines, valid structure)
+- [ ] End-to-end runtime test (needs user to run pipeline)

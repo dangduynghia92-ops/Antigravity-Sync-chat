@@ -1,0 +1,124 @@
+# Per-Niche Config Auto-Save
+
+Khi user chọn mode + style khác nhau, các settings (lang, framework, word count, v.v.) sẽ tự động lưu/load theo từng combo mode+style thay vì dùng 1 config chung.
+
+## Proposed Changes
+
+### Config Manager
+
+#### [MODIFY] [config_manager.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py)
+
+Thêm 2 functions mới:
+
+```python
+def save_niche_config(style_filename: str, data: dict):
+    """Save per-niche config to niche_configs/{sanitized_name}.json"""
+
+def load_niche_config(style_filename: str) -> dict:
+    """Load per-niche config. Returns empty dict if not found."""
+```
+
+- Lưu vào thư mục `niche_configs/` (tự tạo nếu chưa có)
+- Key = tên file style đã sanitize (VD: `narrative_phân_tích_trận_đánh.json` → `narrative_phân_tích_trận_đánh.json`)
+- Dùng chính tên file style làm key, vì mỗi style đã thuộc 1 mode (pipeline field)
+
+---
+
+### Style Rewrite Tab
+
+#### [MODIFY] [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**1. `_save_config()` (line 686)** — Sau khi save config chung, thêm auto-save per-niche:
+
+```python
+def _save_config(self):
+    # ... existing code saves to CONFIG_NAME ...
+    
+    # Also save per-niche settings
+    style_file = self._get_style_filename()
+    if style_file:
+        niche_cfg = {
+            "lang": self._combo_lang.currentText(),
+            "framework": self._combo_framework.currentText(),
+            "tier": self._combo_tier.currentText(),
+            "threads": self._spin_threads.value(),
+            "country": self._combo_country.currentText(),
+            "ch_min": self._ch_min.value(),
+            "ch_max": self._ch_max.value(),
+            "wc_open_min": self._wc_open_min.value(),
+            "wc_open_max": self._wc_open_max.value(),
+            "wc_body_min": self._wc_body_min.value(),
+            "wc_body_max": self._wc_body_max.value(),
+            "wc_end_min": self._wc_end_min.value(),
+            "wc_end_max": self._wc_end_max.value(),
+        }
+        save_niche_config(style_file, niche_cfg)
+```
+
+> [!NOTE]
+> Các field **KHÔNG lưu** per-niche: `output`, `unused_dir`, `mode`, `style` (đã là key), `excel_update`, `transitions`, `cut_video`, `price_check`, `enrich_data` (hardcoded defaults per mode).
+
+**2. `_on_mode_changed()` (line 1319)** — Sau khi refresh style dropdown, load niche config cho style đang chọn:
+
+Thêm vào cuối `_on_mode_changed()`:
+```python
+# Load niche config for the selected style
+self._apply_niche_config()
+```
+
+**3. Thêm method mới `_apply_niche_config()`:**
+
+```python
+def _apply_niche_config(self):
+    """Load and apply per-niche config for the currently selected style."""
+    style_file = self._get_style_filename()
+    if not style_file:
+        return
+    niche = load_niche_config(style_file)
+    if not niche:
+        return  # No saved niche config — use current/default values
+    
+    # Apply niche settings (same logic as _load_saved_config but subset)
+    if niche.get("lang"):
+        idx = self._combo_lang.findText(niche["lang"])
+        if idx >= 0: self._combo_lang.setCurrentIndex(idx)
+    if niche.get("framework"):
+        idx = self._combo_framework.findText(niche["framework"])
+        if idx >= 0: self._combo_framework.setCurrentIndex(idx)
+    # ... (same pattern for tier, threads, country, wc_*, ch_*)
+```
+
+**4. Kết nối signal** — style combo change cũng trigger niche config load:
+
+```python
+self._combo_style.currentTextChanged.connect(lambda _: self._apply_niche_config())
+```
+
+## Flow tổng quát
+
+```
+User chọn Mode → _on_mode_changed()
+  ├─ Set checkbox defaults (hardcoded)
+  ├─ Filter styles by mode
+  ├─ Load frameworks from style JSON
+  └─ _apply_niche_config()  ← MỚI
+       ├─ Tìm niche config cho style đang chọn
+       ├─ Nếu có → fill lang, framework, wc_*, ch_*, tier, threads, country
+       └─ Nếu không → giữ defaults từ _on_mode_changed
+       
+User chọn Style khác → _apply_niche_config()  ← MỚI
+       └─ Load niche config mới cho style mới
+
+User bấm Save / Run → _save_config()
+       ├─ Save config chung (như cũ)
+       └─ Save niche config cho style hiện tại  ← MỚI
+```
+
+## Verification Plan
+
+### Manual Verification
+
+1. Mở app → chọn **Narrative** + **✦ Narrative Phân Tích Trận Đánh** → đổi lang sang `Español`, wc_body_min sang `600` → bấm **Save**
+2. Chuyển sang **Top/List Review** → xác nhận settings reset về defaults của Review
+3. Chuyển lại **Narrative** + **✦ Narrative Phân Tích Trận Đánh** → xác nhận lang = `Español` và wc_body_min = `600` (được load từ niche config)
+4. Kiểm tra file `niche_configs/narrative_phân_tích_trận_đánh.json` có được tạo đúng

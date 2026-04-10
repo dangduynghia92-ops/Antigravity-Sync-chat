@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Walkthrough for the Resume Pipeline feature implementation, covering the UI button, cache preloading, and step-level cache checks in the rewrite pipeline.",
+  "updatedAt":  "2026-04-05T02:34:39.383194700Z",
+  "version":  "1"
+}

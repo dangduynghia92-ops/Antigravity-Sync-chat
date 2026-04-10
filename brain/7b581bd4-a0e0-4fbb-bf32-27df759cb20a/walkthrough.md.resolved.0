@@ -1,0 +1,125 @@
+# Cách thức hoạt động của tab 🔀 Regroup
+
+## Mục đích
+
+Tab **Regroup** dùng để **nhóm lại** các chapters đã tách (từ tab Chapter/Split) theo **ngách chủ đề** (niche). AI sẽ phân loại từng chapter vào ngách phù hợp nhất, sau đó copy file vào các folder nhóm riêng biệt.
+
+---
+
+## Quy trình 3 bước
+
+```mermaid
+flowchart LR
+    A["1. Scan Chapters"] --> B["2. AI Classify"]
+    B --> C["3. Copy to Group"]
+```
+
+### Bước 1: Scan Chapters
+
+**Mục đích**: Quét folder chứa chapters đã tách, đọc thông tin từng chapter.
+
+**Chi tiết**:
+- Duyệt tất cả subfolder trong **Scan Folder**
+- Bỏ qua folder đã regroup (có `_GROUP_INFO.json`)
+- Tìm file chapter theo pattern: `Chapter N - Title.txt` hoặc `.md`
+- Đọc file `_SUMMARY.txt` để lấy tóm tắt cho mỗi chapter
+- **Nếu thiếu summary**: Tự động gọi AI tạo summary (đọc nội dung chapter → gửi AI → lưu `_SUMMARY.txt`)
+- Lọc chapter theo **Min chars** (mặc định 6000 ký tự) nếu checkbox được bật
+- Kết quả hiển thị trong tree, nhóm theo **source script**
+
+**Dữ liệu mỗi chapter** ([ChapterEntry](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#20-34)):
+| Trường | Mô tả |
+|---|---|
+| `source_script` | Tên subfolder gốc |
+| `chapter_title` | Tên file chapter (không có extension) |
+| `chapter_number` | Số thứ tự chapter |
+| `file_path` | Đường dẫn tuyệt đối |
+| [summary](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#87-131) | Tóm tắt từ `_SUMMARY.txt` |
+| [file_hash](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#78-85) | MD5 hash để track đã dùng chưa |
+
+---
+
+### Bước 2: AI Classify
+
+**Mục đích**: Gửi chapters tới AI để phân loại vào các ngách chủ đề.
+
+**Chi tiết**:
+1. Lấy danh sách **ngách đã chọn** (checked) từ UI
+2. Nếu "Ẩn chapters đã dùng" bật → lọc bỏ chapters đã dùng
+3. Đánh số thứ tự `#1, #2, ...` cho mỗi chapter
+4. Xây dựng prompt gồm:
+   - **System prompt** từ [system_regroup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt) — hướng dẫn AI phân loại
+   - **User prompt**: danh sách ngách + danh sách chapters (có summary)
+5. Gửi theo **batch 50 chapters** mỗi lần gọi API
+6. AI trả về JSON với cấu trúc:
+   ```json
+   {
+     "groups": [
+       {
+         "niche": "Tên ngách",
+         "suggested_titles": ["Tiêu đề gợi ý 1", "Tiêu đề 2"],
+         "chapters": [
+           {"id": "#1", "reason": "Lý do phân loại"}
+         ]
+       }
+     ]
+   }
+   ```
+7. Parse response → map `#N` về [ChapterEntry](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#20-34) thực tế
+8. Hiển thị tree theo **ngách** (thay vì theo source script)
+9. **Auto-export** danh sách chapters không khớp ngách ra file CSV
+
+**Tier**: Chọn Flash (nhanh, rẻ) hoặc Pro (chính xác hơn) cho AI model.
+
+---
+
+### Bước 3: Copy to Group
+
+**Mục đích**: Copy các chapters đã chọn (checked trong tree) vào folder nhóm.
+
+**Chi tiết**:
+1. Duyệt tree → lấy chapters có checkbox ✓
+2. Với mỗi nhóm ngách:
+   - Tìm folder đã tồn tại (cùng tên) → **append** thêm
+   - Không có → tạo folder mới (tên được sanitize: bỏ dấu, thay space bằng `_`)
+   - Copy file chapter vào folder nhóm, skip nếu đã tồn tại
+   - Tạo/cập nhật `_GROUP_INFO.json` với metadata
+3. Cập nhật `_USED_TRACKER.json` — đánh dấu chapters đã dùng
+
+**Output folder structure**:
+```
+output/
+├── ten_ngach_1/
+│   ├── Chapter 1 - Title.txt
+│   ├── Chapter 5 - Title.txt
+│   └── _GROUP_INFO.json
+├── ten_ngach_2/
+│   ├── Chapter 3 - Title.txt
+│   └── _GROUP_INFO.json
+```
+
+---
+
+## Các tính năng khác
+
+| Tính năng | Mô tả |
+|---|---|
+| **Chủ đề lớn** | Dropdown chọn broad topic từ folder [niches/](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#38-41) (file [.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt)) |
+| **Danh sách ngách** | Checklist các ngách nhỏ, quản lý thêm/xóa, lưu theo topic |
+| **Ẩn chapters đã dùng** | Checkbox ẩn chapters đã được copy sang group trước đó |
+| **AI Suggest** | Tự động check tất cả chapters chưa dùng trong tree |
+| **Export ✗** | Xuất CSV danh sách chapters không khớp ngách nào |
+| **Save Config** | Lưu cấu hình (scan folder, output, topic, tier) |
+
+---
+
+## File liên quan
+
+| File | Vai trò |
+|---|---|
+| [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py) | UI tab — PyQt6 widgets, 3 nút hành động, tree hiển thị |
+| [regroup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py) | Core logic — scan, classify, copy, tracker |
+| [system_regroup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt) | System prompt cho AI phân loại |
+| `niches/*.txt` | Danh sách ngách theo từng chủ đề lớn |
+| `_USED_TRACKER.json` | Tracking chapters đã dùng (trong scan folder) |
+| `_GROUP_INFO.json` | Metadata của mỗi nhóm output |

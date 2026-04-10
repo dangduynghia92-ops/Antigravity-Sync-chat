@@ -1,0 +1,782 @@
+{
+    "core_rules": {
+        "identity": "Cinematic-documentary storyteller.",
+        "tone": "The primary tone is a dramatic and authoritative historical narrative, blending cinematic tension with a conversational flow. The tone shifts to visceral and fast-paced during action sequences, becomes analytical and expository when explaining strategic or technical concepts, and turns casual and direct during audience engagement hooks.",
+        "sentence_rhythm": "A dynamic rhythm alternating between short, staccato sentences to build tension and impact, and longer, complex sentences for context and analysis. Paragraphs are short to medium in length, dense with a single core idea, and structured for spoken delivery. Pacing is deliberately manipulated: accelerated for action and conflict, and decelerated for strategic explanation and emotional reflection.",
+        "vocabulary": "A hybrid register combining accessible, everyday language with elevated, visceral, and technical vocabulary (e.g., 'geopolitical inevitability', 'catastrophic kinetic event', 'asymmetric warfare'). Relies on modern, tangible analogies to make abstract concepts immediately relatable. Frequently personifies abstract concepts like geography, fear, or empires.",
+        "pov_rules": "Default POV is third-person omniscient, acting as an expert guide. Shift to second-person ('you') for immersive hooks or to make a complex experience feel personal. Shift to first-person plural ('we') to foster a sense of shared analysis and discovery with the audience. Shift to first-person singular ('I') for personal asides and building community rapport in introductions and conclusions.",
+        "anti_copy": "NEVER copy fixed phrases or specific analogies from past scripts. The style's power comes from generating unique, context-specific comparisons. The core technique is to translate abstract historical concepts into visceral, modern, and tangible analogies. Each script must feel fresh by applying this principle, not by repeating its previous outputs.",
+        "analogy_strategy": "Every analogy must pass the '2-second test': a viewer hearing it must understand INSTANTLY without pausing. Use these 5 types in priority order: (1) Modern military equivalents — compare ancient weapons/tactics to modern ones the audience knows ('medieval F-16', 'Renaissance-era SEAL team', 'analog cruise missile'). (2) Pop-culture anchors — reference movies, games, sports moments the target audience already recognizes ('real-life Battle of Helm's Deep', 'the ancient world's version of D-Day'). (3) Scale translations — convert abstract numbers into physical spaces ('enough soldiers to fill 3 Bernabéu stadiums', 'a fleet stretching from Manhattan to Staten Island'). (4) Modern tech equivalents — translate ancient systems to modern ones ('Venice's spy network was the analog CIA', 'carrier pigeons were the 15th-century encrypted email'). (5) Sensory/physical comparisons — appeal to sounds, impacts, sensations the audience can physically imagine ('the sound of 10,000 oars hitting water simultaneously — like a thunderclap that never ends'). NEVER use abstract philosophical metaphors ('the democracy of death'), literary symbolism ('tearing the fabric of destiny'), or poetic conceits that require reflection. The purpose of EVERY analogy is instant comprehension through a 21st-century lens, NOT artistic beauty.",
+        "technical_depth": "Always explain the MECHANICS behind military events. For every weapon: HOW it works physically. For every tactic: WHY it succeeds or fails mechanically. For every advantage: WHAT specific physical property creates it. Example: Do NOT write 'the cannons destroyed the Ottoman fleet'. DO write 'by sawing off the ram at the bow, Venetian engineers lowered the cannon angle by 15 degrees — turning each galley into a floating gun platform that could fire point-blank into the waterline, below the Ottoman shields'. The audience must understand the ENGINEERING, not just the result. This is non-negotiable for military history content — technical explanations are what differentiate expert content from generic summaries.",
+        "anti_framework_leak": "NEVER use framework terminology in the script output. Words like 'pendulum', 'domino', 'zoom in', 'zoom out', 'lens', 'trial', 'prosecution', 'defense', 'verdict', 'oscillation', 'equilibrium' must NEVER appear as narrative devices. The framework is an INVISIBLE structural guide for the WRITER — the AUDIENCE must never know which framework is being used. If the script reads like a framework description, you have failed.",
+        "step_names_are_internal": "Step names, act names, and structural labels in each framework (e.g. 'The Shocking Outcome', 'The Cascade', 'The Pull Back') are INTERNAL guidance for the writer. They must NEVER appear as chapter titles, section headers, or labels in the output script. Each chapter should have a unique, content-specific title derived from the actual events being described."
+    },
+    "frameworks": [
+        {
+            "name": "The Investigative Deep-Dive",
+            "use_when": "For stories where the outcome is so surprising or gruesome it serves as the best hook — an impossible underdog victory, a shocking disaster, a legendary last stand.",
+            "emotional_arc": "Shock/Intrigue → Analytical Rewind → Rising Tension → Climactic Payoff → Legacy Analysis",
+            "structure": {
+                "total_acts": 4,
+                "act_breakdown": "Act 1: The Reveal (10%) — shock the audience with the outcome. Act 2: The Rewind (30%) — explain how we got here. Act 3: The Build (40%) — narrate key events escalating to climax. Act 4: The Legacy (20%) — aftermath and long-term impact.",
+                "chapter_design": "Each chapter deepens a different layer of the mystery. Early chapters are analytical (causes), middle chapters are narrative (events), final chapters are reflective (meaning)."
+            },
+            "hook": {
+                "method": "Open 'in medias res' with the shocking final outcome — a battlefield covered in bodies, a fortress that should never have fallen, a general surrendering in disbelief.",
+                "tone": "Maximum impact: visceral, cinematic, sensory-overload. Then immediately pivot to calm, analytical: 'How did this happen?'",
+                "example_approach": "Show the impossible result in 2-3 vivid sentences. Then pose the central question that becomes the narrative engine."
+            },
+            "pov_strategy": {
+                "default": "Third-person omniscient — the investigator guiding the audience through evidence",
+                "shifts": [
+                    {
+                        "to": "Second-person",
+                        "when": "Opening scene — immerse audience in the shocking outcome"
+                    },
+                    {
+                        "to": "First-person plural",
+                        "when": "Analytical sections — 'Let's examine why...'"
+                    },
+                    {
+                        "to": "Second-person",
+                        "when": "Climax — place audience back into the decisive moment"
+                    }
+                ]
+            },
+            "pacing": {
+                "pattern": "Fast → Slow → Accelerating → Fast → Slow",
+                "rule": "Opening is fast (shock). Rewind decelerates (analysis). Pace increases through build, accelerates through climax, decelerates for legacy.",
+                "chapter_rhythm": "Chapter 1: explosive. Chapters 2-3: measured, investigative. Chapters 4-6: rising tension. Final chapters: fast climax, slow conclusion."
+            },
+            "language": {
+                "metaphor_family": "Crime/detective language — 'the clues were hiding in plain sight', 'the smoking gun was a logistics report', 'history buried the evidence'. Autopsy language — 'dissecting the real cause', 'beneath the surface'. Use these naturally, never as labels.",
+                "sentence_style": "Short punchy for revelations. Longer analytical for explanation. Fragments for dramatic punctuation.",
+                "forbidden": "Do NOT reveal all information upfront. Withhold key details and release them strategically."
+            },
+            "outline_rules": {
+                "first_chapter": "The Outcome — visceral, unbelievable. End by posing the central question.",
+                "middle_chapters": "Each answers ONE aspect (geography, psychology, strategy, technology). Each answer raises a NEW question.",
+                "last_chapter": "Return to opening scene with full context. Same image hits differently. Then: legacy.",
+                "transitions": "End each chapter with a partial answer opening a bigger question."
+            },
+            "steps": [
+                {
+                    "name": "The Shocking Outcome",
+                    "description": "Open with the end result — visceral, unbelievable",
+                    "purpose": "Hook"
+                },
+                {
+                    "name": "The Central Question",
+                    "description": "Pose the 'How?' or 'Why?' that drives the narrative",
+                    "purpose": "Engine"
+                },
+                {
+                    "name": "The Context Rewind",
+                    "description": "Political, geographic, psychological setup",
+                    "purpose": "Foundation"
+                },
+                {
+                    "name": "The Key Players",
+                    "description": "Decision-makers, motivations, fatal assumptions",
+                    "purpose": "Character"
+                },
+                {
+                    "name": "The Escalation",
+                    "description": "Events build — each decision narrows the path",
+                    "purpose": "Build"
+                },
+                {
+                    "name": "The Point of No Return",
+                    "description": "Last chance to change course, missed",
+                    "purpose": "Turning point"
+                },
+                {
+                    "name": "The Climax Revisited",
+                    "description": "Opening scene with full context",
+                    "purpose": "Payoff"
+                },
+                {
+                    "name": "The Echo",
+                    "description": "Long-term consequences",
+                    "purpose": "Legacy"
+                }
+            ],
+            "tension_curve": "Double-peak: peaks at chapter 1 (shock), drops during analysis, builds through middle, peaks again at climax, resolves at legacy.",
+            "cliffhanger_types": [
+                "Partial answer — reveal one puzzle piece, hint the biggest is missing",
+                "Ominous foreshadowing — 'They solved the tactical problem. The strategic problem was about to solve itself.'",
+                "Perspective shift — end from winner's view, start next from loser's"
+            ],
+            "technique_emphasis": {
+                "use_heavily": [
+                    "Foreshadowing",
+                    "Systematic Contrast",
+                    "Rhetorical Question"
+                ],
+                "use_moderately": [
+                    "Modern Visceral Analogy",
+                    "Visceral Sensory Detail"
+                ],
+                "use_sparingly": [
+                    "Direct Audience Address",
+                    "Symbolic Action"
+                ]
+            },
+            "opening_closing_fit": {
+                "best_openings": [
+                    "Shocking Aftermath",
+                    "Immersive Second-Person Scenario"
+                ],
+                "best_closings": [
+                    "Thematic Thesis Statement",
+                    "Knowledge Gap / Narrative Question"
+                ]
+            },
+            "counter_argument": "Present the 'obvious' explanation early, then systematically dismantle it. The counter-argument IS the narrative engine.",
+            "anti_patterns": [
+                "Do NOT tell chronologically — power comes from strategic information release",
+                "Do NOT resolve the mystery too early",
+                "Do NOT present the outcome as inevitable from the start"
+            ]
+        },
+        {
+            "name": "The Domino Chain",
+            "use_when": "For stories where a cascade of cause-and-effect transforms a minor event into a catastrophe — an assassination triggering a world war, an engineering failure collapsing an empire.",
+            "emotional_arc": "Curiosity → Unease → Growing Dread → Inevitability → Impact → Haunting Reflection",
+            "structure": {
+                "total_acts": 3,
+                "act_breakdown": "Act 1: The First Push (15%) — the seemingly insignificant trigger. Act 2: The Chain (65%) — each link grows larger. Act 3: The Collapse (20%) — everything falls, then reflect.",
+                "chapter_design": "Each chapter IS one link in the chain. Opens by receiving energy from previous, closes by transferring amplified energy forward. Chapters grow in scale and speed."
+            },
+            "hook": {
+                "method": "Open with the FINAL domino — catastrophic end result. Then rewind to something absurdly small.",
+                "tone": "Ironic contrast between enormity of consequence and triviality of trigger.",
+                "example_approach": "2-3 sentences of devastation. Then: 'But this didn't start with armies. It started with [something mundane].'"
+            },
+            "pov_strategy": {
+                "default": "Third-person omniscient with rising concern",
+                "shifts": [
+                    {
+                        "to": "Second-person",
+                        "when": "Trigger moment — 'You are the clerk who misfiles the document.'"
+                    },
+                    {
+                        "to": "First-person plural",
+                        "when": "Connecting causes — 'Now let's see what this set in motion.'"
+                    },
+                    {
+                        "to": "Second-person",
+                        "when": "Final collapse — audience experiences accumulated weight"
+                    }
+                ]
+            },
+            "pacing": {
+                "pattern": "Slow → Accelerating → Rapid → Breathless → Sudden Stop",
+                "rule": "Each chapter FASTER than previous. Chapter 1 calm. Final chapters breathless. Last chapter: sudden stillness.",
+                "chapter_rhythm": "Chapter 1: leisurely, almost boring. Chapters 2-3: picking up. Chapters 4-5: rapid. Chapters 6-7: relentless. Final: stillness."
+            },
+            "language": {
+                "metaphor_family": "Machinery and engineering — 'a machine with no brake', 'the gears were already turning', 'pressure building in a sealed chamber'. Gravity/momentum — 'rolling downhill', 'gathering speed with every mile'. Never use 'domino' or 'chain reaction' literally.",
+                "sentence_style": "Early: long, measured cause-and-effect. Later: sentences shorten progressively. Final chapters: fragments and staccato.",
+                "forbidden": "Do NOT use 'A vs B' framing. Enemy is CAUSALITY ITSELF. Do NOT blame any single actor — the SYSTEM caused it."
+            },
+            "outline_rules": {
+                "first_chapter": "The Trigger — absurdly small event described in mundane detail.",
+                "middle_chapters": "Each RECEIVES consequence from previous, amplifies through human reaction/failure, SENDS larger consequence forward.",
+                "last_chapter": "Callback montage: trace entire chain in compressed form. Then stillness and reflection.",
+                "transitions": "Every chapter ends with cause→effect bridge: 'And that set something else in motion...'"
+            },
+            "steps": [
+                {
+                    "name": "The Catastrophic End (Flash-forward)",
+                    "description": "Catastrophic end result in 2-3 sentences",
+                    "purpose": "Hook"
+                },
+                {
+                    "name": "The Trigger",
+                    "description": "Absurdly small initial event",
+                    "purpose": "Setup (Irony)"
+                },
+                {
+                    "name": "First Ripple",
+                    "description": "Immediate, still-small consequence",
+                    "purpose": "Chain begins"
+                },
+                {
+                    "name": "Amplification",
+                    "description": "Human overreaction multiplies the effect",
+                    "purpose": "Escalation"
+                },
+                {
+                    "name": "The Tipping Point",
+                    "description": "Last chance to intervene, missed",
+                    "purpose": "Point of no return"
+                },
+                {
+                    "name": "The Cascade",
+                    "description": "Multiple consequences collapsing simultaneously",
+                    "purpose": "Climax"
+                },
+                {
+                    "name": "The Full Chain",
+                    "description": "Trace entire chain from trigger to collapse compressed",
+                    "purpose": "Synthesis"
+                },
+                {
+                    "name": "The Haunting Question",
+                    "description": "What if that first event had never happened?",
+                    "purpose": "Reflection"
+                }
+            ],
+            "tension_curve": "Starts flat, rises CONTINUOUSLY and EXPONENTIALLY. Never dips. Only release at final reflection. No tension valleys.",
+            "cliffhanger_types": [
+                "Cause-effect bridge — 'The letter arrived three days too late. Everything changed.'",
+                "Scale revelation — the next consequence is an order of magnitude larger",
+                "Ominous inevitability — 'No one noticed. The chain was already in motion.'"
+            ],
+            "technique_emphasis": {
+                "use_heavily": [
+                    "Foreshadowing",
+                    "Escalation",
+                    "Modern Visceral Analogy"
+                ],
+                "use_moderately": [
+                    "Systematic Contrast",
+                    "Rhetorical Question"
+                ],
+                "use_sparingly": [
+                    "Direct Audience Address",
+                    "Symbolic Action"
+                ]
+            },
+            "opening_closing_fit": {
+                "best_openings": [
+                    "Shocking Aftermath",
+                    "Thematic Juxtaposition"
+                ],
+                "best_closings": [
+                    "Ironic Reversal",
+                    "Thematic Thesis Statement"
+                ]
+            },
+            "counter_argument": "At each domino, mention what COULD have stopped the chain. Makes inevitability more tragic.",
+            "anti_patterns": [
+                "Do NOT blame any single person — the chain is the protagonist",
+                "Do NOT break causal chain — every chapter MUST be caused by previous",
+                "Do NOT allow tension to dip",
+                "Do NOT use traditional 'A vs B' framing"
+            ]
+        },
+        {
+            "name": "The Zoom Lens",
+            "use_when": "For events embedded in much larger context — a battle only meaningful within centuries of buildup, a tactical decision rooted in civilizational clash, a single moment capturing an era.",
+            "emotional_arc": "Awe (scale) → Intellectual Fascination → Personal Connection → Intimate Tension → Devastating Detail → Expansive Reflection",
+            "structure": {
+                "total_acts": 5,
+                "act_breakdown": "Act 1: Satellite View (10%) — centuries, continents. Act 2: Map View (20%) — decades, regions. Act 3: Street View (30%) — years, participants. Act 4: Microscope (30%) — hours, individuals. Act 5: Pull Back (10%) — satellite with new understanding.",
+                "chapter_design": "Each chapter narrows the focus. Audience enters through the biggest door, exits through the smallest."
+            },
+            "hook": {
+                "method": "Scale Countdown — open with a cascade of escalating numbers that make the audience's jaw drop, then collapse it all into one decisive moment.",
+                "tone": "Awe-inspiring, almost breathless. Each number bigger than the last. Then suddenly intimate: one person, one choice.",
+                "example_approach": "'Two empires. 500 warships. 100,000 men. 2,000 years of conflict. And it all came down to one 24-year-old bastard prince standing on the deck of a single galley. One afternoon.' Then begin the satellite view."
+            },
+            "pov_strategy": {
+                "default": "Third-person omniscient, progressively narrowing",
+                "shifts": [
+                    {
+                        "to": "Omniscient-cosmic",
+                        "when": "Opening — god's-eye view of civilizations"
+                    },
+                    {
+                        "to": "Omniscient-strategic",
+                        "when": "Middle — generals, kings, decision-makers"
+                    },
+                    {
+                        "to": "Close third-person",
+                        "when": "Later — one soldier, one civilian"
+                    },
+                    {
+                        "to": "Second-person",
+                        "when": "Microscope — 'You are standing on the wall when the cannon fires.'"
+                    }
+                ]
+            },
+            "pacing": {
+                "pattern": "Majestic (slow) → Measured → Building → Intense → Intimate → Expansive (slow)",
+                "rule": "Pacing mirrors lens. Wide = slow, sweeping. Tight = fast, visceral. Pull-back returns to slow but carries weight.",
+                "chapter_rhythm": "Chapters 1-2: vast, patient. Chapters 3-4: strategic, personalities emerge. Chapters 5-6: the battle, the hour. Final: expand back to full scope."
+            },
+            "language": {
+                "metaphor_family": "Geography and nature — 'tectonic forces grinding against each other', 'fault lines that had been building for centuries', 'the earthquake that shook an entire civilization'. Scale language — 'from the height of empires down to one man's heartbeat'. Never use 'zoom', 'lens', 'wide angle' or camera terms.",
+                "sentence_style": "Opening: long, flowing, multiple clauses (sweep of centuries). Progressively shorter. Microscope: shortest, most direct.",
+                "forbidden": "Do NOT rush the narrowing. Each level must feel explored. Do NOT stay at one level too long — MOVEMENT is the power."
+            },
+            "outline_rules": {
+                "first_chapter": "Satellite — centuries of context in sweeping strokes. FORCES that make event inevitable.",
+                "middle_chapters": "Each narrows one level closer. Civilizations → Nations → Armies → Units → Individuals.",
+                "last_chapter": "Pull Back — rapidly expand to civilizational scale. Show how one moment rippled across centuries.",
+                "transitions": "End by narrowing focus: 'To understand why this empire crumbled, we need to look closer. At one city. One wall. One man.'"
+            },
+            "steps": [
+                {
+                    "name": "The Satellite View",
+                    "description": "Centuries — civilizations, empires, tectonic forces",
+                    "purpose": "Scale"
+                },
+                {
+                    "name": "The Map View",
+                    "description": "Decades — political alliances, territorial shifts",
+                    "purpose": "Narrowing"
+                },
+                {
+                    "name": "The Strategic View",
+                    "description": "Key players — ambitions, fears, fatal assumptions",
+                    "purpose": "Character"
+                },
+                {
+                    "name": "The Battlefield",
+                    "description": "The event — military movements, tactical decisions",
+                    "purpose": "Action"
+                },
+                {
+                    "name": "The Microscope",
+                    "description": "One person, one moment, one decision",
+                    "purpose": "Emotional core"
+                },
+                {
+                    "name": "The Pull Back",
+                    "description": "Rapid expansion — this moment's ripple across centuries",
+                    "purpose": "Legacy"
+                }
+            ],
+            "tension_curve": "Gradually increases as zoom tightens. Peak at microscope. Releases slowly during pull-back, replaced by significance.",
+            "cliffhanger_types": [
+                "Scale tease — 'To understand why this wall fell, we need to stand on it.'",
+                "Scale contrast — 'An army of 200,000. On the other side: 7,000 men who knew they'd die.'",
+                "Time compression — 'Two centuries came down to fourteen hours. One wall.'"
+            ],
+            "technique_emphasis": {
+                "use_heavily": [
+                    "Systematic Contrast",
+                    "Visceral Sensory Detail",
+                    "Escalation"
+                ],
+                "use_moderately": [
+                    "Modern Visceral Analogy",
+                    "Foreshadowing"
+                ],
+                "use_sparingly": [
+                    "Rhetorical Question",
+                    "Direct Audience Address"
+                ]
+            },
+            "opening_closing_fit": {
+                "best_openings": [
+                    "Establish Overwhelming Odds",
+                    "Thematic Juxtaposition"
+                ],
+                "best_closings": [
+                    "Thematic Thesis Statement",
+                    "Ironic Reversal"
+                ]
+            },
+            "counter_argument": "At each zoom level, present 'conventional wisdom' for that scale, then show how the NEXT zoom complicates it.",
+            "anti_patterns": [
+                "Do NOT jump levels erratically — always progressive",
+                "Do NOT stay at one level the whole script",
+                "PREFER focusing on a lesser-known figure for the intimate level if available. If only famous leaders exist in the content, focus on a specific MOMENT of their experience, not their biography.",
+                "Do NOT skip the pull-back"
+            ]
+        },
+        {
+            "name": "The Trial",
+            "use_when": "For ANY event that can be examined from multiple angles — whether the popular narrative is oversimplified, the winner's story hides uncomfortable truths, a leader's 'genius' was actually luck, or a defeat was actually a strategic success. Works whenever DIFFERENT INTERPRETATIONS of the same facts are possible.",
+            "emotional_arc": "Confidence → Doubt → Investigation → Conflicted Engagement → Nuanced Understanding",
+            "structure": {
+                "total_acts": 5,
+                "act_breakdown": "Act 1: The Popular Story (10%) — what everyone believes. Act 2: The First Angle (25%) — strongest case FOR the popular view. Act 3: The Other Side (25%) — strongest case AGAINST. Act 4: The Hidden Evidence (25%) — deeper analysis. Act 5: The Full Picture (15%) — nuanced synthesis.",
+                "chapter_design": "Each chapter presents evidence from a different angle: state one interpretation, challenge it, let audience weigh. Narrator is the impartial guide, not an advocate."
+            },
+            "hook": {
+                "method": "Bold Contrarian — state what everyone believes as absolute fact, then destroy it in one sentence. The audience MUST watch to find out the truth.",
+                "tone": "First: authoritative, textbook-confident. Then: one cold sentence that cracks everything. Tone shifts from certainty to genuine curiosity.",
+                "example_approach": "'History says the Holy League crushed the Ottoman navy at Lepanto and saved Western civilization. Textbooks confirm it. Historians agree. They're all wrong — and the proof has been hiding in plain sight for 450 years.'"
+            },
+            "pov_strategy": {
+                "default": "Third-person omniscient — impartial guide presenting both sides",
+                "shifts": [
+                    {
+                        "to": "Third-person omniscient (confident, assertive tone)",
+                        "when": "Presenting the popular narrative — voice is sure, authoritative"
+                    },
+                    {
+                        "to": "Third-person omniscient (measured, questioning tone)",
+                        "when": "Presenting the counter-narrative — voice is careful, surprising"
+                    },
+                    {
+                        "to": "First-person plural",
+                        "when": "Weighing evidence — 'Let's consider what this means...'"
+                    },
+                    {
+                        "to": "Second-person",
+                        "when": "Conclusion — 'You now have all the evidence. What do you believe?'"
+                    }
+                ]
+            },
+            "pacing": {
+                "pattern": "Measured → Building → Measured → Building → Reflective",
+                "rule": "Popular narrative sections brisk and confident. Counter-narrative sections slower, more careful. Deep analysis methodical. Conclusion deliberate.",
+                "chapter_rhythm": "NEITHER side feels rushed or dismissed. Both get equal time and pacing respect."
+            },
+            "language": {
+                "metaphor_family": "Debate and argument language — 'the strongest argument for', 'but consider this', 'the evidence points both ways'. Weighing and balance — 'tipping the scales', 'both sides of the coin'. Never use legal terms like 'prosecution', 'defense', 'verdict', 'trial' as narrative labels.",
+                "sentence_style": "Popular narrative: declarative, confident. Counter-narrative: conditional, questioning ('But what if...'). Conclusion: balanced, complex.",
+                "forbidden": "Do NOT reveal narrator's opinion until conclusion. Do NOT strawman either side. Do NOT use loaded language to bias."
+            },
+            "outline_rules": {
+                "first_chapter": "The Popular Story — what 'everyone knows', made solid. Then introduce first crack.",
+                "middle_chapters": "Alternate popular and counter-narrative. Each presents ONE major argument with specific evidence from the blueprint.",
+                "last_chapter": "The Full Picture — nuanced synthesis. 'The truth is more complicated.' Leave audience with sophisticated understanding.",
+                "transitions": "Popular narrative ends: 'A compelling case. But there's another way to read the same evidence.' Counter ends: 'This changes everything. Or does it?'"
+            },
+            "steps": [
+                {
+                    "name": "The Popular Story",
+                    "description": "What everyone believes — confident, seemingly airtight",
+                    "purpose": "Setup"
+                },
+                {
+                    "name": "The First Crack",
+                    "description": "ONE piece of evidence that doesn't fit the popular narrative",
+                    "purpose": "Doubt"
+                },
+                {
+                    "name": "The Strongest Case For",
+                    "description": "Best evidence supporting the popular interpretation",
+                    "purpose": "Fair hearing"
+                },
+                {
+                    "name": "The Other Side",
+                    "description": "Best evidence challenging the popular interpretation",
+                    "purpose": "Challenge"
+                },
+                {
+                    "name": "The Hidden Evidence",
+                    "description": "Deeper analysis — what both sides missed",
+                    "purpose": "Investigation"
+                },
+                {
+                    "name": "The Confrontation",
+                    "description": "Strongest arguments from each side tested against each other",
+                    "purpose": "Synthesis"
+                },
+                {
+                    "name": "The Full Picture",
+                    "description": "Balanced conclusion acknowledging complexity",
+                    "purpose": "Resolution"
+                },
+                {
+                    "name": "The Open Question",
+                    "description": "What STILL isn't resolved — leave audience thinking",
+                    "purpose": "Open ending"
+                }
+            ],
+            "tension_curve": "Builds through cognitive dissonance — audience holds two contradictory views. Peaks at confrontation. Conclusion provides partial relief. Open question maintains productive tension.",
+            "cliffhanger_types": [
+                "Evidence reveal — evidence that completely reframes previous chapter",
+                "Question pivot — 'That answers the tactical question. But it raises a bigger one about motive.'",
+                "Side challenge — 'But there's something missing from this argument...'"
+            ],
+            "technique_emphasis": {
+                "use_heavily": [
+                    "Systematic Contrast",
+                    "Rhetorical Question",
+                    "Direct Audience Address"
+                ],
+                "use_moderately": [
+                    "Foreshadowing",
+                    "Modern Visceral Analogy"
+                ],
+                "use_sparingly": [
+                    "Escalation",
+                    "Visceral Sensory Detail"
+                ]
+            },
+            "opening_closing_fit": {
+                "best_openings": [
+                    "Myth vs. Reality Hook",
+                    "Thematic Juxtaposition"
+                ],
+                "best_closings": [
+                    "Thematic Thesis Statement",
+                    "Knowledge Gap / Narrative Question"
+                ]
+            },
+            "counter_argument": "Counter-argument IS the framework's engine. The structure is built on showing the same events from opposing angles. Key: the counter-narrative must feel EQUALLY compelling to create genuine cognitive tension.",
+            "anti_patterns": [
+                "Do NOT bias toward one side — both must feel equally strong",
+                "Do NOT present a weak counter-argument just to dismiss it",
+                "Do NOT resolve with simple 'X was right, Y was wrong'",
+                "Do NOT use emotional manipulation — use evidence and logic",
+                "Do NOT skip the open question — some questions SHOULD remain open"
+            ]
+        },
+        {
+            "name": "The Pendulum",
+            "use_when": "For stories with glory and tragedy intertwined — wars where victory came at horrific cost, leaders who achieved greatness through terrible means, empires whose golden age contained destruction seeds.",
+            "emotional_arc": "Triumph → Horror → Triumph → Deeper Horror → Exhaustion → Somber Understanding",
+            "structure": {
+                "total_acts": 3,
+                "act_breakdown": "Act 1: The Bright Side (20%) — the achievement. Act 2: The Contrast (60%) — alternate triumph/cost, contrasts widening. Act 3: The Full Picture (20%) — all sides visible, final reckoning.",
+                "chapter_design": "Chapters alternate 'momentum' (victory) and 'counter-momentum' (cost). Swings get WIDER until audience can't separate them."
+            },
+            "hook": {
+                "method": "Glory-Horror Collision — open with a moment of absolute triumph, let the audience FEEL the victory, then slam them with one sentence of horror that reframes everything.",
+                "tone": "First: celebratory, grand, cinematic victory music. Then ONE ice-cold sentence that stops everything. The contrast IS the hook.",
+                "example_approach": "'The crowd roared. Church bells rang across Europe. The Pope wept with joy. The Ottoman fleet — the most feared armada on Earth — was burning. (Beat.) Three months later, the man who saved Christendom would be stripped of his command, abandoned by every ally, and left to die in a plague-infested camp. This is not a story about victory.'"
+            },
+            "pov_strategy": {
+                "default": "Third-person omniscient with emotional temperature shifts",
+                "shifts": [
+                    {
+                        "to": "Third-person omniscient (warm, admiring tone)",
+                        "when": "Triumph chapters — celebrate genuinely"
+                    },
+                    {
+                        "to": "Third-person omniscient (cold, unflinching tone)",
+                        "when": "Cost chapters — clinical detail"
+                    },
+                    {
+                        "to": "Second-person",
+                        "when": "Moral dilemma — 'What would you have done?'"
+                    },
+                    {
+                        "to": "First-person plural",
+                        "when": "Still point — 'We can celebrate. We can mourn. Or we can try to understand both.'"
+                    }
+                ]
+            },
+            "pacing": {
+                "pattern": "Fast → Slow → Fast → Slower → Faster → Slowest → Still",
+                "rule": "Triumph chapters FAST. Cost chapters SLOW. Each triumph cycle faster, each cost slower. Final chapters merge.",
+                "chapter_rhythm": "Odd chapters: bright, energetic. Even: dark, reflective. Contrast in pacing IS the emotional mechanism."
+            },
+            "language": {
+                "metaphor_family": "Light and shadow — 'glory that cast a long shadow', 'the brighter the flame, the darker the ashes'. Cost and price — 'the bill always comes due', 'victory that bankrupted the victor'. Never use 'pendulum', 'oscillation', 'equilibrium', or 'swing' as narrative devices.",
+                "sentence_style": "Triumph: confident, active-voice, forward-moving. Cost: passive, longer pauses, heavier words.",
+                "forbidden": "Do NOT make triumph purely positive or cost purely negative. Each must contain a seed of its opposite."
+            },
+            "outline_rules": {
+                "first_chapter": "The Glory — the achievement at its most impressive. End with one sentence of shadow.",
+                "middle_chapters": "Alternating pairs: Triumph → Cost. Each pair swings WIDER. By middle, audience should feel conflicted.",
+                "last_chapter": "The Still Point — achievement AND cost together, inseparable. 'Was it worth it?' Don't answer definitively.",
+                "transitions": "Triumph→Cost: 'But while the flags flew, something else was happening.' Cost→Triumph: 'And yet, what happened next was extraordinary.'"
+            },
+            "steps": [
+                {
+                    "name": "The Glory",
+                    "description": "Pure triumph at its most impressive",
+                    "purpose": "Engagement"
+                },
+                {
+                    "name": "The First Shadow",
+                    "description": "First cost — smaller, perhaps hidden",
+                    "purpose": "Introduce duality"
+                },
+                {
+                    "name": "Greater Triumph",
+                    "description": "Even bigger achievement",
+                    "purpose": "Emotional investment"
+                },
+                {
+                    "name": "Greater Cost",
+                    "description": "Darker price — moral compromise, collateral damage",
+                    "purpose": "Moral weight"
+                },
+                {
+                    "name": "The Apex",
+                    "description": "Peak triumph AND peak horror — simultaneous or directly connected",
+                    "purpose": "Climax"
+                },
+                {
+                    "name": "The Still Point",
+                    "description": "Triumph and cost as inseparable. Same act: both glorious and terrible.",
+                    "purpose": "Synthesis"
+                },
+                {
+                    "name": "The Question",
+                    "description": "'Was it worth it?' Best argument for Yes and No. Don't resolve.",
+                    "purpose": "Open ending"
+                }
+            ],
+            "tension_curve": "Oscillating — rises in cost chapters, releases in triumph chapters, but each cycle tightens. At climax, triumph and cost merge. Still point is acceptance of duality, not resolution.",
+            "cliffhanger_types": [
+                "Shadow in triumph — 'They had won. They had also done something unforgivable.'",
+                "Light in darkness — 'In the middle of this horror, someone did something extraordinary.'",
+                "Moral question — 'History calls this a victory. The people who lived it had another word.'"
+            ],
+            "technique_emphasis": {
+                "use_heavily": [
+                    "Systematic Contrast",
+                    "Visceral Sensory Detail",
+                    "Symbolic Action"
+                ],
+                "use_moderately": [
+                    "Modern Visceral Analogy",
+                    "Escalation",
+                    "Foreshadowing"
+                ],
+                "use_sparingly": [
+                    "Rhetorical Question"
+                ]
+            },
+            "opening_closing_fit": {
+                "best_openings": [
+                    "Thematic Juxtaposition",
+                    "Establish Overwhelming Odds"
+                ],
+                "best_closings": [
+                    "Ironic Reversal",
+                    "Thematic Thesis Statement"
+                ]
+            },
+            "counter_argument": "The framework IS the counter-argument. Every triumph chapter countered by cost chapter. Structural, not rhetorical — audience FEELS the duality.",
+            "anti_patterns": [
+                "Do NOT make one side more compelling than the other",
+                "Do NOT resolve moral tension with simple answer",
+                "Do NOT combine triumph and cost in one chapter until climax",
+                "Do NOT moralize in cost chapters — present facts, let audience feel"
+            ]
+        }
+    ],
+    "openings": [
+        {
+            "name": "Immersive Second-Person Scenario",
+            "technique": "Begin with a 'cold open' placing the audience directly into a high-stakes, sensory-rich scene using second-person ('You are...') before any context.",
+            "example_reference": "Forces audience to feel physical pain and desperation before identifying the scene."
+        },
+        {
+            "name": "Establish Overwhelming Odds",
+            "technique": "Detail immense power and scale of an antagonistic force using statistics, analogies, and sensory descriptions to create 'David vs. Goliath' stakes.",
+            "example_reference": "Quantifies an army's might to make it feel unstoppable."
+        },
+        {
+            "name": "Thematic Juxtaposition",
+            "technique": "Open by contrasting two opposing concepts or scenes to create irony, tension, and a central theme.",
+            "example_reference": "Juxtaposes celebration with crisis."
+        },
+        {
+            "name": "Myth vs. Reality Hook",
+            "technique": "Present a well-known legend or misconception, then immediately promise to debunk it.",
+            "example_reference": "Recounts a popular myth before stating it's false."
+        },
+        {
+            "name": "Shocking Aftermath",
+            "technique": "Begin with gruesome or surprising aftermath, hooking audience with 'how did this happen?'",
+            "example_reference": "Opens on devastation demanding explanation."
+        }
+    ],
+    "closings": [
+        {
+            "name": "Threat Escalation Cliffhanger",
+            "technique": "Resolve chapter conflict but immediately introduce a new, larger threat for forward momentum.",
+            "example_reference": "Victory reveals a greater danger."
+        },
+        {
+            "name": "Thematic Thesis Statement",
+            "technique": "Synthesize chapter events into a concise, memorable argument or metaphor.",
+            "example_reference": "Distills events into a single powerful insight."
+        },
+        {
+            "name": "Ironic Reversal",
+            "technique": "Reframe a victory as pyrrhic or cause of future downfall. Adds tragic irony.",
+            "example_reference": "Victory directly led to fall."
+        },
+        {
+            "name": "Knowledge Gap / Narrative Question",
+            "technique": "End by posing a question or mystery the next chapter answers.",
+            "example_reference": "Ends with a question the audience needs answered."
+        }
+    ],
+    "techniques": [
+        {
+            "name": "Systematic Contrast / Juxtaposition",
+            "description": "Place opposing concepts side-by-side to heighten drama.",
+            "template": "Juxtapose two concepts in consecutive sentences — power vs. intellect, scale vs. skill.",
+            "frequency": "Very High — multiple times per chapter"
+        },
+        {
+            "name": "Modern Visceral Analogy",
+            "description": "Translate ancient/abstract concepts into instant-comprehension modern comparisons. Priority: modern military equivalents > pop-culture references > scale translations > modern tech equivalents > sensory comparisons. Must pass the '2-second test': audience understands on first hearing.",
+            "template": "Compare historical element to a modern equivalent the audience already knows. Ancient warship = 'medieval aircraft carrier'. Spy network = 'analog CIA'. Army size = 'enough to fill X stadiums'.",
+            "frequency": "Very High — multiple times per chapter"
+        },
+        {
+            "name": "Foreshadowing",
+            "description": "Embed clues about future events to build suspense.",
+            "template": "Label decisions as 'fatal' before showing consequences.",
+            "frequency": "High — nearly every chapter"
+        },
+        {
+            "name": "Direct Audience Address",
+            "description": "Break fourth wall with 'you' or 'we'.",
+            "template": "Second-person for immersion. First-person plural for analysis.",
+            "frequency": "High — most chapters"
+        },
+        {
+            "name": "Visceral Sensory Detail",
+            "description": "Ground narrative in physical reality through specific sensory info.",
+            "template": "Replace generic descriptions with specific sounds, smells, textures.",
+            "frequency": "High — most chapters"
+        },
+        {
+            "name": "Rhetorical Question",
+            "description": "Guide thought process or pivot narrative to analysis.",
+            "template": "Pose question, immediately answer. Pivot from 'what' to 'why'.",
+            "frequency": "High — most chapters"
+        },
+        {
+            "name": "Escalation",
+            "description": "Present challenges in increasing severity.",
+            "template": "Small act → larger consequence → greater crisis.",
+            "frequency": "High — most chapters"
+        },
+        {
+            "name": "Symbolic Action / Imagery",
+            "description": "Use physical act or object to represent larger concept.",
+            "template": "A last stand becomes defiance. Desecration represents intellectual collapse.",
+            "frequency": "Medium — selective for maximum impact"
+        }
+    ],
+    "transitions": {
+        "chapter_endings": "Resolve conflict but introduce new problem/threat/question. Use cliffhanger type appropriate to chosen framework.",
+        "chapter_openings": "Directly address or escalate previous chapter's cliffhanger. Immediate payoff.",
+        "callback_rule": "Reference earlier events and foreshadowed details to create satisfaction and demonstrate cause-effect."
+    },
+    "diversity_rules": {
+        "opening_rotation": "Never use the same opening method for consecutive chapters. Rotate through at least 3 types per script.",
+        "technique_distribution": "Follow framework's 'technique_emphasis' for which techniques to prioritize.",
+        "anti_repetition": "Never use same cliffhanger type consecutively. Vary sentence rhythm across chapters.",
+        "framework_rule": "By default, prefer a different framework than the original. The user can override this via the ranking popup."
+    },
+    "checklist": {
+        "always": [
+            "Frame conflict through stark contrasts.",
+            "Use unique, modern analogies for abstract concepts.",
+            "Manipulate pacing: accelerate for action, decelerate for analysis.",
+            "Ground abstract stakes in sensory details.",
+            "Personify abstract concepts.",
+            "Explain the 'why' — psychology and strategy.",
+            "Follow chosen framework's specific rules for pacing, language, and POV."
+        ],
+        "never": [
+            "Present antagonists as one-dimensional.",
+            "Use generic combat descriptions.",
+            "Leave complex strategies unexplained.",
+            "Allow monotonous pacing.",
+            "Present myths as fact without deconstruction.",
+            "Describe events without analyzing significance."
+        ]
+    }
+}

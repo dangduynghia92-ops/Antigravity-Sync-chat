@@ -1,0 +1,82 @@
+# Walkthrough: Biography Narrative Pipeline Optimization
+
+## Changes Made
+
+### 1. Write-for-Ear Sync (mystery + battle)
+Added full SPOKEN RHYTHM section to `system_narrative_write_mystery.txt` and `system_narrative_write_battle.txt`, synced from biography baseline:
+- WAVE PATTERN (short/long sentence alternation)
+- BREATH POINTS (landing sentences after dense passages)
+- ONE IDEA PER SENTENCE
+- ACTIVE VOICE
+- CONTRACTIONS for spoken flow
+- BANNED PATTERNS (academic filler words)
+
+Each niche uses **domain-specific examples** (artifacts for mystery, cavalry for battle).
+
+| Niche | Before | After |
+|---|:---:|:---:|
+| biography | 6/7 | 6/7 (baseline) |
+| mystery | 2/7 | **4/7** |
+| battle | 3/7 | **5/7** |
+
+---
+
+### 2. Auto-Patch Toggle Fix (A)
+
+**Bug**: `auto_patch=True` hardcoded in New Content pipeline (line 2052), ignoring `_chk_auto_patch` checkbox.
+
+**Fix**: Cache checkbox value at job submission time (`_do_patch = self._chk_auto_patch.isChecked()`) and pass to `_run_shared_fw_pipeline(auto_patch=_do_patch)`.
+
+Files changed: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+---
+
+### 3. Blueprint Filter Rewrite (B)
+
+**Bug**: `_extract_chapter_blueprint()` had two critical data loss paths:
+
+1. `key_data` items are plain English descriptions (e.g. "Job at the Swiss Patent Office") but code used them as dotted JSON paths via `split(".")` → top_key never matched → **all key_data lost**
+2. `life_phase_covered` comma-joined by AI (e.g. "Phase A, Phase B") → substring match failed against individual phase items → **life_phases lost**
+
+**Fix**: Complete rewrite with 4-strategy approach:
+1. **life_phase_covered**: split on comma, match each individually
+2. **relationships_featured**: direct matching (unchanged)
+3. **myths_debunked**: direct matching (unchanged)
+4. **key_data**: fuzzy substring search across ALL blueprint sections, with backward-compatible dotted-path support
+
+**Verification** (Einstein data):
+
+| Chapter | OLD | NEW | Fix |
+|---|---:|---:|---|
+| Ch1 (hook) | 6,663 | **56,487** | Proper fallback to full blueprint |
+| Ch3 | 8,937 | **12,075** | life_phases: 0→2 items (comma-split fix) |
+| Ch5 | 9,793 | **10,540** | achievements fuzzy match |
+
+File changed: [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+---
+
+### 4. Blueprint Schema Additions (C)
+
+Added 4 new fields to all 3 biography blueprint prompts (extract, research, enrich):
+
+| Field | Location | Purpose |
+|---|---|---|
+| `final_words` | `core_identity.death` | Last documented words |
+| `who_was_present` | `core_identity.death` | Who was at their side at death |
+| `financial_arc` | `core_identity` | Wealth trajectory (peak → death) |
+| `vices_and_obsessions` | `personal_profile` | Dark habits, addictions, obsessions |
+| `documented_close_calls` | `turning_points` | Near-death / near-miss events |
+
+Files changed:
+- [system_extract_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_biography.txt)
+- [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
+- [system_enrich_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_biography.txt)
+
+## Verification
+
+- ✅ All syntax checks passed
+- ✅ Blueprint filter verified with real Einstein data
+- ✅ All 5 new fields present in all 3 prompts
+- ✅ Auto-Patch checkbox now properly read in New Content pipeline
+- ✅ Git committed

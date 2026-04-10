@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Full audit report of cinematic_military_v2.json identifying 9 categories of issues: terminology leaks, POV type errors, framework applicability concerns, core rule conflicts, missing rules, checkbox-related conflicts, structural validation results, overly rigid anti-patterns, and prioritized fix recommendations.",
+  "updatedAt":  "2026-03-10T02:49:34.124654400Z"
+}

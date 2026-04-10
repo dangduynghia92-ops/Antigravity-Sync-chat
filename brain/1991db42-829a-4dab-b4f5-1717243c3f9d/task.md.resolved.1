@@ -1,0 +1,36 @@
+# SRT Chapter Splitter — Task Checklist
+
+## Phase 1: Foundation
+- [x] Create project structure (directories, [main.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/main.py), [requirements.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt))
+- [x] [ui/theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/theme.py) — Dark/Light QSS theme system
+- [x] `ui/icons/` — SVG arrow icons
+- [x] `ui/searchable_combo.py` — Searchable ComboBox widget
+- [x] `ui/log_section.py` — Processing Log panel (copy, clear, timestamp)
+- [x] `core/api_client.py` — Multi-endpoint API router with failover
+- [x] `core/config_manager.py` — Config save/load per-tab
+- [x] `core/srt_parser.py` — SRT file parser
+- [x] `core/chapter_splitter.py` — AI-based chapter splitting logic
+
+## Phase 2: UI Components
+- [x] `ui/header_bar.py` — App name, version, Settings, Restart buttons
+- [x] `ui/settings_dialog.py` — Settings dialog (endpoints, theme, API keys)
+- [x] `ui/projects_section.py` — Tree view with folder grouping, dedup
+
+## Phase 3: Main Tab + Window
+- [x] `ui/chapter_tab.py` — Main SRT Chapter tab (config, projects, actions)
+- [x] `ui/main_window.py` — Main window with tabs, splitter, log panel
+- [x] `main.py` — Entry point
+
+## Phase 4: Core Processing
+- [x] `core/process_controller.py` — Start/Pause/Stop with ThreadPoolExecutor
+- [x] `prompts/` — System, constraint, fallback prompt .txt files
+- [x] Integration: wire API + splitter + controller + UI
+
+## Phase 5: Output & Merge
+- [x] Chapter file output (per-chapter .txt files)
+- [x] Merge all results file
+- [x] Summary file generation
+
+## Phase 6: Verification
+- [x] All imports pass (`python -c "from ui.main_window import MainWindow; ..."`)
+- [x] App launches successfully (no errors, running in background)

@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Xác nhận mức độ tách bạch giữa Top/List Review và Narrative.\n\nKết quả: Review pipeline hoàn toàn tách bạch với Narrative — không dùng chung bất kỳ function nào ngoại trừ `recommend_framework()` (đã giữ nguyên). Vấn đề chồng chéo chỉ xảy ra giữa các niche BÊN TRONG Narrative mode (biography lẫn vào mystery/battle qua `_run_shared_fw_pipeline`).",
+  "updatedAt":  "2026-04-07T11:56:21.261755200Z",
+  "version":  "1",
+  "requestFeedback":  true
+}

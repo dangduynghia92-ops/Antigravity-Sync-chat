@@ -1,0 +1,19 @@
+# Task: Redesign Review Blueprint Schema
+
+## Current Task: Flexible Blueprint Schema
+- [/] Plan: identify all downstream consumers of blueprint fields
+- [ ] Rewrite [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) with flexible schema
+- [ ] Update downstream prompts that reference old fields (reality_check, outline, writer)
+- [ ] Update any Python code parsing old blueprint fields
+- [ ] Verify syntax and test
+
+## Completed Earlier
+- [x] Unused chapters feature (copy, delete, mapping)
+- [x] Fix copy timing (moved to end of pipeline)
+- [x] Fix save/load config for all fields
+- [x] Fix [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1046-1113) overwriting saved config
+- [x] Fix `QMessageBox` import
+- [x] Fix scoping bug in unused chapters block
+- [x] Strip `source_parts` from writer blueprint
+- [x] Add `source_parts` to review blueprint prompt
+- [x] Add pipeline-running check to Delete button

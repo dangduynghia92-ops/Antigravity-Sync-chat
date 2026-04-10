@@ -1,0 +1,68 @@
+# Prompt Constraint Options
+
+Add optional constraint toggles to improve generated image prompt quality. Based on user's reference prompt, images currently suffer from: border artifacts, text/signatures, paper/table framing, historical inaccuracies, and missing safety rules.
+
+## Proposed Changes
+
+### Constraint Templates
+
+#### [NEW] [prompt_constraints.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_constraints.py)
+
+Central module defining constraint text blocks as constants:
+
+| Constraint | Purpose | Example rules |
+|---|---|---|
+| `SAFETY` | PG-13, no policy violations | No explicit content, use cinematic implication for sensitive scenes |
+| `QUALITY` | Anti-artifact output rules | No text/signatures, no borders, no paper/table framing, borderless full-frame, no split-screen |
+| `HISTORICAL` | Era consistency | Architecture, costumes, weapons, vehicles must match the era |
+| `OUTPUT_FORMAT` | Structured prompt format | Single seamless paragraph: Era → Setting → Camera/Composition → Props → Human Elements → Lighting/Palette → Architecture. End with style suffix |
+
+Each is a text block appended to the style's system prompt when enabled.
+
+---
+
+### SRT Tab — Config Section
+
+#### [MODIFY] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+
+- Add 4 checkboxes in Row 3 (next to existing Context/Log API): **`☑ Safety`**, **`☑ Quality`**, **`☑ Historical`**, **`☑ Format`**
+- Quality + Format checked by default (most common needs)
+- Save/load checkbox states to [config.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/config.json)
+- [get_config()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py#184-194) returns new keys: `safety_constraint`, `quality_constraint`, `historical_constraint`, `format_constraint`
+
+---
+
+### SRT Processing
+
+#### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+- [start()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#102-127) and [_process_single_project()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#170-266) accept new `constraints: dict` parameter
+- After loading [style_content](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#29-39), append enabled constraint text blocks:
+  ```python
+  if constraints.get("safety"): style_content += SAFETY_CONSTRAINT
+  if constraints.get("quality"): style_content += QUALITY_CONSTRAINT  
+  if constraints.get("historical"): style_content += HISTORICAL_CONSTRAINT
+  if constraints.get("format"): style_content += OUTPUT_FORMAT_CONSTRAINT
+  ```
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+- Pass constraint flags from config to `controller.start()`
+
+---
+
+### Product Tab
+
+#### [MODIFY] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+- Add same 4 checkboxes in its config bar
+- In [_generate_loop()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#485-598), append constraint text to `system_prompt` before API calls
+
+## Verification Plan
+
+### Manual Verification
+- Run the app, toggle constraints on/off
+- Generate prompts with Quality ON → verify no "on paper", "text", "border" in output
+- Generate prompts with Safety ON → verify PG-13 language
+- Generate prompts with Historical ON → verify era-appropriate descriptions
+- Generate prompts with Format ON → verify single-paragraph structure with Era/Setting/Camera/Props/Lighting elements

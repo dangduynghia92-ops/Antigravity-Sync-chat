@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to add a transition toggle checkbox to the Style Rewrite tab. When OFF (Top/List mode only), chapters open directly with topic name instead of bridge sentences. Changes span UI (checkbox + visibility + config), backend (new parameter + conditional prompt stripping), and prompt templates.",
+  "updatedAt": "2026-03-20T02:31:14.975991Z",
+  "version": "29"
+}

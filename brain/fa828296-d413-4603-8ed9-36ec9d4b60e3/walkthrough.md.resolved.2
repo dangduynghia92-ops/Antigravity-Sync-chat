@@ -1,0 +1,391 @@
+# Auto Pipeline Tab — Walkthrough
+
+## Changes Made
+
+### New Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| [auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py) | ~350 | Phase 1+2 orchestrator |
+| [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py) | ~700 | Full UI tab |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) | Registered `🚀 Auto Pipeline` as first tab |
+
+```diff:main_window.py
+"""
+main_window.py — Main application window with tabs, header, log panel.
+"""
+import os
+import sys
+import subprocess
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QTabWidget,
+    QApplication,
+)
+from PyQt6.QtCore import Qt, QTimer
+
+from ui.header_bar import HeaderBar
+from ui.chapter_tab import ChapterTab
+from ui.regroup_tab import RegroupTab
+from ui.rewrite_tab import RewriteTab
+from ui.rewrite_style_tab import RewriteStyleTab
+from ui.tts_tab import TTSTab
+from ui.style_tab import StyleTab
+from ui.youtube_tab import YouTubeTab
+from ui.video_cutter_tab import VideoCutterTab
+from ui.cookie_tab import CookieTab
+from ui.chat_tab import ChatTab
+from ui.settings_dialog import SettingsDialog
+from ui.theme import apply_theme
+from core.config_manager import load_settings
+
+
+class MainWindow(QMainWindow):
+    """Main application window — header, tabs, log panel."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("SRT Chapter Splitter v1.0")
+        self.setMinimumSize(900, 650)
+        self.resize(1250, 750)
+
+        self._build_ui()
+        self._connect_signals()
+
+    def _build_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        main_layout = QVBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # ─── Header Bar ───
+        self._header = HeaderBar()
+        main_layout.addWidget(self._header)
+
+        # ─── Tab Widget ───
+        self._tabs = QTabWidget()
+
+        # YouTube Downloader & Scanner Tab (first)
+        self._youtube_tab = YouTubeTab()
+        self._tabs.addTab(self._youtube_tab, "📥 YouTube")
+
+        # Chapter Tab
+        self._chapter_tab = ChapterTab()
+        self._tabs.addTab(self._chapter_tab, "📂 SRT Chapter")
+
+        # Regroup Tab
+        self._regroup_tab = RegroupTab()
+        self._tabs.addTab(self._regroup_tab, "🔀 Regroup")
+
+        # Rewrite Tab
+        self._rewrite_tab = RewriteTab()
+        self._tabs.addTab(self._rewrite_tab, "✍️ Rewrite")
+
+        # Style Rewrite Tab
+        self._style_rewrite_tab = RewriteStyleTab()
+        self._tabs.addTab(self._style_rewrite_tab, "✦ Style Rewrite")
+
+        # Video Cutter Tab
+        self._video_cutter_tab = VideoCutterTab()
+        self._tabs.addTab(self._video_cutter_tab, "✂ Video Cutter")
+
+        # TTS Cleanup Tab
+        self._tts_tab = TTSTab()
+        self._tabs.addTab(self._tts_tab, "🔊 TTS Cleanup")
+
+        # Style Analyzer Tab
+        self._style_tab = StyleTab()
+        self._tabs.addTab(self._style_tab, "🔍 Style Analyzer")
+
+        # Cookie Manager Tab
+        self._cookie_tab = CookieTab()
+        self._tabs.addTab(self._cookie_tab, "🍪 Cookies")
+
+        # Chat Test Tab (Google Search)
+        self._chat_tab = ChatTab()
+        self._tabs.addTab(self._chat_tab, "💬 Chat")
+
+        main_layout.addWidget(self._tabs)
+
+    def _connect_signals(self):
+        """Wire up signals between components."""
+        # Header signals
+        self._header.settings_clicked.connect(self._open_settings)
+        self._header.restart_clicked.connect(self._restart_app)
+
+        # Background update check (non-blocking)
+        QTimer.singleShot(3000, self._check_updates_bg)
+
+    def _check_updates_bg(self):
+        """Check for yt-dlp updates in background thread."""
+        import threading
+
+        def _check():
+            try:
+                import subprocess as sp
+                # Get installed version
+                r = sp.run(
+                    [sys.executable, "-m", "pip", "show", "yt-dlp"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                installed = ""
+                for line in r.stdout.split("\n"):
+                    if line.startswith("Version:"):
+                        installed = line.split(":", 1)[1].strip()
+                        break
+                if not installed:
+                    return
+
+                # Get latest from PyPI
+                import urllib.request
+                import json
+                req = urllib.request.Request(
+                    "https://pypi.org/pypi/yt-dlp/json",
+                    headers={"User-Agent": "SRT-Chapter-Splitter/1.0"},
+                )
+                resp = urllib.request.urlopen(req, timeout=10)
+                data = json.loads(resp.read())
+                latest = data.get("info", {}).get("version", "")
+
+                if latest and installed and latest != installed:
+                    # Signal main thread to show badge
+                    QTimer.singleShot(0, lambda: self._header.set_badge(1))
+            except Exception:
+                pass
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _open_settings(self):
+        """Open settings dialog."""
+        self._header.set_badge(0)  # clear badge
+        dialog = SettingsDialog(self)
+        dialog.theme_changed.connect(self._on_theme_changed)
+        dialog.exec()
+
+    def _on_theme_changed(self, theme_name):
+        """Apply new theme to entire app."""
+        app = QApplication.instance()
+        if app:
+            apply_theme(app, theme_name)
+
+    def _restart_app(self):
+        """Restart the application."""
+        QTimer.singleShot(500, self._do_restart)
+
+    def _do_restart(self):
+        """Perform actual restart — spawn new process then quit current."""
+        python = sys.executable
+        script = os.path.abspath(sys.argv[0])
+        subprocess.Popen([python, script] + sys.argv[1:])
+        QApplication.quit()
+===
+"""
+main_window.py — Main application window with tabs, header, log panel.
+"""
+import os
+import sys
+import subprocess
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QTabWidget,
+    QApplication,
+)
+from PyQt6.QtCore import Qt, QTimer
+
+from ui.header_bar import HeaderBar
+from ui.auto_pipeline_tab import AutoPipelineTab
+from ui.chapter_tab import ChapterTab
+from ui.regroup_tab import RegroupTab
+from ui.rewrite_tab import RewriteTab
+from ui.rewrite_style_tab import RewriteStyleTab
+from ui.tts_tab import TTSTab
+from ui.style_tab import StyleTab
+from ui.youtube_tab import YouTubeTab
+from ui.video_cutter_tab import VideoCutterTab
+from ui.cookie_tab import CookieTab
+from ui.chat_tab import ChatTab
+from ui.settings_dialog import SettingsDialog
+from ui.theme import apply_theme
+from core.config_manager import load_settings
+
+
+class MainWindow(QMainWindow):
+    """Main application window — header, tabs, log panel."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("SRT Chapter Splitter v1.0")
+        self.setMinimumSize(900, 650)
+        self.resize(1250, 750)
+
+        self._build_ui()
+        self._connect_signals()
+
+    def _build_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        main_layout = QVBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # ─── Header Bar ───
+        self._header = HeaderBar()
+        main_layout.addWidget(self._header)
+
+        # ─── Tab Widget ───
+        self._tabs = QTabWidget()
+
+        # Auto Pipeline Tab (first — main workflow)
+        self._auto_tab = AutoPipelineTab()
+        self._tabs.addTab(self._auto_tab, "🚀 Auto Pipeline")
+
+        # YouTube Downloader & Scanner Tab
+        self._youtube_tab = YouTubeTab()
+        self._tabs.addTab(self._youtube_tab, "📥 YouTube")
+
+        # Chapter Tab
+        self._chapter_tab = ChapterTab()
+        self._tabs.addTab(self._chapter_tab, "📂 SRT Chapter")
+
+        # Regroup Tab
+        self._regroup_tab = RegroupTab()
+        self._tabs.addTab(self._regroup_tab, "🔀 Regroup")
+
+        # Rewrite Tab
+        self._rewrite_tab = RewriteTab()
+        self._tabs.addTab(self._rewrite_tab, "✍️ Rewrite")
+
+        # Style Rewrite Tab
+        self._style_rewrite_tab = RewriteStyleTab()
+        self._tabs.addTab(self._style_rewrite_tab, "✦ Style Rewrite")
+
+        # Video Cutter Tab
+        self._video_cutter_tab = VideoCutterTab()
+        self._tabs.addTab(self._video_cutter_tab, "✂ Video Cutter")
+
+        # TTS Cleanup Tab
+        self._tts_tab = TTSTab()
+        self._tabs.addTab(self._tts_tab, "🔊 TTS Cleanup")
+
+        # Style Analyzer Tab
+        self._style_tab = StyleTab()
+        self._tabs.addTab(self._style_tab, "🔍 Style Analyzer")
+
+        # Cookie Manager Tab
+        self._cookie_tab = CookieTab()
+        self._tabs.addTab(self._cookie_tab, "🍪 Cookies")
+
+        # Chat Test Tab (Google Search)
+        self._chat_tab = ChatTab()
+        self._tabs.addTab(self._chat_tab, "💬 Chat")
+
+        main_layout.addWidget(self._tabs)
+
+    def _connect_signals(self):
+        """Wire up signals between components."""
+        # Header signals
+        self._header.settings_clicked.connect(self._open_settings)
+        self._header.restart_clicked.connect(self._restart_app)
+
+        # Background update check (non-blocking)
+        QTimer.singleShot(3000, self._check_updates_bg)
+
+    def _check_updates_bg(self):
+        """Check for yt-dlp updates in background thread."""
+        import threading
+
+        def _check():
+            try:
+                import subprocess as sp
+                # Get installed version
+                r = sp.run(
+                    [sys.executable, "-m", "pip", "show", "yt-dlp"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                installed = ""
+                for line in r.stdout.split("\n"):
+                    if line.startswith("Version:"):
+                        installed = line.split(":", 1)[1].strip()
+                        break
+                if not installed:
+                    return
+
+                # Get latest from PyPI
+                import urllib.request
+                import json
+                req = urllib.request.Request(
+                    "https://pypi.org/pypi/yt-dlp/json",
+                    headers={"User-Agent": "SRT-Chapter-Splitter/1.0"},
+                )
+                resp = urllib.request.urlopen(req, timeout=10)
+                data = json.loads(resp.read())
+                latest = data.get("info", {}).get("version", "")
+
+                if latest and installed and latest != installed:
+                    # Signal main thread to show badge
+                    QTimer.singleShot(0, lambda: self._header.set_badge(1))
+            except Exception:
+                pass
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _open_settings(self):
+        """Open settings dialog."""
+        self._header.set_badge(0)  # clear badge
+        dialog = SettingsDialog(self)
+        dialog.theme_changed.connect(self._on_theme_changed)
+        dialog.exec()
+
+    def _on_theme_changed(self, theme_name):
+        """Apply new theme to entire app."""
+        app = QApplication.instance()
+        if app:
+            apply_theme(app, theme_name)
+
+    def _restart_app(self):
+        """Restart the application."""
+        QTimer.singleShot(500, self._do_restart)
+
+    def _do_restart(self):
+        """Perform actual restart — spawn new process then quit current."""
+        python = sys.executable
+        script = os.path.abspath(sys.argv[0])
+        subprocess.Popen([python, script] + sys.argv[1:])
+        QApplication.quit()
+```
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph AutoPipeline["core/auto_pipeline.py"]
+        P1["Phase 1: Download<br/>(parallel: video+thumb+transcript)"]
+        P2["Phase 2: Split<br/>(sequential: split→verify→punctuate→save)"]
+    end
+    
+    subgraph Tab["ui/auto_pipeline_tab.py"]
+        UI["UI: URLs + Config"]
+        P3["Phase 3: Rewrite<br/>(delegates to RewriteStyleTab)"]
+    end
+    
+    UI --> P1 --> P2 --> P3
+```
+
+**Key design decision:** Phase 3 (Rewrite) delegates to `RewriteStyleTab._do_renew_review()` / [_do_renew_style()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2056-2559) rather than duplicating 1500+ lines of rewrite pipeline code. Config is synchronized via [_sync_config_to_rewrite_tab()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py#1013-1060).
+
+## Function Reuse
+
+All pipeline logic reuses existing functions — zero code duplication:
+- `yt_downloader`: [get_video_info](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545), [get_transcript_ytdlp](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169), [download_video](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#768-862), [download_thumbnail_file](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952), [extract_timestamps](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#572-613), [build_transcript_file](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649)
+- `chapter_splitter`: [classify_script_type](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#150-187), [split_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#552-735), [verify_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#737-785), [punctuate_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#787-884), [save_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#894-940), [merge_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#942-968), [save_summary](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#970-1041)
+- `rewriter`: Entire rewrite pipeline via [RewriteStyleTab](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#45-3524) job system
+
+## Verification
+
+- ✅ AST syntax check passes on all 3 files
+- ✅ All function signatures match source modules
+- ⏳ Awaiting user manual testing

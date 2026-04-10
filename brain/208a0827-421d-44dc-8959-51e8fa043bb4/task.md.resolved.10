@@ -1,0 +1,6 @@
+# UI Overhaul Phase 2
+
+- [x] Fix 1: Replace CTkTabview → manual frame switching (eliminate tab flicker)
+- [x] Fix 2: SearchableCombo — reuse dropdown window instead of destroy/recreate
+- [x] Fix 3: Product Tab — add Save/Load Config
+- [x] Fix 4: Layout — dark Treeview theme + dark scrollbar (from Phase 1)

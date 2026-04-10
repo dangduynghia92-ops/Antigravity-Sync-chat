@@ -1,0 +1,94 @@
+# Einstein Blueprint Comparison: Script-based vs AI Research
+
+## Quantitative Summary
+
+| Field | Reference (Script) | Research (Pro) | Research (Flash) | Winner |
+|---|---|---|---|---|
+| Life Phases | **6** | **6** | **6** | Tie |
+| Total Key Events | **30** | 18 | 18 | Reference +67% |
+| Achievements | **5** | 4 | 4 | Reference |
+| Conflicts | **4** | **4** | **4** | Tie |
+| Relationships | **7** | 5 | 5 | Reference +40% |
+| Turning Points | **6** | 3 | 3 | Reference **2x** |
+| Systemic Opposition | **3** | 2 | 2 | Reference |
+| Paradigm Shift | **2** | **2** | **2** | Tie |
+| Dual Nature (Light) | **4** | 3 | 3 | Reference |
+| Dual Nature (Dark) | **4** | 3 | **4** | Tie |
+| Myths vs Reality | 1 | **3** | **3** | **Research 3x** |
+| Key Quotes | **8** | 3 | 4 | Reference **2x** |
+| Named Sources | **17** | 4 | 3 | Reference **5x** |
+| JSON Size | **24,353** | 23,756 | 17,211 | Ref ≈ Pro |
+
+---
+
+## Đánh giá chi tiết
+
+### ✅ Research làm TỐT (ngang hoặc hơn Reference)
+
+1. **Life Phases**: Cả 3 đều có 6 phases, coverage tương đương
+2. **Conflicts**: Cả 3 đều có 4 conflicts — AI biết đủ xung đột chính
+3. **Paradigm Shift**: Cả 3 đều có 2 — AI hiểu rõ impact civilizational
+4. **Myths vs Reality**: Research tốt hơn! 3 myths vs 1 myth Reference (script gốc chỉ nhắc 1 myth)
+5. **Pro vs Flash JSON size**: Pro (23.7k) gần bằng Reference (24.3k) — data density tương đương
+
+### ⚠️ Research YẾU hơn Reference
+
+1. **Key Events**: Reference 30 events, Research chỉ 18 (−40%)
+   - Script gốc có chi tiết micro (compass story, fake breakdown, specific patent office events)
+   - AI biết broad strokes nhưng thiếu anecdotes
+   
+2. **Relationships**: Reference 7, Research 5 (−29%)
+   - Research **thiếu**: Max Talmud, Eduard 'Tete' Einstein, Leo Szilard, Thomas Harvey
+   - Đây là những nhân vật "thú vị" mà script gốc đã chọn lọc
+   
+3. **Turning Points**: Reference 6, Research 3 (**−50%**)
+   - Research thiếu: compass childhood, fake breakdown, patent office job
+   - Chỉ có 3 turning points lớn (Annus Mirabilis, 1919 eclipse, Hitler)
+
+4. **Key Quotes**: Reference 8, Research 3-4
+   - AI chỉ biết quotes nổi tiếng ("God does not play dice")
+   - Script gốc có quotes ít phổ biến nhưng hay hơn
+
+5. **Named Sources**: Reference **17**, Research **3-4** (**−80%**)
+   - Đây là điểm yếu LỚN NHẤT — AI không biết specific historians/biographers
+   - Script gốc cite nhiều nguồn cụ thể → credibility cao hơn
+
+### Pro vs Flash
+
+| Aspect | Pro | Flash |
+|---|---|---|
+| JSON size | **23,756** (lớn hơn 38%) | 17,211 |
+| Data depth | Sâu hơn | Vừa đủ |
+| Quality | Câu dài, chi tiết | Ngắn gọn, surface-level |
+| Recommendation | ✅ **Dùng cho production** | Dùng để test nhanh |
+
+> Pro và Flash cho ra **cùng item count** nhưng Pro chi tiết hơn 38% về nội dung mỗi item.
+
+---
+
+## Kết luận
+
+### Research từ AI knowledge **khả thi** cho nhân vật nổi tiếng
+
+- **Cấu trúc đúng hoàn toàn** — cùng JSON schema, pipeline downstream chạy OK
+- **Coverage ~70-80%** so với blueprint từ script 70k chars
+- **Myths tốt hơn** — AI biết nhiều misconceptions phổ biến
+
+### Điểm yếu cần cải thiện
+
+| Vấn đề | Mức độ | Giải pháp |
+|---|---|---|
+| Key events thiếu (18 vs 30) | Medium | Tăng minimum requirement trong prompt |
+| Relationships thiếu (5 vs 7) | Medium | Prompt yêu cầu "MINIMUM 7 relationships" |
+| Turning points thiếu (3 vs 6) | High | Prompt yêu cầu "MINIMUM 5 turning points" |
+| Named sources thiếu (4 vs 17) | High | Khó fix — AI không biết specific sources |
+| Key quotes thiếu (3 vs 8) | Medium | Prompt yêu cầu "MINIMUM 5 quotes" |
+
+### Recommendation
+
+Tăng minimum requirements trong `system_research_blueprint_biography.txt`:
+- `key_events` per phase: 3 → **5**
+- `relationships`: 5 → **7**  
+- `turning_points`: 3 → **5**
+- `key_quotes`: 3 → **5**
+- `named_sources`: không cải thiện được nhiều qua prompt (giới hạn AI knowledge)

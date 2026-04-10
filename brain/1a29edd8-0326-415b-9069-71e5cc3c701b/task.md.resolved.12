@@ -1,0 +1,11 @@
+# Pipeline Improvements
+
+- [x] Fix 9 audit bugs
+- [x] Move debug files to `_pipeline` subdirectory
+- [x] Add sound notifications (popup, done, error)
+- [x] Fix cross-chapter patching (CHAPTER_FILE labels)
+- [x] Add chapter headers to FULL_SCRIPT
+- [x] Fix POV rules (no first person)
+- [x] Remove chapter heading from output
+- [x] Limit countdown numbering to Budget Warrior & Tier List only
+- [/] Design framework-specific ending methods

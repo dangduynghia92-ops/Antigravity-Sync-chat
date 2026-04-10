@@ -1,0 +1,65 @@
+# Review Pipeline Flow — Implementation Plan
+
+## How It Works
+
+### Dispatch Logic
+[_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1320-1758) reads the selected style JSON → checks `"pipeline"` field:
+- `"narrative"` (or missing) → existing flow (unchanged)
+- `"review"` → new `_do_renew_review()` worker
+
+### Review Flow (10 steps)
+
+```
+Step 1: Concat text
+Step 2: extract_blueprint() — same shared prompt, returns product_evaluation
+Step 3: recommend_framework() — rank 8 review frameworks → popup user chọn
+Step 4: check_blueprint() — audit data vs framework's evaluation_focus
+Step 5: convert_units() — Python function, US/EU
+Step 6: create_review_outline() — Hook/Body/End outline
+Step 7: audit_outline() — reuse existing
+Step 8: write_review_chapter() × N — uses NEW prompt (system_write_from_blueprint_review.txt)
+Step 9: verify_facts() — fact-check + unit check
+Step 10: Merge → FULL_SCRIPT.txt
+```
+
+## Changes (NO modification to existing code)
+
+### Style Guide JSON
+
+#### [MODIFY] [Review_trang thiết bị quân sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_trang%20thiết%20bị%20quân%20sự.json)
+Add `"pipeline": "review"` at top level
+
+---
+
+### New Prompt
+
+#### [NEW] system_write_from_blueprint_review.txt
+Separate prompt for review chapters — includes:
+- `{chapter_type}` (hook/body/end)
+- `{target_country}` (US/EU)
+- `{products_covered}`, `{evaluation_criteria}`, `{primary_criterion}`
+- `{techniques_to_use}`
+- CTA template rules
+
+This is a NEW file — does NOT replace the narrative prompt.
+
+---
+
+### New Function (rewriter.py)
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+Add `write_review_chapter()` — calls NEW prompt, passes review-specific fields.
+**Does NOT modify** [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1140-1219).
+
+---
+
+### UI Tab
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+1. In [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1320-1758): add dispatch check → `_do_renew_review()` if `pipeline == "review"`
+2. Add `_do_renew_review()` — new worker with 10-step flow
+3. Add Target Country combo (US/EU) in UI row — only visible when pipeline is review
+4. Framework combo: populate from style JSON's frameworks (review has 8, narrative has 5)
+
+> [!IMPORTANT]
+> All existing narrative code stays UNTOUCHED. Review is a completely separate worker method.

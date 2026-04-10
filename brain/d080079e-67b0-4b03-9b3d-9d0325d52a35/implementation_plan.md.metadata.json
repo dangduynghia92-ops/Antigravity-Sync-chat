@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to add a price enrichment step in the Top/List Review pipeline. After Step 5 (reality check), a new step uses Google Search via Gemini native API to look up current US street prices for firearms/ammo, compares with script prices, and updates the blueprint. Requires a Gemini API key and a new function in rewriter.py.",
+  "updatedAt": "2026-03-23T23:13:10.694301700Z",
+  "version": "2"
+}

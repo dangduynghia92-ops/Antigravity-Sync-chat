@@ -1,0 +1,72 @@
+# Einstein Blueprint: Full Comparison (7 variants)
+
+## Quantitative Results
+
+| Field | Reference | Single Pro | Single Flash | Plan A final | Plan B final |
+|---|---|---|---|---|---|
+| Life Phases | 6 | 6 | 6 | 6 | 5 |
+| **Key Events** | 30 | 18 | 18 | **76** | **82** |
+| Achievements | **5** | 4 | 4 | ⛔ **0** | ⛔ **0** |
+| Conflicts | **4** | 4 | 4 | ⛔ **0** | ⛔ **0** |
+| Relationships | 7 | 5 | 5 | **13** | **14** |
+| Turning Points | 6 | 3 | 3 | 6 | **7** |
+| Systemic Opposition | 3 | 2 | 2 | **5** | **5** |
+| Paradigm Shift | 2 | 2 | 2 | **5** | **5** |
+| Dual (Light) | 4 | 3 | 3 | **8** | 6 |
+| Dual (Dark) | 4 | 3 | 4 | **6** | **6** |
+| Myths vs Reality | 1 | 3 | 3 | **6** | **6** |
+| Key Quotes | 8 | 3 | 4 | 9 | **11** |
+| Named Sources | **17** | 4 | 3 | 8 | 12 |
+| JSON Size | 24k | 24k | 17k | **48k** | **60k** |
+
+## Draft → Expanded Growth (Pro expand thêm bao nhiêu data?)
+
+| Metric | Plan A Growth | Plan B Growth |
+|---|---|---|
+| Key Events | +27 | +25 |
+| Relationships | +6 | +6 |
+| Turning Points | +2 | +3 |
+| Myths vs Reality | +3 | +3 |
+| Key Quotes | +4 | +4 |
+| JSON Size | **+24k (+98%)** | **+28k (+91%)** |
+
+> [!IMPORTANT]
+> Expand phase gần **gấp đôi** data — chứng minh chiến lược chia nhỏ hoạt động tốt.
+
+---
+
+## Kết luận
+
+### ✅ Multi-call THẮNG TUYỆT ĐỐI trên hầu hết metrics
+
+- **Key Events**: 76-82 vs 30 (Reference) vs 18 (Single) → **gấp 2.5-4x**
+- **Relationships**: 13-14 vs 7 (Reference) → **gấp 2x**
+- **Myths**: 6 vs 1 (Reference) → **gấp 6x**
+- **Turning Points**: 6-7 vs 3 (Single) → **gấp 2x**
+- **JSON Size**: 48-60k vs 24k → data depth gấp đôi
+
+### ⛔ BUG NGHIÊM TRỌNG: Achievements = 0, Conflicts = 0
+
+> [!CAUTION]
+> Cả Plan A và Plan B đều có **achievements = 0** và **conflicts = 0**.
+> Nguyên nhân: Section B prompt yêu cầu `achievements` và `conflicts` nhưng AI có thể đã nhóm chúng vào dạng key khác hoặc section prompt chưa đủ rõ output schema.
+> **Cần fix**: Thêm JSON schema mẫu vào section B prompt.
+
+### Plan A vs Plan B
+
+| Aspect | Plan A (Flash+Pro) | Plan B (Pro+Pro) |
+|---|---|---|
+| JSON Size | 48k | **60k** (+25%) |
+| Key Events | 76 | **82** |
+| Quotes | 9 | **11** |
+| Sources | 8 | **12** |
+| API Cost | **Thấp hơn** | Cao hơn |
+| **Verdict** | Tốt, tiết kiệm | Tốt nhất về data |
+
+> [!TIP]
+> **Plan A** (Flash+Pro) đạt ~80% chất lượng Plan B nhưng rẻ hơn đáng kể. Đề xuất dùng Plan A cho production, Plan B cho nhân vật cần data sâu nhất.
+
+### Next Steps
+
+1. **Fix bug achievements/conflicts = 0** — thêm explicit JSON schema vào section B prompt
+2. **Test với nhân vật khác** (Tesla, Cleopatra) để xác nhận consistency

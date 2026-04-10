@@ -1,0 +1,39 @@
+# Walkthrough: Google Check + Niche Prompt Separation
+
+## 1. Google Check (replaces Price Check + Enrich Data)
+
+### Problem
+`💰 Price Check` only fired for firearms in Review mode. `🔍 Enrich Data` only appeared in Narrative mode. **Mystery niche got zero Google enrichment.**
+
+### Solution
+Merged into single `🔍 Google Check` checkbox, always visible in both modes.
+
+| Niche | Step 5a: Specs | Step 5b: Prices | Step 5c: Enrich |
+|---|---|---|---|
+| Firearms | ✅ | ✅ | ✅ |
+| Military | ✅ | ❌ | ✅ |
+| Mystery | ❌ | ❌ | ✅ **NEW** |
+| Narrative | ❌ | ❌ | ✅ (unchanged) |
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | Merged 2 checkboxes → `_chk_google_check`, refactored Step 5 dispatch |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1142-L1145) | Added `mystery`/`bí ẩn` to `_NICHE_ENRICH_PROMPT_MAP` |
+| [system_enrich_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_mystery.txt) | **NEW** — mystery enrichment prompt |
+
+---
+
+## 2. Niche Prompt Separation (earlier in session)
+
+Moved from shared prompts to niche-specific prompts for all 6 pipeline steps. Created 12 new prompts, deleted 6 shared ones.
+
+## 3. Outline Bug Fix
+
+Merged `create_mystery_outline()` into [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2624-2783) with niche-aware "MYSTERY CONSTRAINT" vs "PRODUCT CONSTRAINT" text. Removed 135 lines of dead code.
+
+## Verification
+- ✅ Zero references to `_chk_price_check`, `_chk_enrich_data`, `_cached_price_check`
+- ✅ Zero references to deleted shared prompts
+- ✅ Auto pipeline tab unaffected

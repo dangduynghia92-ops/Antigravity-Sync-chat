@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Implementation plan for adding Narrative rewrite mode to the Rewrite tab. Covers: 3 new prompt files, 5 new core functions in rewriter.py, UI changes (Mode combobox, narrative rewrite flow, review dialog), versioned output directory structure (v1/v2/.../final/), and verification steps.",
+  "updatedAt":  "2026-03-01T07:01:08.996728600Z",
+  "version":  "8"
+}

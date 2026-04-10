@@ -1,0 +1,95 @@
+# TTS Cleanup Tab — Implementation Plan
+
+Tạo thẻ mới "TTS Cleanup" chuyển đổi kịch bản AI sang định dạng tối ưu cho model TTS (ElevenLabs).
+
+## Proposed Changes
+
+### Core Module
+
+#### [NEW] [tts_cleanup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+
+Hàm `cleanup_for_tts(text, api_client, lang, log_callback)`:
+- Gửi text + prompt cho AI xử lý tất cả rules
+- Return text đã clean
+
+Hàm `cleanup_rules_only(text, lang)` (không cần AI):
+- Regex xử lý trước: bỏ markdown, bỏ dấu ngoặc vuông, trim whitespace
+
+---
+
+#### [NEW] [system_tts_cleanup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt)
+
+Prompt AI xử lý:
+
+| Rule | Input | Output |
+|---|---|---|
+| Ký hiệu → chữ | `@`, `$100`, `50%` | [at](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#18-38), `one hundred dollars`, `fifty percent` |
+| Viết hoa → thường | `The LOST Epoch`, `Franciszek Honiok` | `the lost epoch`, `franciszek honiok` |
+| Viết hoa sau dấu chấm | `history. the next` | `history. The next` |
+| Số → chữ (năm) | `1200 BCE` | `twelve hundred B-C-E` |
+| Số → chữ (đếm) | `3 ships` | `three ships` |
+| Số → chữ (thứ tự) | `the 3rd king` | `the third king` |
+| Số → chữ (tiền) | `$47.5M` | `forty-seven point five million dollars` |
+| Số → chữ (thập phân) | `3.14` | `three point one four` |
+| Số La Mã thứ tự | `Pope John III` | `pope john the third` |
+| Số La Mã tên | `World War II` | `world war two` |
+| Viết tắt có dấu chấm | `St.`, `Dr.`, `Mr.` | `saint`, `doctor`, `mister` |
+| **Acronym đọc từng chữ** | `FBI`, `BCE`, `CEO` | `F-B-I`, `B-C-E`, `C-E-O` |
+| **Acronym đọc thành từ** | `NASA`, `UNESCO`, `AIDS` | `nasa`, `unesco`, `aids` |
+
+> [!IMPORTANT]
+> **Về acronyms**: AI sẽ tự phân biệt dựa trên cách đọc phổ biến:
+> - Đọc từng chữ cái → thêm dấu gạch: `F-B-I`, `B-C-E` (giúp TTS đánh vần)
+> - Đọc thành từ → viết thường: `nasa`, `unesco` (giúp TTS đọc nguyên từ)
+> 
+> Không cần user config — AI model đã biết cách đọc phổ biến của từng acronym.
+
+---
+
+### UI
+
+#### [NEW] [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+
+**Layout:**
+```
+┌──────────────────────────────────────────┐
+│ Scan Folder  │  Add Files  │  Lang: [en] │
+│ Tier: [flash▼] Threads: [4] Output: [...] │
+├──────────────────────────────────────────┤
+│ 📁 folder_name (3)                       │
+│   ✅ en_001_Chapter 1.txt         1500w  │
+│   ✅ en_002_Chapter 2.txt         1200w  │
+│   ✅ en_003_Chapter 3.txt         1800w  │
+│ 📁 another_folder (2)                    │
+│   ✅ en_001_Chapter 1.txt         1400w  │
+│   ✅ en_002_Chapter 2.txt         1600w  │
+├──────────────────────────────────────────┤
+│ All │ None │ Clear │ Process │ Stop │    │
+│ Retry │ Open │                           │
+└──────────────────────────────────────────┘
+│ [Log panel]                              │
+```
+
+**Xử lý:**
+- Scan/Add → tree view nhóm theo folder
+- Process → multi-thread gửi AI cleanup từng file
+- Output: `{output_dir}/{lang}_tts_{original_name}.txt`
+- Retry: xử lý lại các file lỗi
+- Status column: `—` / `Processing` / `✓ Done` / `❌ Error`
+
+---
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+Thêm tab TTS Cleanup vào tab widget.
+
+---
+
+## Verification Plan
+
+### Manual
+- Load folder với nhiều file .txt
+- Process 1 file → kiểm tra output: số, viết tắt, acronym, ký hiệu
+- Process nhiều file → kiểm tra multi-thread
+- Retry file lỗi
+- Test acronyms: FBI → `F-B-I`, NASA → `nasa`

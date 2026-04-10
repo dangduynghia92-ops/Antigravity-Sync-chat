@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Detailed audit comparing the current prompt and actual output against 'write for ear' best practices. Identifies 4 main problems (long sentences, academic jargon, no breath points, missing time anchoring) and proposes a concrete 'WRITE FOR EAR' section to add to the prompt.",
+  "updatedAt":  "2026-04-02T00:05:13.588065800Z",
+  "requestFeedback":  true
+}

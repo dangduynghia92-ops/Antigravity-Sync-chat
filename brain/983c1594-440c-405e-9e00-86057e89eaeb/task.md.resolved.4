@@ -1,0 +1,21 @@
+# New Niche: Biography (Tiểu sử nhân vật lịch sử)
+
+## Files to Create
+- [ ] `styles/narrative_tiểu_sử_nhân_vật.json` — Style JSON (5 frameworks)
+- [ ] `prompts/system_extract_blueprint_biography.txt` — Blueprint extraction
+- [ ] `prompts/system_enrich_blueprint_biography.txt` — Enrichment via Google
+- [ ] `prompts/system_narrative_outline_biography.txt` — Outline creation
+- [ ] `prompts/system_narrative_audit_biography.txt` — Outline audit
+- [ ] `prompts/system_narrative_write_biography.txt` — Chapter writer
+- [ ] `prompts/system_narrative_review_biography.txt` — Cross-chapter review
+
+## Code Wiring (rewriter.py)
+- [ ] Global `_NICHE_PROMPT_MAP` — 4 narrative entries
+- [ ] Local `extract_blueprint()` map — biography keywords
+- [ ] `_NICHE_ENRICH_PROMPT_MAP` — biography keywords
+
+## Verification
+- [ ] Python syntax check
+- [ ] JSON validation
+- [ ] Dispatch ordering (biography before generic keywords)
+- [ ] Git commit

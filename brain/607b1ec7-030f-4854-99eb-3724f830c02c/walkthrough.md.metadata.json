@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Complete pipeline rewrite: removed all cache, locations, CIVILIAN. Visual Bible and Character Pipeline always regenerate fresh. JSON output when character_bible present.",
+  "updatedAt": "2026-03-23T08:33:56.230397600Z",
+  "version": "3"
+}

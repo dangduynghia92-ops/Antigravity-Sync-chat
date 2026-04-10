@@ -1,0 +1,24 @@
+# Create Rewrite Style Tab + Revert Original
+
+## 1. Revert rewrite_tab.py (Tab A)
+- [ ] Remove style items from [_refresh_mode_dropdown](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#484-511) (keep only Top/List + Narrative)
+- [ ] Remove [_show_mode_popup](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#512-516) method
+- [ ] Remove style case from [_get_mode_type](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#517-534)
+- [ ] Remove style redirect from [_do_rewrite_all](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1081-1275)
+- [ ] Remove `is_style` branching from [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1278-1650)
+- [ ] Restore original `chapters_data[fname]` access (was changed for style safety)
+
+## 2. Create rewrite_style_tab.py (Tab B)
+- [ ] UI: Style dropdown, Lang, Tier, Threads, Word count (Open/Body/End)
+- [ ] File loading: Scan folder, Add files, Tree view
+- [ ] Sequential rewrite flow using style guide prompt
+- [ ] Verify, Review+Patch, Merge, Final review
+- [ ] Save/load config
+
+## 3. Integrate into main_window.py
+- [ ] Add Tab B after Tab A
+- [ ] Wire signals
+
+## 4. Verify
+- [ ] Import test
+- [ ] Check Tab A works as before

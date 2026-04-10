@@ -1,0 +1,28 @@
+# Mystery History Pipeline
+
+## Prompt Files ✅
+- [x] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) (Step 8 - outline)
+- [x] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) (Step 10 - write)
+- [x] [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt) (Step 3 - extraction)
+- [x] [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt) (Step 5 - verify)
+- [x] [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt) (Step 6 - completeness)
+- [x] [system_audit_outline_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_mystery.txt) (Step 9 - audit)
+- [x] [system_review_cross_chapter_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter_mystery.txt) (Step 11 - cross-review)
+
+## Code Routing ✅
+- [x] [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1988-2123) trong [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Niche param cho [extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091)
+- [x] Niche param cho [reality_check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1882-1932)
+- [x] Niche param cho [check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1688-1743)
+- [x] Niche param cho [audit_outline_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1093-1146)
+- [x] Niche param cho [review_cross_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1148-1192)
+- [x] Niche param cho [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2259-2398) (via `_niche_prompt_map`)
+
+## Style + UI ✅
+- [x] Style guide `Review_bí_ẩn_lịch_sử.json` + `topic_keywords`
+- [x] Niche detection prompt fix
+- [x] [_niche](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py#561-569) detection moved to pipeline start
+
+## Verification ✅
+- [x] Compile check: OK
+- [ ] Test thủ công

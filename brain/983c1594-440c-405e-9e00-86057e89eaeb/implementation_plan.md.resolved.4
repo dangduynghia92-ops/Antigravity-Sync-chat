@@ -1,0 +1,79 @@
+# Thêm Framework Signals vào Blueprint Biography
+
+## Vấn đề
+Blueprint hiện tại thiếu data cho 3/5 frameworks:
+
+| Framework | Cần gì? | Blueprint có? | Kết quả |
+|---|---|---|---|
+| **Hai Mặt** | `dual_nature` (light + dark) | ✅ Mandatory | Luôn fit |
+| **Sử Thi** | `life_phases` (nhiều phases) | ✅ Always extracted | Luôn fit |
+| **Bước Ngoặt** | 1 decisive moment | ⚠️ `turning_point` per-phase, hay empty | Thiếu data |
+| **Bản Án** | Systemic persecution | ⚠️ `conflicts` không phân biệt loại | Thiếu signal |
+| **Kẻ Xét Lại** | Historical bias, reputation gap | ⚠️ `myths_vs_reality` hạn chế | Thiếu signal |
+
+## Proposed Changes
+
+### 1. [MODIFY] Blueprint Extraction Prompt
+**File**: [system_extract_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_biography.txt)
+
+Thêm section **13. FRAMEWORK SIGNALS** vào extraction prompt:
+
+```json
+"framework_signals": {
+    "decisive_moment": "THE single event/decision that changed this person's trajectory forever",
+    "decisive_moment_age": "Age or year when it happened",
+    "was_persecuted_by_system": true/false,
+    "persecution_details": "Which institution/system/government opposed them? How?",
+    "historical_record_bias": "allied | hostile | neutral | mixed — who wrote the main accounts?",
+    "popular_vs_evidence_gap": "high | medium | low — how different is popular perception from actual evidence?",
+    "contradiction_level": "high | medium | low — how contradictory are their actions/legacy?"
+}
+```
+
+**Tác dụng**: 
+- Enrichment biết fill `decisive_moment` (cho Bước Ngoặt)
+- Enrichment biết fill `was_persecuted_by_system` (cho Bản Án)
+- Enrichment biết fill `popular_vs_evidence_gap` (cho Kẻ Xét Lại)
+
+### 2. [MODIFY] Enrichment Prompt
+**File**: [system_enrich_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_biography.txt)
+
+Enrichment prompt cần biết fill `framework_signals` — nhưng vì enrichment đã fill ALL empty fields, chỉ cần đảm bảo extraction tạo schema có sẵn.
+
+### 3. [MODIFY] Framework Style JSON
+**File**: [narrative_tiểu_sử_nhân_vật.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_tiểu_sử_nhân_vật.json)
+
+Thêm `evaluation_focus` cho mỗi framework:
+```json
+{
+    "name": "Bước Ngoặt",
+    "evaluation_focus": {
+        "required_signals": ["decisive_moment"],
+        "preferred_signals": ["life_phases with clear turning_points"],
+        "best_when": "decisive_moment is vivid and life has clear before/after"
+    }
+}
+```
+
+### 4. [MODIFY] Recommend Framework Prompt
+**File**: [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt)
+
+Thêm scoring criterion: **signal_fit** — framework có `evaluation_focus.required_signals` match với blueprint's `framework_signals` không?
+
+> [!IMPORTANT]
+> Recommend prompt hiện tại là generic cho review niche. Cần kiểm tra xem biography niche dùng prompt riêng hay chung.
+
+## Open Questions
+
+1. **Recommend prompt**: Biography niche dùng `system_recommend_framework.txt` chung hay có prompt riêng? Nếu chung → cần xem cách tách hoặc thêm điều kiện.
+
+2. **Có nên thêm `framework_signals` cho mystery và battle niche không?** Hay chỉ biography?
+
+## Verification Plan
+
+### Automated Tests
+- Run blueprint extraction on Einstein transcript → verify `framework_signals` section appears
+- Run recommend_framework → verify scores more balanced across 5 frameworks 
+
+### Manual Verification
+- Chạy pipeline hoàn chỉnh cho 2-3 nhân vật khác nhau (Tesla, Cleopatra, Oppenheimer) → xem framework diversity

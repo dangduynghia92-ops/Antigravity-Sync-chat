@@ -1,0 +1,43 @@
+# Split Rewrite into Tab A + Tab B
+
+## Tab A: Rewrite (giữ nguyên)
+Revert tất cả thay đổi liên quan style mode. Chỉ còn:
+- Mode: `Top/List bí_ẩn_lịch_sử` | `Narrative bí_ẩn_lịch_sử`
+- Lang: `English` | `Español` (chọn file prompt)
+- Flow và prompt giữ nguyên 100%
+
+### Revert trong [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py):
+- Xóa style items khỏi [_refresh_mode_dropdown](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#484-511)
+- Xóa [_show_mode_popup](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#512-516)
+- Xóa style case trong [_get_mode_type](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#517-534)
+- Xóa style redirect trong [_do_rewrite_all](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1081-1275)
+- Xóa `is_style` branching trong [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1278-1650)
+
+---
+
+## Tab B: Style Rewrite (mới)
+
+### [NEW] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**UI Row 1:** `Style: [dropdown ▾]` + `Lang: [English | Español | ...]` + `Tier` + `Threads`
+**UI Row 2:** `Open: min~max` + `Body: min~max` + `End: min~max`
+**Tree:** Giống Tab A
+**Buttons:** `Load` + [Rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#35-2547) + `Stop` + `Open` + `Clear`
+
+**Flow (tuần tự, giống Narrative):**
+1. Outline
+2. ~~Reorder~~ (bỏ)
+3. Rewrite tuần tự — style prompt + context 2 chapter trước
+4. Verify
+5. Cross-chapter review + auto patch
+6. Merge v1
+7. Final review popup
+
+**Style dropdown:** Scan `styles/` → `✦ historical_thriller`, `✦ sci_fi_explainer`...
+**Lang dropdown:** Thêm dòng `"Write ALL output in {lang}"` vào prompt
+
+---
+
+## [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- Import `RewriteStyleTab`
+- Add tab: `✦ Style Rewrite` sau `✍️ Rewrite`

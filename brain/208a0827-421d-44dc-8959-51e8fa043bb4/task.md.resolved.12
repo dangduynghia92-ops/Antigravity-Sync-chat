@@ -1,0 +1,5 @@
+# UI Fixes Phase 3
+
+- [x] Fix tab switch lag — use grid + tkraise instead of pack/pack_forget
+- [x] Add dropdown arrow ▼ button to SearchableCombo
+- [x] Reorganize config_section layout — Context + Constraints moved to left column

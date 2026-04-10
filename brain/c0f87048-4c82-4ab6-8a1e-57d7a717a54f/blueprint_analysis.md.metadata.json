@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Analysis of blueprint extraction quality for the Battle of Lepanto 1571 script. Identifies 6 gaps including missing flank battles, missing commanders (Barbarigo/Siroco), weak geography, and product-review fields in a battle narrative. Proposes creating a battle-specific prompt template similar to the existing mystery/review variants.",
+  "updatedAt": "2026-03-24T16:10:51.869857800Z"
+}

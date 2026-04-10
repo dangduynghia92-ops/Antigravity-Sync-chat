@@ -1,0 +1,23 @@
+# Build Review Trang Thiết Bị Quân Sự Mode
+
+## Style Guide
+- [x] Style Guide JSON — 8 frameworks, core_rules, openings, closings, techniques
+- [x] `evaluation_focus` per framework — which criteria to focus/skip
+
+## Analysis Pipeline
+- [x] Style Analysis Pipeline (4-step)
+- [x] 2-phase synthesis (foundation + frameworks)
+- [x] Python-computed content_patterns and diversity_rules
+
+## Writing Pipeline Prompts
+- [x] #1 [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) — extract with 7 evaluation criteria per product
+- [x] #2 [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) — score & rank frameworks for blueprint
+- [x] #3 [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) — check data completeness vs framework
+- [x] #4 [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — create chapter outline (Hook/Body/End)
+- [x] #5 [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt) — write with chapter_type + evaluation_focus + CTA
+- [x] #6 [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt) — fact check + unit conversion (US/EU only)
+
+## Pending
+- [ ] Python integration (wire prompts into pipeline code)
+- [ ] Unit conversion function (Python, pre-write)
+- [ ] Test with real script

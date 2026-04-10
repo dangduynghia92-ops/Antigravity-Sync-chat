@@ -1,0 +1,201 @@
+# Unified Pipeline Tab — One-Click YouTube → Chapter → Rewrite
+
+Thẻ mới kết hợp 3 pipeline (YouTube Download → SRT Chapter Split → Style Rewrite) vào một giao diện duy nhất. User chỉ cần paste link(s) YouTube, chọn cấu hình, bấm Run — toàn bộ pipeline tự chạy end-to-end.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Câu hỏi cần xác nhận trước khi triển khai:**
+> 1. **Mode mặc định**: Khi chạy auto, script_type sẽ được AI classify tự động (như chapter_tab hiện tại). Nếu AI detect ra "top_list" thì chạy Top/List Review pipeline (12 steps), "narrative" thì chạy Narrative pipeline (8 steps). Bạn có muốn cho phép override manual trên UI không?
+> 2. **Style guide**: Style Rewrite cần file [.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/api_keys.json) style guide. Tab unified nên: (a) cho chọn style guide trên UI giống `rewrite_style_tab`, hay (b) dùng style guide mặc định?
+> 3. **Merge mode cho nhiều links**: Khi user chọn "merge nhiều link vào 1 kịch bản", bạn muốn merge ở bước nào? Đề xuất: merge các transcript thành 1 file lớn → split chapter → rewrite. Hay merge sau khi rewrite xong từng link?
+> 4. **Tên thẻ**: Đề xuất `🚀 Auto Pipeline` hoặc `⚡ One-Click`. Bạn thích tên gì?
+
+## Proposed Changes
+
+### Output Folder Structure
+
+```
+{output_root}/
+└── {video_title}_[{videoID}]/          ← main project folder
+    ├── 01_download/                    ← YouTube download artifacts
+    │   ├── {title}_transcript.txt
+    │   ├── {title}_thumb.jpg
+    │   └── {title}.mp4  (optional)
+    ├── 02_chapters/                    ← Split chapter output
+    │   ├── Chapter 1 - Title.txt
+    │   ├── Chapter 2 - Title.txt
+    │   ├── ...
+    │   ├── {title}_MERGED.txt
+    │   └── {title}_SUMMARY.txt
+    └── 03_rewrite/                     ← Style Rewrite output
+        ├── Chapter 1 - Rewritten.txt
+        ├── Chapter 2 - Rewritten.txt
+        ├── ...
+        └── _pipeline/                  ← pipeline artifacts
+```
+
+Với merge mode (nhiều links):
+```
+{output_root}/
+└── {merged_title}/
+    ├── 01_downloads/
+    │   ├── video1_transcript.txt
+    │   ├── video2_transcript.txt
+    │   └── ...
+    ├── 02_merged_transcript/
+    │   └── merged_transcript.txt
+    ├── 03_chapters/
+    └── 04_rewrite/
+```
+
+---
+
+### Component 1: Core Pipeline Engine
+
+#### [NEW] [auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py)
+
+Backend orchestrator — không chứa UI code. Lấy lại logic từ các module có sẵn:
+
+```python
+class AutoPipeline:
+    """Orchestrates: YouTube download → Chapter split → Style Rewrite."""
+    
+    def run_single(self, url, config, callbacks) -> dict:
+        """Process 1 YouTube URL end-to-end."""
+        # Step 1: Download transcript (reuse yt_downloader functions)
+        # Step 2: Split chapters (reuse chapter_splitter functions)  
+        # Step 3: Rewrite chapters (reuse rewriter functions)
+    
+    def run_batch_independent(self, urls, config, callbacks) -> list:
+        """Process multiple URLs independently (1 script per URL)."""
+    
+    def run_batch_merged(self, urls, config, callbacks) -> dict:
+        """Merge multiple transcripts → 1 combined script."""
+```
+
+**Tái sử dụng functions từ modules hiện có — KHÔNG duplicate code:**
+
+| Step | Reuse From | Functions |
+|------|-----------|-----------|
+| Download transcript | `core.yt_downloader` | [get_video_info()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545), [get_transcript_ytdlp()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169), [get_transcript()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1178-1240), [extract_timestamps()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#572-613), [build_transcript_file()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649) |
+| Download video/thumb | `core.yt_downloader` | [download_video()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#768-862), [download_thumbnail_file()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952) |
+| Split chapters | `core.chapter_splitter` | [split_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#552-735), [verify_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#737-785), [punctuate_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#787-884), [save_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#894-940), [merge_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#942-968), [save_summary()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#970-1041) |
+| Classify script type | `core.chapter_splitter` | [classify_script_type()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#150-187) |
+| Rewrite | `core.rewriter` | [extract_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045), [audit_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1254-1320), [write_from_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404), etc. |
+| Excel update | `core.yt_downloader` | [update_excel_transcript_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1533-1578), [update_excel_split_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1619-1666), [update_excel_rewrite_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1668-1712) |
+
+---
+
+### Component 2: UI Tab
+
+#### [NEW] [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+UI layout:
+
+```
+┌──────────────────────────────────────────────────┐
+│ YouTube URLs:  [paste area / text edit]           │
+│ ──────────────────────────────────────────────── │
+│ Output Root:   [___________] [Browse]             │
+│ ──────────────────────────────────────────────── │
+│ Config Row:                                       │
+│  Mode: [Auto ▼]  Style: [style.json ▼]           │
+│  Language: [English ▼]  Tier: [Flash ▼]           │
+│  ☑ Download Video  ☑ Download Thumbnail           │
+│  ☑ Excel Update    ☑ Cut Video                    │
+│ ──────────────────────────────────────────────── │
+│ Pipeline Steps:  (visual progress)                │
+│  ① Download  ② Split  ③ Rewrite                  │
+│  [████████░░░░░░░░░░░░░░░░░░] Step 2/3 - Split   │
+│ ──────────────────────────────────────────────── │
+│ [▶ Run]  [⏹ Stop]  [⏸ Pause]                     │
+│ ──────────────────────────────────────────────── │
+│ Log Panel                                         │
+└──────────────────────────────────────────────────┘
+```
+
+**UI Features:**
+- `QPlainTextEdit` cho paste nhiều URLs (1 per line)
+- Auto-detect single vs multiple links
+- Khi >1 link: popup hỏi "Independent scripts" hoặc "Merge into one"
+- Visual pipeline stepper (3-step progress bar)
+- `LogSection` (reuse existing widget)
+- Config lưu/load qua `config_manager`
+
+---
+
+### Component 3: Registration
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Import `AutoPipelineTab`
+- Add tab: `self._tabs.addTab(self._auto_tab, "🚀 Auto Pipeline")`
+- Đặt ở vị trí đầu tiên (trước YouTube tab) vì đây là flow chính
+
+---
+
+## Pipeline Flow Detail
+
+```mermaid
+flowchart TD
+    Start["User pastes URLs + clicks Run"] --> Count{"How many URLs?"}
+    Count -->|1| Single["Single mode"]
+    Count -->|>1| Ask{"Popup: Independent or Merge?"}
+    Ask -->|Independent| Batch["Process each URL independently"]
+    Ask -->|Merge| Merge["Merge mode"]
+    
+    Single --> DL1["Step 1: Download"]
+    DL1 --> DL1a["get_video_info()"]
+    DL1a --> DL1b["get_transcript_ytdlp() / fallback"]
+    DL1b --> DL1c["extract_timestamps()"]
+    DL1c --> DL1d["build_transcript_file()"]
+    DL1d --> DL1e["(optional) download_video + thumb"]
+    DL1e --> Split["Step 2: Split Chapters"]
+    
+    Split --> S1["classify_script_type()"]
+    S1 --> S2["split_chapters()"]
+    S2 --> S3["verify_chapters()"]
+    S3 --> S4["punctuate_chapters() (if SRT)"]
+    S4 --> S5["save_chapters() + merge_chapters()"]
+    S5 --> Rewrite["Step 3: Rewrite"]
+    
+    Rewrite --> R1["Load chapters from 02_chapters/"]
+    R1 --> R2{"script_type?"}
+    R2 -->|top_list| R3["Top/List Review pipeline (12 steps)"]
+    R2 -->|narrative| R4["Narrative pipeline (8 steps)"]
+    R3 --> Done["✅ Complete"]
+    R4 --> Done
+    
+    Batch --> DL1
+    
+    Merge --> MDL["Download all transcripts"]
+    MDL --> MCombine["Concatenate transcript texts"]
+    MCombine --> Split
+```
+
+## Verification Plan
+
+### Manual Verification (User Testing)
+
+> [!NOTE]
+> Project không có test suite. Verification sẽ bằng manual testing trên UI.
+
+1. **Single URL test**: Paste 1 YouTube URL → Run → Verify:
+   - Transcript downloaded to `01_download/`
+   - Chapters split correctly in `02_chapters/`
+   - Rewritten chapters in `03_rewrite/`
+   - Folder structure đúng format
+
+2. **Multiple URL - Independent test**: Paste 3 URLs → Choose "Independent" → Verify:
+   - 3 separate project folders created
+   - Each runs the full pipeline independently
+
+3. **Multiple URL - Merge test**: Paste 2 URLs → Choose "Merge" → Verify:
+   - Transcripts merged thành 1 file
+   - Chapters split từ merged text
+   - Rewrite chạy trên merged chapters
+
+4. **Stop/Pause test**: Start pipeline → Pause midway → Resume → Verify nó tiếp tục đúng step
+
+5. **Error handling test**: Paste invalid URL → Verify error logged, không crash app

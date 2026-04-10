@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Full audit of JSON framework file vs prompt text consistency. Identifies 6 issues: 3 need immediate fix (missing echo closing, conflicting openings array, overlapping closings array), 3 are low-severity. Provides specific fix recommendations for each.",
+  "updatedAt": "2026-04-08T17:39:31.358105300Z",
+  "requestFeedback": true
+}

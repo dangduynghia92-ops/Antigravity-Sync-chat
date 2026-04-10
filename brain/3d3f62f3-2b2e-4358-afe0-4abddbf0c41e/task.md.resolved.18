@@ -1,0 +1,12 @@
+# Style Analyzer → Rewrite Integration
+
+- [x] Restructure synthesis output to JSON
+- [x] Refactor 3-step flow (analyze → cache → generate prompt)
+- [x] Add Step 4: Quality review
+- [/] Rewrite tab UI restructure
+  - [ ] Split Rewrite controls into 2 rows
+  - [ ] Rename mode items with niche name
+  - [ ] Load style guides from `styles/` into dropdown
+  - [ ] Update mode check logic for new names
+- [ ] Save Style button in Style Analyzer
+- [ ] Wire style guide into rewrite system prompt

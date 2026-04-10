@@ -1,0 +1,62 @@
+# Audit: Impact Tiers Implementation
+
+## Pipeline Flow Check
+
+```
+Extract → Enrich → Recommend → Outline → Write
+```
+
+### ✅ Stage 1: Extract (`system_extract_blueprint_biography.txt`)
+- Added `paradigm_shift` (section 16) with `impact_radius` tier
+- Added `dark_side_severity` to `dual_nature.dark_side`
+- Added `trajectory_shift_degree` to `turning_points`
+- Added `opposition_severity` to `systemic_opposition`
+- Added `historical_distortion_level` to `historiography`
+- JSON output format updated with all tier tags
+
+### ✅ Stage 2: Enrich (`system_enrich_blueprint_biography.txt`)
+- **FIX APPLIED**: Added `paradigm_shift` as new field (item l)
+- **FIX APPLIED**: Added tier tags to turning_points, systemic_opposition, historiography
+- **FIX APPLIED**: Updated priority order to include paradigm_shift
+- Enrich now fills ALL tier fields if missing
+
+### ✅ Stage 3: Recommend (`system_recommend_framework.txt`)
+- Replaced "count items" with "Impact Tier scoring"
+- Added step-by-step methodology + example
+- Output now includes `highest_tier` field
+- `primary_field_items` → removed (replaced by tier)
+
+### ✅ Stage 4: Style JSON (`narrative_tiểu_sử_nhân_vật.json`)
+- All 5 `evaluation_focus` blocks updated with `tier_field` + `tier_scoring`
+- Sử Thi: `life_phases` → `paradigm_shift` ✅
+
+### ✅ Stage 5: Code (`core/rewriter.py`)
+- `recommend_framework()` line 2490: passes `evaluation_focus` from style JSON → OK
+- `check_blueprint()` line 2543: passes `evaluation_focus` → new tiers included → OK
+- No local scoring code — all AI-driven → no code changes needed
+
+## Issues Found & Fixed
+
+| # | Issue | Status |
+|---|---|---|
+| 1 | Enrich prompt missing `paradigm_shift` + tier tags | ✅ Fixed |
+
+## No Issues Found
+
+| Check | Result |
+|---|---|
+| JSON syntax valid | ✅ |
+| Python syntax valid (rewriter.py, rewrite_style_tab.py) | ✅ |
+| `evaluation_focus` passed to AI correctly | ✅ |
+| Framework selection uses AI scores | ✅ |
+| `check_blueprint` not called in narrative pipeline | ✅ (review only) |
+| Outline prompt receives blueprint with paradigm_shift | ✅ |
+
+## Files Modified (total: 4)
+
+| File | Change |
+|---|---|
+| [system_extract_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_biography.txt) | +5 tier fields + paradigm_shift section |
+| [system_enrich_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_biography.txt) | +tier tags + paradigm_shift enrichment |
+| [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) | Tier-based scoring method |
+| [narrative_tiểu_sử_nhân_vật.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_tiểu_sử_nhân_vật.json) | 5x evaluation_focus with tier_scoring |

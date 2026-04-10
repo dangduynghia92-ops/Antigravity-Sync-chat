@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Vietnamese-language research report that: (1) Interprets chat screenshots from a Vietnamese community discussing Gemini CLI account verification and multi-account farming via CLIProxyAPI, (2) Explains what EasyCLI is (Tauri v2 desktop GUI for CLIProxyAPI), (3) Provides a detailed feature comparison table between EasyCLI desktop app and the localhost:8080 web dashboard, (4) Recommends using both tools together — EasyCLI for process management/auto-start and the web dashboard for monitoring/custom integration.",
+  "updatedAt": "2026-03-23T01:58:43.433782500Z"
+}

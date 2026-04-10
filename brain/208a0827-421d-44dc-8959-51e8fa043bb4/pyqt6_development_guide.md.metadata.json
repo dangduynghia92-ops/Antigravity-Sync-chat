@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive PyQt6 desktop application development guide covering: project structure, centralized QSS theming with SVG icons for arrows (the only reliable method), Qt QSS pitfalls to avoid (border-triangles don't work, emoji breaks, native arrows disappear when sub-controls are styled), layout best practices, thread safety patterns, dialog patterns, icon button patterns, and a pre-completion checklist. Written in Vietnamese, distilled from real-world issues encountered during the SRT Prompt Generator migration.",
+  "updatedAt": "2026-02-26T10:54:55.599174Z"
+}

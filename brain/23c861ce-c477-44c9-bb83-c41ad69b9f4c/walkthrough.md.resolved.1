@@ -1,0 +1,86 @@
+# Walkthrough: Mystery Blueprint Upgrade + Niche Prompt Separation
+
+## Phase 1: Mystery Blueprint Upgrade
+
+### [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+
+Added 5 structured categories per mystery subject:
+
+| Category | Fields | Purpose |
+|---|---|---|
+| `key_figures` | name, role, affiliation, key_actions, fate, source | Historical individuals |
+| `historical_context` | political_backdrop, catalyst, era_characteristics | Era context |
+| `geography` | locations, distances, terrain_features | Factual measurements |
+| `technology_and_artifacts` | element, how_it_works, why_remarkable, modern_equivalent | Optional: artifact mysteries |
+| `scholarly_debate` | claim, evidence_for, evidence_against | Academic disagreements |
+
+Removed: `ranking_criteria`, `original_order`, `thesis_angle`
+
+### Supporting Prompts Updated
+- [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt) — verify + enrich new fields
+- [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt) — validate new fields
+
+---
+
+## Phase 2: Niche Prompt Separation
+
+### New Architecture
+
+All shared prompts eliminated. Each niche has its own prompt set:
+
+```
+prompts/
+├── system_extract_blueprint_firearms.txt   [NEW]
+├── system_extract_blueprint_military.txt   [NEW]
+├── system_extract_blueprint_mystery.txt    (existed)
+├── system_reality_check_firearms.txt       [NEW]
+├── system_reality_check_military.txt       [NEW]
+├── system_reality_check_mystery.txt        (existed)
+├── system_check_blueprint_firearms.txt     [NEW]
+├── system_check_blueprint_military.txt     [NEW]
+├── system_check_blueprint_mystery.txt      (existed)
+├── system_review_outline_firearms.txt      [NEW]
+├── system_review_outline_military.txt      [NEW]
+├── system_mystery_outline.txt              (existed)
+├── system_audit_outline_firearms.txt       [NEW]
+├── system_audit_outline_military.txt       [NEW]
+├── system_audit_outline_mystery.txt        (existed)
+├── system_review_cross_chapter_firearms.txt [NEW]
+├── system_review_cross_chapter_military.txt [NEW]
+└── system_review_cross_chapter_mystery.txt  (existed)
+```
+
+**Deleted** (6 shared prompts):
+- [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt)
+- [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt)
+- [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt)
+- [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt)
+- [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt)
+- [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt)
+
+### Python Changes
+
+**[rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L47-L96)** — Added centralized dispatch:
+
+```python
+_NICHE_PROMPT_MAP = {
+    "extract_blueprint": {"firearms": "...", "military": "...", "mystery": "..."},
+    "reality_check":     {"firearms": "...", "military": "...", "mystery": "..."},
+    "check_blueprint":   {"firearms": "...", "military": "...", "mystery": "..."},
+    "audit_outline":     {"firearms": "...", "military": "...", "mystery": "..."},
+    "cross_chapter":     {"firearms": "...", "military": "...", "mystery": "..."},
+    "outline":           {"firearms": "...", "military": "...", "mystery": "..."},
+}
+
+def _get_niche_prompt(step, niche):
+    # Returns prompt file, or raises ValueError with instructions
+```
+
+Unknown niches now raise: `"No 'extract_blueprint' prompt found for niche 'X'. Known niches: [firearms, military, mystery]. Please create a prompt file..."`
+
+**[rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L38)** — Removed [create_mystery_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2621-2756) import, unified outline call.
+
+## Verification Results
+- ✅ Zero references to deleted shared prompts in Python code
+- ✅ Zero `_is_mystery` in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) (all replaced with [_get_niche_prompt()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#83-100))
+- ✅ `_is_mystery` in [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) L3423 is a local UI variable (shuffle logic) — correct

@@ -1,0 +1,31 @@
+# Style Rewrite Pipeline — Detect Framework + Write New
+
+## Completed
+- [x] Analyze current pipeline (root cause: sends original text → paraphrase)
+- [x] Design 5 rich frameworks (Deep-Dive, Domino, Zoom, Trial, Pendulum)
+- [x] Build [cinematic_military_v2.json](file:///C:/Users/Admin/.gemini/antigravity/brain/9cc5599d-f325-48cb-8ba0-b577b6195dae/cinematic_military_v2.json) — full style guide with rich frameworks
+
+## In Progress
+- [/] Pipeline implementation
+
+### Step 1: New prompts
+- [ ] `system_detect_framework.txt` — detect which framework original uses
+- [ ] `system_extract_blueprint.txt` — extract facts/topics from original (NO original text in output)
+- [ ] `system_write_from_blueprint.txt` — write new chapter from blueprint + style + framework
+
+### Step 2: Core functions
+- [ ] `extract_blueprint()` in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [ ] `detect_framework()` in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [ ] `write_from_blueprint()` in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+### Step 3: UI/Pipeline integration
+- [ ] Copy style JSON to `styles/`
+- [ ] Update [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1185-1467) pipeline to use new flow:
+  1. Detect original framework
+  2. Select different framework
+  3. Extract blueprint
+  4. Generate outline with new framework
+  5. Write chapters from blueprint + outline
+
+## Later
+- [ ] Manual testing with real scripts

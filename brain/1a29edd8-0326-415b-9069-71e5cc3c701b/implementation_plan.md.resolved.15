@@ -1,0 +1,78 @@
+# Blueprint Source Tagging & AI-Knowledge Verification
+
+## Problem
+AI blueprint extraction **invents data** from training knowledge when transcript doesn't mention it (e.g., "top ejection" for Winchester 1894). Reality Check doesn't catch this because it trusts all blueprint data equally.
+
+## Solution
+Tag each blueprint field with source → verify AI-added data → output clean blueprint.
+
+```
+Step 3: Extract  →  _blueprint_raw.json (WITH source tags)
+Step 5: Check    →  verify "ai_knowledge" fields → _blueprint.json (CLEAN, same format as today)
+Step 6+          →  read _blueprint.json as usual (NO changes needed)
+```
+
+## Proposed Changes
+
+---
+
+### Prompt: Extract Blueprint
+
+#### [MODIFY] [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt)
+
+Add source tagging requirement. Each non-empty field value becomes `{"value": "...", "source": "transcript|ai_knowledge"}`:
+
+```diff
+  "ergonomics": {
+-   "controls": "Top ejection",
++   "controls": {"value": "Top ejection", "source": "ai_knowledge"},
++   "grip_angle": {"value": "", "source": "transcript"},
+  }
+```
+
+> [!IMPORTANT]
+> Only applies to `product_evaluation` sub-fields (specs_core, trigger, ergonomics, accuracy, reliability, aftermarket, value_proposition). Top-level fields (core_topic, thesis_angle, etc.) stay as plain strings.
+
+---
+
+### Prompt: Reality Check
+
+#### [MODIFY] [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt)
+
+Two new responsibilities:
+1. **Verify `ai_knowledge` fields** — check if they're factually correct, fix if wrong, flag warnings
+2. **Output clean blueprint** — strip source tags, merge enriched data, return same format as today's [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_blueprint.json)
+
+New output will include both `verification_result` (what was checked/fixed) AND `clean_blueprint` (ready for downstream).
+
+---
+
+### Pipeline Code
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**Step 3** (~L1930): Save as `_blueprint_raw.json` instead of [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_blueprint.json)
+
+**Step 5** (~L2029-2086): 
+- Pass `_blueprint_raw.json` to reality check
+- Save verification result as [_reality_check.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_reality_check.json)
+- Extract `clean_blueprint` from result → save as [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_blueprint.json)
+- Use [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_blueprint.json) (clean) for all downstream steps
+
+---
+
+### Rewriter Module
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Update [reality_check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1862-1909) function signature — now returns both verification report and clean blueprint.
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- Re-run the @BallisticEdge08 brush guns review
+- Check `_blueprint_raw.json` for source tags on Win 1894 "controls" field
+- Check [_reality_check.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_reality_check.json) — should flag "Expulsión superior" as incorrect
+- Check [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/10.%20Gun/1.%20Channel%201/1.Video%20doi%20thu/@BallisticEdge08/001_MhrY54wKa6c_Forgot%20Bolt%20Action%20%E2%80%94%20Top%2010%20Brush%20Guns%20Every%20American%20Should%20Know%20About%21_transcript/style_rewrite/_pipeline/_blueprint.json) (clean) — should have corrected ejection type

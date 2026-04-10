@@ -1,0 +1,63 @@
+# Merge Preview — Theme Grouping & CSV Export
+
+Nâng cấp flow AI Merge: AI phân nhóm chapters theo theme → export CSV → pop-up tree view với "Merge Preview" (mở CSV) và "Merge Selected" (merge nhóm đã chọn).
+
+## Proposed Changes
+
+### Prompt
+
+#### [MODIFY] [system_order.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_order.txt)
+
+Viết lại prompt. AI sẽ phân tất cả chapters thành nhiều nhóm theme:
+
+```json
+{
+  "groups": [
+    {
+      "group_id": 1,
+      "theme": "WW2 Government Secrets",
+      "description_vi": "Bí mật chính phủ thời WW2...",
+      "appeal_score": 9,
+      "suggested_titles_vi": ["6 Bí Mật WW2...", "Sự Thật Kinh Hoàng..."],
+      "why_this_group_vi": "Lý do nhóm này hợp nhau...",
+      "chapters": [
+        {"order": 1, "filename": "...", "role_vi": "Hook", "reason_vi": "Lý do vị trí"}
+      ],
+      "excluded": [
+        {"filename": "...", "reason_vi": "Lý do loại"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### Core
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+1. Sửa [ai_order_chapters()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#309-370) → dùng prompt mới, return `{"groups": [...]}`
+2. Thêm `export_merge_preview_csv(groups, output_path)` — ghi CSV 2 phần:
+   - Tổng quan nhóm: theme, description, titles, appeal score, why_this_group
+   - Chi tiết: chapter, vị trí, role, reason, loại/chọn
+
+---
+
+### UI
+
+#### [MODIFY] [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+
+1. Giữ nút **"3. AI Merge"** — khi click, gọi AI phân nhóm (như cũ)
+2. Thay [_show_ai_merge_dialog()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1792-1871) → dialog mới:
+   - **Tree view**: nhóm (checkbox + theme + score) → chapters con (order + filename + role)
+   - **Radio-style**: chỉ cho chọn 1 nhóm tại 1 thời điểm
+   - **Nút "Merge Preview"**: mở file CSV bằng app mặc định
+   - **Nút "Merge Selected"**: merge chapters của nhóm đã chọn
+3. Export CSV tự động khi dialog mở
+
+## Verification Plan
+
+- Chạy AI Merge với 19 chapters → kiểm tra pop-up tree view
+- Click "Merge Preview" → mở CSV đúng format
+- Chọn 1 nhóm → "Merge Selected" → merge thành công

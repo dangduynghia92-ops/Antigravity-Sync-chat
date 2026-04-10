@@ -1,0 +1,160 @@
+# SRT-to-Prompt Converter Application
+
+Ứng dụng Python chuyển đổi file SRT (phụ đề có timecode) thành prompt tạo ảnh/video, gửi qua API đến các AI model. Hỗ trợ nhiều phong cách (style) qua file `.txt`, điều khiển tiến trình (start/pause/stop), và cấu hình API với nhiều endpoint dự phòng.
+
+## Proposed Changes
+
+### Project Structure
+
+```
+1.Prompt_Image/
+├── main.py                    # Entry point
+├── config.json                # App settings
+├── api_keys.json              # API keys (riêng biệt)
+├── requirements.txt           # Dependencies
+├── styles/                    # Style presets folder
+│   ├── Cinematic.txt
+│   └── Documentary.txt
+├── core/                      # Core logic modules
+│   ├── __init__.py
+│   ├── srt_parser.py          # Parse SRT files
+│   ├── api_client.py          # API calls + fallback
+│   ├── prompt_generator.py    # Generate prompts from SRT
+│   └── process_controller.py  # Start/Pause/Stop logic
+└── tabs/                      # UI tab modules
+    ├── __init__.py
+    ├── tab_srt_input.py       # Tab 1: SRT Input & Time Settings
+    ├── tab_styles.py          # Tab 2: Style Management
+    ├── tab_api_config.py      # Tab 3: API Configuration
+    ├── tab_process.py         # Tab 4: Process Control & Progress
+    └── tab_output.py          # Tab 5: Output & Results
+```
+
+---
+
+### Core Modules
+
+#### [NEW] [srt_parser.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_parser.py)
+- Parse file `.srt` ra list segments `{index, start_time, end_time, text}`
+- Hàm `group_by_interval(segments, interval_seconds)` — gom text theo khoảng thời gian (3s, 5s, 10s...)
+- Trả về list `{time_range, combined_text}` cho prompt generator
+
+#### [NEW] [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py)
+- Class `APIClient` quản lý nhiều endpoint dự phòng
+- Load API keys từ `api_keys.json` riêng biệt
+- Auto-fallback: nếu endpoint 1 fail → thử endpoint 2, 3...
+- Hỗ trợ gửi request với system prompt từ style file
+- Rate limiting & retry logic
+
+#### [NEW] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+- Nhận grouped segments + style content (system prompt)
+- Tạo prompt cho mỗi segment: gửi SRT text + style hướng dẫn → API → nhận prompt kết quả
+- Trả về list `{time_range, original_text, generated_prompt}`
+
+#### [NEW] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- Class `ProcessController` dùng threading
+- States: `IDLE`, `RUNNING`, `PAUSED`, `STOPPED`
+- Methods: `start()`, `pause()`, `resume()`, `stop()`
+- Callback system để update UI progress
+
+---
+
+### UI Tabs (CustomTkinter)
+
+> [!IMPORTANT]
+> Dùng **CustomTkinter** cho giao diện hiện đại, dark mode. Mỗi tab là 1 file riêng biệt, dễ sửa chữa.
+
+#### [NEW] [tab_srt_input.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/tabs/tab_srt_input.py)
+- **Tab 1 — SRT Input & Settings**
+- Nút chọn file SRT (file dialog)
+- Preview nội dung SRT đã parse
+- Slider/SpinBox chọn khoảng thời gian (3–30 giây)
+- Hiển thị số segments sau khi group
+
+#### [NEW] [tab_styles.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/tabs/tab_styles.py)
+- **Tab 2 — Style Management**
+- Dropdown/ComboBox tự động quét thư mục `/styles`
+- Nút refresh danh sách styles
+- Preview nội dung file style đang chọn
+- Nút mở thư mục styles để thêm file mới
+
+#### [NEW] [tab_api_config.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/tabs/tab_api_config.py)
+- **Tab 3 — API Configuration**
+- Danh sách endpoints (thêm/sửa/xóa)
+- Input API key (masked)
+- Chọn model name
+- Nút test connection
+- Lưu/Load config từ `api_keys.json`
+
+#### [NEW] [tab_process.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/tabs/tab_process.py)
+- **Tab 4 — Process Control**
+- 3 nút: **▶ Start**, **⏸ Pause**, **⏹ Stop**
+- Progress bar tổng thể
+- Log realtime hiển thị từng segment đang xử lý
+- Countdown/timer cho segment hiện tại
+
+#### [NEW] [tab_output.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/tabs/tab_output.py)
+- **Tab 5 — Output & Results**
+- Bảng kết quả: Time Range | Original Text | Generated Prompt
+- Nút xuất kết quả ra file `.txt` hoặc `.csv`
+- Nút copy prompt đã chọn
+- Nút clear results
+
+---
+
+### Entry Point & Config
+
+#### [NEW] [main.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/main.py)
+- Khởi tạo CustomTkinter app với dark mode
+- Tạo TabView với 5 tabs
+- **Nút Reset App** ở header — restart toàn bộ ứng dụng
+- Title bar với tên app + version
+
+#### [NEW] [api_keys.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/api_keys.json)
+```json
+{
+  "endpoints": [
+    {
+      "name": "OpenAI",
+      "url": "https://api.openai.com/v1/chat/completions",
+      "api_key": "",
+      "model": "gpt-4o-mini"
+    },
+    {
+      "name": "Gemini",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models",
+      "api_key": "",
+      "model": "gemini-2.0-flash"
+    }
+  ]
+}
+```
+
+#### [NEW] [requirements.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/requirements.txt)
+- `customtkinter`, `requests`, `Pillow`
+
+---
+
+### Style Presets
+
+#### [NEW] [Cinematic.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/styles/Cinematic.txt)
+- System prompt hướng dẫn AI tạo prompt theo phong cách điện ảnh (cinematic lighting, dramatic composition, film grain...)
+
+#### [NEW] [Documentary.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/styles/Documentary.txt)
+- System prompt hướng dẫn AI tạo prompt theo phong cách tài liệu (realistic, natural lighting, journalistic...)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Chạy `pip install -r requirements.txt` để cài đặt dependencies
+2. Chạy `python main.py` — kiểm tra app khởi động, 5 tabs hiển thị đúng
+3. **Tab SRT**: Load 1 file SRT mẫu, chỉnh interval → xác nhận segments hiển thị đúng
+4. **Tab Styles**: Kiểm tra dropdown hiển thị file từ `/styles`, preview nội dung
+5. **Tab API Config**: Nhập endpoint + key, test save/load
+6. **Tab Process**: Nhấn Start (với endpoint thật hoặc mock) → kiểm tra progress bar + pause/stop
+7. **Tab Output**: Xem bảng kết quả, test export
+
+> [!NOTE]
+> Việc test đầy đủ chức năng gọi API cần user cung cấp API key thật. Phần UI và SRT parsing có thể test offline.

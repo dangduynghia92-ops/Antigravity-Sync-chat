@@ -1,0 +1,49 @@
+# Tách Processing Log riêng cho mỗi Tab
+
+Hiện tại cả 3 tab (SRT Chapter, Regroup, Rewrite) đều emit `log_message` và `status_changed` Signal đến **cùng 1** [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) widget ở bottom. Cần tách để mỗi tab có log riêng, nhúng trực tiếp vào bên trong tab đó.
+
+## Proposed Changes
+
+### LogSection Widget
+
+#### [MODIFY] [log_section.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py)
+
+- Giữ nguyên [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) class, không thay đổi gì — nó sẽ được tái sử dụng bên trong mỗi tab.
+
+---
+
+### Mỗi Tab — Nhúng LogSection riêng
+
+#### [MODIFY] [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+
+- Import [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) và thêm 1 instance `self._log` bên trong tab layout (dùng `QSplitter` vertical giữa nội dung tab và log).
+- Thay tất cả `self.log_message.emit(msg)` → `self._log.log(msg)`.
+- Thay tất cả `self.status_changed.emit(text, is_error)` → `self._log.set_status(text, is_error)`.
+- Remove signal declarations `log_message` và `status_changed` (không cần emit ra ngoài nữa).
+
+#### [MODIFY] [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py)
+
+- Tương tự chapter_tab: nhúng [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) riêng, thay emit → gọi trực tiếp.
+
+#### [MODIFY] [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+
+- Tương tự: nhúng [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) riêng, thay emit → gọi trực tiếp.
+
+---
+
+### MainWindow — Bỏ LogSection chung
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Xóa import [LogSection](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#12-103) và xóa instance `self._log_section`.
+- Xóa `QSplitter` vertical (không cần tách tab/log nữa, vì log nằm trong tab).
+- Xóa tất cả signal connections (`log_message.connect`, `status_changed.connect`).
+- Layout đơn giản: header + tabs.
+
+## Verification Plan
+
+### Manual Verification
+1. Chạy `python main.py` từ thư mục project.
+2. Chuyển qua từng tab (SRT Chapter → Regroup → Rewrite) và xác nhận mỗi tab có Processing Log riêng ở dưới.
+3. Thực hiện 1 action ở Regroup tab (ví dụ: Scan) → log chỉ hiện ở Regroup tab, không hiện ở các tab khác.
+4. Nút Clear Log / Copy Log hoạt động độc lập cho từng tab.

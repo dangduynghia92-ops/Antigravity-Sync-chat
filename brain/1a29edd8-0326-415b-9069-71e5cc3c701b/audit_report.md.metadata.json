@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comparison audit: v2-run1 (before fixes) vs v2-run2 (after vocabulary rename + structure/closing enforcement). Shows dramatic improvement in structure variety and closing compliance. Remaining issue: 'investigation' still leaks 4 times in transitions.",
+  "updatedAt": "2026-03-20T00:30:40.995957Z",
+  "version": "8"
+}

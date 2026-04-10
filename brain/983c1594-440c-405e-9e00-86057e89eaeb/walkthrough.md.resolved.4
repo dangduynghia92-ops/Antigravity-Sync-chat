@@ -1,0 +1,183 @@
+# Pipeline Architecture — Mode/Niche Summary & Full Audit
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    subgraph "UI Layer"
+        AP["Auto Pipeline Tab"]
+        SR["Style Rewrite Tab"]
+    end
+
+    subgraph "Mode Routing (Pipeline Type)"
+        NAR["Narrative Pipeline<br/>_do_renew_style()"]
+        REV["Review Pipeline<br/>_do_renew_review()"]
+    end
+
+    subgraph "Niche Detection (from Style JSON)"
+        N1["niche: 'battle war military combat'"]
+        N2["niche: 'mystery history'"]
+        N3["niche: 'firearms guns ammunition shooting'"]
+        N4["niche: 'military vehicles equipment weapons'"]
+    end
+
+    subgraph "Prompt Dispatch (rewriter.py)"
+        P1["system_*_battle.txt"]
+        P2["system_*_mystery.txt"]
+        P3["system_*_firearms.txt"]
+        P4["system_*_military.txt"]
+    end
+
+    AP --> NAR
+    AP --> REV
+    SR --> NAR
+    SR --> REV
+
+    NAR --> N1
+    NAR --> N2
+    REV --> N2
+    REV --> N3
+    REV --> N4
+
+    N1 --> P1
+    N2 --> P2
+    N3 --> P3
+    N4 --> P4
+```
+
+---
+
+## Mode vs Niche — Key Distinction
+
+| Concept | What it is | Where it lives | Example values |
+|---|---|---|---|
+| **Mode** | Pipeline type (processing logic) | UI dropdown + code routing | `"Narrative"`, `"Top/List Review"` |
+| **Niche** | Content domain (terminology, rules, prompts) | Style JSON `"niche"` field | `"mystery history"`, `"battle war military combat"` |
+| **Framework** | Storytelling structure within a niche | Style JSON `"frameworks"` array | `"Bóc Tách"`, `"The Investigative Deep-Dive"` |
+| **Style JSON** | Complete config for 1 mode + 1 niche | `styles/` directory | `narrative_bí_ẩn_lịch_sử.json` |
+
+### Separation Rules
+
+1. **Mode** decides WHICH pipeline runs (`_do_renew_style` vs `_do_renew_review`)
+2. **Niche** decides WHICH prompts load, WHICH rules apply, WHICH terminology handling
+3. **Framework** decides HOW the story is structured within the chosen niche
+4. Code should NEVER hardcode niche-specific behavior at the mode level
+
+---
+
+## Style JSON Files — Current State
+
+| File | Mode | Niche Field | voice_over_clarity | terminology_handling |
+|---|---|---|---|---|
+| [narrative_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_bí_ẩn_lịch_sử.json) | Narrative | `"mystery history"` | ✅ | ✅ (3 tier) |
+| [narrative_phân_tích_trận_đánh.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_phân_tích_trận_đánh.json) | Narrative | `"battle war military combat"` | ✅ | ✅ (3 tier) |
+| [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_bí_ẩn_lịch_sử.json) | Review | `"mystery history"` | ✅ | ✅ (3 tier) |
+| [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_súng_đạn.json) | Review | `"firearms guns ammunition shooting"` | ✅ | ❌ (enthusiast audience) |
+| [Review_trang_thiết_bị_quân_sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_trang_thiết_bị_quân_sự.json) | Review | `"military vehicles equipment weapons"` | ✅ | ❌ (defense audience) |
+
+---
+
+## Prompt Dispatch Map
+
+### Review Pipeline Steps ([rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) global `_NICHE_PROMPT_MAP`)
+
+| Step | firearms | military | mystery |
+|---|---|---|---|
+| extract_blueprint | ✅ `system_extract_blueprint_firearms.txt` | ✅ `system_extract_blueprint_military.txt` | ✅ `system_extract_blueprint_mystery.txt` |
+| reality_check | ✅ `system_reality_check_firearms.txt` | ✅ `system_reality_check_military.txt` | ✅ `system_reality_check_mystery.txt` |
+| check_blueprint | ✅ `system_check_blueprint_firearms.txt` | ✅ `system_check_blueprint_military.txt` | ✅ `system_check_blueprint_mystery.txt` |
+| audit_outline | ✅ `system_audit_outline_firearms.txt` | ✅ `system_audit_outline_military.txt` | ✅ `system_audit_outline_mystery.txt` |
+| cross_chapter | ✅ `system_review_cross_chapter_firearms.txt` | ✅ `system_review_cross_chapter_military.txt` | ✅ `system_review_cross_chapter_mystery.txt` |
+| outline | ✅ `system_review_outline_firearms.txt` | ✅ `system_review_outline_military.txt` | ✅ `system_mystery_outline.txt` |
+| writer | ✅ `system_write_review_firearms.txt` | ✅ `system_write_review_military.txt` | ✅ `system_write_review_mystery.txt` |
+
+### Narrative Pipeline Steps (global `_NICHE_PROMPT_MAP`)
+
+| Step | battle/war | mystery/bí ẩn |
+|---|---|---|
+| narrative_outline | ✅ `system_narrative_outline_battle.txt` | ✅ `system_narrative_outline_mystery.txt` |
+| narrative_audit | ✅ `system_narrative_audit_battle.txt` | ✅ `system_narrative_audit_mystery.txt` |
+| narrative_writer | ✅ `system_narrative_write_battle.txt` | ✅ `system_narrative_write_mystery.txt` |
+| narrative_review | ✅ `system_narrative_review_battle.txt` | ✅ `system_narrative_review_mystery.txt` |
+
+### Local Dispatch Maps in Functions
+
+| Function | Map | Niches covered |
+|---|---|---|
+| `extract_blueprint()` (narrative) | Local `_NICHE_PROMPT_MAP` | ✅ mystery, battle (fixed this session) |
+| `enrich_blueprint_google()` | `_NICHE_ENRICH_PROMPT_MAP` | ✅ mystery, battle, firearms (ordering fixed) |
+| `write_from_blueprint_review()` | Local `_niche_prompt_map` | ✅ firearms, military, mystery |
+
+---
+
+## Dual-Framework Parallel Execution
+
+### Flow (Both Modes, Both Tabs)
+
+```mermaid
+flowchart TD
+    A["User selects 'Auto' framework"] --> B["AI ranks all frameworks by score"]
+    B --> C{"len(rankings) >= 2?"}
+    C -->|Yes| D["v1 = rankings[0], v2 = rankings[1]"]
+    C -->|No| E["v1 = rankings[0] only"]
+    D --> F["Create v1_dir/ & v2_dir/"]
+    F --> G["Run v1 & v2 in parallel"]
+    G --> H["ThreadPoolExecutor (Narrative)<br/>Thread + job dict (Review)"]
+    H --> I["Wait for both to finish"]
+```
+
+### Coverage After This Session
+
+| | Auto Pipeline Tab | Style Rewrite Tab (manual) |
+|---|---|---|
+| **Narrative mode** | ✅ Dual (top 2 AI-ranked) | ✅ Dual (top 2 AI-ranked) |
+| **Review mode** | ✅ Dual (top 2 AI-ranked) | ✅ Dual (top 2 AI-ranked) |
+
+---
+
+## Full Code Audit — Bugs Found & Fixed
+
+### 🔴 Critical Bugs Fixed
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1186) | `extract_blueprint()` local map had NO mystery keywords — mystery narrative would crash | Added mystery keywords BEFORE battle |
+| 2 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1253) | `_NICHE_ENRICH_PROMPT_MAP` ordered `"history"` before `"mystery"` — niche `"mystery history"` matched battle | Reordered: mystery keywords FIRST |
+| 3 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2482) | Narrative auto-select hardcoded `"The Investigative Deep-Dive"` as v2 fallback — only valid for battle niche | Replaced with generic top-2 AI-ranked |
+
+### 🟡 Design Issues Fixed
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 4 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2304) | Narrative mode read niche from **filename** string parsing, Review mode read from JSON `"niche"` field — inconsistent | Unified: both read from `style_data.get("niche")` with filename fallback |
+| 5 | [narrative_phân_tích_trận_đánh.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_phân_tích_trận_đánh.json) | Missing `"niche"` field (only style JSON without it) | Added `"niche": "battle war military combat"` |
+| 6 | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2910) | Review mode dual-framework only worked from Auto Pipeline (`_auto_dual` flag), not from manual Style Rewrite tab | Enabled `_auto_dual` when user selects "Auto" in any mode |
+
+### ✅ Verified Correct
+
+| Area | Status | Details |
+|---|---|---|
+| Global `_NICHE_PROMPT_MAP` (4 steps × 2 niches) | ✅ | All narrative steps correctly dispatch by niche keyword |
+| Review global map (7 steps × 3 niches) | ✅ | All review steps correctly dispatch by niche keyword |
+| Mode branching (Narrative vs Review pipeline) | ✅ | Correctly routes to different pipeline functions |
+| Spec/Price niche detection | ✅ | Uses `_niche` word matching, not mode |
+| Mystery outline no-shuffle | ✅ | Uses `_niche` check, not mode |
+| `write_from_blueprint_review()` niche dispatch | ✅ | Reads from `style_data.get("niche")` |
+| Voice-over clarity & terminology rules | ✅ | Applied per-niche in style JSONs |
+| Framework selection | ✅ | AI-ranked, niche-agnostic |
+
+---
+
+## Niche Dispatch Safety — Priority Rule
+
+> [!IMPORTANT]
+> When a niche string contains generic words like `"history"` or `"military"` that could match MULTIPLE niches, **more specific keywords MUST appear first** in the dispatch map.
+
+Example: niche = `"mystery history"`
+- ❌ `"history"` matches first → routes to battle prompt (WRONG)
+- ✅ `"mystery"` matches first → routes to mystery prompt (CORRECT)
+
+This pattern is now consistently applied across:
+- Global `_NICHE_PROMPT_MAP`
+- Local `extract_blueprint()` map
+- `_NICHE_ENRICH_PROMPT_MAP`

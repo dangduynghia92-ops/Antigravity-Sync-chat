@@ -1,0 +1,152 @@
+# Regroup Module — Implementation Plan
+
+## Mục tiêu
+
+Thêm tab "Regroup" cho phép user scan các chapters đã tách → AI phân loại theo ngách → copy files vào folder nhóm mới, phục vụ việc tạo kịch bản YouTube chuyên sâu.
+
+## Flow
+
+```
+User chọn chủ đề lớn + ngách → Scan output folder → AI phân loại
+→ Hiện bảng checkbox → User chọn / AI suggest → Copy files ra folder nhóm
+```
+
+---
+
+## Proposed Changes
+
+### Core Logic
+
+#### [NEW] [regroup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py)
+
+**Chức năng chính:**
+
+- `scan_output_folder(folder)` → quét tất cả subfolders, đọc `_SUMMARY.txt`, ghi nhớ chapter file paths ([.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt), [.md](file:///C:/Users/Admin/.gemini/antigravity/brain/1991db42-829a-4dab-b4f5-1717243c3f9d/task.md))
+- `parse_summary_file(path)` → parse `_SUMMARY.txt` → list `{number, title, summary, file_path}`
+- `classify_chapters(summaries, niche_list, api_client)` → gửi AI phân loại → trả JSON groups
+  - Chia batch nếu >100 summaries (mỗi batch ~50)
+- `copy_to_group(chapters, group_name, regroup_output_dir)` → copy files + tạo `_GROUP_INFO.json`
+- `load_used_tracker(folder)` / `save_used_tracker(folder, data)` → quản lý `_USED_TRACKER.json`
+- `get_next_group_number(regroup_dir, niche_name)` → tìm số thứ tự tiếp theo cho folder
+
+---
+
+#### [NEW] [system_regroup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt)
+
+Prompt yêu cầu AI:
+- Nhận danh sách chapter summaries + danh sách ngách có sẵn
+- Phân loại mỗi chapter vào đúng 1 ngách (hoặc "Không khớp")
+- Gợi ý 2-3 title YouTube cho mỗi ngách
+- Output JSON format
+
+---
+
+#### [NEW] [niches/](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niches/) folder
+
+File mẫu `bí_ẩn_lịch_sử.txt`:
+
+```
+Công trình cổ đại bí ẩn
+Nền văn minh đã mất
+Vụ mất tích kỳ lạ
+Kho báu chưa tìm thấy
+Sinh vật huyền bí
+Lời nguyền và phép thuật
+Bí ẩn dưới đại dương
+Vũ khí và công nghệ cổ đại
+Người ngoài hành tinh thời cổ đại
+```
+
+User có thể tạo thêm file mới, mỗi file = 1 chủ đề lớn.
+
+---
+
+### UI
+
+#### [NEW] [regroup_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py)
+
+**Layout:**
+
+```
+Row 1: [Scan Folder: ___________] [...] [Regroup Output: ___________] [...]
+Row 2: [Chủ đề lớn: ▼dropdown] [Chapters/group: min [7] — max [10]]
+Row 3: Danh sách ngách (checkbox list, load từ file)
+       [+ Thêm ngách] [Scan & Classify]
+─────────────────────────────────────
+TreeWidget: Kết quả phân loại
+  📁 Công trình cổ đại (8 chapters)
+     ☑ ScriptA/Ch2 - Kim tự tháp     [✅ chưa dùng]
+     ☑ ScriptB/Ch0 - Stonehenge      [✅ chưa dùng]
+     ☐ ScriptC/Ch1 - Angkor Wat      [⚠️ đã dùng]
+  📁 Vụ mất tích (5 chapters)
+     ...
+─────────────────────────────────────
+[AI Suggest] [Copy Selected to Group] [☐ Ẩn đã dùng]
+```
+
+**Signals:** `log_message`, `status_changed` — kết nối với LogSection.
+
+---
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Import `RegrospTab`
+- Thêm tab: `self._tabs.addTab(self._regroup_tab, "🔀 Regroup")`
+- Kết nối signals `log_message`, `status_changed`
+
+---
+
+### Output Format
+
+#### `_USED_TRACKER.json` (trong scan folder gốc)
+
+```json
+{
+  "used_chapters": [
+    {
+      "path": "F:/Output/ScriptA/Chapter 2 - Kim tự tháp.txt",
+      "hash": "a1b2c3...",
+      "assigned_to": "cong_trinh_co_dai_bi_an_001",
+      "date": "2026-02-28"
+    }
+  ]
+}
+```
+
+#### `_GROUP_INFO.json` (trong mỗi folder nhóm)
+
+```json
+{
+  "niche": "Công trình cổ đại bí ẩn",
+  "broad_topic": "Bí ẩn lịch sử",
+  "suggested_titles": ["5 Công Trình Cổ Đại Khoa Học Bó Tay"],
+  "created": "2026-02-28",
+  "chapters": [
+    {"source": "ScriptA", "title": "Ch2 - Kim tự tháp", "original_path": "..."}
+  ]
+}
+```
+
+---
+
+## Edge Cases
+
+| Case | Xử lý |
+|---|---|
+| Thiếu `_SUMMARY.txt` | Cảnh báo + nút tạo summary (dùng AI) |
+| Chapter thuộc 2+ ngách | Hiện ở cả 2, đánh dấu "multi-niche" |
+| Path file không tồn tại | Validate khi scan, loại bỏ + cảnh báo |
+| >100 summaries | Chia batch, mỗi batch ~50 summaries |
+| Ngách có ít chapter hơn min range | Cảnh báo "chỉ có N/min" |
+| Folder nhóm trùng tên | Auto-increment: `_001`, `_002` |
+
+## Verification Plan
+
+### Automated
+- `python -c "from ui.main_window import MainWindow; print('OK')"` — import test
+- Chạy app, kiểm tra tab Regroup hiện lên
+
+### Manual
+- Scan folder có chapters → bảng phân loại hiện đúng
+- Copy files → folder nhóm tạo đúng cấu trúc
+- Theme dark/light hiển thị đúng

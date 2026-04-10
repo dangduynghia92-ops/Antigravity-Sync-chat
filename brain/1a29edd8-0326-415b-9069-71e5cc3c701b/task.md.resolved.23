@@ -1,0 +1,9 @@
+# Mystery History Pipeline
+
+- [ ] Tạo `system_mystery_outline.txt`
+- [ ] Tạo `system_write_review_mystery.txt`
+- [ ] Thêm `create_mystery_outline()` vào [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [ ] Đăng ký niche `"mystery"` vào `_niche_prompt_map`
+- [ ] Wire vào [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- [ ] Compile check
+- [ ] Test thủ công

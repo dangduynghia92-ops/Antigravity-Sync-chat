@@ -1,0 +1,33 @@
+# Visual Bible Feature — Walkthrough
+
+## Summary
+Implemented automatic Visual Bible generation for historical video processing. When the **Historical** constraint is checked, the app generates a structured reference document before processing individual segments.
+
+## Changes Made
+
+### New Files
+| File | Purpose |
+|---|---|
+| [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) | Generate, save, and load Visual Bible documents |
+| [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) | Prompt template for AI analysis |
+
+### Modified Files
+| File | Changes |
+|---|---|
+| [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) | Added [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#31-46) parameter to all generation methods; prepends bible as reference section in user messages |
+| [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | Integrated Visual Bible step — loads cached or generates new (Pro tier), saves to file, passes to prompt generator |
+
+## Processing Flow
+```
+Historical ✓ → Start Processing
+  ├─ Cached _visual_bible.txt? → Load it
+  └─ No cache? → AI (Pro) reads full SRT → generates bible → saves file
+  → Each segment gets Visual Bible prepended as reference
+  → AI uses relevant characters/settings per segment
+```
+
+## Verification
+All modules import successfully:
+- `narrative_review`: ✅ OK
+- `prompt_generator`: ✅ OK  
+- `process_controller`: ✅ OK

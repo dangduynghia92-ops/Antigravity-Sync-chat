@@ -1,0 +1,129 @@
+# Review Pipeline — Complete Overhaul Plan
+
+## Pipeline Overview (12 Steps)
+
+```
+1. Concatenate text
+2. Detect framework          ← ĐÃ SỬA (dùng review frameworks, không narrative)
+3. Extract blueprint         ← ĐÃ SỬA (prompt riêng, chỉ trích product data)
+4. Rank frameworks
+5. Reality check             → bổ sung data thiếu, sửa data sai
+6. Check completeness        → đảm bảo đủ data cho framework đã chọn
+7. Convert units
+8. Create outline            ← CẦN SỬA (thiếu universal rules, chưa delegate đúng)
+9. Audit outline             ← ĐÃ SỬA (review-specific, respect chapter range)
+10. Write chapters           ← CẦN SỬA (thiếu universal rules, chưa follow framework)
+11. Cross-chapter review     ← ĐÃ SỬA (review-specific: data consistency)
+12. Merge
+```
+
+---
+
+## Code Changes ĐÃ HOÀN THÀNH
+
+| Thay đổi | File |
+|---|---|
+| [detect_framework](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#930-1002) nhận `frameworks_list` | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) |
+| Review pipeline truyền review frameworks | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) |
+| [extract_blueprint_review](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1088) — prompt riêng | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) + [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) |
+| [audit_outline_review](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1090-1140) — prompt riêng + [chapter_range](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#364-375) | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) + [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt) |
+| [review_cross_chapter](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1142-1183) — prompt riêng | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) + [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) |
+| Review pipeline gọi đúng functions | [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) |
+
+---
+
+## CẦN SỬA: Outline Prompt ([system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt))
+
+### A. Universal Rules (áp dụng MỌI framework)
+
+| # | Rule | Lý do |
+|---|---|---|
+| 1 | **Hook phải nêu tiêu chí xếp hạng** | Khán giả cần biết "xếp hạng dựa trên gì" ngay từ đầu |
+| 2 | **Mỗi product phải note ưu VÀ nhược điểm** | Chỉ khen → mất credibility |
+| 3 | **Mỗi product ghi `target_user`** | "Ai nên mua cái này" — giúp khán giả tự filter |
+| 4 | **Mỗi product ghi `ranking_reason`** | Tại sao đứng vị trí này (1 câu) |
+| 5 | **Kết luận có category awards** | "Best for budget", "Best trigger", "Best overall" |
+| 6 | **Kết luận nhắc lại tiêu chí** | Remind audience how you ranked |
+
+### B. Framework-Driven Rules (DELEGATE cho framework JSON)
+
+| Yếu tố | Prompt nói | Framework JSON quyết định |
+|---|---|---|
+| **Ranking order** | "Follow `evaluation_focus.angle` + `structure.direction`" | VD: "10→1 weakest to strongest" |
+| **Transitions** | "Follow `structure.body.transitions`" | VD: "Hard-cut" hoặc "narrative bridge" |
+| **Chapter template** | "Follow `structure.body.chapter_template` if exists" | VD: "1.Benchmark 2.Data 3.Feature 4.Myth 5.Price" |
+| **Pacing** | "Follow `structure.body.pacing`" | VD: "Consistently fast" |
+| **Numbering** | "If `structure.type` is 'countdown', state number" | VD: type=countdown → "Number 7" |
+| **Hook method** | "Follow `structure.hook`" | VD: "Contrarian challenge" |
+| **End method** | "Follow `structure.end`" | VD: "Acknowledge benchmark → restate thesis" |
+
+### C. Output JSON — thêm fields
+
+```json
+{
+  "chapters": [{
+    ...existing fields...,
+    "ranking_reason": "Tại sao product này đứng vị trí này (1 câu)",
+    "target_user": "Ai nên mua product này",
+    "cons_to_mention": "1 nhược điểm chính cần đề cập"
+  }],
+  "cta": {
+    ...existing fields...,
+    "category_awards": {"best_budget": "Product X", "best_trigger": "Product Y", "best_overall": "Product Z"},
+    "ranking_criteria_recap": "Nhắc lại tiêu chí xếp hạng (1 câu)"
+  }
+}
+```
+
+---
+
+## CẦN SỬA: Writer Prompt ([system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt))
+
+### A. Universal Rules — THÊM
+
+| # | Rule | Lý do |
+|---|---|---|
+| 1 | **Mọi số liệu phải đến từ blueprint** | Blueprint đã bổ sung đầy đủ qua Reality Check. Không tự bịa thêm |
+| 2 | **Body chapter: nhắc ít nhất 1 nhược điểm** | Credibility — reviewer chân thật |
+| 3 | **Body chapter: kết bằng "ai nên mua"** | Follow `target_user` từ outline |
+| 4 | **Dùng `ends_with` từ outline** để viết transition | Đảm bảo flow giữa chapters |
+
+### B. Framework-Driven Rules — THÊM
+
+| # | Rule | Khi nào |
+|---|---|---|
+| 1 | **Follow `chapter_template`** nếu framework có | Budget Warrior: 1.Benchmark→2.Data→3.Feature→4.Myth→5.Price |
+| 2 | **Follow `pacing`** | Budget Warrior: "fast, short sentences" |
+| 3 | **If countdown: viết số countdown** | "Number 7:", "Number 6:" |
+| 4 | **If head-to-head: viết round** | "Round 1: Trigger" |
+
+---
+
+## CẦN BỔ SUNG: 10 Frameworks thiếu data
+
+Chỉ Budget Warrior có `chapter_template`, `transitions`, `pacing`. 10 cái còn lại thiếu:
+
+| Framework | `chapter_template` cần | `transitions` cần |
+|---|---|---|
+| Contrarian Takedown | Leader claim → Challenger data → Verdict | Dimension kết → next dimension tease |
+| Underdog Champion | Myth → Data surprise → Reassessment | "But what about X?" bridge |
+| High-Stakes Scenario | Scenario setup → Test → Survival verdict | Escalating stakes |
+| Legacy Justification | Heritage → Modern test → Endurance proof | Era progression |
+| Tier List | Tier placement → Evidence → Tier verdict | Tier jump announcement |
+| Myth Buster | Myth statement → Evidence → Truth reveal | "Next myth is even worse..." |
+| Evolution Timeline | Previous gen → New gen → Delta measurement | Generation leap |
+| Head-to-Head Duel | Round announce → Product A → Product B → Winner | Round result → next round |
+| Golden Age Legacy | Nostalgia → Modern test → Still relevant? | Time period progression |
+| Industry Shakeup | Announcement → Analysis → Disruption score | Impact escalation |
+
+> [!IMPORTANT]
+> Mỗi framework cần bổ sung vào JSON: `chapter_template`, `transitions`, `pacing`.
+> Có thể generate từ logic framework hoặc phân tích từ sample scripts.
+
+---
+
+## Thứ tự thực hiện
+
+1. Sửa [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — thêm universal rules + delegate framework rules
+2. Sửa [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — thêm universal rules + delegate framework rules
+3. Bổ sung 10 frameworks trong `Review_trang thiết bị quân sự.json`

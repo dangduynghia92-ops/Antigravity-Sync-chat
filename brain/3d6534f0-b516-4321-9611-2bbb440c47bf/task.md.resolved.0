@@ -1,0 +1,14 @@
+# Build CLIProxyAPI Management Web Dashboard
+
+- [x] Research CLIProxyAPI Management API endpoints
+- [/] Plan web dashboard implementation
+- [ ] Enable Management API (update config.yaml with secret-key)
+- [ ] Build single-page web dashboard (HTML + CSS + JS)
+  - [ ] Dashboard overview (server status, version, models count)
+  - [ ] Accounts panel (list OAuth accounts with status)
+  - [ ] Models panel (list available models)
+  - [ ] Usage statistics panel
+  - [ ] Config viewer
+  - [ ] OAuth login buttons (add new accounts)
+- [ ] Serve dashboard on a local port
+- [ ] Verify dashboard works with live CLIProxyAPI

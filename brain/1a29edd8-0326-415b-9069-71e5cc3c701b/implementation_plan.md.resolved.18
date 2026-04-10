@@ -1,0 +1,84 @@
+# Unused Chapters Feature
+
+Auto-save chapters chứa items không được dùng + file tổng hợp source mapping + nút Delete.
+
+## Proposed Changes
+
+### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+---
+
+### A. UI Changes
+
+**1. Unused chapters folder** (near output folder row):
+- TextInput `_txt_unused_dir` + Browse button
+- Saved/restored via config
+
+**2. Delete button** (màu đỏ `#e74c3c`):
+- Popup theo trạng thái:
+  - Chưa chọn folder → *"Chưa chọn thư mục unused chapters"*
+  - Chưa hoàn thành kịch bản → *"Chưa hoàn thành kịch bản — không có file xoá"*
+  - Folder rỗng → *"Thư mục rỗng"*
+  - Có file → *"Xoá {N} file? Không thể hoàn tác."* + Yes/No
+
+**3. Merge mode validation**:
+- [_do_rewrite_merge()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1167-1195): kiểm tra output path trống → popup *"Vui lòng chọn thư mục output trước khi merge"* → return
+
+---
+
+### B. Pipeline Changes (sau line ~2258)
+
+**1. Detect unused products + copy chapters**:
+```python
+all_products = {p["product_name"] for p in blueprint["product_evaluation"]}
+unused_products = all_products - selected_products
+
+if unused_products and unused_dir:
+    for ch in checked:  # source chapter files
+        for uname in unused_products:
+            if uname.lower() in ch["text"].lower():
+                # Copy ch["filepath"] → unused_dir
+                # Add suffix _2 if filename exists
+                break
+    log(f"✓ Copied {N} unused chapters → {unused_dir}")
+```
+
+**2. Save `_source_mapping.json` in output**:
+```json
+{
+  "used": [
+    {
+      "product": "M1A2 Abrams",
+      "chapter_file": "ch_01.txt",
+      "source_video": "Top 10 Tanks [abc123]",
+      "source_path": "F:/videos/top10tanks/chapters/ch_01.txt",
+      "video_id": "abc123"
+    }
+  ],
+  "unused": [
+    {
+      "product": "PzH 2000",
+      "chapter_file": "ch_08.txt",
+      "source_video": "Artillery Systems [xyz789]",
+      "source_path": "F:/videos/artillery/chapters/ch_08.txt",
+      "video_id": "xyz789",
+      "copied_to": "F:/unused_chapters/ch_08.txt"
+    }
+  ]
+}
+```
+
+Truy xuất info từ chapter data có sẵn:
+- `source_video` ← `ch["group"]` (folder name)
+- `source_path` ← `ch["filepath"]`
+- [video_id](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1776-1794) ← [_extract_video_id_from_path()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1776-1794) từ folder name
+
+> [!NOTE]
+> Áp dụng cả merge lẫn single-folder. Bất cứ khi nào outline dùng ít items hơn blueprint.
+
+## Verification
+
+- Merge 2 folder (10 items), chapter_range = 7 → verify 3 chapters copied + _source_mapping.json
+- Single folder (8 items), chapter_range = 5 → verify 3 chapters copied
+- Delete button: test mỗi trạng thái popup
+- Merge without output path → verify block

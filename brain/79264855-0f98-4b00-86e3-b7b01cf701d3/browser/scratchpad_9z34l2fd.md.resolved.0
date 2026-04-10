@@ -1,0 +1,16 @@
+# ScrapeCreators API Documentation Task
+
+## Goal
+Find all YouTube-related API endpoints from ScrapeCreators to support video/channel scanning and transcript retrieval.
+
+## Checklist
+- [ ] Navigate to ScrapeCreators Docs
+- [ ] Explore sidebar for YouTube endpoints
+- [ ] Catalog YouTube Video endpoints (Transcript, Details, etc.)
+- [ ] Catalog YouTube Channel endpoints
+- [ ] Catalog YouTube Playlist endpoints
+- [ ] Catalog YouTube Search endpoints
+- [ ] Summarize all findings
+
+## Findings
+*(To be populated)*

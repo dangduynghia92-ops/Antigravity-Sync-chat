@@ -1,0 +1,292 @@
+# Narrative Mystery — Thiết kế Prompt Set
+
+## Triết lý thiết kế
+
+### So sánh 3 niche
+
+| Khía cạnh | Review Mystery (top/list) | Battle Narrative | **Narrative Mystery (mới)** |
+|-----------|--------------------------|------------------|-----------------------------|
+| **Đơn vị** | Mỗi chapter = 1 bí ẩn riêng | Mỗi chapter = 1 phase trận | Mỗi chapter = 1 **lớp điều tra** về CÙNG bí ẩn |
+| **Arc** | Sine wave retention | Chronological battle | **Investigation funnel** — mở rộng rồi thu hẹp |
+| **Trục chính** | Tone (banger→creep→epic) | Timeline (buildup→chaos) | **Evidence depth** (surface→core→verdict) |
+| **Giữ chân** | Đa dạng chủ đề | Adrenaline + stakes | **Cognitive tension** — audience muốn biết sự thật |
+| **Đặc trưng** | `tone_slot`, `mystery_category` | `battle_phase`, `commanders` | `investigation_phase`, `evidence_layer`, `credibility_level` |
+
+---
+
+## 1. INVESTIGATION ARC (thay Sine Wave / Battle Timeline)
+
+Battle có **timeline tự nhiên** (buildup→chaos→aftermath).
+Review có **sine wave** (banger→fascinator→creep).
+Mystery cần **Investigation Funnel** — kéo người xem từ bề mặt đến lõi:
+
+```
+HOOK ─── Gây sốc, đặt câu hỏi không thể bỏ qua
+  │
+FOUNDATION ─── Bối cảnh: thời đại, nhân vật, sự kiện chính thức
+  │           Mục đích: audience hiểu "câu chuyện chính thống" trước
+  │
+DEEP DIVE ─── Đào sâu: bằng chứng, mâu thuẫn, phát hiện mới  
+  │           Mục đích: từng lớp evidence khiến câu chuyện chính thống lung lay
+  │           (Nhiều chapters — mỗi chapter tấn công từ 1 góc khác nhau)
+  │
+CONFRONTATION ─── Đối đầu: giả thuyết vs giả thuyết
+  │              Mục đích: peak tension — audience phải chọn phe
+  │
+VERDICT ─── Phán quyết: tổng hợp, đánh giá xác suất, câu hỏi mở
+            Mục đích: trí tuệ + emotion — audience rời đi với suy nghĩ
+```
+
+### Pacing Slots (adapt theo chapter count)
+
+| Slot | Purpose | Retention Goal |
+|------|---------|----------------|
+| **HOOK** | Drop vào moment gây sốc nhất / paradox không thể giải thích | Giữ trong 60s đầu |
+| **FOUNDATION** | Xây bối cảnh — lịch sử chính thống, nhân vật chính, timeline | Audience "hiểu rồi" → sẵn sàng bị phá |
+| **DEEP_DIVE** (1-3 chapters) | Mỗi chapter = 1 góc tấn công khác nhau vào mainstream theory | Cognitive tension — "wait, what??" |
+| **CONFRONTATION** | Đặt 2+ giả thuyết đối đầu trực tiếp, để evidence quyết | Peak engagement — audience chọn phe |
+| **VERDICT** | Tổng hợp, credibility assessment, câu hỏi mở + CTA | Leave with thought |
+
+> **Nguyên tắc retention 10-15 phút**: Không bao giờ để audience "biết trước kết luận". Mỗi chapter phải THÊM 1 lớp complexity, không chỉ thêm evidence. Foundation cho thấy câu chuyện chính thống → Chapter tiếp phá vỡ nó → Chapter tiếp phá vỡ cái phá vỡ → ... → Verdict tổng hợp.
+
+---
+
+## 2. CHAPTER STRUCTURES (7 structures)
+
+Lấy cảm hứng từ review mystery (mythbuster, detective_trail...) nhưng redesign cho **single-mystery deep analysis**:
+
+### STRUCTURE 1: EVIDENCE EXCAVATION
+```
+Flow: Phát hiện bằng chứng → Phân tích nguồn gốc → Đánh giá credibility
+How: Mở bằng MỘT bằng chứng cụ thể (tài liệu, artifact, phát hiện khảo cổ).
+     Truy nguồn: ai tìm, khi nào, trong hoàn cảnh nào.
+     Đánh giá: bằng chứng này đáng tin đến mức nào? Ai xác nhận, ai phản bác?
+Best for: FOUNDATION chapters — giới thiệu evidence mới
+Tone affinity: foundation, deep_dive
+```
+
+### STRUCTURE 2: THEORY BUILDING
+```
+Flow: Tập hợp evidence → Xây dựng giả thuyết → Test giả thuyết
+How: Thu thập 3-5 bằng chứng đã trình bày → Kết nối logic → 
+     Xây 1 giả thuyết coherent → Test: giả thuyết này giải thích 
+     được gì, KHÔNG giải thích được gì?
+Best for: DEEP_DIVE chapters — connecting dots
+Tone affinity: deep_dive
+```
+
+### STRUCTURE 3: COUNTER INVESTIGATION
+```
+Flow: Mainstream theory → Systematic attack → What remains unexplained
+How: Trình bày giải thích chính thống MẠNH NHẤT CÓ THỂ (steelman).
+     Sau đó systematic attack từ evidence: mâu thuẫn 1, mâu thuẫn 2...
+     Kết: mainstream giải thích được X%, nhưng Y% vẫn không thể giải thích.
+Best for: DEEP_DIVE + CONFRONTATION — audience plays jury
+Tone affinity: deep_dive, confrontation
+```
+
+### STRUCTURE 4: PRIMARY SOURCE ANALYSIS
+```
+Flow: Tài liệu gốc → Context tài liệu → What it reveals vs hides
+How: Focus vào 1 PRIMARY SOURCE cụ thể (bản thảo cổ, bản đồ, 
+     bia khắc, tài liệu archived). Đọc nghĩa đen → Đọc context 
+     (ai viết, cho ai, trong hoàn cảnh gì) → Phát hiện điều tài liệu 
+     cố tình giấu hoặc vô tình tiết lộ.
+Best for: DEEP_DIVE — khi có primary source mạnh
+Tone affinity: foundation, deep_dive
+```
+
+### STRUCTURE 5: TIMELINE RECONSTRUCTION
+```
+Flow: Official timeline → Anomalies in sequence → Revised timeline
+How: Trình bày timeline chính thức → Chỉ ra gaps, contradictions, 
+     impossible timings (X xảy ra trước Y nhưng Y là prerequisite) → 
+     Đề xuất timeline thay thế dựa trên evidence.
+Best for: DEEP_DIVE — chronology mysteries
+Tone affinity: deep_dive, confrontation
+```
+
+### STRUCTURE 6: CREDIBILITY TRIAL
+```
+Flow: Who says what → Cross-examine sources → Verdict on reliability
+How: "Xét xử" các nguồn tin: Expert A nói X (credentials, bias, funding), 
+     Expert B nói Y (credentials, bias, funding). Tài liệu gốc nói Z.
+     Physical evidence nói W. Ai đáng tin hơn? Tại sao?
+Best for: CONFRONTATION — đỉnh điểm tension
+Tone affinity: confrontation
+```
+
+### STRUCTURE 7: VERDICT SYNTHESIS
+```
+Flow: What we know for certain → What remains debated → What may never be known
+How: Phân loại evidence thành 3 tier: confirmed facts, probable hypotheses, 
+     unknowables. Đánh giá xác suất cho mỗi giả thuyết. Kết thúc bằng 
+     câu hỏi mở — NOT a firm conclusion.
+Best for: VERDICT chapter
+Tone affinity: verdict
+```
+
+### Structure-Slot Affinity Table
+
+| Slot | PREFER | AVOID |
+|------|--------|-------|
+| foundation | evidence_excavation, primary_source | verdict_synthesis |
+| deep_dive | theory_building, counter_investigation, timeline_reconstruction | verdict_synthesis |
+| confrontation | credibility_trial, counter_investigation | evidence_excavation |
+| verdict | verdict_synthesis | evidence_excavation |
+
+---
+
+## 3. CLOSING TYPES (4 types — same as review, adapted)
+
+| Type | Mô tả | Best for slot |
+|------|--------|---------------|
+| **RHETORICAL_QUESTIONS** | 2-4 câu hỏi chưa trả lời, mỗi chapter format khác | deep_dive |
+| **COLD_FACT** | Kết bằng 1 fact lạnh lùng, stark | confrontation |
+| **EVIDENCE_CLIFF** | Reveal 1 bằng chứng mới ở CUỐI chapter → kéo sang chapter sau | foundation, deep_dive |
+| **IMPOSSIBILITY_STATEMENT** | Khẳng định điều KHÔNG THỂ giải thích → cognitive tension | confrontation |
+
+> Hai chapters liên tiếp KHÔNG ĐƯỢC dùng cùng closing type.
+
+---
+
+## 4. HOOK RULES
+
+Lấy từ review mystery + battle, adapt cho single-mystery:
+
+| Method | Khi nào dùng |
+|--------|-------------|
+| **Paradox Drop** | Mở bằng 1 fact KHÔNG THỂ đúng nhưng LÀ đúng — "Năm 1513, ai đó vẽ bản đồ Nam Cực... 300 năm trước khi lục địa này được phát hiện" |
+| **Crime Scene Opening** | Mở bằng 1 "hiện trường" cụ thể — artifact, tài liệu, di tích — và describe nó bằng sensory details |
+| **Impossible Question** | "Làm sao 1 nền văn minh 3000 năm trước cắt đá với độ chính xác 0.01mm?" |
+| **Timeline Impossibility** | Mở bằng 2 events KHÔNG THỂ xảy ra đồng thời nhưng evidence nói CÓ |
+
+Hook KHÔNG phân tích sâu — chỉ set up **WHY this mystery matters** và tạo **curiosity gap**.
+
+---
+
+## 5. END RULES
+
+| Element | Mô tả |
+|---------|--------|
+| **Verdict** | Phân loại: what's confirmed, what's probable, what's unknown |
+| **Credibility Score** | Đánh giá từng giả thuyết: Strong evidence / Weak evidence / No evidence |
+| **Callback** | Quay về hình ảnh/câu hỏi mở đầu — giờ audience hiểu sâu hơn |
+| **Grand Thesis** | 1-2 câu: bài học lớn hơn — "Bí ẩn này nói gì về X?" |
+| **Open Question** | Câu hỏi audience CHƯA trả lời được → CTA comments |
+| **NEVER** | Tuyên bố kết luận tuyệt đối hoặc tease video tiếp |
+
+---
+
+## 6. ENRICHED CHAPTER SCHEMA (Outline output)
+
+```json
+{
+  "chapter_number": 1,
+  "chapter_type": "hook | body | end",
+  "title": "Working title (evocative, content-specific)",
+  "framework_step": "Step from framework",
+  "summary": "2-3 sentences",
+  "key_evidence": ["Evidence 1 from blueprint", "Evidence 2"],
+  
+  "investigation_phase": "foundation | deep_dive | confrontation | verdict",
+  "evidence_layer": "What layer of the mystery this chapter peels back (1 sentence)",
+  "theories_addressed": ["Mainstream theory", "Alternative hypothesis"],
+  "sources_featured": ["Expert/Source 1", "Document 2"],
+  "credibility_focus": "Which source or claim is being evaluated for reliability",
+  
+  "chapter_structure": "evidence_excavation | theory_building | counter_investigation | primary_source | timeline_reconstruction | credibility_trial | verdict_synthesis",
+  "closing_type": "rhetorical_questions | cold_fact | evidence_cliff | impossibility_statement",
+  
+  "narrative_techniques": ["Technique 1", "Technique 2"],
+  "emotional_beat": "curiosity | doubt | shock | intellectual_awe | dread | resolution",
+  "callback_to": "Reference to previous chapter",
+  "foreshadow": "Hint at what's coming",
+  "ends_with": "Transition/cliffhanger",
+  "word_count_target": 400
+}
+```
+
+---
+
+## 7. REQUIRED ELEMENTS (Body chapters)
+
+Tương tự battle có [CONTEXT], [FORCES], [TACTICAL], mystery có:
+
+| Element | Mô tả | BAD | GOOD |
+|---------|--------|-----|------|
+| **[EVIDENCE]** | Bằng chứng cụ thể từ blueprint | "Có nhiều bằng chứng" | "Bia đá Rosetta 196 TCN, nặng 760kg, có 3 loại chữ: hieroglyphic, demotic, Greek" |
+| **[MAINSTREAM]** | Giải thích chính thống | "Các nhà khoa học cho rằng..." | "Egyptologist Mark Lehner, ĐH Harvard, 2008: kiến trúc sàng lọc qua hệ thống ramp dài 1.6km..." |
+| **[COUNTER]** | Phản bác / evidence chống lại | "Nhưng có ý kiến khác" | "Nhưng ramp 1.6km cần 3 triệu m³ đất — nhiều hơn cả kim tự tháp. Không có dấu vết ramp nào được tìm thấy." |
+| **[SOURCE]** | Ai nói, credentials, potential bias | "Theo 1 chuyên gia" | "Theo Robert Schoch, PhD Địa chất ĐH Boston — lưu ý: kết luận của ông bị phản bác bởi hầu hết Egyptologists" |
+| **[IMPOSSIBILITY]** | Điều mainstream KHÔNG THỂ giải thích | "Vẫn chưa rõ" | "20 tấn đá granite từ Aswan, 800km phía nam — vận chuyển bằng gì khi bánh xe chưa được sử dụng?" |
+
+---
+
+## 8. RETENTION ENGINEERING (10-15 phút)
+
+### Curiosity Gap Architecture
+```
+Chapter 1 (HOOK): Đặt 1 câu hỏi IMPOSSIBLE → audience phải ở lại
+Chapter 2 (FOUNDATION): Cho thấy mainstream answer → "OK understood"
+Chapter 3-5 (DEEP DIVE): Phá mainstream answer, mỗi chapter từ 1 góc
+  → Mỗi chapter kết bằng EVIDENCE_CLIFF: "Nhưng đó chưa phải điều kỳ lạ nhất..."
+Chapter 6 (CONFRONTATION): Giả thuyết vs giả thuyết → peak tension
+Chapter 7 (VERDICT): "Sự thật có thể là..." → open question → CTA
+```
+
+### Anti-Drop Mechanisms
+1. **Minute 0-1**: Paradox Drop — fact quá shocking để bỏ qua
+2. **Minute 2-3**: Foundation — audience feel smart, invested
+3. **Minute 4-7**: Deep Dive — mỗi chapter kết bằng evidence cliff → "phải nghe tiếp"
+4. **Minute 8-10**: Confrontation — audience ĐÃ đầu tư về mặt trí tuệ, không thể dừng
+5. **Minute 11-15**: Verdict — payoff cho investment → CTA khi engagement cao nhất
+
+### Pacing Rules
+- Không bao giờ 2 chapters liên tiếp cùng structure
+- Không bao giờ 2 chapters liên tiếp cùng closing type
+- Deep Dive chapters phải alternate giữa **analytical** (cold evidence) và **sensory** (vivid reconstruction)
+- Confrontation chapter phải có tempo nhanh hơn Foundation
+
+---
+
+## 9. IMPLEMENTATION PLAN
+
+### Files cần tạo (4 prompt files)
+
+| # | File | Size (est) | Dựa trên |
+|---|------|-----------|-----------|
+| 1 | `system_narrative_outline_mystery.txt` | ~11KB | Battle outline + Review mystery outline |
+| 2 | `system_narrative_audit_mystery.txt` | ~3KB | Battle audit |
+| 3 | `system_narrative_write_mystery.txt` | ~11KB | Battle writer + Review mystery writer |
+| 4 | `system_narrative_review_mystery.txt` | ~4KB | Battle review |
+
+### Blueprint — KHÔNG cần tạo mới
+
+> [!IMPORTANT]
+> Mystery blueprint extractor (`system_extract_blueprint_mystery.txt`) đã tồn tại và phù hợp cho narrative mode. Cấu trúc `product_evaluation` (tên trường vì pipeline compatibility) chứa detailed_facts, mainstream_theory, counter_evidence — đủ data cho single-mystery deep analysis.
+>
+> Chỉ cần extract 1 mystery thay vì 10 — logic này do blueprint extractor tự xử lý dựa trên input text.
+
+### Code changes
+
+1. Thêm keywords vào `_NICHE_PROMPT_MAP` cho 4 step keys (`narrative_outline`, `narrative_audit`, `narrative_writer`, `narrative_review`)
+2. Keywords: `"mystery"`, `"bí ẩn"`, `"enigma"`, `"conspiracy"`, `"âm mưu"`, `"giả thuyết"`, `"alternative history"`, `"lịch sử thay thế"`
+
+### Thể loại con được bao phủ
+
+Tất cả các thể loại sau đều dùng chung bộ prompt narrative mystery:
+- ✅ Bí ẩn lịch sử (historical mysteries)
+- ✅ Lịch sử thay thế (alternative history / "what if")
+- ✅ Lịch sử giả thuyết (historical hypothesis)
+- ✅ Thuyết âm mưu có cơ sở (evidence-based conspiracy)
+- ✅ Khảo cổ bí ẩn (mysterious archaeology / OOPArts)
+
+Vì tất cả đều có chung pattern: **Evidence → Theory → Counter → Verdict**
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Vocabulary Ban**: Review mystery ban "investigation", "case file", "dossier". Narrative mystery cần ban những từ gì?
+> 2. **Adrenaline Test (2nd person)**: Battle có rule "dùng YOU khi visceral danger". Mystery có cần rule tương tự? (VD: "Hãy tưởng tượng bạn mở cánh cửa hầm mộ đó...")
+> 3. **Credibility Scale**: Verdict chapter có nên output explicit credibility scale (1-10) cho mỗi theory không? Hay để writer tự đánh giá bằng ngôn ngữ?

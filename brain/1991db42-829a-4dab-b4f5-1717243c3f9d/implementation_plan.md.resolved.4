@@ -1,0 +1,122 @@
+# Rewrite Tab — Improvements Plan
+
+## Tổng hợp 9 yêu cầu
+
+---
+
+### 1. Word Count Fields (min/max linh hoạt)
+Thêm 2 ô `QSpinBox` trên UI: **"Từ:"** `[1300]` **"đến:"** `[1800]`.
+- Cả hai điền → khoảng (1300-1800)
+- Chỉ điền ô 1 → tối thiểu
+- Chỉ điền ô 2 → tối đa
+
+Giá trị này inject vào [system_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt) và [system_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt) lúc runtime.
+
+---
+
+### 2. Progress % Column
+Thêm cột **"Tiến trình"** hiện `%` từng bước:
+- Analyze: 0% → 50% → 100%
+- Rewrite: 0% → 30% → 60% → 100%
+- Verify: tự động sau rewrite
+
+---
+
+### 3. Clean Status Column
+Cột trạng thái chỉ hiện: `⏳ Pending` | `🔍 Analyzed` | `✍️ Rewriting` | `✓ Done` | `✗ Error`
+
+Score hiện ở **cột Score** riêng. Không trộn `⚠️ 7.5/10` vào cột trạng thái.
+
+---
+
+### 4. Stop + Retry Buttons
+- **Stop**: dừng tất cả luồng đang chạy
+- **Retry**: chạy lại chapters bị lỗi (`✗ Error`)
+
+---
+
+### 5. Auto-Verify + Remove Verify Button
+Sau khi mỗi chapter rewrite xong → tự verify ngay → bỏ nút "3. Verify".
+
+Flow: `[1. Analyze]` → `[2. Rewrite + Verify]` → `[3. AI Order & Merge]`
+
+---
+
+### 6. Auto-Export Review Report (Vietnamese)
+Sau khi verify xong → tự tạo `_REVIEW_REPORT.csv` với:
+
+| STT | Chapter | Score | Passed | Số từ | Điểm mạnh | Vấn đề | Gợi ý |
+|---|---|---|---|---|---|---|---|
+
+Cột tiêu đề tiếng Việt, UTF-8 BOM cho Excel.
+
+---
+
+### 7. AI Chapter Ordering Popup
+Nút **"3. AI Order & Merge"** mở popup:
+- AI phân tích tất cả chapters đã rewrite
+- Gợi ý thứ tự tối ưu cho US audience retention
+- Bảng hiển thị: STT | Chapter | Lý do (tiếng Việt)
+- Nút **"Đồng ý"** → merge theo thứ tự này
+- Nút **"Hủy"** → quay lại
+
+#### [NEW] [system_order.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_order.txt)
+Prompt cho AI: đọc tóm tắt các chapters → gợi ý thứ tự + chọn chapters phù hợp nhất.
+
+---
+
+### 8-9. Chapter Selection + Unused Tracking
+- Checkbox ☑ trên tree = **đưa vào kịch bản**
+- AI gợi ý 7-10 chapters tốt nhất từ 20+ chapters đã rewrite
+- Chapters không được chọn → đánh dấu `excluded` trong `_REWRITE_STATUS.json`
+- Chapters excluded → có thể dùng lại cho video khác
+
+#### `_REWRITE_STATUS.json` mới:
+```json
+{
+  "chapters": {
+    "Chapter 1.txt": {
+      "status": "verified",
+      "included": true,
+      "order": 1
+    },
+    "Chapter 5.txt": {
+      "status": "verified",
+      "included": false,
+      "exclude_reason": "Nội dung trùng lặp với Chapter 2"
+    }
+  }
+}
+```
+
+---
+
+## UI Layout Mới
+
+```
+┌───────────────────────────────────────────────────────────┐
+│ Input Group: [____________] [Browse]                       │
+│ Output:      [____________] [Browse]                       │
+│ AI Tier: [flash▼]  Threads: [3]  Từ: [1300] đến: [1800]  │
+│                                                            │
+│ ☑ Tên Chapter      │ Method  │ Trạng thái│ Score │ Tiến tr│
+│ ☑ Chapter 1 - ..   │ Inquiry │ ✓ Done    │  9.8  │ 100%   │
+│ ☐ Chapter 5 - ..   │ Relic   │ ✓ Done    │  7.0  │ 100%   │
+│ ☑ Chapter 7 - ..   │ Cognit..│ ✍️ Rewrite│  —    │  60%   │
+│                                                            │
+│ [1.Analyze] [2.Rewrite] [3.AI Order & Merge]              │
+│ [⏹ Stop] [🔄 Retry] Chọn tất cả │ Bỏ chọn │ Open Output │
+└───────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Files cần sửa
+
+| File | Thay đổi |
+|---|---|
+| [ui/rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | Word count fields, progress column, stop/retry, auto-verify, AI ordering popup, checkbox = include/exclude |
+| [core/rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Dynamic word count in prompts, ordering function, review report export |
+| [prompts/system_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt) | `{word_count_rule}` placeholder |
+| [prompts/system_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt) | `{word_count_rule}` placeholder |
+| `prompts/system_order.txt` | [NEW] AI ordering prompt |

@@ -1,0 +1,13 @@
+# Rewrite Pipeline Improvements
+
+## Task 1: Fix Status/Score/Progress Columns ✅
+## Task 2: Concurrent Rewrite Support
+- [x] Per-job stop flags, ThreadPoolExecutor
+- [x] Fixed column refs (Score removed)
+- [x] Fixed 36 stop_flag refs for concurrent safety
+- [/] Redesign: left panel = scanned Folders → right panel = Chapters
+  - [ ] Rename Job table to Folder table, populate on scan
+  - [ ] Show folder groups from self._chapters on left
+  - [ ] Click folder → show its chapters on right
+  - [ ] Rewrite = run job for selected folder
+  - [ ] Folder status: Idle/Running/Done/Error

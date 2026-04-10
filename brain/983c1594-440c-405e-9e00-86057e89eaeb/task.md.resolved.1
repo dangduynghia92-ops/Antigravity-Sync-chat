@@ -1,0 +1,13 @@
+# Niche Battle Prompts — Task Tracker
+
+- [x] 1. Prompt: `system_narrative_outline_battle.txt` (~10KB)
+- [x] 2. Prompt: `system_narrative_audit_battle.txt` (~2.5KB)
+- [x] 3. Prompt: `system_narrative_write_battle.txt` (~9.4KB)
+- [x] 4. Prompt: `system_narrative_review_battle.txt` (~3.3KB)
+- [x] 5. Code: Update `_NICHE_PROMPT_MAP` in `rewriter.py` (4 new step keys × 5 niche keywords each)
+- [x] 6. Code: Update `generate_renew_outline_v2()` — add `niche` param + dispatch with fallback
+- [x] 7. Code: Update `audit_outline()` — add `niche` + `chapter_range` params + dispatch
+- [x] 8. Code: Update `write_from_blueprint()` — add `niche` param + battle field injection
+- [x] 9. Code: Update `review_narrative_full()` — add `niche` + `lang` params + [CHAPTER_FILE N] labeling
+- [x] 10. Code: Update `rewrite_style_tab.py` — pass `niche=_niche` to all 4 functions
+- [x] 11. Verify: Syntax check (AST parse OK) + niche dispatch test (all 4 prompts resolve correctly)

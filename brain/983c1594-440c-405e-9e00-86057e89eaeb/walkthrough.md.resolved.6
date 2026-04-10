@@ -1,0 +1,115 @@
+# Einstein Biography — Pipeline & Content Audit
+
+## Pipeline Health Summary
+
+| Step | Status | Notes |
+|---|---|---|
+| Niche detection | ✅ | Correctly matched `biography` from folder name |
+| Blueprint extraction | ✅ | via gemini-2.5-pro, ~90s |
+| Enrichment Phase 1 (AI) | ⚠️ | Filled 0/5 fields (nested array items) |
+| Enrichment Phase 2 (Search) | ⚠️ | Filled 0/5 fields, 2 empty responses |
+| Framework ranking | ✅ | Hai Mặt=9.8, Sử Thi=9.5 — correct top 2 for Einstein |
+| v1 Outline (Hai Mặt) | ✅ | 7→8 chapters after audit fix |
+| v1 Audit | ✅ | 6 issues found & fixed (coverage, pacing, myths) |
+| v2 Outline (Sử Thi) | ✅ | 8 chapters |
+| v2 Audit | ❌ | JSON parse error → used original unaudited outline |
+| v1 Writing (8 ch) | ✅ | All chapters written, ~6 min total |
+| v2 Writing (8 ch) | ✅ | All chapters written, ~10 min total |
+| v1 Review | ✅ | flow=8.5, 5 issues (2 transition_duplication, 1 closing_variety, 1 vocab_redundancy, 1 pacing) |
+| v2 Review | ✅ | flow=8.5, 4 issues |
+
+> [!IMPORTANT]
+> **v2 audit failed** with JSON parse error. This means v2 ran with **unaudited outline** — chapter structure variety, myths distribution, and open loop chain were not validated before writing.
+
+---
+
+## Content Quality Assessment
+
+### v1 — Hai Mặt (Two Faces) — ⭐ 9/10
+
+**Hook (Ch.1)**: Excellent. Opens with the Roosevelt letter decision (frozen moment), establishes the "genius or monster?" contradiction immediately. Ends with the master open loop: "Was his genius a gift, or a shield?"
+
+**Dark Revelation (Ch.4 — "The List of Demands")**: **Outstanding**. The Mileva memorandum is presented with devastating specificity. The juxtaposition — "As the world's headlines shouted 'Revolution in Science!', the man they were celebrating was the same man who had systematically dismantled his wife's dignity" — is exactly what the Hai Mặt framework demands.
+
+**Ending (Ch.8)**: Strong callback to hook (brain jar → GPS → letter to Roosevelt). Clean verdict: "Genius or monster? The answer is neither. And both." No moral judgment. ✅
+
+**Strengths**:
+- Dual nature perfectly balanced — light chapters ALWAYS reference dark, dark chapters ALWAYS acknowledge genius
+- Source citations natural: "According to his biographer Walter Isaacson..."
+- Myth vs Reality: "We picture him with his wild hair, his charmingly mismatched socks — a harmless genius"
+- Chapter titles are evocative and content-specific ✅
+- No framework terminology leaked ✅
+
+**Weaknesses**:
+- Closing variety poor (6 body chapters use same forward-hook technique)
+- 2 transition duplications (Ch.6→7, Ch.7→8)
+- Phrase "loved humanity in the abstract" repeated in Ch.4 and Ch.6
+
+---
+
+### v2 — Sử Thi (Epic) — ⭐ 8/10
+
+**Hook (Ch.1)**: Good but weaker than v1. More conventional opening — "His face is an icon." Less dramatic than v1's Roosevelt letter opening.
+
+**Ending (Ch.8)**: Strong. Brain theft story, GPS callback, final line: "beautiful, violent, and ultimately, impossible to fully contain." Clean, no moral judgment. ✅
+
+**Strengths**:
+- Chronological flow is smooth — you feel the **inevitability** building
+- Good chapter titles: "The Compass and the Castle", "The Weight of Starlight"
+- Final paragraph is cinematic
+
+**Weaknesses**:
+- **Unaudited outline** — no guarantee of structure variety, myths distribution, open loop chain
+- Hook less compelling than v1 (opens with description vs. dramatic scene)
+- Ch.8 write took **5 min 17s** (vs. ~30s for other chapters) — may have been a retry
+
+---
+
+## Pipeline Issues Found
+
+### 🔴 Critical: v2 Audit JSON Parse Error
+```
+⚠ Could not parse audit result: Expecting ',' delimiter: line 167 column 8
+```
+The audit model returned malformed JSON → entire audit skipped. This means: no structure variety check, no myths distribution check, no open loop validation.
+
+**Root cause**: Pro model sometimes outputs very long audit JSON with syntax issues at edge cases.
+
+**Recommendation**: Add JSON repair logic (strip trailing commas, fix unclosed brackets) before giving up.
+
+---
+
+### 🟡 Major: Enrichment 0% Fill Rate
+Both phases filled 0/5 fields. The empty fields are deeply nested:
+- `life_phases[3].relationships_formed`
+- `life_phases[8].relationships_formed`
+- `life_phases[9].turning_point`
+
+**Root cause**: Enrich model returns `life_phases` array but with different ordering/structure than the original blueprint. `_deep_merge_empty` matches by index, and the indices don't align.
+
+**Impact**: Low for this run — Einstein data is rich enough without these fields. But for lesser-known subjects, this could leave critical gaps.
+
+---
+
+### 🟢 Minor: Framework Detection Mismatch
+Detected "The Investigative Deep-Dive" — but this framework belongs to mystery niche, not biography. This happens because the detection uses the mystery style's frameworks (original script was in mystery style).
+
+**Impact**: None — detection result is only informational, doesn't affect output.
+
+---
+
+## Verdict
+
+| Criterion | v1 Hai Mặt | v2 Sử Thi |
+|---|---|---|
+| Hook impact | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Dual nature balance | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Myth vs Reality | ⭐⭐⭐⭐ | ⭐⭐⭐ (unaudited) |
+| Source citations | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Pacing/engagement | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Ending callback | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| Structure variety | ⭐⭐⭐ (closing same) | ⭐⭐⭐ (unaudited) |
+| **Overall** | **9/10** | **8/10** |
+
+> [!TIP]
+> **v1 Hai Mặt is the winner** for Einstein. The dual-nature framework is a perfect match — Einstein's life IS the definition of "two faces" (pacifist ↔ bomb, genius ↔ terrible father, saint ↔ cold husband). The AI ranking (9.8 score) was accurate.

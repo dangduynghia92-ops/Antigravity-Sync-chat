@@ -1,0 +1,15 @@
+# Style Analyzer — Structured JSON Output
+
+- [x] Fix per-script independent analysis flow
+- [x] Scan parent folder → auto-detect subfolders
+- [x] Add Remove button for checked files
+- [x] Anti-spam & anti-plagiarism rules in prompts
+- [x] Fixed filenames (no timestamps), cache check
+- [x] Recognize old timestamped files → rename
+- [/] Structured JSON output (core_rules + selectable components)
+  - [/] Update synthesis prompt → JSON output
+  - [ ] Update compare prompt → merge JSON
+  - [ ] Update save_style_guide → save .json
+  - [ ] Update cache check → .json
+  - [ ] Update _run_analysis flow
+- [ ] Test end-to-end

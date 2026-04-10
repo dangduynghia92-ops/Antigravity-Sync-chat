@@ -1,0 +1,77 @@
+# Merge Price Check + Enrich Data → Google Check
+
+## Problem
+- `💰 Price Check` only visible in Review mode → only fires for firearms niche
+- `🔍 Enrich Data` only visible in Narrative mode → calls [enrich_blueprint_google()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1210-1348)
+- **Mystery niche in Review mode gets NO Google enrichment at all**
+
+## Proposed Changes
+
+### UI — Merge 2 checkboxes into 1
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**Replace:**
+```
+💰 Price Check  (Review-only)
+🔍 Enrich Data  (Narrative-only)
+```
+**With:**
+```
+🔍 Google Check  (visible in BOTH modes)
+```
+
+Internal name: `_chk_google_check`. Always visible in both Review and Narrative modes.
+
+Tooltip: "Use Google Search to verify facts and enrich data. Firearms: also looks up prices. Requires Gemini API keys."
+
+Update all references: config save/load (`"google_check"`), job caching (`"_cached_google_check"`), mode toggle (always visible + checked).
+
+---
+
+### Pipeline Dispatch — Niche-aware Google Check
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) — Review pipeline (L3276-3350)
+
+Replace current `_is_price_niche` gating with niche-aware dispatch:
+
+```
+if google_check_enabled:
+  Step 5a: verify_specs_google()      ← firearms/military only
+  Step 5b: enrich_prices_google()     ← firearms only
+  Step 5c: enrich_blueprint_google()  ← ALL niches (NEW for mystery)
+```
+
+All 3 steps run in parallel via `ThreadPoolExecutor`.
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) — Narrative pipeline (L2342-2371)
+
+Replace `_chk_enrich_data` → `_chk_google_check`. Logic unchanged.
+
+---
+
+### Enrichment Prompt + Map
+
+#### [NEW] [system_enrich_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_mystery.txt)
+
+Mystery-specific enrichment prompt focusing on:
+- Verify `named_sources` (publication year, author, ISBN)
+- Update `key_figures` (dates, fate, affiliation)
+- Enrich `scholarly_debate` with recent papers
+- Fill `geography.distances` and `geography.locations`
+- Verify `technology_and_artifacts` dating
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) — L1133
+
+Add mystery keywords to `_NICHE_ENRICH_PROMPT_MAP`:
+```python
+"mystery": "system_enrich_blueprint_mystery.txt",
+"bí ẩn": "system_enrich_blueprint_mystery.txt",
+```
+
+## Verification Plan
+
+### Manual
+- Run pipeline with mystery niche + Google Check ON → verify `_enrichment.json` saved
+- Run pipeline with firearms niche → verify prices + specs still work
+- Toggle Google Check OFF → verify all Google steps skipped

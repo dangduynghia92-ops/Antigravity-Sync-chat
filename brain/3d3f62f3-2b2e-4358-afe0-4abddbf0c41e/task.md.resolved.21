@@ -1,0 +1,22 @@
+# Create Rewrite Style Tab + Revert Original
+
+## 1. Revert rewrite_tab.py (Tab A)
+- [x] Remove style items from [_refresh_mode_dropdown](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#482-498)
+- [x] Remove `_show_mode_popup` method
+- [x] Remove style case from [_get_mode_type](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#499-511)
+- [x] Remove style redirect from [_do_rewrite_all](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1058-1213)
+- [x] Remove `is_style` branching from [_do_narrative_rewrite](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1216-1530)
+- [x] Fix reorder step indentation
+
+## 2. Create rewrite_style_tab.py (Tab B)
+- [x] UI: Mode (Top/List | Narrative) + Style + Lang + Tier + Threads + Word count
+- [x] File loading: Scan folder, Tree view
+- [x] Top/List flow: parallel rewrite+verify
+- [x] Narrative flow: outline → sequential rewrite → verify → review+patch → final review
+- [x] Save/load config
+
+## 3. Integrate into main_window.py
+- [x] Import + add tab ✦ Style Rewrite
+
+## 4. Verify
+- [x] Import test passed

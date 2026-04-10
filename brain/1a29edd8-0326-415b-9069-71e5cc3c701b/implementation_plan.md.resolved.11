@@ -1,0 +1,111 @@
+# Đề Xuất: Tiêu Chí Chọn & Sắp Xếp Items Cho Từng Framework
+
+> Khi kịch bản gốc có nhiều sản phẩm hơn số chapter cho phép, cần quyết định:
+> 1. Giữ sản phẩm nào, bỏ sản phẩm nào?
+> 2. Sắp xếp chúng theo thứ tự nào?
+
+---
+
+## 1. Budget Warrior (Đếm ngược)
+
+**Cách chọn sản phẩm**: Giữ những sản phẩm nào có giá rẻ hơn sản phẩm benchmark (ví dụ Glock) nhưng đồng thời vượt trội ở ít nhất một chỉ số quan trọng (dung lượng đạn, độ chính xác, cò súng...). Bỏ những sản phẩm có giá gần bằng benchmark hoặc không có đủ dữ liệu kỹ thuật để so sánh.
+
+**Cách sắp xếp**: Sản phẩm có lợi thế giá trị thấp nhất đứng đầu danh sách (vị trí #10), sản phẩm có lợi thế giá trị cao nhất đứng cuối (vị trí #1). Lợi thế giá trị được tính bằng: sản phẩm đó vượt benchmark ở bao nhiêu chỉ số, mỗi chỉ số vượt bao nhiêu, và giá rẻ hơn bao nhiêu.
+
+**Ví dụ**: Taurus GX4 giá $240, vượt Glock 43X ở dung lượng đạn (13 so với 10) và trọng lượng nhẹ hơn → xếp giữa danh sách. Tisas PX9 giá $450, vượt Glock 19 ở dung lượng (18 so với 15), cò súng tốt hơn, và chính xác hơn → xếp gần #1 vì vượt nhiều chỉ số với giá vẫn rẻ hơn.
+
+---
+
+## 2. Tier List (Bảng xếp hạng theo tầng)
+
+**Cách chọn sản phẩm**: Ưu tiên chọn sao cho mỗi tầng (C, B, A, S) đều có ít nhất một sản phẩm đại diện. Bỏ những sản phẩm nằm lưng chừng giữa hai tầng, khó phân loại rõ ràng.
+
+**Cách sắp xếp**: Bắt đầu từ tầng C (thấp nhất), đi lên tầng S (cao nhất). Trong cùng một tầng, sắp theo mục đích sử dụng: súng mang theo người (CCW) trước, súng phòng thủ nhà sau, súng thi đấu cuối.
+
+**Ví dụ**: Tầng C gồm các sản phẩm đáng mua nhưng có giới hạn rõ ràng (chỉ phù hợp một mục đích duy nhất). Tầng S chỉ dành cho sản phẩm vượt trội toàn diện, không có điểm yếu đáng kể.
+
+---
+
+## 3. Contrarian Takedown (Phản biện)
+
+**Cách chọn sản phẩm**: Chọn những sản phẩm mà dư luận đánh giá khác xa so với dữ liệu thực tế. Ví dụ: sản phẩm được mọi người khen nhưng data lại cho thấy điểm yếu, hoặc ngược lại — sản phẩm bị chê nhưng thực ra rất tốt. Bỏ những sản phẩm mà dư luận và dữ liệu trùng khớp (không có gì đáng phản biện).
+
+**Cách sắp xếp**: Bắt đầu bằng sản phẩm ít gây bất ngờ nhất, kết thúc bằng sản phẩm gây shock lớn nhất. Kết luận phản biện cuối cùng phải là thứ khiến khán giả phải tranh luận trong phần bình luận.
+
+**Ví dụ**: Chương đầu — "Glock 19 thực sự chính xác hơn mọi người nghĩ" (ít bất ngờ). Chương cuối — "Súng Thổ Nhĩ Kỳ giá $350 đáng tin cậy hơn Sig Sauer $600 sau 5000 viên đạn" (rất bất ngờ).
+
+---
+
+## 4. Underdog Champion (Kẻ thách thức)
+
+**Cách chọn sản phẩm**: Chỉ giữ thương hiệu ít tên tuổi hoặc bị đánh giá thấp, nhưng có dữ liệu kiểm tra ấn tượng bất ngờ. Bỏ các thương hiệu lớn nổi tiếng (Smith & Wesson, Sig Sauer, CZ) — đây không phải underdog.
+
+**Cách sắp xếp**: Bắt đầu bằng sản phẩm ít bất ngờ nhất, kết thúc bằng sản phẩm gây ngạc nhiên lớn nhất. Tiêu chí: thương hiệu càng ít tên tuổi mà hiệu suất càng cao thì xếp càng gần vị trí #1.
+
+**Ví dụ**: Vị trí giữa — Taurus GX4 (Taurus đã bắt đầu được công nhận). Vị trí #1 — Arex Delta (thương hiệu Slovenia hầu như không ai ở Mỹ biết đến, nhưng bắn chính xác hơn Glock 19).
+
+---
+
+## 5. Head-to-Head Duel (Đối đầu 1 chọi 1)
+
+**Cách chọn sản phẩm**: Chỉ giữ đúng 2 sản phẩm cạnh tranh trực tiếp nhất — cùng loại, cùng cỡ đạn, cùng phân khúc giá, cùng mục đích sử dụng. Bỏ tất cả sản phẩm còn lại.
+
+**Cách sắp xếp**: Không đếm ngược. Mỗi chương là một hiệp đấu so sánh một tiêu chí cụ thể. Sắp xếp các hiệp từ tiêu chí kém quyết định nhất đến tiêu chí quyết định nhất. Hiệp cuối cùng là tiêu chí quan trọng nhất quyết định người thắng.
+
+**Ví dụ**: Glock 19 đấu với CZ P-10 C. Hiệp 1: Độ tin cậy (cả hai đều tốt — hòa). Hiệp 2: Cò súng (CZ thắng rõ). Hiệp 3: Hệ sinh thái phụ kiện (Glock thắng áp đảo). Hiệp 4: Độ chính xác (CZ thắng sát nút). Hiệp cuối: Giá trị tổng thể.
+
+---
+
+## 6. High-Stakes Scenario (Tình huống sinh tử)
+
+**Cách chọn sản phẩm**: Chỉ giữ những sản phẩm có dữ liệu đáng tin cậy về độ bền, độ tin cậy, hoặc hoạt động trong điều kiện khắc nghiệt (tra tấn cát, bùn, nhiệt...). Bỏ những sản phẩm chỉ có dữ liệu bắn tại trường bắn bình thường.
+
+**Cách sắp xếp**: Từ tình huống rủi ro thấp đến rủi ro cao nhất. Sản phẩm đầu tiên phù hợp cho ngày đi bắn giải trí. Sản phẩm cuối cùng (#1) là thứ bạn tin tưởng giao phó mạng sống.
+
+**Ví dụ**: Vị trí đầu — súng phù hợp ngày đi bắn cuối tuần. Vị trí giữa — súng mang theo người hàng ngày (CCW). Vị trí cuối — súng bạn chọn khi chỉ được mang một khẩu duy nhất trong tình huống sinh tồn.
+
+---
+
+## 7. Myth Buster (Phá huyền thoại)
+
+**Cách chọn sản phẩm**: Đây không chọn sản phẩm mà chọn các huyền thoại (myths) phổ biến trong cộng đồng súng Mỹ. Mỗi chương = một huyền thoại. Bỏ những myths quá thích hợp (niche) hoặc đã được cộng đồng chấp nhận rộng rãi.
+
+**Cách sắp xếp**: Bắt đầu bằng huyền thoại ít gây tranh cãi, kết thúc bằng huyền thoại gây tranh cãi dữ dội nhất. Chương cuối phải là kết luận khiến khán giả chia rẽ ý kiến.
+
+**Ví dụ**: Chương đầu — "Súng polymer không bền bằng súng thép" (phần lớn đã biết là sai). Chương cuối — "Đạn .45 ACP có sức chặn tốt hơn 9mm" (cộng đồng Mỹ vẫn cãi nhau về vấn đề này hàng ngày).
+
+---
+
+## 8. Evolution Timeline (Dòng tiến hóa)
+
+**Cách chọn sản phẩm**: Chọn các thế hệ khác nhau của cùng một dòng sản phẩm (ví dụ: Glock Gen 1 → Gen 5). Chỉ giữ các thế hệ có thay đổi đáng kể (thiết kế lại, đổi cỡ đạn, nền tảng mới). Bỏ các thế hệ chỉ thay đổi nhỏ (màu sắc, phụ kiện đi kèm).
+
+**Cách sắp xếp**: Theo thời gian — từ cũ nhất đến mới nhất. Không thay đổi thứ tự này.
+
+---
+
+## 9. Legacy Justification (Biện minh cho kinh điển)
+
+**Cách chọn sản phẩm**: Chỉ giữ sản phẩm có lịch sử dài (ít nhất 20 năm trên thị trường), có hồ sơ phục vụ quân đội hoặc cảnh sát, và vẫn đang được bán. Bỏ sản phẩm mới (dưới 5 năm) hoặc đã ngừng sản xuất.
+
+**Cách sắp xếp**: Từ sản phẩm có lịch sử ngắn nhất đến dài nhất. Vị trí #1 = sản phẩm kinh điển lâu đời nhất mà vẫn cạnh tranh được với sản phẩm hiện đại.
+
+**Ví dụ**: Vị trí đầu — CZ 75 (ra mắt 1975, vẫn sản xuất). Vị trí cuối — M1911 (ra mắt 1911, hơn 100 năm, vẫn có mặt khắp nơi).
+
+---
+
+## 10. Golden Age Legacy (Di sản thời hoàng kim)
+
+**Cách chọn sản phẩm**: Chỉ giữ sản phẩm từ thời "hoàng kim" (trước năm 2000) mà khán giả còn hoài niệm và vẫn có thể mua được. Bỏ sản phẩm quá hiếm (chỉ dành cho sưu tầm, không mua nổi).
+
+**Cách sắp xếp**: Bắt đầu bằng sản phẩm hoài niệm phổ biến nhất (ai cũng nhớ), kết thúc bằng sản phẩm gây bất ngờ nhất khi vẫn còn cạnh tranh được với súng hiện đại.
+
+---
+
+## 11. Industry Shakeup (Chấn động thị trường)
+
+**Cách chọn sản phẩm**: Chỉ giữ sản phẩm mới ra mắt gần đây mà gây ảnh hưởng lớn đến cục diện thị trường (phá giá, tính năng đột phá, thương hiệu bất ngờ tham gia). Bỏ sản phẩm chỉ là bản nâng cấp nhỏ, không gây ấn tượng.
+
+**Cách sắp xếp**: Từ sản phẩm ít gây chấn động đến nhiều chấn động nhất. Tiêu chí: mức phá giá + mức đổi mới tính năng + mức bất ngờ về thương hiệu. Vị trí #1 = sản phẩm khiến toàn bộ đối thủ phải phản ứng.
+
+**Ví dụ**: Vị trí đầu — một sản phẩm cải tiến nhẹ nhưng giá rẻ hơn. Vị trí #1 — một thương hiệu không ai ngờ tung ra sản phẩm vượt mặt tất cả đối thủ ở phân khúc giá thấp hơn.

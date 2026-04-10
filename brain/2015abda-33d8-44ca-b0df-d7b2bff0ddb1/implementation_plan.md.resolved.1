@@ -1,0 +1,62 @@
+# Kế Hoạch Tối Ưu Hóa Blueprint Outline (Prompt Engineering CoT)
+
+Tài liệu này trình bày phương án kỹ thuật tối ưu nhất để giải quyết 2 vấn đề nghiêm trọng trong hệ thống sinh Outline, mà **không cần can thiệp vào tầng Python/Kiến trúc luồng xử lý**.
+
+## Tóm tắt Vấn đề
+
+1. **Hiệu ứng Nhồi nhét (Superficial Chapters):** AI gộp mù quáng 1 Phase = 1 Chương. Dẫn đến có chương phải gánh 5 sự kiện lịch sử trong vỏn vẹn 1500 chữ, khiến bài viết bị hời hợt, liệt kê tóm tắt.
+2. **Lỗi Tràn Data (55KB Fallback ở Ch01):** Khâu Hook (Chương 1) thường bị AI Outline tóm tắt (Paraphrase) lại `key_data` thay vì copy nguyên văn. Python filter (`_extract_chapter_blueprint`) dò tìm bằng substring nên không trúng -> Tưởng giỏ rỗng -> Đổ ụp 55KB Master Blueprint xuống cho Writer.
+
+---
+
+## Proposed Changes
+
+Chúng ta sẽ chỉnh sửa duy nhất tệp tin sau:
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+### Thay đổi 1: Sửa Cấu trúc JSON `phase_chapter_plan` (Giải quyết Vấn đề 1)
+Bắt buộc AI phải thực hiện thao tác **"Giải Toán Nháp" (Chain of Thought - CoT)** trước khi xuất kết quả bẻ chương.
+Sửa cấu trúc mẫu trong Prompt thành:
+
+```json
+  "phase_chapter_plan": [
+    {
+      "phase": "Framework step name",
+      "pacing_evaluation": {
+         "mapped_nodes": "Liệt kê nhanh các mục (events/conflicts/achievements) từ blueprint sẽ được đưa vào phase này",
+         "node_count": "Đếm tổng số mục ở trên (Ví dụ: 4)",
+         "capacity_check": "1 chương (1500 words) chỉ miêu tả Cinematic được 2-3 nodes. Nếu gộp nhiều hơn sẽ biến thành diễn thuyết tóm tắt.",
+         "action": "SPLIT_REQUIRED (Nếu node_count > 3) hoặc KEEP_AS_ONE (Nếu node_count <= 3)"
+      },
+      "chapters": [1],
+      "blueprint_data": ["Key data items from blueprint assigned to this phase"],
+      "reason_for_split": "Dựa vào action ở trên để giải thích lý do chỉ định mảng chapters"
+    }
+  ]
+```
+> [!TIP]
+> Việc để con AI in ra `node_count` và kết luận `action` mang tính **Cưỡng chế Nhận thức**. Khi nó tự in ra chữ `SPLIT_REQUIRED`, nó buộc phải bẻ mảng `chapters` ở ngay dòng bên dưới thành `[5, 6]` (2 chương).
+
+### Thay đổi 2: Bổ sung CRITICAL RULE về `key_data` (Giải quyết Vấn đề 2)
+Thêm quy tắc số 16 vào phần CRITICAL RULES cuối mảng yêu cầu của Prompt:
+
+```markdown
+16. **KEY_DATA EXACT MATCH**: When citing text for the `key_data` array, you MUST COPY the exact sentence/phrase directly from the blueprint. DO NOT paraphrase, summarize, or change the wording. The internal python system uses exact substring matching. If you paraphrase, the system will crash and fallback.
+```
+> [!NOTE]
+> Ngay khi AI bị cấm Paraphrase, nó sẽ bê nguyên xi chuỗi chữ gốc rải vào `key_data`. Bộ lọc Python `_extract_chapter_blueprint` sẽ vồ trúng 100%, hạ dung lượng Ch01 từ 55KB về mốc 10KB.
+
+---
+
+## User Review Required
+
+Bạn hãy đọc bản Plan kỹ thuật này. Phương án này chỉ **thêm 1 block JSON** và **thêm 1 dòng chữ luật** vào tệp `.txt` tĩnh. 
+- API Python hiện tại dùng `json.loads` nên việc JSON outline có thêm trường râu ria `pacing_evaluation` sẽ hoàn toàn bị bỏ qua, không gây vỡ code.
+
+## Verification Plan
+
+### Manual Verification
+1. Sau khi Approve, tôi sẽ chèn các dòng mới vào tệp Prompt.
+2. Bạn mở app AntiCode, tạo lại Outline cho nhân vật nhiều sự kiện (Van Gogh cũ cũng được).
+3. Đọc tệp `_renew_outline_audited.json`: Xác minh xem `pacing_evaluation` có xuất hiện và ép bẻ chương hay không.
+4. Kiểm tra thư mục `_chapter_data`: Xác minh file `ch01_blueprint.json` đã rớt thảm hại về mốc <15KB do bộ lọc đã chạy chính xác.

@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to build a single-page web dashboard (dark theme, glassmorphism) for managing CLIProxyAPI. Communicates via Management API at port 8317. Features: server info, accounts list, models list, usage stats, config viewer, OAuth login buttons. Requires updating config.yaml to add management secret-key.",
+  "updatedAt": "2026-03-17T07:54:45.481455900Z"
+}

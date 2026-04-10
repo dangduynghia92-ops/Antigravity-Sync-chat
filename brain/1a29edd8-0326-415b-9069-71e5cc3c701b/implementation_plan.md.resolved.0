@@ -1,0 +1,46 @@
+# Review Writer Pipeline — Implementation Plan
+
+## Goal
+Create `core/review_writer.py` module that wires all review prompts into an executable pipeline.
+
+## Proposed Changes
+
+### [NEW] [review_writer.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/review_writer.py)
+
+New module with 7 functions following existing [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) patterns:
+
+| Function | Prompt | Input | Output |
+|----------|--------|-------|--------|
+| [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#969-1010) | [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) | script text | blueprint dict |
+| `recommend_framework()` | [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) | blueprint + frameworks list | rankings dict |
+| `check_blueprint()` | [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) | blueprint + framework eval_focus | completeness report |
+| `convert_units()` | None (pure Python) | blueprint + target_country | converted blueprint |
+| `create_outline()` | [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) | blueprint + framework + style_guide | outline dict |
+| `write_review_chapter()` | [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt) | blueprint + outline chapter + context | chapter text |
+| `verify_facts()` | [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt) | written text + blueprint + target_country | verification report |
+
+**Patterns from rewriter.py:**
+- [_load_prompt(name, lang)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#154-167) — reuse existing
+- `api_client.call_api(messages, temperature, timeout)` — standard signature
+- `log_callback(msg)` — for UI feedback
+- JSON response parsing via `re.search(r'\{[\s\S]*\}', content)`
+- `stop_check` — interruptible API calls
+
+**Unit conversion (`convert_units`):**
+- Pure Python, no API call
+- Traverses `product_evaluation` array in blueprint
+- Converts weight (kg↔lbs), length (mm/cm↔inches), distance (m↔yards), price (EUR↔USD)
+- Only US and EU targets
+
+## Verification Plan
+
+### Manual Test
+1. Run the app
+2. Load a gun review script
+3. Test [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#969-1010) — check product_evaluation has structured data
+4. Test `recommend_framework()` — check all 8 frameworks scored
+5. Test `convert_units()` — check units match target country
+6. Test full pipeline end-to-end
+
+> [!IMPORTANT]
+> This module creates the functions only. UI integration (buttons, callbacks) will be a separate step.

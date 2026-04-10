@@ -1,0 +1,44 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+Scrape Creators Documentation
+Documentation
+Search...
+[0] (500,500)<div  />
+[1] (1143,500)<div class='h-full overflow-y-auto' scrollable='true' />
+	Introduction
+API Documentation
+Introduction
+Welcome to the
+Scrape Creators API documentation
+. Our comprehensive REST API provides powerful endpoints to extract
+public data
+from
+27
++ social media platforms including
+TikTok, TikTok Shop, Instagram, YouTube, LinkedIn
+, and more
+.
+🚀 Quick Start Guide
+Get started in minutes with our
+free API key
+. Extract profile data, posts, videos, and more from any public social media account.
+Supported Platforms
+TikTok
+TikTok Shop
+Instagram
+YouTube
+LinkedIn
+Facebook
+Facebook Ad Library
+Google Ad Library
+LinkedIn Ad Library
+Twitter
+Reddit
+Truth Social
+Threads
+Bluesky
+Pinterest
+
+</current_dom>

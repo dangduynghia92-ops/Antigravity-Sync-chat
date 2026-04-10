@@ -1,0 +1,6 @@
+# In-App User Manual
+
+- [/] Create `user_manual.html` with 11 tabs (Vietnamese)
+- [ ] Add Help button to [header_bar.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/header_bar.py)
+- [ ] Connect Help button in [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) to open manual at active tab
+- [ ] Verify

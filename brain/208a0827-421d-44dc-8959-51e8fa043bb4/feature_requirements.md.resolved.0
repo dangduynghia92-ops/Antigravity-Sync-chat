@@ -1,0 +1,103 @@
+# Danh Sách Yêu Cầu Ứng Dụng Desktop
+
+> Tổng hợp từ quá trình xây dựng SRT Prompt Generator — dùng làm template khi tạo ứng dụng mới.
+
+---
+
+## 🏗️ Kiến Trúc & Mã Nguồn
+
+- Viết code bằng mã nguồn **PyQt6**
+- **Tách source code** từng chức năng riêng file — sửa file nào chỉ ảnh hưởng file đó, không rối code
+- Chia chức năng lớn thành **từng tab riêng biệt** (SRT Prompt, Product Prompt, ...)
+- **Tách biệt backend và UI** — core logic không phụ thuộc giao diện
+- Cấu trúc thư mục rõ ràng: `core/` (logic), [ui/](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/srt_preview.py#21-46) (giao diện), [styles/](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py#149-152) (dữ liệu)
+
+---
+
+## 🎨 Giao Diện UI/UX
+
+- Giao diện **dark theme** hiện đại, chuyên nghiệp
+- Hỗ trợ **chuyển đổi theme** Dark / Light trong Settings
+- Theme styling **tập trung 1 file** ([theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/theme.py)), không rải rác inline
+- Mũi tên ComboBox/SpinBox dùng **file SVG** (không dùng CSS border-triangle, không dùng emoji)
+- Nút bấm dùng **text thuần** (Refresh, Open, Preview) — không dùng emoji icon
+- Nút xóa/đóng dạng **X trắng nền tròn đỏ**
+- Kích thước nút **compact, cân đối** giữa các tab
+- **Searchable ComboBox** — combo có ô tìm kiếm cho danh sách dài
+
+---
+
+## ⚡ Chức Năng API
+
+- Gọi **model AI xử lý tác vụ** thông qua API (Gemini, OpenAI compatible)
+- Hỗ trợ **nhiều endpoint dự phòng** — khi endpoint bị rate limit (429), tự chuyển sang endpoint tiếp theo
+- Mỗi endpoint cấu hình riêng: Base URL, API Key, Flash Model, Pro Model
+- **Bật/tắt** từng endpoint riêng biệt
+- **API Key lưu riêng**, bảo mật (hiển thị dạng `●●●●●●`)
+- Chọn **tier xử lý**: Flash (nhanh) hoặc Pro (chất lượng)
+- Tùy chỉnh số **threads** xử lý đồng thời
+- **Log API** — ghi lại request/response để debug
+
+---
+
+## 🔄 Quản Lý Tiến Trình
+
+- Nút **Start** — bắt đầu xử lý
+- Nút **Pause** — tạm dừng tiến trình
+- Nút **Stop** — dừng hẳn tiến trình
+- Hiển thị **progress** cho từng item (thanh tiến trình, trạng thái)
+- Xử lý **đa luồng** — không đóng băng giao diện khi chạy
+- **Thread safety** — UI update qua `QTimer.singleShot(0, ...)`
+
+---
+
+## ⚙️ Cấu Hình & Settings
+
+- **Dialog Settings** riêng — cấu hình API endpoints, theme, ngôn ngữ
+- Nút **Reset ứng dụng** — restart khi cập nhật code mới
+- Cấu hình được **lưu file** (`settings.json`) và tự load khi khởi động
+- Thêm/xóa endpoint **động** (nút + / X)
+
+---
+
+## 🌐 Đa Ngôn Ngữ
+
+- **Lựa chọn ngôn ngữ** khi thực hiện trả kết quả ở output
+- Hỗ trợ nhiều ngôn ngữ đầu ra (Vietnamese, English, ...)
+
+---
+
+## 📂 Quản Lý File & Project
+
+- **Scan thư mục** để tìm file cần xử lý
+- **Mở thư mục** chứa file trực tiếp từ app
+- **Preview** nội dung file trước khi xử lý
+- Chọn **output folder** cho kết quả
+- Hỗ trợ xuất **CSV / TXT**
+
+---
+
+## 📋 Chức Năng Chuyên Biệt (SRT Prompt Generator)
+
+- **Parse file SRT** — đọc và hiển thị subtitle
+- **Style management** — quản lý các style prompt (load từ thư mục, refresh, preview)
+- **Prompt generation** — tự động tạo prompt từ SRT content + style
+- **Constraints** — bộ lọc: Safety, Quality, Historical, Format
+- **Batch processing** — xử lý hàng loạt items
+- Tab **Product Prompt** — tạo prompt cho sản phẩm (paste danh sách, chọn style, count)
+- **SRT Preview** — xem trước nội dung SRT đã parse
+- Hiển thị **context duration** (giây) cho mỗi segment
+
+---
+
+## ✅ Checklist Khi Hoàn Thành
+
+- [ ] Mọi tab/chức năng hoạt động độc lập
+- [ ] API fallback giữa các endpoints hoạt động
+- [ ] Start/Pause/Stop điều khiển đúng
+- [ ] Theme chuyển đổi không lỗi
+- [ ] Không emoji trong buttons
+- [ ] Mũi tên ComboBox/SpinBox hiển thị đúng hình tam giác
+- [ ] Settings lưu/load chính xác
+- [ ] Đa luồng không đóng băng UI
+- [ ] Reset app hoạt động

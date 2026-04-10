@@ -1,0 +1,91 @@
+# Unused Chapters Feature
+
+## Proposed Changes — [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+### A. UI — Split Output Row
+
+Chia output hiện tại thành 2 ô:
+
+```
+Output:          [đường dẫn kịch bản viết lại_______________] [Browse]
+Unused chapters: [đường dẫn lưu chapters không dùng________] [Browse] [🗑 Delete]
+```
+
+- `_txt_output` → output kịch bản (giữ nguyên)
+- `_txt_unused_dir` → thư mục unused chapters (mới)
+- **Delete button** màu đỏ `#e74c3c`, popup theo trạng thái:
+  - Chưa chọn folder / chưa hoàn thành / rỗng → thông báo
+  - Có file → xác nhận xoá
+
+---
+
+### B. Blueprint — Thêm `source_parts`
+
+#### [MODIFY] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+
+Thêm field `source_parts` trong mỗi product:
+```json
+"source_parts": ["PART 3", "PART 7"]
+```
+AI tag mỗi product được trích từ PART nào.
+
+#### Strip trước outline (line ~2187):
+```python
+prod.pop("source_parts", None)  # AI outline KHÔNG thấy
+```
+
+---
+
+### C. Pipeline — Copy Unused + Source Mapping
+
+Sau outline chọn products (line ~2258):
+
+**1. Xác định unused products** (code, không phải AI):
+```python
+all_products = blueprint["product_evaluation"]
+unused = [p for p in all_products if p["product_name"] not in selected_products]
+```
+
+**2. Map product → source chapter file** qua `source_parts`:
+```python
+for product in unused:
+    for part_tag in product.get("source_parts", []):
+        part_idx = int(part_tag.replace("PART ", "")) - 1
+        chapter = checked[part_idx]  # source file
+        # Copy chapter["filepath"] → unused_dir
+```
+Fallback: text matching nếu `source_parts` thiếu.
+
+**3. Save `_source_mapping.json`** trong output:
+```json
+{
+  "used": [{"product": "...", "source_video": "...", "source_path": "...", "video_id": "..."}],
+  "unused": [{"product": "...", "source_video": "...", "source_path": "...", "video_id": "...", "copied_to": "..."}]
+}
+```
+
+---
+
+### D. Merge Validation
+
+**1. Output bắt buộc**: merge mà output trống → popup block
+
+**2. Multi-folder check** (code, SAU outline):
+```python
+used_folders = {ch["group"] for ch in used_chapters}
+if len(used_folders) < 2:
+    popup: "Tất cả items từ 1 nguồn. Merge không cần thiết — chạy riêng?"
+    → Dừng pipeline
+```
+
+> [!IMPORTANT]
+> Rule #2 check bằng CODE sau khi AI chọn xong — AI không biết rule → không thể ép/bịa.
+
+---
+
+## Verification
+- Merge 2 folders (10 items), range 7 → 3 unused copied + mapping saved
+- Single folder (8 items), range 5 → 3 unused copied
+- Delete button: test 4 trạng thái popup
+- Merge without output → blocked
+- Merge only 1 folder used → stopped with notification

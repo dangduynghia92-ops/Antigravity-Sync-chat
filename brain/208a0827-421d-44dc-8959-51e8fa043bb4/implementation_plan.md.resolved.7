@@ -1,0 +1,58 @@
+# Targeted UI Upgrade — Safe Visual Improvements
+
+Fix the "Win97" look without breaking any functionality. All changes are visual-only (ttk.Style, padding, colors) — no logic rewiring.
+
+## Phase 1: Treeview Dark Theme (Highest Impact)
+
+### [MODIFY] [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py)
+
+Restyle the Projects Treeview:
+- **Headers**: Dark bg `#1a1a2e` with subtle border-bottom, no 3D relief
+- **Rows**: Alternating `#1e1e2e` / `#252538` for visual separation
+- **Selected row**: Accent blue `#2563EB` instead of harsh system blue
+- **Scrollbar**: Style ttk.Scrollbar to match dark theme (clam theme allows this)
+- **Row height**: Increase from 26 → 30 for easier click targets
+
+### [MODIFY] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+Same Treeview restyling for the Objects panel.
+
+---
+
+## Phase 2: Global Dark Scrollbar + Spacing
+
+### [NEW] [ui/theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/theme.py)
+
+Create a shared theme module that:
+- Defines all dark color constants in one place
+- Provides `apply_dark_treeview_style()` function to style all ttk widgets
+- Provides `apply_dark_scrollbar_style()` for consistent scrollbars
+
+### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+- Call `apply_dark_treeview_style()` once at startup
+- Slightly increase padding between major sections
+
+---
+
+## Phase 3: Lag Fixes
+
+### [MODIFY] [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py)
+
+- Throttle [update_project()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py#413-429) calls — batch UI updates instead of per-call refresh
+
+### [MODIFY] [searchable_combo.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/searchable_combo.py)
+
+- Debounce filter keystrokes (150ms delay) to reduce widget churn
+- Limit visible items to 15 max in dropdown
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- Run app, verify SRT tab Treeview is dark-themed with no white headers
+- Verify Product tab Objects panel matches
+- Verify scrollbars blend with dark theme
+- Test all functionality: add SRT, scan folder, process, style apply, product generate
+- Test SearchableCombo filtering speed

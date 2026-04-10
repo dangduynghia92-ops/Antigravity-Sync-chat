@@ -1,0 +1,129 @@
+# 🍪 Cookie Manager — Full Selenium
+
+## Goal
+Build a Cookie Manager with Selenium-based Google login, multi-account rotation, auto-refresh, and integration with all yt-dlp commands across the app.
+
+## Architecture
+
+```mermaid
+graph LR
+    UI[Cookie Tab UI] --> CM[core/cookie_manager.py]
+    CM --> SE[Selenium Login]
+    CM --> CS[Cookie Storage<br>cookies/*.txt]
+    CM --> RO[Account Rotator]
+    VCut[Video Cutter] --> RO
+    YTDl[YouTube Downloader] --> RO
+    RO --> CS
+```
+
+## Proposed Changes
+
+---
+
+### Core Module
+
+#### [NEW] [cookie_manager.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/cookie_manager.py)
+
+**Account storage** (`cookies/accounts.json`):
+```json
+[
+  {
+    "email": "user@gmail.com",
+    "proxy": "",
+    "cookie_file": "cookies/user_gmail_com.txt",
+    "status": "live",
+    "last_login": "2026-03-20T05:00:00",
+    "use_count": 12,
+    "last_error": ""
+  }
+]
+```
+
+**Key functions:**
+- `load_accounts()` / `save_accounts()` — JSON persistence
+- `login_account(email, proxy)` — Open Chrome via `undetected-chromedriver`, navigate to YouTube, user logs in manually, tool waits for login completion, exports cookies to Netscape format
+- `check_cookie_status(cookie_file)` — Test cookie validity via yt-dlp `--cookies` + `--dump-json` on a known video
+- `get_next_cookie()` — Round-robin rotator, skips dead accounts
+- `refresh_dead_accounts()` — Re-login accounts with status "dead"
+- `extract_from_browser(browser)` — Extract cookies from installed browser (Chrome/Edge/Firefox)
+
+> [!IMPORTANT]
+> Uses `undetected-chromedriver` (pip install) instead of raw Selenium to bypass Google's automation detection. User still needs to handle CAPTCHA/2FA manually in the opened browser window.
+
+**Cookie format**: Netscape HTTP Cookie File ([.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt)) — compatible with `--cookies` flag in yt-dlp.
+
+---
+
+### UI Tab
+
+#### [NEW] [cookie_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/cookie_tab.py)
+
+**Layout** (similar to AZ-Labs screenshot):
+```
+┌─────────────────────────────────────────────────┐
+│ 🍪 Cookie Manager                               │
+├──┬──────────────┬───────┬──────────┬──────┬──────┤
+│# │ EMAIL        │ PROXY │LAST LOGIN│STATUS│ACTION│
+├──┼──────────────┼───────┼──────────┼──────┼──────┤
+│1 │ user@gmail   │ —     │03-20     │🟢Live│🔑Login│
+│2 │ acc2@gmail   │ ip:p  │03-19     │🔴Dead│🔑Login│
+├──┴──────────────┴───────┴──────────┴──────┴──────┤
+│ + ADD ACCOUNT                                    │
+│ Email: [___________] Proxy: [___________] [+Add] │
+├──────────────────────────────────────────────────┤
+│[Extract Chrome][Login All][Check All][Refresh]   │
+│[Bulk Import]  [Remove Selected]                  │
+└──────────────────────────────────────────────────┘
+```
+
+**Buttons:**
+- **Extract Chrome** — Extract cookies from Chrome browser directly
+- **🔑 Login** (per row) — Open Selenium browser for that account
+- **Login All** — Sequential login for all accounts
+- **Check All** — Test all cookie files, update status
+- **Refresh** — Re-login dead accounts
+- **Bulk Import** — Import cookies.txt files
+- **Remove Selected** — Right-click or button to remove
+
+---
+
+### Integration
+
+#### [MODIFY] [video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+
+- Replace `--cookies-from-browser chrome` with `--cookies <cookie_file>`
+- Call `get_next_cookie()` before each download
+- On bot-detection error → mark account dead, try next account
+
+#### [MODIFY] [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)
+
+- Add `--cookies <cookie_file>` to all 7 yt-dlp commands
+- Round-robin rotation per download
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Add Cookie tab: `self._tabs.addTab(cookie_tab, "🍪 Cookies")`
+
+---
+
+## Dependencies
+
+| Package | Purpose | Install |
+|---|---|---|
+| `undetected-chromedriver` | Bypass Google bot detection | `pip install undetected-chromedriver` |
+| `selenium` | Browser automation | bundled with above |
+
+> [!WARNING]
+> **Google Login caveats:**
+> - Google có thể yêu cầu CAPTCHA / 2FA → user phải xử lý thủ công trong browser window
+> - Cookie YouTube hết hạn sau ~24h → cần refresh định kỳ
+> - Nhiều account trên cùng IP có thể bị Google flag → recommend proxy
+
+## Verification Plan
+
+### Automated Tests
+- `python -c "from core.cookie_manager import ...; print('OK')"` — compile check
+- `python -c "from ui.cookie_tab import CookieTab; print('OK')"` — UI compile check
+
+### Manual Testing
+- Add account → Login → Check status → Download video with rotated cookie

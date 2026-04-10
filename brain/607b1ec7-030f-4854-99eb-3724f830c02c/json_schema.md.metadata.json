@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive JSON schema for historical image prompt output. Includes example from Battle of Lepanto. Covers: scene, characters (with cref/sref types, actions, emotions), setting, props, atmosphere, camera, and flat prompt assembly.",
+  "updatedAt": "2026-03-23T07:32:38.636150200Z"
+}

@@ -1,0 +1,45 @@
+# Redesign SRT Chapter Processing Flow
+
+## Current Flow (blocking)
+```
+1. Classify ALL scripts (wait for all)
+2. Show mismatch dialog (blocks everything)
+3. Process ALL items (after user responds)
+```
+
+## New Flow (non-blocking)
+```
+1. Classify each script one by one
+   - ✅ Match → process immediately (don't wait)
+   - ⚠ Mismatch → set aside in pending list
+2. All matched items finish processing
+3. Show mismatch dialog for pending items
+4. Process pending items with user overrides
+```
+
+## Proposed Changes
+
+### [MODIFY] [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+
+Rewrite [_classify_then_process()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#441-526) (lines 441–528):
+
+**Phase 1 — Classify & split:**
+- Loop through filepaths, classify each
+- `matched_items` = items where AI type matches user selection
+- `mismatched_items` = items where AI type differs
+
+**Phase 2 — Process matched immediately:**
+- Call `self._controller.start(matched_items, ...)` right away
+- Wait for completion
+
+**Phase 3 — Handle mismatches (after matched done):**
+- If `mismatched_items` not empty → emit `_sig_format_warning`
+- Wait for user response
+- If user confirms overrides → process those items too
+- If user cancels → skip them
+
+**Dialog text update:**
+- Change dialog title/text to clarify these are the remaining items that didn't match
+
+## Verification Plan
+- Run app → add multiple scripts with different types → verify matched scripts process immediately while mismatched ones wait

@@ -1,0 +1,74 @@
+# Rewrite Tab — Split 2 Bảng + Merge Redesign
+
+## Bố cục mới
+
+Tab Rewrite chia thành **2 khu vực** bằng `QSplitter` (kéo thay đổi tỉ lệ):
+
+```
+┌─────────────────────────────────────────────────────┐
+│  REWRITE AREA                                       │
+│  Input: [___________] [Browse]  Output: [___] [Br]  │
+│  AI Tier: [flash▼]  Threads: [3]  [📂 Load] [Stats] │
+│  Số từ: [1300] ~ [1800] từ                          │
+│                                                     │
+│  ☑ Tên Chapter    │ Method │ Trạng thái│Score│Tiến  │
+│  ☑ Chapter 1..    │ Inquir │ ✓ Done    │ 9.2│ 100% │
+│  ☑ Chapter 2..    │ Relic  │ ✍ Rewri   │  — │  50% │
+│                                                     │
+│  [1.Analyze] [2.Rewrite] [⏹ Stop] [🔄 Retry]       │
+├─────────────────────────────────────────────────────┤
+│  MERGE AREA                                         │
+│  [📂 Load Project]  Chọn: [5] ~ [10] ch             │
+│                                                     │
+│  ☑ Tên Chapter    │ Project      │ Score │ Số từ    │
+│  ☑ Chapter 1..    │ am_muu_001   │  9.2  │ 1450    │
+│  ☐ Chapter 5..    │ am_muu_001   │  7.0  │ 1280    │
+│  ☑ Chapter 3..    │ bi_an_002    │  8.5  │ 1600    │
+│                                                     │
+│  [3.AI Merge] [Merge thủ công] [👁 Ẩn đã merge] [Chọn/Bỏ] [Open]│
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Chi tiết từng phần
+
+### Bảng 1 — REWRITE AREA (giữ nguyên logic hiện tại)
+- Input/Output folder, AI Tier, Threads, Word count range
+- Tree: chapters với Method, Trạng thái, Score, Tiến trình
+- Buttons: **1. Analyze**, **2. Rewrite** (auto-verify), **⏹ Stop**, **🔄 Retry**
+
+### Bảng 2 — MERGE AREA (mới)
+- **📂 Load Project**: browse tới output folder (đã rewrite) → load tất cả `*_rewritten.txt` + đọc `_REWRITE_STATUS.json` để lấy score
+- Có thể load **nhiều project** (cộng dồn vào bảng)
+- **Chọn chapter: [5] ~ [10] ch** — di chuyển sang đây
+- Tree columns: ☑ Tên Chapter | Project | Score | Số từ
+
+#### Nút **3. AI Merge**:
+1. AI đọc **nội dung thực** của các file rewritten (không chỉ tên)
+2. Căn cứ số chapter range (5-10), AI chọn chapters tốt nhất
+3. Popup hiện gợi ý: thứ tự + lý do tiếng Việt
+4. **Đồng ý** → merge theo thứ tự AI
+5. **Không đồng ý** → không làm gì
+
+#### Nút **Merge thủ công**:
+1. User tick tay các chapter muốn merge
+2. AI chỉ gợi ý **thứ tự** (không chọn/bỏ chapter)
+3. **Đồng ý** → merge theo thứ tự AI gợi ý
+4. **Không đồng ý** → merge theo thứ tự từ trên xuống dưới
+
+#### Nút **👁 Ẩn đã merge** (toggle):
+- Bật → ẩn các chapter đã được merge (status = `merged`)
+- Tắt → hiện lại tất cả
+- Chapters sau khi merge xong → đánh dấu `"merged": true` trong `_REWRITE_STATUS.json`
+- Giúp tránh merge trùng khi làm nhiều video
+
+---
+
+## Files cần sửa
+
+| File | Thay đổi |
+|---|---|
+| [ui/rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) | Tách thành 2 khu vực: RewriteArea + MergeArea trong QSplitter |
+| [core/rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Sửa [ai_order_chapters](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#225-291) đọc nội dung file thực, thêm `ai_suggest_order` cho manual merge |
+| [prompts/system_order.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_order.txt) | Cập nhật prompt — AI nhận actual content thay vì chỉ tên |

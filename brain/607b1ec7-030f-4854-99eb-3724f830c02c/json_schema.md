@@ -1,0 +1,154 @@
+# JSON Output Schema — Historical Image Prompt
+
+## Schema
+
+```json
+{
+  "segment_id": 1,
+  "time_range": "00:12:30 → 00:12:45",
+
+  "scene": {
+    "action": "Main action summary — what is happening",
+    "era": "16th century, 1571",
+    "location": "Gulf of Patras, aboard a Venetian war galley"
+  },
+
+  "characters": [
+    {
+      "label": "Christian-Commander-A",
+      "ref_type": "cref",
+      "action": "what the character is doing",
+      "position": "where in the frame",
+      "emotion": "facial expression / body language"
+    },
+    {
+      "label": "Ottoman-Soldier",
+      "ref_type": "sref",
+      "count": "many / few / single",
+      "uniform": "exact uniform description from character bible",
+      "weapon": "exact weapon from character bible",
+      "action": "what they are doing"
+    },
+    {
+      "type": "civilian",
+      "description": "full text description — no reference image",
+      "action": "what they are doing"
+    }
+  ],
+
+  "setting": {
+    "architecture": "building/structure description",
+    "environment": "landscape, terrain, weather",
+    "key_props": ["object 1", "object 2"]
+  },
+
+  "atmosphere": {
+    "lighting": "warm sunset / harsh noon / candlelit",
+    "mood": "tense / triumphant / grim",
+    "weather": "clear / stormy / misty",
+    "effects": "smoke / fire / dust / blood"
+  },
+
+  "camera": {
+    "shot": "wide / medium / close-up / extreme close-up",
+    "angle": "eye-level / low angle / bird's eye / dutch angle",
+    "focus": "what/who is in focus"
+  },
+
+  "flat_prompt": "The full assembled text prompt ready for AI image generation"
+}
+```
+
+---
+
+## Ví dụ thực tế: Battle of Lepanto Ch.7 — Đại chiến trung tâm
+
+```json
+{
+  "segment_id": 42,
+  "time_range": "00:18:30 → 00:18:45",
+
+  "scene": {
+    "action": "The flagships Real and Sultana crash together, soldiers clash in brutal melee combat on blood-soaked decks",
+    "era": "16th century, October 7, 1571",
+    "location": "Gulf of Patras, central battle line"
+  },
+
+  "characters": [
+    {
+      "label": "Christian-Commander-A",
+      "ref_type": "cref",
+      "action": "fighting in the front line with a sword, wounded in the foot",
+      "position": "center-left foreground",
+      "emotion": "fierce determination, gritting teeth"
+    },
+    {
+      "label": "Ottoman-Commander-A",
+      "ref_type": "cref",
+      "action": "directing defense from the elevated stern castle",
+      "position": "center-right background",
+      "emotion": "furious, shouting commands"
+    },
+    {
+      "label": "Christian-Soldier",
+      "ref_type": "sref",
+      "count": "many",
+      "uniform": "steel morion helmet, breastplate armor, red sash across chest",
+      "weapon": "arquebuses and short swords",
+      "action": "firing and charging across the boarding planks"
+    },
+    {
+      "label": "Ottoman-Soldier",
+      "ref_type": "sref",
+      "count": "many",
+      "uniform": "white turban, red vest with gold trim, loose blue trousers",
+      "weapon": "curved scimitar and composite bow",
+      "action": "defending the deck, shooting arrows in close range"
+    }
+  ],
+
+  "setting": {
+    "architecture": "Two massive war galleys locked together, ornate gilded sterns, lateen sail masts tangled, wooden railings splintered",
+    "environment": "Open Mediterranean sea, other galleys burning in the background",
+    "key_props": ["broken oars floating in water", "torn battle flags", "scattered weapons on deck", "boarding ropes and hooks"]
+  },
+
+  "atmosphere": {
+    "lighting": "Late afternoon golden light filtered through thick cannon smoke",
+    "mood": "Chaotic, brutal, decisive moment of the battle",
+    "weather": "Calm sea, light western breeze",
+    "effects": "Dense gunpowder smoke, blood on wooden decks, splinters flying"
+  },
+
+  "camera": {
+    "shot": "wide",
+    "angle": "slightly low angle, looking up at the warriors",
+    "focus": "Christian-Commander-A in the foreground melee"
+  },
+
+  "flat_prompt": "Christian-Commander-A fights in the front line with a sword, wounded in the foot, fierce determination. Ottoman-Commander-A directs defense from elevated stern. Two massive 16th-century war galleys locked together in the Gulf of Patras, ornate gilded sterns, broken masts. Christian soldiers in steel morion helmets, breastplate armor, red sashes, firing arquebuses. Ottoman soldiers in white turbans, red vests, curved scimitars, shooting composite bows. Blood-soaked wooden decks, dense gunpowder smoke, late afternoon golden light, torn battle flags. Wide shot, slightly low angle. October 1571."
+}
+```
+
+---
+
+## Giải thích từng phần
+
+| Field | Mục đích | Ai dùng |
+|---|---|---|
+| `characters[].label` | Tên nhân vật/lính | Match với ảnh sheet |
+| `characters[].ref_type` | `cref` hoặc `sref` | User biết gắn ảnh kiểu gì |
+| `characters[].uniform/weapon` | Mô tả quân phục | Có trong prompt text + có ảnh sref |
+| `characters[].action/emotion` | Hành động, cảm xúc | Trong prompt text |
+| `setting` | Bối cảnh | Từ Visual Bible, luôn mô tả đầy đủ |
+| `atmosphere` | Ánh sáng, mood | Ảnh hưởng lớn đến kết quả |
+| `camera` | Góc quay | Đa dạng hóa ảnh |
+| `flat_prompt` | Prompt text gộp | Gửi trực tiếp vào AI gen ảnh |
+
+---
+
+## Câu hỏi mở
+
+1. `flat_prompt` có cần không? Hay user tự ghép từ JSON fields?
+2. Có cần thêm field `negative_prompt` (những gì KHÔNG muốn trong ảnh)?
+3. Output file: JSON array thay CSV, hay CSV với 1 cột chứa JSON?

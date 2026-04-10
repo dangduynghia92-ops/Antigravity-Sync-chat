@@ -1,0 +1,54 @@
+# Visual Bible Feature — Auto Narrative Review for Historical Videos
+
+When **Historical** constraint is checked, the app automatically generates a "Visual Bible" before processing segments.
+
+## Proposed Changes
+
+### Core Logic
+
+---
+
+#### [NEW] [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+
+- `generate_visual_bible(srt_path, api_client, log_callback) → str`: Read full SRT → send to API (**Pro** tier always) → return Visual Bible text
+- `load_visual_bible(output_dir, project_name) → str | None`: Load cached file
+- `save_visual_bible(output_dir, project_name, content)`: Save to `{project_name}_visual_bible.txt`
+
+---
+
+#### [NEW] [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt)
+
+Prompt template instructing AI to produce structured context: historical period, main characters with descriptions, group characters (armies, civilians), architecture.
+
+---
+
+#### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+In [_process_single_project()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#174-293), when `constraints.get("historical")` is True:
+1. Try `load_visual_bible()` (use cache if exists)
+2. If no cache → call `generate_visual_bible()` (Pro tier) and save
+3. Pass Visual Bible text to [generate_batch()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#211-243) as new parameter
+
+---
+
+#### [MODIFY] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+
+- Add `visual_bible: str = ""` parameter to [generate_batch()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#211-243), [_generate_sequential()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#244-301), [generate_single()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#101-155), [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#156-210)
+- In [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#156-210): when visual_bible is provided, include as `=== VISUAL BIBLE (REFERENCE) ===` section with instruction to only use relevant info per segment
+
+---
+
+## Flow
+
+```
+User clicks Start (Historical ✓)
+    │
+    For each SRT project:
+    ├─ Cached visual_bible exists? → load
+    ├─ No cache? → API call (Pro) → generate → save file
+    └─ Process segments with Visual Bible prepended to each request
+```
+
+## Verification
+
+Manual testing: run app, check Historical, verify Visual Bible is generated/cached, and prompts include consistent character/setting descriptions.

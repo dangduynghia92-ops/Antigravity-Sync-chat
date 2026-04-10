@@ -1,0 +1,7 @@
+# Visual Bible Feature — Tasks
+
+- [ ] Create `prompts/narrative_review_prompt.txt`
+- [ ] Create `core/narrative_review.py`
+- [ ] Modify [core/prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) — add visual_bible parameter
+- [ ] Modify [core/process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) — integrate visual bible step
+- [ ] Verify the implementation

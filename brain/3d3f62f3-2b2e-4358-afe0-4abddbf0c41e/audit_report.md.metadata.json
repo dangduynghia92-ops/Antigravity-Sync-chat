@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Complete audit of the style analyzer pipeline's data collection logic, covering all 4 steps: file scanning, overview analysis, per-chapter detail, cross-chapter statistics, and synthesis. Identifies 5 issues including chapter ordering in parallel processing, overview token limits, technique name normalization, and missing data in cached analyses.",
+  "updatedAt": "2026-03-19T00:06:12.280265Z",
+  "version": "3"
+}

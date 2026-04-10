@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive Vietnamese-language research report comparing Google's official Gemini CLI with the third-party CLIProxyAPI proxy server. Covers what each tool is, their features, pricing, a direct comparison table, and an analysis of how they relate in the user's current Python app architecture (App → CLIProxyAPI → Gemini CLI → AI Model). Includes a Mermaid architecture diagram.",
+  "updatedAt": "2026-03-23T01:52:40.961135900Z"
+}

@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Detailed audit of the Auto Pipeline resume feature. Compares how Top/List Review mode and Narrative mode handle resume after mid-run failures. Identifies that Narrative mode has robust per-chapter resume checkpointing while Review mode only caches Steps 1-3 (blueprint), forcing expensive Steps 4-6 and all writing to re-execute. Provides specific recommendations for improvement.",
+  "updatedAt": "2026-04-09T21:52:36.198502Z",
+  "requestFeedback": true
+}

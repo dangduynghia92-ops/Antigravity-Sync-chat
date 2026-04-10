@@ -1,0 +1,63 @@
+# Concurrent Rewrite Support
+
+## Goal
+Allow running 2-3 rewrite pipelines simultaneously. User can add new folders while others are running.
+
+## Current Architecture
+- Single `_stop_flag` → kills everything
+- Single `threading.Thread` per pipeline run
+- `self._status` shared dict for all chapters
+- UI: one button "▶ Rewrite", one "■ Stop"
+
+## Proposed Changes
+
+### 1. Job Manager
+A lightweight job tracker in [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py):
+
+```python
+# Each job = { id, group_path, stop_flag, thread, status, mode }
+self._jobs = {}  # job_id -> job dict
+self._job_pool = ThreadPoolExecutor(max_workers=3)
+```
+
+---
+
+### 2. Per-Job Stop Flags
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+- Replace `self._stop_flag` with per-job stop flags
+- Each job gets a `threading.Event()` as its stop signal
+- Pipeline functions check `job_stop.is_set()` instead of `self._stop_flag`
+- Wrap pipeline [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1045-1470) closures to capture their own stop event
+
+**Stop button behavior:**
+- If 1 job running → stop it
+- If >1 jobs → show popup to choose: "Stop All" or select specific job
+
+---
+
+### 3. UI Changes
+
+**Rewrite button:**
+- Always enabled (not disabled during run)
+- Click → starts a new job with current folder/settings
+- Tooltip shows "X/3 jobs running"
+
+**Stop button:**
+- Shows count: "■ Stop (2)"
+- Click → if 1 job, stop it; if >1, show picker
+
+**Job indicator** (bottom of chapter list):
+- Small label: "Jobs: ✓ FolderA | ⚙ FolderB | ⏳ FolderC"
+
+---
+
+### 4. Log Prefixing
+Already prefixed `[Review]`/`[Renew]` but need to add folder name:
+- `[Review:FolderName] Step 3/12...`
+
+## Verification
+- Run 2 scripts simultaneously, verify both complete
+- Stop one while other continues
+- Verify tree status updates correctly for each

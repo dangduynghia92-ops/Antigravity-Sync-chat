@@ -1,0 +1,101 @@
+# Pipeline Map: Biography vs Review
+
+## REVIEW Pipeline (Firearms, Military Equipment)
+> Chạy từ Rewrite tab hoặc Auto Pipeline
+
+```
+Step 1: Detect framework           → detect_framework()          [CHUNG]
+Step 2: Extract blueprint          → extract_blueprint_review()   [RIÊNG review]
+Step 3: Recommend framework        → recommend_framework()        [CHUNG — đã fix]
+Step 4: Reality check              → reality_check_blueprint()    [RIÊNG review]
+Step 5: Verify specs + prices      → verify_specs_google()        [RIÊNG review]
+Step 6: Enrich blueprint           → enrich_blueprint_google()    [RIÊNG review]
+Step 7: Rhetoric transform         → transform_rhetoric()         [RIÊNG review]
+Step 8: Check completeness         → check_blueprint()            [RIÊNG review]
+Step 9: Create outline             → create_review_outline()      [RIÊNG review]
+Step 10: Audit outline             → audit_outline_review()       [RIÊNG review]
+Step 11: Write chapters            → write_review_chapter()       [RIÊNG review]
+Step 12: Cross-chapter review      → review_cross_chapter()       [RIÊNG review]
+```
+
+**Kết luận**: Review pipeline gần như hoàn toàn riêng ✅
+
+---
+
+## NARRATIVE Pipeline (Biography, Mystery, Battle)
+> Chạy từ New Content tab hoặc Rewrite tab
+
+```
+Step 1: Extract blueprint          → extract_blueprint()          [CHUNG narrative]
+                                      Prompt: system_extract_blueprint_{niche}.txt
+Step 2: Recommend framework        → recommend_framework()        [CHUNG]
+                                   → recommend_framework_biography() [RIÊNG biography — mới tách]
+
+── Bước dưới đây chạy trong _run_shared_fw_pipeline() ──────────
+
+Step A: Phase Plan                 → generate_phase_plan()         ⚠️ BỊ LẪN
+                                      Chỉ biography có prompt
+                                      Nhưng shared pipeline gọi cho TẤT CẢ niches
+
+Step B: Outline                    → generate_renew_outline_v2()   ⚠️ BỊ LẪN  
+                                      Param phase_plan luôn truyền
+                                      (Mystery/Battle: phase_plan=None → OK nhưng thừa)
+
+Step C: Audit outline              → audit_outline()               ⚠️ BỊ LẪN
+                                      Diff-based logic mới thay đổi cách apply fixes
+                                      Ảnh hưởng tất cả niches
+
+Step D: Write chapters             → write_from_blueprint()        [CHUNG — OK]
+                                      Prompt riêng: system_narrative_write_{niche}.txt
+
+Step E: Review chapters            → review_narrative_full()       [CHUNG — OK]
+                                      Prompt riêng: system_narrative_review_{niche}.txt
+
+Step F: Patch overlaps             → patch_chapter_overlap()       [CHUNG — OK]
+Step G: Merge versions             → merge_to_version()            [CHUNG — OK]
+```
+
+---
+
+## ⚠️ 4 CHỖ BỊ LẪN
+
+### 1. `generate_phase_plan()` chạy cho tất cả niches
+**Vấn đề**: Mystery/Battle sẽ CRASH vì không có prompt `system_narrative_phase_plan_mystery.txt`
+**Fix**: Guard bằng niche check — chỉ gọi khi biography
+
+### 2. `_NICHE_OUTLINE_FIELDS` xóa `open_loop_resolve/plant`  
+**Vấn đề**: Mystery outline dùng fields này → bị mất
+**Fix**: Thêm lại 2 fields cũ, giữ fields mới
+
+### 3. `audit_outline()` diff-based logic
+**Vấn đề**: Thay đổi cách apply fixes cho tất cả niches
+**Fix**: Có legacy fallback — nhưng cần verify mystery/battle vẫn OK
+
+### 4. `get_ch_range()` return empty string
+**Vấn đề**: Khi user không set min/max → AI không biết limit
+**Fix**: Khôi phục `"a suitable number of chapters"`
+
+---
+
+## ĐỀ XUẤT FIX
+
+Thêm **4 guard** vào shared code, KHÔNG tạo pipeline riêng:
+
+```python
+# Fix 1: _run_shared_fw_pipeline — guard phase plan
+if niche and any(kw in niche for kw in ("biography", "tiểu sử", "nhân vật")):
+    phase_plan = generate_phase_plan(...)
+else:
+    phase_plan = None  # Skip cho mystery/battle
+
+# Fix 2: _NICHE_OUTLINE_FIELDS — restore old fields
+"{open_loop_resolve}": "open_loop_resolve",   # ← KHÔI PHỤC
+"{open_loop_plant}": "open_loop_plant",       # ← KHÔI PHỤC
+"{main_key_data}": "main_key_data",           # giữ mới
+"{sub_key_data}": "sub_key_data",             # giữ mới
+
+# Fix 3: audit_outline — legacy fallback đã có, verify OK
+
+# Fix 4: get_ch_range — restore fallback
+return "a suitable number of chapters"  # ← KHÔI PHỤC
+```

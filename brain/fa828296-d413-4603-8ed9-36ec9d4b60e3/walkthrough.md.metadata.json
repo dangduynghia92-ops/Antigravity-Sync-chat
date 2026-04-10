@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Comprehensive audit report of the Auto Pipeline tab. Documents 5 critical bugs found by cross-checking against YouTube, Chapter, and Style Rewrite tabs, all fixes applied, and verified clean.",
+  "updatedAt": "2026-03-24T00:57:22.993535600Z",
+  "version": "3"
+}

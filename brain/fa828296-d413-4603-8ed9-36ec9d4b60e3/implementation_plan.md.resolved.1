@@ -1,0 +1,225 @@
+# Auto Pipeline Tab — Updated Plan (v2)
+
+Thẻ mới kết hợp 3 pipeline (YouTube Download → SRT Chapter Split → Style Rewrite) vào một giao diện duy nhất. User paste link(s) YouTube, chọn cấu hình, bấm Run — pipeline tự chạy end-to-end.
+
+---
+
+## Proposed Changes
+
+### Output Folder Structure
+
+**Single / Independent mode:**
+```
+{output_root}/
+└── {video_title}_[{videoID}]/          ← project folder
+    ├── 01_download/                    ← YouTube artifacts
+    │   ├── {title}_transcript.txt
+    │   ├── {title}_thumb.jpg
+    │   └── {title}.mp4  (nếu chọn download video)
+    ├── 02_chapters/                    ← Split output
+    │   ├── Chapter 1 - Title.txt
+    │   ├── Chapter 2 - Title.txt
+    │   ├── {title}_MERGED.txt
+    │   └── {title}_SUMMARY.txt
+    └── 03_rewrite/                     ← Style Rewrite output
+        ├── Chapter 1 - Rewritten.txt
+        ├── ...
+        ├── FULL_SCRIPT.txt
+        └── _pipeline/
+```
+
+**Merge mode (top/list, nhiều links):**
+```
+{output_root}/
+└── {merged_name}/
+    ├── 01_downloads/                   ← mỗi video 1 sub-folder
+    │   ├── video1/transcript.txt
+    │   └── video2/transcript.txt
+    ├── 02_chapters/                    ← merged chapters
+    │   ├── Chapter 1 - Title.txt      ← chapters từ tất cả videos
+    │   ├── ...
+    │   └── MERGED.txt
+    └── 03_rewrite/                     ← rewrite trên merged chapters
+```
+
+> [!NOTE]
+> **Merge flow:** Download riêng từng video → Split chapters riêng → Gom tất cả chapters thành 1 danh sách → Rewrite 1 job duy nhất (giống [_do_rewrite_merge](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1673-1709) trong [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py))
+
+---
+
+### Component 1: Core Pipeline Engine
+
+#### [NEW] [auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py)
+
+Backend orchestrator — tái sử dụng 100% functions từ modules hiện có:
+
+```python
+class AutoPipeline:
+    """YouTube → Chapter Split → Style Rewrite orchestrator."""
+    
+    def run_single(self, url, config, callbacks) -> dict:
+        """Process 1 URL: download → split → rewrite."""
+    
+    def run_batch_independent(self, urls, config, callbacks) -> list:
+        """Nhiều URLs, mỗi URL 1 project riêng."""
+    
+    def run_batch_merged(self, urls, config, callbacks) -> dict:
+        """Nhiều URLs → download & split riêng → merge chapters → rewrite 1 job."""
+```
+
+**Functions tái sử dụng:**
+
+| Step | Module | Functions |
+|------|--------|-----------|
+| Download | `core.yt_downloader` | [get_video_info()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545), [get_transcript_ytdlp()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169), [get_transcript()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1178-1240), [extract_timestamps()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#572-613), [build_transcript_file()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#615-649), [download_video()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#768-862), [download_thumbnail_file()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952) |
+| Split | `core.chapter_splitter` | [classify_script_type()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#150-187), [split_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#552-735), [verify_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#737-785), [punctuate_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#787-884), [save_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#894-940), [merge_chapters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#942-968), [save_summary()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#970-1041) |
+| Rewrite | `core.rewriter` | [extract_blueprint_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091), [audit_outline_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1093-1146), [review_cross_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1148-1192), [write_review_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2417-2599), [extract_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045), [write_from_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404), etc. |
+| Excel | `core.yt_downloader` | [update_excel_transcript_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1533-1578), [update_excel_split_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1619-1666), [update_excel_rewrite_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1668-1712) |
+
+---
+
+### Component 2: UI Tab
+
+#### [NEW] [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+**UI Layout** (giống screenshot Style Rewrite tab, thêm YouTube URL input):
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ YouTube URLs:  [QPlainTextEdit - paste 1 or more URLs]       │
+│                                          [Paste] [Clear]     │
+│ ─────────────────────────────────────────────────────────── │
+│ Output:  [___________________________________] [Browse]       │
+│ ─────────────────────────────────────────────────────────── │
+│ Config (GIỐNG Style Rewrite tab):                            │
+│                                                              │
+│ Mode: [Top/List ▼]  Style: [✦ Review Súng Đạn ▼]            │
+│ Framework: [Auto ▼]  Lang: [English ▼]  Tier: [Pro ▼]       │
+│ Country: [US ▼]                                              │
+│                                                              │
+│ Ch: [9] ~ [11]   Open: [—] ~ [250]   Body: [—] ~ [500]     │
+│ End: [—] ~ [150]                                             │
+│                                                              │
+│ ☑ Download Video   ☑ Download Thumbnail                      │
+│ ☑ Excel Update     ☑ Transitions                             │
+│ ☑ Cut Video        ☑ Price Check                             │
+│ ─────────────────────────────────────────────────────────── │
+│ Pipeline Progress:                                           │
+│ ① Download ═══✓  ② Split ══░░  ③ Rewrite ░░░░               │
+│ Video 2/5: "Top 10 Best Handguns 2024" — Step 2: Splitting   │
+│ ─────────────────────────────────────────────────────────── │
+│ [▶ Run]  [⏹ Stop]  [Save Config]                             │
+│ ─────────────────────────────────────────────────────────── │
+│ Processing Log                                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Những ô config giữ nguyên từ Style Rewrite:**
+- Mode, Style, Framework, Lang, Tier, Country
+- Ch min/max, Word count (Open/Body/End min/max)
+- Checkboxes: Excel, Transitions, Cut Video, Price Check
+
+**Ô config MỚI (thêm cho YouTube):**
+- Download Video checkbox
+- Download Thumbnail checkbox
+
+**Ô config CÓ THỂ BỎ** (so với Style Rewrite):
+- `Unused chapters folder` — không cần vì pipeline tự quản lý
+- `Scan Folder` / `+Add` buttons — thay bằng YouTube URL input
+
+---
+
+### Pipeline Flow — Chi tiết
+
+```mermaid
+flowchart TD
+    Start["User paste URLs & Run"] --> Count{"URLs count?"}
+    Count -->|1| Single["→ Single mode"]
+    Count -->|>1| Ask{"Popup: 'Independent' or 'Merge'?<br/>(Merge chỉ cho Top/List)"}
+    Ask -->|Independent| EachURL["Loop từng URL"]
+    Ask -->|Merge| MergeMode["Merge mode"]
+    
+    %% ═══ STEP 1: Download ═══
+    EachURL --> DL["Step 1: Download"]
+    Single --> DL
+    MergeMode --> MDL["Step 1: Download tất cả videos"]
+    
+    DL --> DL1["get_video_info()"]
+    DL1 --> DL2["get_transcript_ytdlp() → fallback API"]
+    DL2 --> DL3["extract_timestamps()"]
+    DL3 --> DL4["build_transcript_file()"]
+    DL4 --> DL5["(optional) download_video + thumbnail"]
+    DL5 --> Classify["AI classify_script_type()"]
+    
+    MDL --> DL1
+    
+    %% ═══ CLASSIFY CHECK ═══
+    Classify --> MMatch{"AI type == user type?"}
+    MMatch -->|yes| Split["Step 2: Split"]
+    MMatch -->|no| Popup["⚠ Popup: 'Video ABC detected as Narrative<br/>but mode is Top/List. Continue?'"]
+    Popup -->|continue| Split
+    Popup -->|cancel| Stop["Stop"]
+    
+    %% ═══ STEP 2: Split ═══
+    Split --> S1["split_chapters()"]
+    S1 --> S2["verify_chapters()"]
+    S2 --> S3["punctuate_chapters() (if SRT)"]
+    S3 --> S4["save_chapters()"]
+    S4 --> MergeCheck{"Merge mode?"}
+    MergeCheck -->|no| Rewrite["Step 3: Rewrite"]
+    MergeCheck -->|yes| Collect["Gom chapters từ tất cả videos"]
+    Collect --> Rewrite
+    
+    %% ═══ STEP 3: Rewrite ═══
+    Rewrite --> R1{"mode?"}
+    R1 -->|Top/List| R2["Top/List Review pipeline<br/>(giống _do_renew_review)"]
+    R1 -->|Narrative| R3["Narrative pipeline<br/>(giống _do_renew_style)"]
+    R2 --> Done["✅ Done + Excel update"]
+    R3 --> Done
+```
+
+### Key Behaviors
+
+1. **AI Classify + Mismatch popup**: Sau khi download transcript, gọi [classify_script_type()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#150-187). Nếu kết quả khác mode user chọn → popup hiện **tiêu đề video** cụ thể + giải thích:
+   ```
+   ⚠ Video không khớp format:
+   • "Top 10 Best Handguns 2024" — AI detect: Top/List (bạn chọn: Narrative)
+   
+   [Tiếp tục với mode gốc]  [Đổi theo AI]  [Hủy]
+   ```
+
+2. **Style guide**: Dropdown [Style](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#45-3524) quét thư mục `styles/` cho file [.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/settings.json), lọc theo `pipeline` field ([review](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#373-376) cho Top/List, [narrative](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1489-1533) cho Narrative). Hiện tại có 4 style files:
+   - `Review_súng_đạn.json` (review pipeline)
+   - `Review_trang_thiết_bị_quân_sự.json` (review pipeline)
+   - `Review_bí_ẩn_lịch_sử.json` (review pipeline)
+   - `narrative_phân_tích_trận_đánh.json` (narrative pipeline)
+
+3. **Merge mode**: Chỉ khả dụng khi >1 URL + mode Top/List. Pipeline: download & split riêng từng video → gom tất cả chapters → tạo 1 rewrite job (giống [_do_rewrite_merge](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1673-1709) trong [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)).
+
+---
+
+### Component 3: Registration
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+```diff
++from ui.auto_pipeline_tab import AutoPipelineTab
+
+ # YouTube Downloader & Scanner Tab (first)
++self._auto_tab = AutoPipelineTab()
++self._tabs.addTab(self._auto_tab, "🚀 Auto Pipeline")
++
+ self._youtube_tab = YouTubeTab()
+ self._tabs.addTab(self._youtube_tab, "📥 YouTube")
+```
+
+---
+
+## Verification Plan
+
+### Manual Testing
+1. **Single URL**: Paste 1 link → Run → Verify 3 output folders (download/chapters/rewrite)
+2. **Multi-URL Independent**: Paste 3 links → "Independent" → 3 separate projects
+3. **Multi-URL Merge**: Paste 2 links → "Merge" → 1 rewrite job từ merged chapters
+4. **Mismatch popup**: Paste link narrative video while mode=Top/List → popup hiện đúng title
+5. **Stop/Error**: Paste invalid URL → verify error handled, app không crash

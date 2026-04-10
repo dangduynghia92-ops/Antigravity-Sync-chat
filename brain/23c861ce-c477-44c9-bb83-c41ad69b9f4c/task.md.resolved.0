@@ -1,0 +1,9 @@
+# Upgrade Mystery Blueprint Extraction
+
+- [/] Plan: Create implementation plan for blueprint upgrade
+- [ ] Modify [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt) — add 5 structured categories
+- [ ] Modify [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt) — handle new fields in verification/enrichment  
+- [ ] Modify [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt) — validate new fields vs framework
+- [ ] Remove deprecated fields: `ranking_criteria`, `original_order`, `thesis_angle`
+- [ ] Verify downstream compatibility (outline + writer prompts consume blueprint)
+- [ ] Test: dry-run with existing pipeline

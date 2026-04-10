@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Side-by-side comparison of current pipeline prompt output (style suffix appended at end) vs enhanced prompt approach (oil painting material descriptions woven throughout the prompt body). Includes generated test images for both versions, analysis of why the current approach produces digital-looking results, and recommendations for modifying the style file to fix the issue.",
+  "updatedAt": "2026-04-09T06:52:40.726864900Z",
+  "requestFeedback": true
+}

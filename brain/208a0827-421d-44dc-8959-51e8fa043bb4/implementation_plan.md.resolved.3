@@ -1,0 +1,101 @@
+# Product Prompt Tab — Implementation Plan
+
+Add a **tabbed interface** to the app with a new "Product Prompt" tab for generating product photography prompts.
+
+## Proposed Changes
+
+### Main Window — Tab System
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+Replace the current single-page layout with `CTkTabview`:
+
+```
+┌─ Header Bar ──────────────────────────────────────────────┐
+│  SRT Prompt Generator v1.0      🔄 Restart   ⚙ Settings  │
+├───────────────────────────────────────────────────────────┤
+│  [ 📝 SRT Prompt ]  [ 📸 Product Prompt ]                │
+│ ┌───────────────────────────────────────────────────────┐ │
+│ │  (tab content fills remaining space)                  │ │
+│ └───────────────────────────────────────────────────────┘ │
+│  📋 Processing Log                                        │
+└───────────────────────────────────────────────────────────┘
+```
+
+- **Tab 1** ("SRT Prompt"): Current workflow (Config, Projects, SRT Preview, Actions) — moved into tab frame
+- **Tab 2** ("Product Prompt"): New product prompt interface
+- **Log Section**: Stays below tabs, shared by both tabs
+
+---
+
+### New Product Prompt Tab
+
+#### [NEW] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+Self-contained UI + logic for generating product photography prompts:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  📸 Product Prompt Generator                             │
+├───────────────┬─────────────────────────────────────────┤
+│ LEFT PANEL    │ RIGHT PANEL: Results                     │
+│               │                                          │
+│ Object:       │ ┌──────────────────────────────────────┐ │
+│ [iPhone 16  ] │ │ 1. A dramatic low-angle hero shot... │ │
+│               │ │ 2. Top-down flatlay composition...   │ │
+│ Style: [▼]    │ │ 3. Extreme close-up macro shot of... │ │
+│ Tier:  [▼]    │ │ 4. Lifestyle in-situ photograph...   │ │
+│ Count: [8]    │ │ 5. Side profile silhouette shot...   │ │
+│               │ │ ...                                   │ │
+│ [▶ Generate]  │ └──────────────────────────────────────┘ │
+│ [💾 Save]     │                                          │
+│ [📋 Copy All] │                                          │
+└───────────────┴─────────────────────────────────────────┘
+```
+
+**Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| Object Name | Text input | Product name (e.g. "iPhone 16 Pro Max", "Nike Air Jordan 1") |
+| Style | ComboBox | Reuses existing styles from [styles/](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py#171-175) folder |
+| Tier | ComboBox | Flash / Pro |
+| Prompt Count | Entry | Number of prompts to generate (default: 8) |
+
+**System Prompt Strategy**: The style file becomes the system prompt. A specialized user message instructs the model to generate N unique product photography prompts with varied angles/compositions:
+
+```
+Generate {count} unique, detailed image generation prompts for product photography of: "{object_name}"
+
+Each prompt must showcase the product from a DIFFERENT perspective:
+- Various camera angles (hero shot, top-down, 45°, low angle, eye-level, macro)
+- Different compositions (isolated, lifestyle, in-context, flatlay, floating)
+- Varied lighting (studio, natural, dramatic, rim light, soft diffused)
+- Multiple focal points (full product, detail/texture, branding, specific feature)
+
+Format: Return ONLY the prompts, numbered 1 to {count}, one per line.
+Each prompt should be self-contained and ready for image generation.
+```
+
+**Actions:**
+- **Generate**: Sends a single API request → model returns N prompts in one response
+- **Save**: Saves results to `output_dir/{object_name}_product_prompts.txt`
+- **Copy All**: Copies all prompts to clipboard
+
+---
+
+### Integration Changes
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+- Import `ProductTab`
+- Wrap Tab 1 content in `tabview.tab("SRT Prompt")` frame
+- Add `tabview.tab("Product Prompt")` with `ProductTab` inside
+- Log section shared, stays below tabview
+
+## Verification Plan
+
+### Manual Verification
+1. Launch app → two tabs visible
+2. Tab 1 "SRT Prompt" works exactly as before
+3. Tab 2 "Product Prompt": enter object name → generate → results appear
+4. Save and Copy buttons work correctly

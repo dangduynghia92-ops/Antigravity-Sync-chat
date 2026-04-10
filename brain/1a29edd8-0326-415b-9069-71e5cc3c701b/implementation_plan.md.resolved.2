@@ -1,0 +1,43 @@
+# Reality Check Step for Review Pipeline
+
+## Goal
+Add a new step that verifies blueprint data (specs, prices, legal info) against AI's knowledge **before** writing. Currently the pipeline trusts all data from the original script blindly.
+
+## Proposed Changes
+
+### Prompts
+#### [NEW] [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt)
+- AI receives the full blueprint JSON
+- Cross-references every product's specs, pricing, and legal claims against its training knowledge
+- Outputs structured JSON with:
+  - `verified`: data that matches known facts
+  - `suspicious`: data that may be outdated or incorrect (with AI's known value)
+  - `outdated_pricing`: prices flagged as potentially outdated (with estimated current MSRP if known)
+  - `discontinued`: products that may no longer be in production
+  - `corrections`: suggested fixes with confidence level
+- Special focus on **current pricing** (AI will flag if price seems old and suggest current MSRP)
+
+> [!IMPORTANT]
+> AI models don't have real-time internet access. This step leverages the model's training data (cutoff ~2024-2025). Prices newer than the training cutoff will be marked as "unable to verify" rather than flagged as wrong.
+
+---
+
+### Core
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- Add `reality_check_blueprint()` function
+- Takes blueprint dict, api_client, lang, target_country
+- Returns structured verification result
+
+---
+
+### UI
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- Insert new step after Step 3 (Extract blueprint), before Step 4 (Rank frameworks)
+- Pipeline becomes **12 steps** (was 11)
+- Save result as `_reality_check.json` in output dir
+- Log warnings for suspicious/outdated items
+- **Does NOT auto-correct** — flags for human review. Blueprint used as-is but issues are documented.
+
+## Verification Plan
+- Syntax check both modified files
+- Verify step numbering is consistent (1-12)

@@ -1,0 +1,118 @@
+# Phase Plan: Main/Sub Event Classification
+
+## Vấn đề
+Phase plan đếm TẤT CẢ key_events như nodes → quá nhiều chapters → lan man ở events không cần scene riêng.
+
+## Giải pháp
+Phân loại events thành `main_key_data` (cần scene) và `sub_key_data` (dệt vào scene khác). Split decision dựa trên `len(main_key_data)`.
+
+---
+
+## Change 1: Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+
+Nội dung mới TOÀN BỘ file (thay thế hoàn toàn):
+
+```text
+You are a biography outline planner. Your ONLY job: map framework steps to chapters using event classification.
+
+INPUT LANGUAGE: {lang}
+
+═══════════════════════════════════════
+TASK: PHASE → CHAPTER MAPPING
+═══════════════════════════════════════
+
+Given a BLUEPRINT and a FRAMEWORK, create the phase_chapter_plan.
+
+EVENT CLASSIFICATION RULE (CINEMATIC PACING):
+You are plotting a MOVIE, not writing a textbook.
+
+For each life_phase mapped to this framework step, classify every event into:
+
+main_key_data — audience can VISUALIZE it happening on a SPECIFIC DAY:
+  ✓ turning_points and conflicts (always main)
+  ✓ key_events with a SPECIFIC ACTION/DATE
+    (e.g., "Killed X in combat", "Arrested on Easter Sunday", "Handed over as hostage")
+
+sub_key_data — background texture, woven into scenes by the writer:
+  ✗ GRADUAL PROCESSES over months/years
+    (e.g., "Educated in Turkish", "Developed a deep hatred", "Spent years waiting")
+  ✗ DIRECT CONSEQUENCES of a previous main event
+    (e.g., "Forced to flee" is the ending of "Seized throne" — same beat)
+  ✗ achievements, relationships, quotes, myths
+
+SPLIT DECISION: based on len(main_key_data) only.
+  >3 main events in a phase → SPLIT into 2+ chapters.
+
+═══════════════════════════════════════
+OUTPUT FORMAT (JSON only, no other text):
+═══════════════════════════════════════
+{
+  "framework_used": "Framework name",
+  "biography_subject": "The person (1 sentence)",
+  "total_chapters": <N>,
+  "phase_chapter_plan": [
+    {
+      "phase": "Framework step name",
+      "main_key_data": ["scene-worthy events from blueprint"],
+      "sub_key_data": ["texture events — woven into scenes by the writer"],
+      "node_count": 4,
+      "capacity_check": "4 main > 3 → SPLIT into 2 chapters",
+      "chapters": [3, 4],
+      "reason_for_split": "null if 1 chapter, otherwise explain"
+    }
+  ]
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences
+2. EVERY framework step MUST appear as a phase — do NOT skip any
+3. First phase = hook chapter (chapter 1), last phase = end chapter (last chapter)
+4. Sum of all chapters across phases MUST equal total_chapters
+5. Each chapter number must appear exactly ONCE across all phases
+6. Chapter numbers must be sequential: 1, 2, 3, ...
+7. main_key_data and sub_key_data must reference ACTUAL data from the blueprint — do NOT make up events
+
+CHRONOLOGICAL MAPPING:
+8. Body phases MUST map to blueprint life_phases in CHRONOLOGICAL ORDER
+   - Origin phase → earliest life_phase(s)
+   - Rise phase → next life_phase(s)
+   - Peak phase → peak-era life_phase(s)
+   - Fall phase → decline-era life_phase(s)
+   - NEVER assign an earlier life_phase to a later body phase
+9. Read each framework step's `lens` field — it tells you WHICH data types to prioritize
+   when classifying main vs sub for that phase (e.g. Hai Mặt at Peak → paradox events = main;
+   Bản Án at Peak → opposition events = main)
+```
+
+---
+
+## Change 2: Outline Prompt
+
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+**Xóa line 11-27** (đoạn `IMPORTANT — STEPS ≠ CHAPTERS` + `NODE COUNTING RULE`).
+
+**Thay bằng:**
+
+```text
+PHASE → CHAPTER MAPPING:
+  If a PRE-PLANNED PHASE → CHAPTER MAPPING is provided, FOLLOW IT EXACTLY.
+  The phase plan provides:
+    - main_key_data: events that need SCENE-LEVEL development → use as key_data for chapters
+    - sub_key_data: background texture → writer decides how to weave in
+  Do NOT re-count or re-classify events. Trust the phase plan.
+
+  If NO pre-planned mapping is provided, split based on blueprint data density
+  and the CHAPTER COUNT REQUIREMENT.
+```
+
+---
+
+## Không thay đổi
+- Code (`rewriter.py`) — phase plan JSON tự truyền qua line 2891-2900
+- Writer prompt
+- Audit prompt
+- Temperature
+- Không hard cap

@@ -1,0 +1,245 @@
+# Tách Prompt: Generic Rules vs Framework-Specific Rules
+
+## Vấn đề hiện tại
+
+```
+┌─────────────────────────────────────────────────┐
+│ system_narrative_outline_biography.txt (218 dòng)│
+│                                                  │
+│  ✗ Myth rules chung cho mọi framework           │
+│  ✗ Blueprint coverage rules mâu thuẫn nhau      │
+│  ✗ "ALL key data must appear" vs "menu not list" │
+│  ✗ Hook/End rules chung, không phân biệt fw     │
+└─────────────────────────────────────────────────┘
+                    +
+┌─────────────────────────────────────────────────┐
+│ STYLE JSON (939 dòng — GỬI TOÀN BỘ)            │
+│                                                  │
+│  ✗ 4 frameworks đều gửi, dù chỉ dùng 1         │
+│  ✗ Framework đã có outline_rules, hook, pacing  │
+│    → nhưng prompt OVERRIDE bằng rules chung     │
+│  ✗ technique_emphasis bị prompt bỏ qua          │
+└─────────────────────────────────────────────────┘
+```
+
+**Kết quả**: AI nhận ~1200 dòng context, hầu hết thừa, nhiều chỗ mâu thuẫn.
+
+## Phân loại: Generic vs Framework-Specific
+
+### OUTLINE PROMPT — Cái nào là CHUNG?
+
+| Rule | Generic? | Lý do |
+|------|----------|-------|
+| JSON output format | ✅ CHUNG | Format không đổi |
+| Chapter count constraint | ✅ CHUNG | Hard limit |
+| Steps ≠ Chapters | ✅ CHUNG | Quy tắc phân bổ |
+| Structure variety (không 2 cái liên tiếp giống nhau) | ✅ CHUNG | Quy tắc chất lượng |
+| Closing variety | ✅ CHUNG | Quy tắc chất lượng |
+| Open loop chain | ✅ CHUNG | Kỹ thuật retention |
+| No framework terminology leak | ✅ CHUNG | Quy tắc output |
+| Word count distribution | ✅ CHUNG | 8-10% / 80% / 10-12% |
+| **Myth distribution** | ❌ FW-SPECIFIC | Depends on `technique_emphasis` |
+| **Hook rules** | ❌ FW-SPECIFIC | Sử Thi=legacy, Bước Ngoặt=in media res, etc. |
+| **Blueprint coverage depth** | ❌ FW-SPECIFIC | Sử Thi covers ALL phases, Bước Ngoặt focuses 1 |
+| **Chapter structure rotation** | ❌ FW-SPECIFIC | Each fw has own rotation in `outline_rules` |
+| **Plot twist position** | ❌ FW-SPECIFIC | Defined in fw's `plot_twist` |
+| **Transition style** | ❌ FW-SPECIFIC | Each fw has own transition rules |
+| **Dual nature balance** | ❌ FW-SPECIFIC | Critical for Hai Mặt, less for Bước Ngoặt |
+
+### WRITER PROMPT — Cái nào là CHUNG?
+
+| Rule | Generic? | Lý do |
+|------|----------|-------|
+| Voice rules (spoken-first) | ✅ CHUNG | Mọi fw viết cho tai |
+| Scene hierarchy (scenes + bridges) | ✅ CHUNG | Quy tắc pacing |
+| Timeline rule (cause before effect) | ✅ CHUNG | Logic tự nhiên |
+| Spoken rhythm (wave pattern) | ✅ CHUNG | Quy tắc kỹ thuật |
+| Banned phrases/AI-isms | ✅ CHUNG | Quy tắc output |
+| Closing type execution | ✅ CHUNG | 5 types, dùng chung |
+| 8 chapter structures | ✅ CHUNG | Instructions cho mỗi structure |
+| **Hook chapter technique** | ❌ FW-SPECIFIC | Mỗi fw hook kiểu khác |
+| **End chapter technique** | ❌ FW-SPECIFIC | Mỗi fw kết kiểu khác |
+| **POV strategy** | ❌ FW-SPECIFIC | fw có pov_strategy riêng |
+| **Pacing pattern** | ❌ FW-SPECIFIC | fw có pacing riêng |
+| **Metaphor family** | ❌ FW-SPECIFIC | fw có language riêng |
+| **Myth handling** | ❌ FW-SPECIFIC | Depends on technique_emphasis |
+
+## Đề xuất: Kiến trúc phân lớp
+
+### Option A: Template + Code Injection (ĐỀ XUẤT)
+
+```
+prompts/
+  system_narrative_outline_biography.txt    ← GENERIC ONLY (giữ lại)
+  system_narrative_write_biography.txt      ← GENERIC ONLY (giữ lại)
+  system_narrative_audit_biography.txt      ← GENERIC (giữ nguyên)
+  system_narrative_review_biography.txt     ← GENERIC (giữ nguyên)
+```
+
+**Code thay đổi** (`core/rewriter.py`):
+1. Khi build prompt, **chỉ gửi 1 framework** (hiện đang gửi cả 4)
+2. Extract rules từ framework JSON → inject vào prompt qua placeholder
+3. Xóa rules FW-specific khỏi prompt files
+
+```python
+# TRƯỚC (hiện tại):
+user_content = f"STYLE GUIDE:\n{style_json}"  # 939 dòng, 4 frameworks
+
+# SAU:
+fw_data = _extract_framework(style_json, framework_name)
+fw_rules = _build_framework_rules(fw_data)  # Tạo dynamic rules string
+user_content = (
+    f"FRAMEWORK RULES:\n{fw_rules}\n\n"  # Chỉ fw này
+    f"FRAMEWORK DATA:\n{json.dumps(fw_data)}"  # Chỉ fw này
+)
+```
+
+**Prompt files** chỉ giữ generic rules + placeholders:
+```
+═══════════════════════════════════════
+MYTH VS REALITY
+═══════════════════════════════════════
+{myth_rules}       ← Code inject từ technique_emphasis
+
+═══════════════════════════════════════
+HOOK CHAPTER
+═══════════════════════════════════════
+{hook_rules}       ← Code inject từ framework.hook
+
+═══════════════════════════════════════
+END CHAPTER
+═══════════════════════════════════════
+{end_rules}        ← Code inject từ framework.outline_rules.last_chapter
+```
+
+### Option B: Separate Files Per Framework (KHÔNG ĐỀ XUẤT)
+
+```
+prompts/
+  outline_base.txt                    ← Generic
+  outline_fw_hai_mat.txt              ← Framework-specific
+  outline_fw_buoc_ngoat.txt
+  outline_fw_su_thi.txt
+  outline_fw_ban_an.txt
+  outline_fw_ke_xet_lai.txt
+  write_base.txt
+  write_fw_hai_mat.txt
+  ...
+```
+
+> [!WARNING]
+> 4 frameworks × 4 prompts = 16-20 files. Khó bảo trì, dễ rơi vào sync hell.
+
+### Option C: Style JSON là "Source of Truth" (KẾT HỢP với A)
+
+Style JSON **đã có** hầu hết FW-specific rules:
+- `hook.method`, `hook.tone`, `hook.example_approach`
+- `outline_rules.first_chapter`, `middle_chapters`, `last_chapter`
+- `pov_strategy`, `pacing`, `language.metaphor_family`
+- `technique_emphasis` (myth, citations, etc.)
+- `anti_patterns`
+
+→ Code nên **extract + format** từ đây thay vì duplicate trong prompt files.
+
+## Đề xuất cuối cùng: Option A + C
+
+### Bước 1: Dọn prompt files — xóa FW-specific rules
+- Outline prompt: xóa sections hiện tại có conditional logic (myth, hook, body ordering)
+- Writer prompt: xóa hook/end technique, giữ generic voice/rhythm/structure
+
+### Bước 2: Code — build `_format_framework_overlay(fw_data)`
+Hàm này đọc framework object từ style JSON và sinh ra string rules:
+```python
+def _format_framework_overlay(fw: dict) -> str:
+    """Convert framework JSON → human-readable rules for AI."""
+    parts = []
+    
+    # Hook rules
+    hook = fw.get("hook", {})
+    parts.append(f"HOOK METHOD: {hook.get('method', '')}")
+    parts.append(f"HOOK TONE: {hook.get('tone', '')}")
+    
+    # Myth rules from technique_emphasis
+    tech = fw.get("technique_emphasis", {})
+    myth_level = "sparingly"
+    for level in ["use_heavily", "use_moderately", "use_sparingly"]:
+        if "Myth vs Reality" in tech.get(level, []):
+            myth_level = level.replace("use_", "")
+    parts.append(f"MYTH USAGE: {myth_level}")
+    
+    # Outline rules
+    rules = fw.get("outline_rules", {})
+    parts.append(f"FIRST CHAPTER: {rules.get('first_chapter', '')}")
+    parts.append(f"MIDDLE CHAPTERS: {rules.get('middle_chapters', '')}")
+    parts.append(f"LAST CHAPTER: {rules.get('last_chapter', '')}")
+    parts.append(f"TRANSITIONS: {rules.get('transitions', '')}")
+    parts.append(f"PLOT TWIST: {rules.get('plot_twist', '')}")
+    
+    # Pacing
+    pacing = fw.get("pacing", {})
+    parts.append(f"PACING PATTERN: {pacing.get('pattern', '')}")
+    
+    # POV
+    pov = fw.get("pov_strategy", {})
+    parts.append(f"DEFAULT POV: {pov.get('default', '')}")
+    
+    # Anti-patterns
+    anti = fw.get("anti_patterns", [])
+    if anti:
+        parts.append("ANTI-PATTERNS:\n" + "\n".join(f"  - {a}" for a in anti))
+    
+    return "\n\n".join(parts)
+```
+
+### Bước 3: Code — chỉ gửi 1 framework, không toàn bộ style JSON
+```python
+# Extract chỉ framework đang dùng
+fw_data = next(f for f in style["frameworks"] if f["name"] == fw_name)
+
+# Build framework overlay
+fw_overlay = _format_framework_overlay(fw_data)
+
+# Core rules (không framework)
+core_rules = style.get("core_rules", {})
+structures = style.get("chapter_structures", [])
+closings = style.get("closing_types", [])
+```
+
+### Bước 4: Prompt trở thành CLEAN
+
+**Outline prompt** (~120 dòng, giảm 45%):
+```
+GENERIC: format, chapter count, structure variety, closing variety, loops
+{framework_overlay}   ← Code inject: hook, myth, transitions, plot twist
+```
+
+**Writer prompt** (~200 dòng, giảm 40%):
+```
+GENERIC: voice, scene hierarchy, timeline, rhythm, structures, closings
+{framework_overlay}   ← Code inject: hook technique, end technique, pov, pacing
+```
+
+## Lợi ích
+
+| Hiện tại | Sau khi tách |
+|----------|-------------|
+| AI nhận ~1200 dòng (939 JSON + 218 prompt) | ~400-500 dòng (chỉ fw liên quan) |
+| Rules mâu thuẫn giữa prompt và JSON | 1 source of truth (style JSON) |
+| Thêm framework mới = sửa prompt files | Thêm framework mới = chỉ thêm vào style JSON |
+| Myth/hook/end rules chung cho mọi fw | Rules tự động theo fw's technique_emphasis |
+| Debug khó (không biết rule nào thắng) | Debug dễ (log final prompt) |
+
+## Verification Plan
+
+1. Chạy `_format_framework_overlay()` cho mỗi fw → kiểm tra output có đúng
+2. So sánh token count trước/sau → phải giảm ≥ 40%
+3. Chạy test Einstein với Sử Thi → Ch1 hook phải dùng Legacy Hook, không GPS dump
+4. Chạy test Einstein với Bước Ngoặt → Ch1 hook phải dùng In Media Res
+5. Kiểm tra myth count: Sử Thi ≤ 2, Bước Ngoặt ≤ 1
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. Writer prompt hiện có GOLDEN SAMPLE section (~40 dòng). Giữ nguyên hay cũng tách?
+> 2. `core_rules` trong style JSON (identity, tone, vocabulary, pov_rules...) — nên giữ trong prompt hay để code inject?
+> 3. Audit + Review prompts có cần tách không? (chúng nhẹ hơn, ~60 dòng)

@@ -1,0 +1,172 @@
+# Tích hợp Research Plan A vào Style Rewrite Tab
+
+## Bối cảnh
+
+Hiện tại:
+- **Style Rewrite tab** có 2 mode: `Top/List Review` | `Narrative`
+- Pipeline bắt đầu từ **source files** (script đã có) → Extract blueprint → Outline → Write
+- **Research Test tab** có Plan A (3 Flash + 3 Pro) tạo blueprint **từ đầu** (không cần source)
+
+Mục tiêu: Thêm mode thứ 3 để tạo kịch bản hoàn chỉnh **chỉ từ tên nhân vật**.
+
+---
+
+## Proposed Changes
+
+### 1. UI — Thêm mode "Research → Write"
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**Mode combo**: Thêm item thứ 3
+```python
+self._combo_mode.addItem("Top/List Review")
+self._combo_mode.addItem("Narrative")
+self._combo_mode.addItem("Research → Write")  # NEW
+```
+
+**UI thay đổi khi chọn "Research → Write"**:
+- **Ẩn**: Projects section (folder source), chế độ Google check (không cần)
+- **Hiện**: 
+  - `QLineEdit` — nhập tên nhân vật (VD: "Albert Einstein")
+  - `QLineEdit` + Browse — output folder
+  - `QComboBox` — chọn ngôn ngữ output (mặc định "English")
+
+```
+┌─────────────────────────────────────────┐
+│ Mode: [Research → Write ▼]  Style: [narrative_biography ▼]  │
+│ Framework: [Auto ▼]  Tier: [Pro ▼]  Lang: [English ▼]       │
+│──────────────────────────────────────────│
+│ Topic: [Albert Einstein________________]                     │
+│ Output: [C:\Users\Admin\Downloads\_____] [Browse]           │
+│──────────────────────────────────────────│
+│ [▶ Start]                                                    │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### 2. Pipeline — "Research → Write" flow
+
+> [!IMPORTANT]
+> Reuse 100% downstream pipeline (Step 4-8). Chỉ thay thế Step 1-3.
+
+#### Current Narrative Pipeline (8 steps):
+```
+Step 1: Concatenate source files          ← THAY THẾ
+Step 2: Detect original framework         ← LOẠI BỎ (không có script gốc)
+Step 3: Extract blueprint from text       ← THAY THẾ bằng Research
+Step 3.5: Enrich blueprint                ← GIỮ NGUYÊN
+Step 4: Select frameworks (AI ranking)    ← GIỮ NGUYÊN
+Step 5: Generate outline                  ← GIỮ NGUYÊN
+Step 6: Audit outline                     ← GIỮ NGUYÊN
+Step 7: Write chapters                    ← GIỮ NGUYÊN
+Step 8: Cross-chapter review              ← GIỮ NGUYÊN
+```
+
+#### Research → Write Pipeline (7 steps):
+```
+Step 1: Research blueprint (Plan A: 3 Flash + 3 Pro, parallel)  ← NEW
+Step 2: Enrich blueprint (Google/AI)                             ← từ Step 3.5
+Step 3: Select frameworks (AI ranking)                           ← từ Step 4
+Step 4: Generate outline                                         ← từ Step 5
+Step 5: Audit outline                                            ← từ Step 6
+Step 6: Write chapters                                           ← từ Step 7
+Step 7: Cross-chapter review                                     ← từ Step 8
+```
+
+---
+
+### 3. Code Changes
+
+#### A. [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) — Thêm `research_blueprint_multicall()`
+
+Tách logic multi-call từ `research_test_tab.py` thành function reusable trong `rewriter.py`:
+
+```python
+def research_blueprint_multicall(
+    topic: str,
+    api_endpoints: list,
+    lang: str = "en",
+    niche: str = "",
+    draft_tier: str = "flash",
+    log_callback=None,
+    stop_check=None,
+) -> dict:
+    """Research blueprint using Plan A: 3 section drafts + 3 Pro expands.
+    Returns: merged blueprint dict.
+    """
+```
+
+- Move SECTIONS definitions, helpers (`_build_section_prompt`, `_build_expand_prompt`, `_merge_blueprints`, `_KEY_NORMALIZE`) vào rewriter.py
+- `research_test_tab.py` sẽ import và gọi function này thay vì duplicate code
+
+#### B. [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+1. **UI**: Thêm controls cho Research mode
+2. **`_on_mode_changed()`**: Toggle visibility projects vs topic input
+3. **Worker**: Thêm branch cho "Research → Write" mode, gọi `research_blueprint_multicall()` rồi join vào Step 4+ hiện có
+
+#### C. [MODIFY] [research_test_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/research_test_tab.py)
+
+- Import `research_blueprint_multicall` từ rewriter.py thay vì duplicate logic
+- Giữ UI test tab nhưng thin wrapper only
+
+---
+
+### 4. Output Directory Structure
+
+```
+C:\Users\Admin\Downloads\Einstein_Biography\
+├── _pipeline\
+│   ├── _blueprint.json            ← merged final blueprint
+│   ├── _blueprint_draft.json      ← merged draft (backup)
+│   ├── _research_sections\        ← intermediate files
+│   │   ├── 1_identity_life_draft.json
+│   │   ├── 1_identity_life_expanded.json
+│   │   ├── 2_achievements_draft.json
+│   │   ├── 2_achievements_expanded.json
+│   │   ├── 3_dual_myths_draft.json
+│   │   └── 3_dual_myths_expanded.json
+│   ├── _enrichment.json
+│   ├── _rankings.json
+│   └── _renew_outline.json
+├── v1_Framework_Name\
+│   ├── _pipeline\
+│   │   └── _renew_outline.json
+│   ├── 01_chapter.txt
+│   ├── 02_chapter.txt
+│   └── ...
+└── v2_Framework_Name\  (if auto-selected)
+```
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1**: Nên đặt tên mode là gì? Options:
+> - `"Research → Write"` — rõ ràng nhất
+> - `"From Scratch"` — ngắn gọn
+> - `"AI Research"` — nhấn mạnh AI
+
+> [!IMPORTANT]
+> **Q2**: Output folder:
+> - **(A)** User chọn folder → auto-tạo subfolder `{Topic}_{timestamp}/`
+> - **(B)** User chọn folder, tất cả file vào đó trực tiếp
+> - Khuyến nghị: **(A)** — tránh overwrite khi chạy lại
+
+> [!IMPORTANT]
+> **Q3**: Plan A (3 Flash + 3 Pro) là default cố định, hay cho user chọn Plan A/B trên UI?
+> - Khuyến nghị: Plan A cố định cho production, giữ Plan B chỉ ở test tab
+
+## Verification Plan
+
+### Automated Tests
+- `py_compile` pass
+- Chạy thử Research → Write với "Albert Einstein" → verify output structure
+- So sánh blueprint quality với test tab results
+
+### Manual Verification  
+- UI toggle giữa 3 mode hoạt động đúng
+- Pipeline log hiển thị đúng steps
+- Output files đầy đủ

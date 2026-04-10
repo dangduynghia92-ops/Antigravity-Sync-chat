@@ -1,0 +1,164 @@
+# Pipeline: Historical Stick Figure Prompt Generation (Final)
+
+Quy trình tạo prompt cho kịch bản lịch sử dạng stick figure, tập trung vào **nhất quán nhân vật** qua character sheet reference.
+
+---
+
+## Pipeline tổng quan
+
+```
+STEP 1 ──→ STEP 2 ──→ STEP 3 ──→ STEP 4 ──→ STEP 5 ──→ STEP 6
+ Mode       Scan       Bible+      Locations   Group      Scene
+ Detect     Characters  Sheets                  SRT       Prompts
+ (1 call)   (1 call)   (2-4 calls) (1 call)   (local)   (N calls)
+```
+
+---
+
+## STEP 1: Mode Detection ✅ (đã làm)
+- AI verify Independent / Narrative
+- 1 API call (Flash tier)
+
+## STEP 2: Character Scan
+- 1 API call (Pro tier)
+- Input: toàn bộ SRT
+- Output:
+
+```
+CHARACTERS FOUND:
+1. Napoleon Bonaparte → LABEL: French-Commander-A | PROTAGONIST | ch1-12
+2. Wellington → LABEL: British-Commander-A | PROTAGONIST | ch3-8
+3. Kutuzov → LABEL: Russian-General-A | NAMED | ch2,3,5
+4. Ney → LABEL: French-General-A | NAMED | ch4,7
+5. Davout → LABEL: French-General-B | NAMED | ch5,8
+6. (group) → LABEL: French-Infantry | MILITARY | ch1-12
+7. (group) → LABEL: British-Infantry | MILITARY | ch3-8
+8. (group) → LABEL: French-Peasant | CIVILIAN | ch1,6
+9. (group) → LABEL: French-Noble | CIVILIAN | ch3,7
+```
+
+### Quy tắc đặt label:
+- Format: `[Faction]-[Role]-[A/B/C]` (named) hoặc `[Faction]-[Role]` (archetype)
+- Không dùng tên thật
+- Có chữ cái A/B/C khi >1 người cùng phe+vai trò
+- Label dùng **xuyên suốt**: Bible → Sheet → Scene Prompt
+
+## STEP 3: Character Bible + Sheet Prompts (multi-pass)
+- 2-4 API calls (Pro tier), **mỗi call = 1 nhóm nhân vật**
+- Chỉ gọi call cho nhóm nào **tồn tại** từ Step 2
+
+| Call | Nhóm | Output |
+|------|-------|--------|
+| A | 🌟 Protagonists | 4 thuộc tính + sheet prompt (3 views) |
+| B | 🎭 Named Supporting | 4 thuộc tính + sheet prompt (3 views) |
+| C | ⚔️ Military Archetypes | 4 thuộc tính + sheet prompt (3 views) |
+| D | 👥 Civilian Archetypes | 4 thuộc tính + sheet prompt (3 views) |
+
+### 4 thuộc tính mỗi nhân vật:
+
+| # | Thuộc tính | Ví dụ |
+|---|---|---|
+| 1 | **Headwear** | black bicorne hat |
+| 2 | **Hair/Face** | clean-shaven, stern mouth line |
+| 3 | **Outfit** | dark navy blue coat, gold buttons, white pants |
+| 4 | **Weapon** | ornate officer saber |
+
+### Sheet prompt format:
+```
+Character reference sheet labeled "[LABEL]".
+Three neutral standing views (front, 3/4 angle, side profile).
+Stick figure with round white circle head, black dot eyes.
+[Headwear] + [Hair/Face] + [Outfit] + [Weapon].
+Label "[LABEL]" written below.
+Clean white background, no scene.
+```
+
+### Output mẫu (1 file gộp):
+```
+## 🌟 PROTAGONISTS
+
+### French-Commander-A | ch1-12
+- Headwear: black bicorne hat worn sideways
+- Hair/Face: clean-shaven, stern downward mouth line
+- Outfit: dark navy blue coat, gold button dots, white pants, black boots
+- Weapon: ornate officer saber at waist
+SHEET_PROMPT: Character reference sheet labeled "French-Commander-A"...
+
+### British-Commander-A | ch3-8
+- Headwear: tall black top hat
+- Hair/Face: prominent sideburns, sharp nose line
+- Outfit: dark red military coat, gold epaulettes
+- Weapon: cavalry sword
+SHEET_PROMPT: Character reference sheet labeled "British-Commander-A"...
+
+## ⚔️ MILITARY ARCHETYPES
+
+### French-Infantry | ch1-12
+- Headwear: black cocked hat
+- Hair/Face: (generic)
+- Outfit: blue coat, white crossbelts
+- Weapon: brown musket with bayonet
+SHEET_PROMPT: Character reference sheet labeled "French-Infantry"...
+```
+
+## STEP 4: Locations & Settings
+- 1 API call (Pro tier)
+- Output: locations với architecture + atmosphere
+
+## STEP 5: Group SRT ✅ (đã có)
+- Local, không cần API
+
+## STEP 6: Scene Prompt Generation
+- N calls (Flash/Pro tier), 1 per segment
+- **Dùng label only** — không mô tả lại ngoại hình
+- AI gen ảnh dùng kèm `--cref` character sheet images
+
+### Scene prompt chứa 6 yếu tố:
+
+| # | Yếu tố | Ví dụ |
+|---|---|---|
+| 1 | **Nhân vật (label)** | French-Commander-A, three French-Infantry |
+| 2 | **Hành động** | points forward, march, carry muskets |
+| 3 | **Vị trí/bố cục** | at the front, follow in a line |
+| 4 | **Bối cảnh** | mountain pass in the Alps, snow |
+| 5 | **Thời tiết/ánh sáng** | cloudy gray sky, cold morning |
+| 6 | **Không khí** | exhausted, tense, triumphant |
+
+### Scene prompt mẫu:
+```
+French-Commander-A and three French-Infantry march through deep snow 
+on a narrow mountain pass. French-Commander-A walks at the front, 
+pointing forward. The soldiers follow in a line, carrying muskets 
+on shoulders, looking exhausted. Rocky cliffs on both sides, cloudy 
+gray sky, distant snow-capped peaks.
+```
+
+---
+
+## Output files
+
+| File | Nội dung |
+|------|----------|
+| `_character_bible.txt` | Tất cả nhân vật + 4 thuộc tính + labels |
+| `_character_sheets.txt` | Prompts tạo ảnh reference (3 views) |
+| `_locations.txt` | Bối cảnh + kiến trúc |
+| `{name}_prompts.csv` | Scene prompts dùng labels |
+
+---
+
+## Files cần sửa
+
+| File | Thay đổi |
+|------|----------|
+| [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) | Tách thành nhiều prompt files cho multi-pass |
+| [NEW] `prompts/character_scan_prompt.txt` | Prompt cho Step 2 (scan) |
+| [NEW] `prompts/character_group_prompt.txt` | Prompt cho Step 3 (bible + sheet per group) |
+| [NEW] `prompts/location_prompt.txt` | Prompt cho Step 4 (locations) |
+| [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) | Multi-pass logic: scan → per-group → locations |
+| [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | Integrate new multi-pass Bible flow |
+| [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) | Scene prompt uses labels (no visual re-description) |
+
+## Verification Plan
+- Import check all new functions
+- Test with sample SRT: verify character scan output format
+- Test scene prompt output: verify labels used instead of descriptions

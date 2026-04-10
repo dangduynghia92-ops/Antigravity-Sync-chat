@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to create an HTML-based User Manual with tabs matching the app's 11 tabs, plus a Help button in the header bar that opens the manual at the active tab's section. The manual is written in Vietnamese and covers all features per tab.",
+  "updatedAt": "2026-03-26T15:41:33.694216300Z"
+}

@@ -1,0 +1,125 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+Scrape Creators Documentation
+Documentation
+Search...
+[0] (500,500)<div  />
+[1] (828,500)<div class='h-full overflow-y-auto' scrollable='true' />
+	[2] (820,1)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/reels/search' />
+		[3] (833,1)<div  />
+			[4] (721,1)<span >GET />
+			[5] (791,1)<span >Search Reels />
+	[6] (820,45)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/post/comments' />
+		[7] (833,45)<div  />
+			[8] (721,45)<span >GET />
+			[9] (785,45)<span >Comments />
+	[10] (820,88)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/reels' />
+		[11] (833,88)<div  />
+			[12] (721,88)<span >GET />
+			[13] (763,88)<span >Reels />
+	[14] (820,132)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlights' />
+		[15] (833,132)<div  />
+			[16] (721,132)<span >GET />
+			[17] (804,132)<span >Story Highlights />
+	[18] (820,176)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlight/detail' />
+		[19] (833,176)<div  />
+			[20] (721,176)<span >GET />
+			[21] (810,176)<span >Highlights Details />
+	[22] (820,232)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/song/reels' />
+		[23] (833,232)<div  />
+			[24] (721,232)<span >GET />
+			[25] (851,232)<span >Reels using Song (Deprecated) />
+	[26] (820,289)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/embed' />
+		[27] (833,289)<div  />
+			[28] (721,289)<span >GET />
+			[29] (795,289)<span >Embed HTML />
+	YouTube
+	[30] (820,394)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel' />
+		[31] (833,394)<div  />
+			[32] (721,394)<span >GET />
+			[33] (802,394)<span >Channel Details />
+	[34] (820,437)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel-videos' />
+		[35] (833,437)<div  />
+			[36] (721,437)<span >GET />
+			[37] (802,437)<span >Channel Videos />
+	[38] (820,481)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel/shorts' />
+		[39] (833,481)<div  />
+			[40] (721,481)<span >GET />
+			[41] (801,481)<span >Channel Shorts />
+	[42] (820,525)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video' />
+		[43] (833,525)<div  />
+			[44] (721,525)<span >GET />
+			[45] (817,525)<span >Video/Short Details />
+	[46] (820,568)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video/transcript' />
+		[47] (833,568)<div  />
+			[48] (721,568)<span >GET />
+			[49] (780,568)<span >Transcript />
+	[50] (820,612)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/search' />
+		[51] (833,612)<div  />
+			[52] (721,612)<span >GET />
+			[53] (769,612)<span >Search />
+	[54] (820,655)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/search/hashtag' />
+		[55] (833,655)<div  />
+			[56] (721,655)<span >GET />
+			[57] (814,655)<span >Search by Hashtag />
+	[58] (820,699)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video/comments' />
+		[59] (833,699)<div  />
+			[60] (721,699)<span >GET />
+			[61] (785,699)<span >Comments />
+	[62] (820,743)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/shorts/trending' />
+		[63] (833,743)<div  />
+			[64] (721,743)<span >GET />
+			[65] (803,743)<span >Trending Shorts />
+	[66] (820,786)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/playlist' />
+		[67] (833,786)<div  />
+			[68] (721,786)<span >GET />
+			[69] (770,786)<span >Playlist />
+	[70] (820,830)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/community-post' />
+		[71] (833,830)<div  />
+			[72] (721,830)<span >GET />
+			[73] (834,830)<span >Community Post Details />
+	LinkedIn
+	[74] (820,935)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/linkedin/profile' />
+		[75] (833,935)<div  />
+			[76] (721,935)<span >GET />
+			[77] (801,935)<span >Person's Profile />
+	[78] (820,978)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/linkedin/company' />
+		[79] (833,978)<div  />
+			[80] (721,978)<span >GET />
+			[81] (801,978)<span >Company Page />
+API Documentation
+Introduction
+Welcome to the
+Scrape Creators API documentation
+. Our comprehensive REST API provides powerful endpoints to extract
+public data
+from
+27
++ social media platforms including
+TikTok, TikTok Shop, Instagram, YouTube, LinkedIn
+, and more
+.
+🚀 Quick Start Guide
+Get started in minutes with our
+free API key
+. Extract profile data, posts, videos, and more from any public social media account.
+Supported Platforms
+TikTok
+TikTok Shop
+Instagram
+YouTube
+LinkedIn
+Facebook
+Facebook Ad Library
+Google Ad Library
+LinkedIn Ad Library
+Twitter
+Reddit
+Truth Social
+Threads
+Bluesky
+Pinterest
+
+</current_dom>

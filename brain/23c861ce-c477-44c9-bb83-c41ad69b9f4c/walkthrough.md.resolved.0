@@ -1,0 +1,645 @@
+# Walkthrough: Mystery Blueprint Upgrade
+
+## Changes Made
+
+### 1. [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+
+**Added** 5 structured categories (inside `product_evaluation[]` per mystery):
+
+| Category | Fields | Purpose |
+|---|---|---|
+| `key_figures` | name, role, affiliation, time_period, key_actions, fate, source | Named historical individuals with source tagging |
+| `historical_context` | political_backdrop, catalyst, era_characteristics | Power dynamics & what was "normal" for the era |
+| `geography` | locations, distances, terrain_features | Factual measurements for scale/impossibility |
+| `technology_and_artifacts` | element, how_it_works, why_remarkable, modern_equivalent | Optional — only for artifact/tech mysteries |
+| `scholarly_debate` | claim, evidence_for, evidence_against | Structured academic disagreements |
+
+**Removed** 3 deprecated fields: `ranking_criteria`, `original_order`, `thesis_angle` (+ related rules)
+
+**Added** 4 new critical rules (#5, #13–16) ensuring source tagging, completeness, and data-only extraction
+
+```diff:system_extract_blueprint_mystery.txt
+You are a mystery history data extraction specialist. Your task is to read a MYSTERY HISTORY SCRIPT and extract a MYSTERY BLUEPRINT — a structured summary of ALL historical data, evidence, theories, and sources.
+
+INPUT LANGUAGE: {lang}
+
+INSTRUCTIONS:
+1. Read the entire mystery history script carefully
+2. Extract ALL factual data — dates, names, locations, measurements, sources, citations, theories
+3. Do NOT copy complete sentences or narrative text from the original
+4. The blueprint must contain enough DATA for a writer to create a COMPLETELY NEW mystery history script
+5. You MAY supplement with your own knowledge to fill important gaps, but you MUST tag the source
+6. Do NOT skip ANY data point mentioned in the script. If it's mentioned, extract it.
+
+SOURCE TAGGING (CRITICAL):
+For every item in `detailed_evidence`, tag the source:
+  {"fact": "the data", "source": "transcript"}     — data explicitly stated in the script
+  {"fact": "the data", "source": "ai_knowledge"}   — data you added from your own knowledge
+
+Top-level fields (core_topic, thesis_angle, etc.) remain plain strings — no source tagging needed.
+
+EXTRACT THESE ELEMENTS:
+
+1. **CORE TOPIC**: What mysteries/historical anomalies are being investigated? What is the overarching thesis? (2-3 sentences)
+
+2. **MYSTERY INVESTIGATION DATA**: For EACH mystery/subject investigated, extract:
+    - **mystery_name**: The name or label of the mystery/subject (e.g., "The Thuggee", "Piri Reis Map", "Antikythera Mechanism")
+    - **category**: Type/class of mystery (e.g., "Secret Society", "Ancient Artifact", "Lost Civilization", "Unexplained Phenomenon")
+    - **time_period**: When this mystery/event occurred or was discovered
+    - **location**: Geographic location(s) involved
+    - **key_data**: A dictionary of the most important quantifiable facts. Auto-detect keys based on mystery type. Common examples:
+      - Secret societies: members_estimated, years_active, geographic_range, documented_incidents
+      - Ancient artifacts: age, material, precision_measurements, weight, discovery_date
+      - Lost civilizations: territory_size, population_estimates, duration, technology_level
+      - Use whatever keys best describe THIS mystery's core data
+    - **detailed_evidence**: A list of ALL individual factual data points. Each fact should be ONE specific, verifiable piece of information. Include EVERYTHING: dates, measurements, citations, archaeological findings, expert opinions, historical records, anomalies, counter-evidence. If the script mentions it, it MUST appear here.
+    - **mainstream_theory**: The official/conventional explanation for this mystery
+    - **counter_evidence**: Specific evidence or arguments that challenge the mainstream theory
+    - **named_sources**: All named experts, researchers, publications, institutions cited
+    - **source_parts**: List which PART(s) this mystery's data was extracted from (e.g., ["PART 3"]). Use the exact PART labels from the input.
+
+3. **INVESTIGATION INFO**:
+    - **escalation_criteria**: How the mysteries are ordered (e.g., "by increasing impossibility", "by geographic scope")
+    - **original_order**: List mystery names in the order they appear in the script
+    - **thesis_angle**: The overarching argument connecting all mysteries (e.g., "history is far older and stranger than mainstream archaeology admits")
+
+4. **KEY CLAIMS**: List of specific claims made in the script that need evidence support. Each as a bullet point with the specific date/measurement/source cited.
+
+OUTPUT FORMAT (JSON only, no other text):
+{
+  "core_topic": "What this investigation is about and its angle",
+  "product_evaluation": [
+    {
+      "product_name": "Name of the mystery/subject",
+      "category": "Mystery type/class",
+      "key_specs": {
+        "years_active": "600 years",
+        "geographic_range": "1,500 km",
+        "documented_incidents": "2 million estimated"
+      },
+      "detailed_facts": [
+        {"fact": "Bernard Lewis documented approximately 100 fortresses across Persia and Syria", "source": "transcript"},
+        {"fact": "First described by Marco Polo in 1273 CE", "source": "transcript"},
+        {"fact": "Used a specialized language called Ramasee for operational communication", "source": "transcript"},
+        {"fact": "Hassan-i Sabbah established the order in 1090 CE at Alamut Castle", "source": "ai_knowledge"}
+      ],
+      "mainstream_theory": "Official/conventional explanation for this mystery",
+      "counter_evidence": ["Specific anomaly 1", "Specific anomaly 2"],
+      "named_sources": ["Bernard Lewis - The Assassins (1967)", "Marco Polo - Il Milione"],
+      "comparisons": ["Factual comparison: who/what was compared, on which dimension — NO rhetorical analogies or metaphors"],
+      "source_units": "imperial | metric | mixed",
+      "source_parts": ["PART 1"]
+    }
+  ],
+  "ranking_criteria": "How mysteries are ordered/escalated",
+  "original_order": ["Mystery A", "Mystery B"],
+  "thesis_angle": "The overarching argument of the investigation",
+  "key_claims": [
+    "Specific claim with supporting data"
+  ]
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences, no explanation
+2. All text in {lang}
+3. Do NOT copy sentences from the script — extract DATA ONLY (dates, names, measurements, facts, sources)
+4. Every item in detailed_facts MUST use the {"fact": "...", "source": "transcript|ai_knowledge"} format
+5. If a fact is not mentioned in the script AND you don't know it, do NOT include it
+6. The blueprint must be COMPLETE — extract EVERY data point, no matter how small. Missing data = failure.
+7. Be HONEST about source tagging — do NOT mark ai_knowledge as "transcript"
+8. key_specs should contain ONLY the most important quantifiable data (5-8 max). ALL other details go in detailed_facts.
+9. Do NOT include list positions or ordering information in detailed_facts (e.g., "number 5 on the list"). The `original_order` field already captures this.
+10. IMPORTANT: Use `product_evaluation` as the JSON key for mystery data (for pipeline compatibility). The field contains mystery subjects, not products.
+11. **NO ANALOGIES OR METAPHORS**: Do NOT extract analogies, metaphors, rhetorical comparisons, or argumentative framings from the script. The `comparisons` field must contain ONLY factual comparisons ("X was compared to Y on dimension Z"), not the script's rhetorical devices. The WRITER will create original analogies.
+12. **detailed_facts = RAW DATA ONLY**: Each fact must be a discrete, verifiable piece of information. Do NOT include entries like "the author compared X to Y using the analogy of Z" — extract only the underlying factual data.
+===
+You are a mystery history data extraction specialist. Your task is to read a MYSTERY HISTORY SCRIPT and extract a MYSTERY BLUEPRINT — a structured summary of ALL historical data, evidence, theories, and sources.
+
+INPUT LANGUAGE: {lang}
+
+INSTRUCTIONS:
+1. Read the entire mystery history script carefully
+2. Extract ALL factual data — dates, names, locations, measurements, sources, citations, theories
+3. Do NOT copy complete sentences or narrative text from the original
+4. The blueprint must contain enough DATA for a writer to create a COMPLETELY NEW mystery history script
+5. You MAY supplement with your own knowledge to fill important gaps, but you MUST tag the source
+6. Do NOT skip ANY data point mentioned in the script. If it's mentioned, extract it.
+
+SOURCE TAGGING (CRITICAL):
+For every item in `detailed_evidence`, tag the source:
+  {"fact": "the data", "source": "transcript"}     — data explicitly stated in the script
+  {"fact": "the data", "source": "ai_knowledge"}   — data you added from your own knowledge
+
+Top-level fields (core_topic, etc.) remain plain strings — no source tagging needed.
+
+EXTRACT THESE ELEMENTS:
+
+1. **CORE TOPIC**: What mysteries/historical anomalies are being investigated? What is the overarching thesis? (2-3 sentences)
+
+2. **MYSTERY INVESTIGATION DATA**: For EACH mystery/subject investigated, extract:
+    - **mystery_name**: The name or label of the mystery/subject (e.g., "The Thuggee", "Piri Reis Map", "Antikythera Mechanism")
+    - **category**: Type/class of mystery (e.g., "Secret Society", "Ancient Artifact", "Lost Civilization", "Unexplained Phenomenon")
+    - **time_period**: When this mystery/event occurred or was discovered
+    - **location**: Geographic location(s) involved
+    - **key_data**: A dictionary of the most important quantifiable facts. Auto-detect keys based on mystery type. Common examples:
+      - Secret societies: members_estimated, years_active, geographic_range, documented_incidents
+      - Ancient artifacts: age, material, precision_measurements, weight, discovery_date
+      - Lost civilizations: territory_size, population_estimates, duration, technology_level
+      - Use whatever keys best describe THIS mystery's core data
+    - **detailed_evidence**: A list of ALL individual factual data points. Each fact should be ONE specific, verifiable piece of information. Include EVERYTHING: dates, measurements, citations, archaeological findings, expert opinions, historical records, anomalies, counter-evidence. If the script mentions it, it MUST appear here.
+    - **mainstream_theory**: The official/conventional explanation for this mystery
+    - **counter_evidence**: Specific evidence or arguments that challenge the mainstream theory
+    - **named_sources**: All named experts, researchers, publications, institutions cited
+    - **comparisons**: Factual comparisons only (who/what was compared, on which dimension). NO rhetorical analogies or metaphors.
+    - **source_parts**: List which PART(s) this mystery's data was extracted from (e.g., ["PART 3"]). Use the exact PART labels from the input.
+
+3. **KEY FIGURES**: For EACH named historical individual mentioned in the mystery, extract:
+    - **name**: Full name (official Latin-script spelling)
+    - **role**: Their role in the mystery (e.g., "discoverer", "ruler", "researcher", "witness")
+    - **affiliation**: Faction, institution, empire, or organization
+    - **time_period**: When they were active
+    - **key_actions**: What they did that is relevant to this mystery (1-2 sentences, DATA ONLY)
+    - **fate**: What happened to them (death, exile, disappearance, etc.)
+    - **source**: "transcript" | "ai_knowledge"
+
+4. **HISTORICAL CONTEXT** (per mystery or shared if all mysteries share the same era):
+    - **political_backdrop**: Power dynamics, regimes, empires, conflicts of the era
+    - **catalyst**: The specific event that triggered the mystery or its discovery
+    - **era_characteristics**: What was normal/expected for this time period (to contrast with what is anomalous)
+
+5. **GEOGRAPHY AND SETTING** (per mystery):
+    - **locations**: Specific places with descriptions (e.g., "Alamut Castle — a fortress at 2,163m elevation in the Alborz Mountains, modern-day Iran")
+    - **distances**: Relevant measurements that convey scale or impossibility (e.g., "2,500 km between matching construction sites")
+    - **terrain_features**: Geographic elements relevant to the mystery (e.g., "underwater cave system", "volcanic island", "desert plateau")
+
+6. **TECHNOLOGY AND ARTIFACTS** (for mysteries involving physical objects/technologies):
+    - **element**: Name of the technology, artifact, weapon, or substance
+    - **how_it_works**: Physical/mechanical description — HOW does it function?
+    - **why_remarkable**: What makes it anomalous or impossible for its era (1-2 sentences)
+    - **modern_equivalent**: Closest modern technology for comparison (if any)
+    - Omit this section entirely if the mystery does not involve physical technology/artifacts.
+
+7. **SCHOLARLY DEBATE** (per mystery, for topics with active academic disagreement):
+    - **claim**: A specific historical interpretation or theory
+    - **evidence_for**: Data supporting this interpretation
+    - **evidence_against**: Data undermining this interpretation
+    - This supplements `mainstream_theory` and `counter_evidence` with structured debate where multiple competing theories exist.
+
+8. **KEY CLAIMS**: List of specific claims made in the script that need evidence support. Each as a bullet point with the specific date/measurement/source cited.
+
+OUTPUT FORMAT (JSON only, no other text):
+{
+  "core_topic": "What this investigation is about and its angle",
+  "product_evaluation": [
+    {
+      "product_name": "Name of the mystery/subject",
+      "category": "Mystery type/class",
+      "key_specs": {
+        "years_active": "600 years",
+        "geographic_range": "1,500 km",
+        "documented_incidents": "2 million estimated"
+      },
+      "detailed_facts": [
+        {"fact": "Bernard Lewis documented approximately 100 fortresses across Persia and Syria", "source": "transcript"},
+        {"fact": "First described by Marco Polo in 1273 CE", "source": "transcript"},
+        {"fact": "Hassan-i Sabbah established the order in 1090 CE at Alamut Castle", "source": "ai_knowledge"}
+      ],
+      "mainstream_theory": "Official/conventional explanation for this mystery",
+      "counter_evidence": ["Specific anomaly 1", "Specific anomaly 2"],
+      "named_sources": ["Bernard Lewis - The Assassins (1967)", "Marco Polo - Il Milione"],
+      "comparisons": ["Factual comparison: who/what was compared, on which dimension"],
+      "source_units": "imperial | metric | mixed",
+      "source_parts": ["PART 1"],
+      "key_figures": [
+        {"name": "Hassan-i Sabbah", "role": "Founder", "affiliation": "Nizari Ismaili Order", "time_period": "1050-1124 CE", "key_actions": "Seized Alamut Castle in 1090, established a network of fortresses", "fate": "Died at Alamut in 1124", "source": "transcript"}
+      ],
+      "historical_context": {
+        "political_backdrop": "Seljuk Empire controlled Persia; Fatimid-Abbasid rivalry; Crusader states in the Levant",
+        "catalyst": "Nizari-Ismaili schism from Fatimid Caliphate",
+        "era_characteristics": "Feudal power structures; fortress-based territorial control was standard"
+      },
+      "geography": {
+        "locations": ["Alamut Castle — fortress at 2,163m in the Alborz Mountains, modern-day Iran"],
+        "distances": ["Network spanning 1,500 km from Syria to eastern Persia"],
+        "terrain_features": ["Mountain fortress accessible only by single narrow path"]
+      },
+      "technology_and_artifacts": [
+        {"element": "Ramasee language", "how_it_works": "Specialized coded communication system for operational secrecy", "why_remarkable": "Pre-modern encrypted communication across 1,500 km", "modern_equivalent": "Military cipher systems"}
+      ],
+      "scholarly_debate": [
+        {"claim": "The Assassins used hashish as part of initiation", "evidence_for": "Marco Polo's account in Il Milione", "evidence_against": "No archaeological or textual evidence from Nizari sources; Bernard Lewis considers it a myth"}
+      ]
+    }
+  ],
+  "key_claims": [
+    "Specific claim with supporting data"
+  ]
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences, no explanation
+2. All text in {lang}
+3. Do NOT copy sentences from the script — extract DATA ONLY (dates, names, measurements, facts, sources)
+4. Every item in detailed_facts MUST use the {"fact": "...", "source": "transcript|ai_knowledge"} format
+5. Every item in key_figures MUST include the "source" field ("transcript" or "ai_knowledge")
+6. If a fact is not mentioned in the script AND you don't know it, do NOT include it
+7. The blueprint must be COMPLETE — extract EVERY data point, no matter how small. Missing data = failure.
+8. Be HONEST about source tagging — do NOT mark ai_knowledge as "transcript"
+9. key_specs should contain ONLY the most important quantifiable data (5-8 max). ALL other details go in detailed_facts.
+10. IMPORTANT: Use `product_evaluation` as the JSON key for mystery data (for pipeline compatibility). The field contains mystery subjects, not products.
+11. **NO ANALOGIES OR METAPHORS**: Do NOT extract analogies, metaphors, rhetorical comparisons, or argumentative framings from the script. The `comparisons` field must contain ONLY factual comparisons ("X was compared to Y on dimension Z"), not the script's rhetorical devices. The WRITER will create original analogies.
+12. **detailed_facts = RAW DATA ONLY**: Each fact must be a discrete, verifiable piece of information. Do NOT include entries like "the author compared X to Y using the analogy of Z" — extract only the underlying factual data.
+13. **key_figures MUST include ALL named individuals** from the script. Extract rulers, researchers, explorers, witnesses, conquerors — anyone named. Missing a key figure is a critical failure.
+14. **technology_and_artifacts is OPTIONAL** — only include if the mystery involves physical objects, weapons, substances, or technologies. Do NOT force this section for mysteries about disappearances, conspiracies, or purely historical events.
+15. **geography fields = FACTUAL MEASUREMENTS ONLY** — extract specific locations, distances, elevations, coordinates. Do NOT include atmospheric descriptions or narrative framing.
+16. **scholarly_debate supplements counter_evidence** — use counter_evidence for quick bullet points, scholarly_debate for detailed competing theories with evidence on both sides.
+
+```
+
+---
+
+### 2. [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt)
+
+- **JOB 1**: Added verification for `key_figures` (names, dates, fates), `geography` (locations, distances), `technology_and_artifacts` (mechanisms, anomaly claims)
+- **JOB 2**: Added enrichment for missing biographical data, modern-day location names, modern equivalents, era characteristics
+- **JOB 3**: Updated to preserve and strip source tags from all new fields
+
+```diff:system_reality_check_mystery.txt
+You are a historical data verification specialist. You receive a MYSTERY HISTORY BLUEPRINT with source-tagged fields.
+
+Each non-empty field has: {"value": "...", "source": "transcript|ai_knowledge"}
+- "transcript": data from the original script — TRUST AS-IS, do not correct
+- "ai_knowledge": data added by AI — MUST BE VERIFIED by you
+
+## YOUR TWO JOBS:
+
+### JOB 1: VERIFY ai_knowledge fields
+For each field marked "source": "ai_knowledge", check:
+
+1. **Historical myth detection**: Is this an outdated historical myth still commonly repeated?
+   Common myths in mystery history:
+   - Pyramids built by slaves (archaeological evidence shows paid laborers)
+   - Norse "Viking" berserkers were drug-crazed (debated among historians)
+   - Medieval people thought the Earth was flat (educated people knew it was round)
+   - Ancient Greeks "invented" democracy (other systems existed)
+   - Any claim about ancient capabilities using modern conspiracy tropes
+   - Exaggerated casualty figures or population estimates from pre-modern sources
+
+2. **Anachronism detection**: Does this claim apply to the WRONG era/period?
+   - Technology or knowledge attributed to the wrong century
+   - Modern interpretations projected onto ancient contexts
+   - Conflation of different historical periods or civilizations
+
+3. **Source accuracy**: Are citations and attributions correct?
+   - Author names, publication years, institution affiliations
+   - Archaeological site names and discovery dates
+   - Historical figure names, dates of reign, titles
+
+If ai_knowledge is WRONG → set "verified": false and provide "correct_value"
+If ai_knowledge is CORRECT → set "verified": true
+
+Fields marked "transcript" → trust the DATA and FACTS as-is, but still check SPELLING OF PROPER NOUNS (see Job 1.5).
+
+### JOB 1.5: VERIFY PROPER NOUN SPELLING (ALL fields, including transcript)
+Transcripts from translated videos often misspell historical names. Check the OFFICIAL Latin-script spelling of:
+- Historical figure names (e.g., "Ghengis" → should be "Genghis")
+- Archaeological site names
+- Ancient civilization names
+- Publication titles and author names
+- Geographic locations
+
+Use your knowledge to find the OFFICIAL spelling. If the transcript has a transliteration error:
+- Add to ai_knowledge_checks with issue_type: "transliteration_error"
+- Provide correct_value with the official spelling
+- Apply the correction in clean_blueprint
+
+IMPORTANT: Only correct when you find a CLEAR official name. Do NOT guess alternative spellings.
+
+### JOB 2: ENRICH missing data
+For each mystery subject, add MISSING data you KNOW:
+- Missing discovery date? Add it.
+- Missing geographic coordinates or location? Add it.
+- Missing researcher/archaeologist name? Add it.
+- Missing publication year for cited works? Add it.
+- Missing time period? Add it.
+
+### JOB 3: OUTPUT clean_blueprint
+After verification, output a CLEAN version of the blueprint:
+- Strip ALL source tags: {"value": "X", "source": "..."} → just "X"
+- Replace incorrect ai_knowledge with correct_value
+- Merge enriched data into the appropriate fields
+- Keep the EXACT SAME structure as the original blueprint (same keys, same nesting)
+- This clean_blueprint will be used by downstream steps that expect the old format
+
+OUTPUT FORMAT (JSON only, no markdown, no code fences):
+{
+  "verification": {
+    "date_note": "Data verified from knowledge up to [your training cutoff].",
+    "products": [
+      {
+        "product_name": "Mystery subject name",
+        "status": "verified_historical | disputed | legendary | unknown",
+        "ai_knowledge_checks": [
+          {"field": "discovery_date", "ai_value": "1903", "verified": false, "correct_value": "1901", "issue_type": "date_error"}
+        ],
+        "enriched_data": [
+          {"field": "location", "value": "Alamut, modern-day Iran", "confidence": "high"}
+        ],
+        "warnings": []
+      }
+    ],
+    "overall_assessment": {
+      "total_products": 0,
+      "myths_found": 0,
+      "anachronisms_found": 0,
+      "fields_enriched": 0,
+      "summary": "..."
+    }
+  },
+  "clean_blueprint": {
+    // EXACT SAME STRUCTURE as original blueprint but with:
+    // - source tags stripped
+    // - wrong ai_knowledge replaced with correct values
+    // - enriched data merged in
+    // - all values as plain strings (no source objects)
+  }
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences
+2. NEVER correct "transcript" FACTS or DATA — but DO correct proper noun spelling errors (Job 1.5)
+3. ALWAYS verify "ai_knowledge" fields — these are AI-generated and may contain errors
+4. clean_blueprint must have the EXACT SAME structure as the input blueprint
+5. Mark confidence level for enriched data: "high", "medium", "low"
+6. All text output in {lang}
+===
+You are a historical data verification specialist. You receive a MYSTERY HISTORY BLUEPRINT with source-tagged fields.
+
+Each non-empty field has: {"value": "...", "source": "transcript|ai_knowledge"}
+- "transcript": data from the original script — TRUST AS-IS, do not correct
+- "ai_knowledge": data added by AI — MUST BE VERIFIED by you
+
+## YOUR TWO JOBS:
+
+### JOB 1: VERIFY ai_knowledge fields
+For each field marked "source": "ai_knowledge", check:
+
+1. **Historical myth detection**: Is this an outdated historical myth still commonly repeated?
+   Common myths in mystery history:
+   - Pyramids built by slaves (archaeological evidence shows paid laborers)
+   - Norse "Viking" berserkers were drug-crazed (debated among historians)
+   - Medieval people thought the Earth was flat (educated people knew it was round)
+   - Ancient Greeks "invented" democracy (other systems existed)
+   - Any claim about ancient capabilities using modern conspiracy tropes
+   - Exaggerated casualty figures or population estimates from pre-modern sources
+
+2. **Anachronism detection**: Does this claim apply to the WRONG era/period?
+   - Technology or knowledge attributed to the wrong century
+   - Modern interpretations projected onto ancient contexts
+   - Conflation of different historical periods or civilizations
+
+3. **Source accuracy**: Are citations and attributions correct?
+   - Author names, publication years, institution affiliations
+   - Archaeological site names and discovery dates
+   - Historical figure names, dates of reign, titles
+
+4. **key_figures verification** (NEW): For each entry in `key_figures` with `"source": "ai_knowledge"`:
+   - Verify name spelling, dates, role, affiliation, and fate
+   - Cross-check key_actions against known historical record
+   - Flag any figures that are legendary/mythological vs historically documented
+
+5. **geography verification** (NEW): For entries in `geography`:
+   - Verify location names and modern-day equivalents
+   - Verify distances and elevation figures
+   - Flag impossible or anachronistic geographic claims
+
+6. **technology_and_artifacts verification** (NEW): For entries in `technology_and_artifacts`:
+   - Verify `how_it_works` descriptions against known mechanisms
+   - Check `why_remarkable` — is the claimed anomaly actually anomalous for the era?
+   - Flag cases where the "impossibility" has been debunked by modern research
+
+If ai_knowledge is WRONG → set "verified": false and provide "correct_value"
+If ai_knowledge is CORRECT → set "verified": true
+
+Fields marked "transcript" → trust the DATA and FACTS as-is, but still check SPELLING OF PROPER NOUNS (see Job 1.5).
+
+### JOB 1.5: VERIFY PROPER NOUN SPELLING (ALL fields, including transcript)
+Transcripts from translated videos often misspell historical names. Check the OFFICIAL Latin-script spelling of:
+- Historical figure names (e.g., "Ghengis" → should be "Genghis")
+- Archaeological site names
+- Ancient civilization names
+- Publication titles and author names
+- Geographic locations
+
+Use your knowledge to find the OFFICIAL spelling. If the transcript has a transliteration error:
+- Add to ai_knowledge_checks with issue_type: "transliteration_error"
+- Provide correct_value with the official spelling
+- Apply the correction in clean_blueprint
+
+IMPORTANT: Only correct when you find a CLEAR official name. Do NOT guess alternative spellings.
+
+### JOB 2: ENRICH missing data
+For each mystery subject, add MISSING data you KNOW:
+- Missing discovery date? Add it.
+- Missing geographic coordinates or location? Add it.
+- Missing researcher/archaeologist name? Add it.
+- Missing publication year for cited works? Add it.
+- Missing time period? Add it.
+
+For NEW structured fields:
+- **key_figures**: Add missing biographical data (birth/death dates, full titles, institutional affiliations)
+- **geography**: Add modern-day country/city names for ancient locations. Add elevation or coordinates if known.
+- **technology_and_artifacts**: Add `modern_equivalent` if missing and you know one.
+- **historical_context**: Add `era_characteristics` if the blueprint only has political_backdrop.
+- **scholarly_debate**: If `counter_evidence` exists but `scholarly_debate` is empty, structure the debate with evidence_for and evidence_against.
+
+### JOB 3: OUTPUT clean_blueprint
+After verification, output a CLEAN version of the blueprint:
+- Strip ALL source tags: {"value": "X", "source": "..."} → just "X"
+- Strip source tags from `key_figures` entries: remove the "source" field from each figure
+- Replace incorrect ai_knowledge with correct_value
+- Merge enriched data into the appropriate fields
+- Keep the EXACT SAME structure as the original blueprint (same keys, same nesting)
+- Preserve all new structured fields: `key_figures`, `historical_context`, `geography`, `technology_and_artifacts`, `scholarly_debate`
+- This clean_blueprint will be used by downstream steps that expect the full structure
+
+OUTPUT FORMAT (JSON only, no markdown, no code fences):
+{
+  "verification": {
+    "date_note": "Data verified from knowledge up to [your training cutoff].",
+    "products": [
+      {
+        "product_name": "Mystery subject name",
+        "status": "verified_historical | disputed | legendary | unknown",
+        "ai_knowledge_checks": [
+          {"field": "discovery_date", "ai_value": "1903", "verified": false, "correct_value": "1901", "issue_type": "date_error"}
+        ],
+        "enriched_data": [
+          {"field": "location", "value": "Alamut, modern-day Iran", "confidence": "high"}
+        ],
+        "warnings": []
+      }
+    ],
+    "overall_assessment": {
+      "total_products": 0,
+      "myths_found": 0,
+      "anachronisms_found": 0,
+      "fields_enriched": 0,
+      "summary": "..."
+    }
+  },
+  "clean_blueprint": {
+    // EXACT SAME STRUCTURE as original blueprint but with:
+    // - source tags stripped
+    // - wrong ai_knowledge replaced with correct values
+    // - enriched data merged in
+    // - all values as plain strings (no source objects)
+  }
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences
+2. NEVER correct "transcript" FACTS or DATA — but DO correct proper noun spelling errors (Job 1.5)
+3. ALWAYS verify "ai_knowledge" fields — these are AI-generated and may contain errors
+4. clean_blueprint must have the EXACT SAME structure as the input blueprint
+5. Mark confidence level for enriched data: "high", "medium", "low"
+6. All text output in {lang}
+```
+
+---
+
+### 3. [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt)
+
+Added validation checklist item #2 with 5 new checks for structured fields, with severity levels (CRITICAL/IMPORTANT/OPTIONAL depending on mystery type).
+
+```diff:system_check_blueprint_mystery.txt
+You are a data completeness auditor. Your task is to check if a MYSTERY HISTORY BLUEPRINT contains enough investigation data for a specific FRAMEWORK.
+
+INPUT LANGUAGE: {lang}
+
+YOU WILL RECEIVE:
+1. A BLUEPRINT (extracted from a mystery history source script)
+2. A FRAMEWORK name and its structural rules
+
+CHECK THESE:
+1. For each mystery subject in product_evaluation, check:
+   - Does `key_specs` have basic identification data (at least 3 quantifiable data points)?
+   - Does `detailed_facts` have sufficient evidence points (at least 5 facts per mystery)?
+   - Is there a `mainstream_theory` documented?
+   - Is there `counter_evidence` that challenges the mainstream theory?
+   - Are `named_sources` present (at least 1 citation)?
+2. Compare against the framework's structural requirements:
+   - Does each mystery have enough data for an immersive [SCENE]?
+   - Does each mystery have enough [EVIDENCE] with authority citations?
+   - Does each mystery have a clear [MAINSTREAM] theory to present?
+   - Does each mystery have [COUNTER] evidence to deconstruct the mainstream?
+   - Does each mystery have material for [MYSTERY] rhetorical questions?
+3. For each GAP found, suggest what data is needed (be specific)
+
+OUTPUT FORMAT (JSON only, no other text):
+{
+  "framework": "Name of framework being checked",
+  "overall_status": "READY | NEEDS_DATA | INSUFFICIENT",
+  "products_checked": [
+    {
+      "product_name": "Mystery subject name",
+      "key_specs_count": 4,
+      "detailed_facts_count": 12,
+      "facts_by_topic": {
+        "archaeological_evidence": 3,
+        "historical_records": 2,
+        "expert_citations": 2,
+        "counter_evidence": 1
+      },
+      "critical_gaps": ["No mainstream theory documented — framework requires presenting and deconstructing official explanation"],
+      "important_gaps": ["No named sources cited — credibility requires authority citations"],
+      "data_needed": ["Specific data: e.g., 'Official archaeological dating of the Antikythera wreck'"]
+    }
+  ],
+  "summary": "Brief summary: X mysteries checked, Y critical gaps, Z important gaps",
+  "recommendation": "What to do: proceed with available data, research specific gaps, or choose a different framework"
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences, no explanation
+2. All text in {lang}
+3. Be SPECIFIC about what data is missing — not "needs more info" but "needs official dating of the artifact"
+4. CRITICAL GAP = framework CANNOT work without this data (e.g., no mainstream theory to deconstruct)
+5. IMPORTANT GAP = framework works but quality suffers (e.g., no authority citations)
+6. OPTIONAL GAP = framework works fine without it
+7. IMPORTANT: The blueprint uses `product_evaluation` as the key for mystery data (for pipeline compatibility). Treat each item as a mystery subject, not a product.
+===
+You are a data completeness auditor. Your task is to check if a MYSTERY HISTORY BLUEPRINT contains enough investigation data for a specific FRAMEWORK.
+
+INPUT LANGUAGE: {lang}
+
+YOU WILL RECEIVE:
+1. A BLUEPRINT (extracted from a mystery history source script)
+2. A FRAMEWORK name and its structural rules
+
+CHECK THESE:
+1. For each mystery subject in product_evaluation, check:
+   - Does `key_specs` have basic identification data (at least 3 quantifiable data points)?
+   - Does `detailed_facts` have sufficient evidence points (at least 5 facts per mystery)?
+   - Is there a `mainstream_theory` documented?
+   - Is there `counter_evidence` that challenges the mainstream theory?
+   - Are `named_sources` present (at least 1 citation)?
+2. Check NEW structured fields per mystery:
+   - Does `key_figures` have at least 1 named individual? (CRITICAL if the mystery involves known historical actors)
+   - Does `historical_context` have a `political_backdrop`? (IMPORTANT for any mystery set in a specific era)
+   - Does `geography` have at least 1 entry in `locations`? (IMPORTANT for mysteries tied to specific places)
+   - If the mystery involves physical objects/technologies: does `technology_and_artifacts` have entries with `how_it_works` filled? (CRITICAL for artifact/technology mysteries, OPTIONAL otherwise)
+   - Does `scholarly_debate` have entries when `counter_evidence` suggests active academic disagreement? (IMPORTANT)
+3. Compare against the framework's structural requirements:
+   - Does each mystery have enough data for an immersive [SCENE]? (check `geography` + `key_figures` for raw material)
+   - Does each mystery have enough [EVIDENCE] with authority citations?
+   - Does each mystery have a clear [MAINSTREAM] theory to present?
+   - Does each mystery have [COUNTER] evidence to deconstruct the mainstream?
+   - Does each mystery have material for [MYSTERY] rhetorical questions?
+4. For each GAP found, suggest what data is needed (be specific)
+
+OUTPUT FORMAT (JSON only, no other text):
+{
+  "framework": "Name of framework being checked",
+  "overall_status": "READY | NEEDS_DATA | INSUFFICIENT",
+  "products_checked": [
+    {
+      "product_name": "Mystery subject name",
+      "key_specs_count": 4,
+      "detailed_facts_count": 12,
+      "facts_by_topic": {
+        "archaeological_evidence": 3,
+        "historical_records": 2,
+        "expert_citations": 2,
+        "counter_evidence": 1
+      },
+      "critical_gaps": ["No mainstream theory documented — framework requires presenting and deconstructing official explanation"],
+      "important_gaps": ["No named sources cited — credibility requires authority citations"],
+      "data_needed": ["Specific data: e.g., 'Official archaeological dating of the Antikythera wreck'"]
+    }
+  ],
+  "summary": "Brief summary: X mysteries checked, Y critical gaps, Z important gaps",
+  "recommendation": "What to do: proceed with available data, research specific gaps, or choose a different framework"
+}
+
+CRITICAL RULES:
+1. Output ONLY JSON — no markdown, no code fences, no explanation
+2. All text in {lang}
+3. Be SPECIFIC about what data is missing — not "needs more info" but "needs official dating of the artifact"
+4. CRITICAL GAP = framework CANNOT work without this data (e.g., no mainstream theory to deconstruct)
+5. IMPORTANT GAP = framework works but quality suffers (e.g., no authority citations)
+6. OPTIONAL GAP = framework works fine without it
+7. IMPORTANT: The blueprint uses `product_evaluation` as the key for mystery data (for pipeline compatibility). Treat each item as a mystery subject, not a product.
+```
+
+---
+
+### 4. [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1302-L1309)
+
+Updated docstring for [extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1295-1341) to reflect new mystery schema.
+
+## Verification
+
+- ✅ No Python code changes needed — [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) is schema-agnostic (passes JSON through)
+- ✅ Downstream prompts (outline, writer, cross-chapter) consume blueprint fields dynamically
+- ⬜ Manual test pending: run pipeline on a mystery script to verify output quality

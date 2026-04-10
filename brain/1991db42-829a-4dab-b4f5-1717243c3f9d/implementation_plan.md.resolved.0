@@ -1,0 +1,173 @@
+# SRT Chapter Splitter — Implementation Plan
+
+Ứng dụng PyQt6 Desktop để chia file SRT kịch bản YouTube thành các chapter lớn bằng AI. Hỗ trợ 2 loại kịch bản: dạng Top/List (mỗi chapter độc lập) và dạng liền mạch (chia theo luận điểm/mạch kể). Xử lý batch, xác minh tự động, lưu kết quả từng item ngay khi hoàn thành.
+
+## Proposed Changes
+
+### Project Structure
+
+```
+2.Script_Split_Chapter/
+├── main.py                    # Entry point
+├── requirements.txt           # PyQt6, requests
+├── core/                      # Backend logic (no UI imports)
+│   ├── __init__.py
+│   ├── api_client.py          # Multi-endpoint API router + failover
+│   ├── config_manager.py      # JSON config save/load per-tab
+│   ├── srt_parser.py          # Parse .srt files
+│   ├── chapter_splitter.py    # AI chapter splitting + verification
+│   └── process_controller.py  # ThreadPoolExecutor, start/pause/stop
+├── ui/                        # All UI components
+│   ├── __init__.py
+│   ├── theme.py               # Dark/Light QSS + apply_theme()
+│   ├── icons/                 # SVG arrows for ComboBox/SpinBox
+│   │   ├── arrow_down.svg
+│   │   └── arrow_up.svg
+│   ├── searchable_combo.py    # QComboBox with filter popup
+│   ├── log_section.py         # Processing Log panel (copy, clear)
+│   ├── header_bar.py          # App name, version, Settings, Restart
+│   ├── settings_dialog.py     # Endpoints, Theme, API keys
+│   ├── projects_section.py    # QTreeWidget with folder grouping
+│   ├── chapter_tab.py         # Main tab: config + projects + actions
+│   └── main_window.py         # QMainWindow + QTabWidget + splitter
+├── prompts/                   # External .txt prompt files
+│   ├── system_toplist.txt     # System prompt for Top/List scripts
+│   ├── system_narrative.txt   # System prompt for Narrative scripts
+│   ├── system_verify.txt      # Verification prompt
+│   └── fallback_chapter.txt   # Default fallback
+├── logs/                      # API call history (auto-created)
+└── output/                    # Generated chapter files (auto-created)
+```
+
+---
+
+### Core Backend
+
+#### [NEW] [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py)
+- Class `APIClient` — multi-endpoint router
+- Loads endpoints from `api_keys.json` (base_url, api_key, model, enabled)
+- `call_api(messages, endpoint_index)` — sends request, returns response
+- Auto-failover: on HTTP 429/5xx, tries next enabled endpoint
+- Optional API logging to `logs/api_history.jsonl` (timestamp, endpoint, model, prompt, response, status_code)
+
+#### [NEW] [config_manager.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py)
+- `save_config(tab_name, data)` → saves to `{tab_name}_config.json`
+- `load_config(tab_name)` → loads from JSON, returns dict
+- `save_api_keys(endpoints)` / `load_api_keys()` → `api_keys.json`
+- `save_settings(settings)` / `load_settings()` → `settings.json` (theme, language)
+
+#### [NEW] [srt_parser.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/srt_parser.py)
+- `parse_srt(filepath)` → returns list of `SrtEntry(index, start, end, text)`
+- `srt_to_text(entries, include_timecodes)` → plain text optionally with timecodes
+- Handles UTF-8 BOM, various line endings
+
+#### [NEW] [chapter_splitter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py)
+- `split_chapters(srt_text, script_type, api_client, include_timestamps)` → list of Chapter objects
+- Two modes: `top_list` (independent entities) and `narrative` (analyze structure)
+- Reads prompts from `prompts/system_toplist.txt` or `prompts/system_narrative.txt`
+- Verification step: calls AI again with `prompts/system_verify.txt` to validate chapters
+- `save_chapters(chapters, output_dir, base_filename)` → saves each chapter as separate .txt
+- `merge_chapters(chapters, output_dir, base_filename)` → single merged .txt
+- `save_summary(chapters, output_dir, base_filename)` → summary .txt file
+- **Preserves original SRT content 100%** — no text modification
+
+#### [NEW] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/process_controller.py)
+- `ProcessController` with `ThreadPoolExecutor(max_workers=threads)`
+- State machine: IDLE → RUNNING ↔ PAUSED → STOPPED → IDLE
+- `start(items, callback)`, `pause()`, `resume()`, `stop()`
+- Uses `threading.Event` for pause/resume
+- Auto-save: saves result immediately when each item completes
+- Emits progress via callback (thread-safe, UI updates via `QTimer.singleShot`)
+
+---
+
+### UI Layer
+
+#### [NEW] [theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/theme.py)
+- `_build_stylesheet(tokens)` — single function generating full QSS
+- `get_dark_stylesheet()` / `get_light_stylesheet()`
+- `apply_theme(app, theme_name)` — sets global stylesheet
+- SVG icon paths with forward-slash for Windows Qt compatibility
+
+#### [NEW] [searchable_combo.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/searchable_combo.py)
+- `SearchableComboBox(QComboBox)` — editable combo with QCompleter filtering
+
+#### [NEW] [log_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py)
+- `LogSection(QWidget)` — scrollable text log with `[HH:MM:SS] message` format
+- Buttons: Copy (clipboard), Clear
+- Auto-scroll to bottom on new entries
+- `log(message)` method for external calls
+
+#### [NEW] [header_bar.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/header_bar.py)
+- App title "SRT Chapter Splitter", version label, Settings button, Restart button
+
+#### [NEW] [settings_dialog.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/settings_dialog.py)
+- QDialog with QScrollArea
+- **API Endpoints section**: dynamic add/remove endpoints (base_url, api_key masked, model, enable toggle)
+- **Theme section**: Dark/Light radio buttons
+- Save/Cancel buttons
+
+#### [NEW] [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/projects_section.py)
+- `ProjectsSection(QWidget)` — QTreeWidget with columns (Name, Type, Status, Progress)
+- Scan Folder (`.srt` files), Add Files, Remove Selected, Clear All
+- Folder grouping in tree view, duplicate prevention
+- Context menu or buttons for actions
+
+#### [NEW] [chapter_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)
+- Main tab combining all controls:
+  - **Config row**: Script Type combo (Top/List, Narrative), Threads SpinBox, Output folder selector, Include Timestamps checkbox, Log API checkbox
+  - **Projects panel** (left via QSplitter)
+  - **Actions panel** (right): Start, Pause, Stop, Retry Failed, Open Output, Merge Results
+  - Save Config button
+- Connects to `ProcessController` for batch processing
+
+#### [NEW] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- QMainWindow with:
+  - Header bar (top)
+  - QTabWidget (center) — currently one tab (SRT Chapter)
+  - Log section (bottom, collapsible via QSplitter)
+
+#### [NEW] [main.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/main.py)
+- Entry point: `QApplication` → load theme → show `MainWindow` → `app.exec()`
+
+---
+
+### Prompts
+
+#### [NEW] prompts/system_toplist.txt
+System prompt for splitting Top/List style scripts — instruct AI to identify each independent entity as a chapter.
+
+#### [NEW] prompts/system_narrative.txt  
+System prompt for splitting narrative scripts — instruct AI to analyze content flow, identify shifts in argument, evidence, emotion, or narrative arc.
+
+#### [NEW] prompts/system_verify.txt
+Verification prompt — asks AI to check if chapter splits are logical and appropriate.
+
+#### [NEW] prompts/fallback_chapter.txt
+Default fallback prompt if other prompt files are missing.
+
+---
+
+## Verification Plan
+
+### Automated (Launch Test)
+1. Install dependencies: `pip install PyQt6 requests`
+2. Run the app: `python main.py`
+3. Verify window opens without errors, UI renders correctly
+4. Run import check: `python -c "from ui.main_window import MainWindow; from core.api_client import APIClient; print('OK')"`
+
+### Browser Visual Verification
+- Launch app and capture screenshot to verify:
+  - Dark theme renders correctly
+  - Header bar shows app name + buttons
+  - Tab layout with splitter works
+  - Log section at bottom with Copy/Clear buttons
+  - Settings dialog opens with endpoint config
+
+### Manual Verification (User)
+1. **Theme Toggle**: Open Settings → switch Dark/Light → verify all widgets update
+2. **File Management**: Scan a folder containing `.srt` files → verify tree view populates, duplicates blocked
+3. **API Processing**: Configure an endpoint with a valid API key → select an SRT file → Start → verify chapters are generated as `.txt` files in output folder
+4. **Pause/Stop**: During batch processing, test Pause (resumes correctly) and Stop (halts gracefully)
+5. **Config Persistence**: Change settings → close app → reopen → verify config loaded
+6. **Output Files**: Check generated chapter files preserve 100% original SRT content with timecodes

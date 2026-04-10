@@ -1,0 +1,149 @@
+# Upgrade Mystery Blueprint Extraction
+
+Thêm 5 category dữ liệu có cấu trúc vào mystery blueprint để writer có raw material đầy đủ hơn, đồng thời xóa 3 field ordering đã deprecated.
+
+## Proposed Changes
+
+### Mystery Blueprint Extraction
+
+#### [MODIFY] [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+
+**Remove** (3 deprecated fields — outline step tự quyết ordering):
+- `ranking_criteria` (dòng 73, dòng 41 `escalation_criteria`)
+- `original_order` (dòng 74, dòng 42)
+- `thesis_angle` (dòng 75, dòng 43, dòng 18)
+- Rule 9 về ordering (dòng 90) → xóa vì không còn `original_order`
+
+**Add** 5 new structured categories vào phần **EXTRACT THESE ELEMENTS** và **OUTPUT FORMAT**:
+
+```
+3. KEY FIGURES (per mystery):
+   - name, role, faction/affiliation
+   - time_period, location
+   - key_actions: what they did that matters
+   - fate: what happened to them
+   - source: transcript | ai_knowledge
+
+4. HISTORICAL CONTEXT (per mystery):
+   - political_backdrop: power dynamics, regimes, conflicts
+   - catalyst: specific event that triggered this mystery
+   - era_characteristics: what was normal/unusual for this period
+
+5. GEOGRAPHY AND SETTING (per mystery):  
+   - locations: specific places with coordinates/descriptions
+   - distances: relevant measurements that convey scale/impossibility
+   - terrain_features: geographic elements relevant to the mystery
+
+6. TECHNOLOGY AND ARTIFACTS (if applicable per mystery):
+   - element: name of technology/artifact/weapon
+   - how_it_works: physical/mechanical description
+   - why_remarkable: what makes it anomalous for its era
+   - modern_equivalent: closest modern comparison (if any)
+
+7. SCHOLARLY DEBATE (per mystery):
+   - claim: specific historical interpretation
+   - evidence_for: supporting evidence
+   - evidence_against: counter-evidence
+```
+
+**JSON schema update** — add new fields inside `product_evaluation[]`:
+
+```json
+{
+  "product_evaluation": [
+    {
+      "product_name": "...",
+      "category": "...",
+      "key_specs": {},
+      "detailed_facts": [],
+      "mainstream_theory": "...",
+      "counter_evidence": [],
+      "named_sources": [],
+      "comparisons": [],
+      "source_units": "...",
+      "source_parts": [],
+      "key_figures": [
+        {"name": "...", "role": "...", "affiliation": "...", "key_actions": "...", "fate": "...", "source": "transcript|ai_knowledge"}
+      ],
+      "historical_context": {
+        "political_backdrop": "...",
+        "catalyst": "...",
+        "era_characteristics": "..."
+      },
+      "geography": {
+        "locations": ["..."],
+        "distances": ["..."],
+        "terrain_features": ["..."]
+      },
+      "technology_and_artifacts": [
+        {"element": "...", "how_it_works": "...", "why_remarkable": "...", "modern_equivalent": "..."}
+      ],
+      "scholarly_debate": [
+        {"claim": "...", "evidence_for": "...", "evidence_against": "..."}
+      ]
+    }
+  ],
+  "key_claims": ["..."]
+}
+```
+
+**New rules to add:**
+- `key_figures` extraction: extract ALL named individuals. Tag source as [transcript](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py#77-191) or `ai_knowledge`.
+- `technology_and_artifacts`: only for mysteries involving physical objects/technologies. Omit if not applicable.
+- `scholarly_debate`: structured alternative to flat `counter_evidence`. Keep `counter_evidence` for quick list, debate for detailed arguments.
+- All new fields: extract DATA ONLY — no narrative framing, no emotional interpretation.
+
+---
+
+### Reality Check Prompt
+
+#### [MODIFY] [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt)
+
+Add verification rules for new fields in **JOB 1** section:
+- Verify `key_figures` names, dates, fates (especially `ai_knowledge` entries)
+- Verify `geography.locations` and `geography.distances`
+- Verify `technology_and_artifacts.how_it_works` accuracy
+- Verify `historical_context.catalyst` dates/events
+
+Add new fields to **JOB 2 (ENRICH)** section:
+- Enrich missing `key_figures` entries with basic biographical data
+- Enrich missing `geography.locations` with modern-day equivalents
+- Enrich missing `technology_and_artifacts.modern_equivalent`
+
+Update **JOB 3 (clean_blueprint)** to include new fields in the stripped output.
+
+---
+
+### Blueprint Check Prompt
+
+#### [MODIFY] [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt)
+
+Add checks for new structured fields:
+- Does each mystery have at least 1 `key_figure`?
+- Does each mystery have `historical_context.political_backdrop`?
+- Does each mystery have at least 1 `geography.location`?
+- For technology mysteries: does it have `technology_and_artifacts` with `how_it_works`?
+
+---
+
+### Python Code
+
+#### No changes needed to [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+[extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1295-1339) (L1295) passes blueprint JSON through without field-specific access. All 3 downstream functions ([reality_check_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2130-2180), [check_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1936-1991), [create_mystery_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2569-2704)) receive the full blueprint dict and forward it to prompts — fully schema-agnostic.
+
+> [!NOTE]
+> [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) docstring tại L1305 mentions `ranking_criteria, original_order, thesis_angle` — nên update docstring nhưng không bắt buộc.
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Sau khi sửa xong, chạy pipeline trên 1 script mystery thật:
+   - Mở app → Style Rewrite tab → chọn mode Top/List Review, niche "bí ẩn lịch sử"
+   - Load 1 script test → Run bước "Extract Blueprint" 
+   - Kiểm tra output JSON có đầy đủ 5 category mới
+   - Kiểm tra không còn `ranking_criteria`, `original_order`, `thesis_angle`
+   - Tiếp tục chạy Reality Check → kiểm tra new fields được verify/enrich
+   - Chạy Check Blueprint → kiểm tra new fields được validate

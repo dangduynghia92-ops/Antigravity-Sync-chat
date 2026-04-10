@@ -1,0 +1,64 @@
+# Chronological Framework Refactoring — Audit Report
+
+## Tổng quan Pipeline và Kết quả Kiểm tra
+
+### ✅ Không cần thay đổi (hoạt động độc lập)
+| Component | Lý do |
+|---|---|
+| `_pre_score_frameworks()` | Đọc `evaluation_focus` → không liên quan steps |
+| `recommend_framework` prompt | Chấm theo data richness, không đọc steps |
+| `extract_blueprint` prompt | Extract data facts, không liên quan narrative flow |
+| `_extract_style_for_framework()` | Trả framework JSON (đã có `lens`) → hoạt động tự nhiên |
+
+---
+
+### ✅ Đã cập nhật
+
+#### 1. Style JSON (`narrative_tiểu_sử_nhân_vật.json`)
+- **Hai Mặt**: 7→6 steps (bỏ Thiên Tài, Vết Nứt, Bóng Tối, Nhân Chứng → thêm Nguồn Gốc, Trỗi Dậy, Sụp Đổ)
+- **Bản Án**: 7→6 steps (bỏ Con Người, Khám Phá, Kháng Cự, Bức Hại, Hủy Diệt → thêm Nguồn Gốc, Trỗi Dậy, Đỉnh Cao, Sụp Đổ)
+- **Kẻ Xét Lại**: 7→6 steps (bỏ Ai Viết, Bối Cảnh, Bằng Chứng, Lật Ngược, Ai Hưởng Lợi → thêm Nguồn Gốc, Trỗi Dậy, Đỉnh Cao, Sụp Đổ)
+- **Sử Thi**: Giữ 7 steps (đã tuyến tính), thêm `lens`
+- **Sự Lụi Tàn**: Giữ 7 steps (đã tuyến tính), thêm `lens`
+- **outline_rules.middle_chapters**: 3 frameworks cập nhật → "CHRONOLOGICAL body"
+
+#### 2. Phase Plan Prompt (MỚI: `system_narrative_phase_plan_biography.txt`)
+- Tách bước phase planning ra API call riêng
+- Thêm CHRONOLOGICAL MAPPING rules (8-9)
+
+#### 3. Outline Prompt (`system_narrative_outline_biography.txt`)
+- Thêm CHRONOLOGICAL BODY rule + MICRO-CALLBACK (1-4 câu)
+- Cập nhật `key_data` instruction → tham chiếu `lens`
+- Cập nhật density splitting → "If PRE-PLANNED mapping provided, FOLLOW IT"
+
+#### 4. Audit Prompt (`system_narrative_audit_biography.txt`)
+- Thêm audit check #16: CHRONOLOGICAL ORDER → flag nếu body chapter nhảy ngược thời gian
+
+#### 5. Write Prompt (`system_narrative_write_biography.txt`)
+- Thêm CHRONOLOGICAL BODY rule
+- Thêm MICRO-CALLBACK ví dụ (✓ vs ✗)
+- Thêm lens reference instruction
+
+#### 6. Code Logic (`core/rewriter.py`)
+- Thêm `generate_phase_plan()` function
+- Thêm `phase_plan` param cho `generate_renew_outline_v2()`
+- Thêm `narrative_phase_plan` entry vào `_NICHE_PROMPT_MAP`
+
+#### 7. Pipeline (`ui/rewrite_style_tab.py`)
+- Tách `_run_shared_fw_pipeline` thành 2 steps: Phase Plan → Outline
+- Import `generate_phase_plan`
+
+---
+
+### 🐛 Bug phát hiện và sửa
+| Bug | Nơi | Fix |
+|---|---|---|
+| **Missing niche map** | `_NICHE_PROMPT_MAP` thiếu `narrative_phase_plan` | Thêm entry cho biography niche |
+| **Outline vẫn yêu cầu phase_plan** | Outline prompt dòng 17 | Sửa → "If pre-planned provided, FOLLOW IT" |
+
+---
+
+### Verification
+- ✅ JSON parse test passed (5 frameworks, all steps have `lens`)
+- ✅ Import test passed (`generate_phase_plan`, `generate_renew_outline_v2`)
+- ✅ Niche map lookup test passed (`narrative_phase_plan` → `system_narrative_phase_plan_biography.txt`)

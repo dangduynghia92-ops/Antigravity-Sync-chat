@@ -1,0 +1,12 @@
+# Tasks
+
+- [x] Fix `[CHAPTER_FILE]` label leak in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Fix index misalignment in mystery pipeline ([rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py))
+- [x] Fix index misalignment in narrative pipeline ([rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py))
+- [x] Add cold open: [structure_human_anchor.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_human_anchor.txt)
+- [x] Add cold open: [structure_detective_trail.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_detective_trail.txt)
+- [x] Add cold open: [structure_mythbuster.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_mythbuster.txt)
+- [x] Add cold open: [structure_conflicting_accounts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_conflicting_accounts.txt)
+- [x] Add cold open: [structure_innocent_facade.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_innocent_facade.txt)
+- [x] Add cold open: [structure_bureaucratic_anomaly.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_bureaucratic_anomaly.txt)
+- [x] Add cold open: [structure_ticking_clock.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_ticking_clock.txt)

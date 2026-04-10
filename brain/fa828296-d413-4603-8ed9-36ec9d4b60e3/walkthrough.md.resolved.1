@@ -1,0 +1,354 @@
+# YouTube & SRT Chapter Pipeline — Full Review
+
+## Architecture Overview
+
+```mermaid
+graph LR
+    subgraph YouTube Tab
+        A[Scanner] -->|scan results| B[Download Queue]
+        B --> C[ThreadPool Download]
+        C --> D[Excel Update]
+    end
+    subgraph SRT Chapter Tab
+        E[Load Files] --> F[AI Classify]
+        F --> G[Split Chapters]
+        G --> H[Verify]
+        H --> I[Punctuate]
+        I --> J[Save + Summary]
+        J --> K[Excel Update]
+    end
+    C -->|transcript.txt| E
+```
+
+**4 Key Files:**
+| File | Lines | Role |
+|------|-------|------|
+| [youtube_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py) | 1364 | UI: downloader + scanner |
+| [yt_downloader.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py) | 1712 | Backend: yt-dlp, scan, transcript, Excel |
+| [chapter_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) | 1364 | UI: classify + split + process pipeline |
+| [chapter_splitter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py) | 1041 | Backend: split, verify, punctuate, save |
+
+---
+
+## 1. YouTube Tab — Downloader Pipeline
+
+### 1.1 Concurrent Download Architecture
+
+```mermaid
+flowchart TD
+    Start["_do_start_download()"] --> Init["Init locks: _lock, _excel_lock, _stt_lock<br/>Find highest existing STT number"]
+    Init --> Pool["ThreadPoolExecutor(max_workers=N)"]
+    Pool --> P1["_process_one(idx, url, total)"]
+    Pool --> P2["_process_one(...)"]
+    Pool --> P3["_process_one(...)"]
+    P1 --> Done["as_completed → count OK/errors"]
+    P2 --> Done
+    P3 --> Done
+    Done --> Signal["_sig_dl_done.emit()"]
+```
+
+**Key design:** Each [_process_one](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#842-1084) is fully self-contained. Thread safety uses 3 separate locks:
+
+| Lock | Protects |
+|------|----------|
+| `_stt_lock` | Sequential STT number assignment + folder existence check |
+| [_lock](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#506-520) | Counters ([done](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#491-496), `errors`) |
+| [_excel_lock](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#506-520) | All Excel file writes |
+
+### 1.2 Single Video Download Flow ([_process_one](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#842-1084))
+
+```
+Step 1: get_video_info(url) → metadata (id, title, description, channel_url)
+         ↓ fallback: regex extract video_id from URL
+Step 2: Auto-detect Excel path (channel_url → excel_folder mapping)
+Step 3: Early skip if dl_transcript && Excel status == "Done"
+Step 4: STT numbering & folder creation (reuse existing [videoID] folder)
+Step 5: Download video/audio (if checked, skip if file exists)
+Step 6: Download thumbnail (if checked, skip if file exists)
+Step 7: Download transcript (if checked, skip if file exists)
+Step 8: Update Excel → Transcript = "Done"
+```
+
+> [!TIP]
+> **Smart skip logic** — Before downloading anything, the system checks: (1) Excel status for "Done", (2) existing video files in folder, (3) existing thumbnail files, (4) existing transcript files. Each asset is independently skippable.
+
+### 1.3 Folder Naming Convention
+
+```
+{STT}_{[videoID]}_{safe_title}/
+  ├── {STT}_[{videoID}]_{safe_title}.mp4
+  ├── {STT}_{videoID}_thumb.jpg
+  └── {STT}_[{videoID}]_{safe_title}_transcript.txt
+```
+
+STT is a 3-digit zero-padded counter, auto-incrementing from the highest existing number in the save directory.
+
+---
+
+## 2. YouTube Tab — Scanner Pipeline
+
+### 2.1 Two-Phase Scanning
+
+```mermaid
+flowchart LR
+    A["scan_playlist(url)"] --> B["Phase 1: fast ID scan<br/>yt-dlp --flat-playlist"]
+    B --> C["Filter out known_ids<br/>(from Excel)"]
+    C --> D["Phase 2: detailed fetch<br/>only new video IDs"]
+    D --> E["Emit results to tree"]
+```
+
+**Phase 1** (`_fast_scan_ids`): Uses `--flat-playlist --dump-json` to get only video IDs — very fast, no full metadata.
+
+**Phase 2** (`_fetch_video_details`): For each **new** video ID, fetches full metadata (title, upload_date, duration, view_count) using yt-dlp `--dump-json`.
+
+### 2.2 Scanner Features
+
+- **Date filtering**: `_spn_scan_months` → calculates `date_after` → passed to yt-dlp for server-side filtering
+- **Excel dedup**: Loads `known_ids` from existing Excel → Phase 2 only fetches metadata for genuinely new videos
+- **Channel ↔ Excel mapping**: [get_excel_path_for_url(url, excel_folder)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#114-133) extracts channel name → `{channel_name}.xlsx`
+
+### 2.3 Excel Export & Merge
+
+[save_scan_to_excel()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#L1382-L1464) merges new scan results with existing Excel data:
+1. Load existing rows by Video ID
+2. Overlay new results (dedup by key)
+3. Sort by Published date descending
+4. Write with auto-fit column widths
+5. Handle `PermissionError` with retry popup dialog
+
+---
+
+## 3. Transcript Extraction — 3-Tier Fallback
+
+```mermaid
+flowchart TD
+    Start["Transcript Request"] --> T1["Tier 1: youtube-transcript-api<br/>(Python library, free)"]
+    T1 -->|success| Done["Return formatted text"]
+    T1 -->|fail| T2["Tier 2: yt-dlp subprocess<br/>(json3 format, free)"]
+    T2 -->|success| Done
+    T2 -->|fail| T3["Tier 3: ScrapeCreators API<br/>(paid, API key required)"]
+    T3 -->|success| Done
+    T3 -->|fail en| T3b["Retry: any language"]
+    T3b --> Done
+```
+
+### Tier Details
+
+| Tier | Function | Method | Cost |
+|------|----------|--------|------|
+| 1 | [_get_transcript_api()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#992-1059) | `youtube-transcript-api` library | Free |
+| 2 | [get_transcript_ytdlp()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169) | yt-dlp `--write-auto-subs --sub-format json3` | Free |
+| 3 | [get_transcript()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1178-1240) | ScrapeCreators REST API | Paid |
+
+**Output format** (all tiers): Inline timecodes [(0:00) text (0:05) more text ...](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1065-1067)
+
+> [!IMPORTANT]
+> The transcript text uses inline [(mm:ss)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1065-1067) timecodes which are critical for the SRT Chapter Tab's timestamp-based splitting. The `chapter_splitter` later strips these with [_strip_timecodes()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#886-892) before saving final output.
+
+---
+
+## 4. SRT Chapter Tab — Processing Pipeline
+
+### 4.1 Batch Processing Entry
+
+[_start_processing()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#L560-L680) orchestrates:
+
+```
+1. Collect checked items (local files + Google Docs)
+2. AI classify each item's script_type (if auto_classify enabled)
+3. Handle format mismatches (popup dialog)
+4. Submit matched items to ProcessController
+5. After completion → handle mismatched items
+```
+
+### 4.2 Format Classification & Mismatch Handling
+
+```mermaid
+flowchart TD
+    Items["Selected Items"] --> Classify["AI classify_script_type()<br/>→ top_list / narrative / other"]
+    Classify --> Check{"user_type == ai_type?"}
+    Check -->|match| Queue["Add to matched queue"]
+    Check -->|mismatch| Pending["Add to pending_mismatches"]
+    Queue --> Process["ProcessController.start()"]
+    Process --> Complete["_on_all_complete()"]
+    Complete --> Mismatch{"pending_mismatches?"}
+    Mismatch -->|yes| Dialog["Show format warning dialog"]
+    Dialog --> Override["User selects per-item overrides"]
+    Override --> Process2["Process mismatched items"]
+    Mismatch -->|no| Finish["Done"]
+```
+
+### 4.3 Single Item Processing ([_do_process_item](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#601-987))
+
+This is the core 4-step pipeline:
+
+````carousel
+### Step 1/4 — Split Chapters
+```
+1. Read transcript file → text_lines
+2. Extract chapter_guide (timestamps from header)
+3. Choose splitting strategy:
+   a. Timestamp-based (if guide has timestamps)
+   b. AI marker-based (fallback)
+4. Validate: check word count per chapter (min 200 words)
+5. Re-split if quality issues detected
+6. Save CSV report if issues persist
+7. 💾 Checkpoint: save_checkpoint(STEP_SPLIT)
+```
+<!-- slide -->
+### Step 2/4 — Clean & Verify
+```
+1. Delete old output files (Chapter *.txt, *.json, *_MERGED.txt, etc.)
+2. If auto_verify enabled:
+   a. verify_chapters() via AI
+   b. If timestamp-based split → save report only (don't auto-fix)
+   c. If AI-based split → retry with verification feedback
+3. 💾 Checkpoint: save_checkpoint(STEP_VERIFY)
+```
+<!-- slide -->
+### Step 3/4 — Punctuate & Save
+```
+1. If SRT parsed (raw subtitles) → punctuate_chapters() via AI
+   - ThreadPoolExecutor parallel processing
+   - Length ratio validation (0.5 < ratio < 1.5)
+2. 💾 Checkpoint: save_checkpoint(STEP_PUNCTUATE)
+3. save_chapters() → individual Chapter files (TXT/MD/JSON)
+4. merge_chapters() → single _MERGED.txt file
+```
+<!-- slide -->
+### Step 4/4 — Summary & Excel
+```
+1. If top_list OR ai_summary enabled:
+   → save_summary() via AI (JSON response → per-chapter summaries)
+2. delete_checkpoint() on success
+3. If excel_update enabled:
+   → find_excel_for_video_id() across all .xlsx files
+   → update_excel_split_status(video_id, "Done")
+```
+````
+
+---
+
+## 5. Chapter Splitting Strategies
+
+### 5.1 Timestamp-Based Splitting (Preferred)
+
+```python
+# Input: chapter_guide from YouTube description
+# Format: "0:00 Introduction\n2:15 First Topic\n5:30 Second Topic"
+
+_parse_chapter_guide(guide)  # → [(0, "Introduction"), (135, "First Topic"), (330, "Second Topic")]
+```
+
+Maps each timestamp → finds nearest [(mm:ss)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1065-1067) timecode in transcript text → splits at that position. Adjusts boundary to the nearest sentence start (`. ` or `? ` or `! `).
+
+### 5.2 AI Marker-Based Splitting (Fallback)
+
+```
+1. Send transcript text + system prompt to AI
+2. AI identifies "start markers" — distinctive phrases marking chapter boundaries
+3. Parse AI response (JSON with markers array)
+4. Find each marker in original text
+5. Adjust each boundary to nearest sentence start
+6. Generate Chapter objects with auto-numbered titles
+```
+
+> [!NOTE]
+> Both strategies use `_adjust_to_sentence_boundary()` — shifts the split point backwards to the first sentence-ending punctuation (`. `, `? `, `! `) to avoid mid-sentence breaks.
+
+---
+
+## 6. Checkpoint & Resume System
+
+```mermaid
+flowchart LR
+    subgraph Checkpoint Steps
+        S1["STEP_SPLIT"] --> S2["STEP_VERIFY"]
+        S2 --> S3["STEP_PUNCTUATE"]
+        S3 --> S4["STEP_DONE"]
+    end
+```
+
+| Function | Purpose |
+|----------|---------|
+| [save_checkpoint(output_dir, step, chapters)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#52-65) | Saves `_checkpoint.json` with step + serialized chapters |
+| [load_checkpoint(output_dir)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#67-79) | Returns [(step, chapters)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1065-1067) or `None` |
+| [delete_checkpoint(output_dir)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#81-89) | Removes checkpoint on success |
+
+**Resume logic:** When processing starts, if a checkpoint exists in the output directory, the pipeline skips already-completed steps and resumes from the saved step. This enables crash recovery for long-running batch jobs.
+
+---
+
+## 7. Excel Database — Status Tracking
+
+The Excel file serves as a persistent status tracker across the entire workflow:
+
+```mermaid
+flowchart LR
+    YT["YouTube Scanner"] -->|"Creates rows"| Excel["channel_name.xlsx"]
+    DL["YouTube Downloader"] -->|"Transcript = Done"| Excel
+    CH["Chapter Splitter"] -->|"Split = Done"| Excel
+    RW["Style Rewrite"] -->|"Rewrite = Done"| Excel
+```
+
+**Excel columns:** `Title | Published | Duration | Views | URL | Video ID | Transcript | Split | Rewrite`
+
+| Function | Updates |
+|----------|---------|
+| [save_scan_to_excel()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1382-1465) | Creates/merges rows |
+| [update_excel_transcript_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1533-1578) | `Transcript = "Done"` |
+| [update_excel_split_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1619-1666) | `Split = "Done"` |
+| [update_excel_rewrite_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1668-1712) | `Rewrite = "Done"` |
+| [check_excel_transcript_status()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1467-1498) | Read-only check for skip logic |
+| [find_excel_for_video_id()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1580-1617) | Recursive search across all `.xlsx` files |
+
+> [!TIP]
+> All Excel write operations use `PermissionError` handling — the UI shows a retry dialog if the file is open in another application.
+
+---
+
+## 8. Thread Safety & UI Communication
+
+| Pattern | Implementation |
+|---------|----------------|
+| Background processing | `threading.Thread(daemon=True)` + `ThreadPoolExecutor` |
+| UI updates | `pyqtSignal` emissions from worker threads |
+| Stop/Pause | `_stop_flag` boolean + `pause_event` (threading.Event) |
+| Excel writes | Dedicated [_excel_lock](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#506-520) per download batch |
+| STT numbering | `_stt_lock` for atomic counter increments |
+| API calls | `APIClient` with endpoint rotation + [stop_check](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1068-1070) callback |
+
+### ProcessController Pattern (Chapter Tab)
+
+The chapter tab uses a `ProcessController` that provides:
+- [start(items, process_func, threads)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1027-1036) — dispatches items to thread pool
+- [pause()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1200-1211) / [resume()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1200-1211) — via `threading.Event.clear()/set()`
+- [stop()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py#1118-1121) — sets stop flag, cancels pending futures
+- Signal callbacks: [on_item_start](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1027-1036), [on_item_complete](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1037-1049), [on_item_error](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1050-1059), [on_all_complete](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#1060-1080)
+
+---
+
+## 9. Data Flow — End to End
+
+```mermaid
+flowchart TD
+    A["YouTube URL / Playlist"] -->|scan| B["Excel: Video Metadata"]
+    B -->|filter new| C["Download Queue"]
+    C -->|download| D["001_[videoID]_title/"]
+    D --> D1["video.mp4"]
+    D --> D2["thumb.jpg"]
+    D --> D3["transcript.txt<br/>(0:00) text (0:05) text..."]
+    D3 -->|load into Chapter Tab| E["AI Classification"]
+    E --> F["Split Chapters"]
+    F --> G["output/001_title/"]
+    G --> G1["Chapter 1 - Title.txt"]
+    G --> G2["Chapter 2 - Title.txt"]
+    G --> G3["title_MERGED.txt"]
+    G --> G4["title_SUMMARY.txt"]
+    G3 -->|load into Rewrite Tab| H["Style Rewrite Pipeline"]
+    B -->|Transcript=Done| B
+    B -->|Split=Done| B
+    B -->|Rewrite=Done| B
+```
+
+This shows the complete lifecycle: **Scan → Download → Split → Rewrite**, with Excel tracking status at each stage.

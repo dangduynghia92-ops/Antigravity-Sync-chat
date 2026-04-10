@@ -1,0 +1,35 @@
+# Split Rewrite into Tab A + Tab B
+
+## Tab A: ✍️ Rewrite (giữ nguyên)
+Revert tất cả style changes → chỉ còn Top/List + Narrative + prompt cứng.
+
+---
+
+## Tab B: ✦ Style Rewrite (mới)
+
+### UI:
+```
+Row 1: Mode [Top/List ▾ | Narrative ▾]  Style [✦ xxx ▾]  Lang [English ▾]  Tier  Threads
+Row 2: Open: min~max  Body: min~max  End: min~max
+Tree:  giống Tab A
+Buttons: Load, Rewrite, Stop, Open, Clear
+```
+
+### Flow theo Mode:
+
+**Top/List + Style:**
+```
+Rewrite song song (mỗi chapter độc lập) → Verify → Done
+Prompt = Style JSON + word count + lang
+```
+
+**Narrative + Style:**
+```
+1. Outline → 2. Rewrite tuần tự → 3. Verify → 4. Review+Patch → 5. Merge → 6. Final Review
+Prompt = Style JSON + word count + lang + context chapters trước
+```
+
+### Files:
+- [NEW] `ui/rewrite_style_tab.py`
+- [MODIFY] [ui/main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) — thêm import + tab
+- [REVERT] [ui/rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) — xóa hết style code

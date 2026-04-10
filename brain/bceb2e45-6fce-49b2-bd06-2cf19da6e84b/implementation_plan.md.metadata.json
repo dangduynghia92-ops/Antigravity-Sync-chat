@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Implementation plan for adding a Resume button to the Auto Pipeline tab. The button appears after a pipeline run completes with failures, allowing the user to resume from the failed step rather than re-running the entire pipeline. Covers three components: (1) cache-aware steps in rewrite pipeline, (2) v2 failure tracking, (3) Resume button UI. Includes open questions about scope and verification plan.",
+  "updatedAt":  "2026-04-05T01:59:19.562838500Z",
+  "requestFeedback":  true
+}

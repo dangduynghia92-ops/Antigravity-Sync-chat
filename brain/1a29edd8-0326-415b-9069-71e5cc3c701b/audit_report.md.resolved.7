@@ -1,0 +1,71 @@
+# Audit: 7 MASSIVE Ancient Megaliths — v2 Post-Update
+
+> Script viết **SAU** v2 prompt changes. Outline **CÓ** v2 fields.
+
+## Outline Assignments vs Actual Output
+
+| Ch | Assigned Structure | Actual? | Assigned Closing | Actual? |
+|---|---|---|---|---|
+| 02 | **the_mythbuster** | ❌ Dùng standard Hồ Sơ Điều Tra | **physical_consequence** | ❌ Dùng 3 rhetorical questions |
+| 03 | **the_conflicting_accounts** | ⚠️ Partially (2 stories nhưng vẫn mainstream→counter) | **rhetorical_questions** | ✅ Đúng |
+| 04 | **the_detective_trail** | ⚠️ Partially (bỏ từ "detective trail" vào text!) | **cold_fact** | ✅ Đúng |
+| 05 | **the_bureaucratic_anomaly** | ✅ Đúng — gap is institutional silence | **irony** | ✅ Đúng |
+| 06 | **the_eyewitness_report** | ⚠️ Partially (dùng "witness" metaphor nhưng vẫn standard) | **rhetorical_questions** | ✅ Đúng (3 câu) |
+| 07 | **the_ticking_clock** | ✅ Đúng — legend sets deadline + speed mystery | **physical_consequence** | ❌ Dùng cold_fact |
+| 08 | **the_innocent_facade** | ✅ Đúng — facade → descend → reveal | **cold_fact** | ✅ Đúng |
+
+**Compliance rate**: Structure ~50%, Closing ~71%
+
+---
+
+## Vấn đề chính
+
+### 1. ❌ Framework Leak — "investigation" 8 lần
+
+`anti_framework_leak` được cập nhật **SAU** pipeline run này. Rule cũ chỉ nói "tên framework không xuất hiện" — không cấm vocabulary leak.
+
+| Lần | Câu |
+|-----|-----|
+| 1 | Ch01: "This **investigation** will open seven case files" |
+| 2 | Ch03: "our **investigation** now moves to..." |
+| 3 | Ch04: "our **investigation** now ascends..." |
+| 4 | Ch05: "our **investigation** now turns to..." |
+| 5 | Ch06: "our **investigation** turns to..." |
+| 6 | Ch07: "our **investigation** now travels west..." |
+| 7 | Ch08: "our final **investigation** escalates..." |
+
+> **Status**: ✅ Fixed by updated `anti_framework_leak` + WORD VARIETY rule
+
+### 2. ⚠️ Structure không follow — 3/7 chapters
+
+Ch02 (assigned mythbuster) vẫn dùng standard: Evidence → Mainstream → Counter → Questions. Writer prompt nói "FOLLOW the assigned structure" nhưng không đủ mạnh.
+
+**Root cause**: Writer nhận structure name nhưng style guide `{style_json}` vẫn chứa framework steps "Hồ Sơ Điều Tra" → AI default về framework steps thay vì chapter structure.
+
+> **Fix cần thêm**: Reinforce trong writer prompt: *"The `chapter_structure` OVERRIDES the framework's default steps. If assigned 'the_mythbuster', you MUST use the Mythbuster flow, NOT the framework's generic step order."*
+
+### 3. ⚠️ Closing Ch02 sai — assigned physical_consequence nhưng viết rhetorical
+
+Ch02 outline: `closing_type: physical_consequence`
+Ch02 actual: Kết bằng 3 câu hỏi tu từ
+
+> **Fix cần thêm**: Add enforcement: *"CRITICAL: You MUST end with the assigned closing_type. Writing rhetorical questions when assigned cold_fact/physical_consequence/irony is a STRUCTURAL FAILURE."*
+
+### 4. ⚠️ Transition template lặp
+
+6/7 body chapters mở bằng: "From [ch trước], our investigation now [verb] to..."
+
+> **Status**: ✅ Partially fixed by WORD VARIETY rule. Cần thêm rule cấm template cụ thể.
+
+---
+
+## Kết luận
+
+v2 outline **hoạt động tốt** — assign đúng structures/closings/tones. Vấn đề ở **writer side**:
+
+1. Writer prompt cần **reinforce stronger** rằng chapter_structure OVERRIDES framework default
+2. Closing type cần **hard enforcement** — violation = rewrite
+3. `anti_framework_leak` cần có hiệu lực (đã fix sau lần run này)
+4. Transition template cần blacklist cụ thể
+
+**Khuyến nghị**: Thêm 2-3 enforcement rules vào writer prompt rồi chạy lại.

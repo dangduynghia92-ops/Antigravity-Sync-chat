@@ -1,0 +1,26 @@
+# Narrative Rewrite Pipeline
+
+## Prompts
+- [x] Create [system_narrative_outline.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline.txt)
+- [x] Create [system_narrative_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_rewrite.txt)
+- [x] Create [system_narrative_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review.txt)
+
+## Core Logic ([core/rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py))
+- [x] [generate_narrative_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#533-578)
+- [x] [rewrite_chapter_narrative()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#580-660)
+- [x] [review_narrative_full()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#662-706)
+- [x] [patch_chapter_overlap()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#708-758)
+- [x] [merge_to_version()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#760-791)
+
+## UI ([ui/rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py))
+- [x] Add Mode ComboBox (Top/List | Narrative)
+- [x] [_do_narrative_rewrite()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#772-960) — main flow (steps 1–6)
+- [x] [_show_narrative_review_dialog()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#961-1048) — interactive dialog
+- [x] [_fix_narrative_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1049-1098) — fix cycle
+- [x] [_open_version_folder()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1099-1105) — open version in explorer
+- [x] Finalize → copy to [final/](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#1033-1038)
+- [x] Mode saved/loaded in config
+
+## Testing
+- [x] Import check
+- [ ] Manual test with sample chapters

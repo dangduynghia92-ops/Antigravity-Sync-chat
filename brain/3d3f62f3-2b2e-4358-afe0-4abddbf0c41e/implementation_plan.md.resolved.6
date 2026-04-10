@@ -1,0 +1,135 @@
+# TTS Cleanup Tab — Implementation Plan
+
+Tạo thẻ mới chuyển đổi kịch bản AI → file sẵn sàng cho TTS model.
+
+## Proposed Changes
+
+### Core Module
+
+#### [NEW] [tts_cleanup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+
+**Hàm chính:**
+- `cleanup_for_tts(text, api_client, lang, log_callback)` → [(cleaned_text, acronyms_list)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#30-34)
+  - Gửi text + prompt cho AI, nhận lại text đã clean + list acronyms
+  - `acronyms_list`: `[{"original": "FBI", "converted": "f b i", "type": "spelled"}, ...]`
+- `export_acronym_csv(acronym_data, output_path)` — xuất CSV report
+
+**Output naming:**
+- File: `tts_{original_name}.txt`
+- CSV: `tts_acronyms_report.csv` (1 file CSV chung, liệt kê theo từng kịch bản)
+
+**Output structure — mirror input:**
+- Input là folder → output tạo folder `tts_{folder_name}/` chứa các file
+- Input là file lẻ → output file trực tiếp, không tạo folder
+
+---
+
+#### [NEW] [system_tts_cleanup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt)
+
+Prompt AI cho **English**:
+
+| Rule | Input | Output |
+|---|---|---|
+| Ký hiệu → chữ | `@`, `$100`, `50%`, `&` | [at](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#18-38), `one hundred dollars`, `fifty percent`, `and` |
+| Viết hoa → thường | `The LOST Epoch`, `Franciszek Honiok` | `the lost epoch`, `franciszek honiok` |
+| Giữ hoa sau dấu chấm | `history. the next` | `history. The next` |
+| Số năm | `1200 BCE` | `twelve hundred b c e` |
+| Số đếm | `3 ships` | `three ships` |
+| Số thứ tự | `the 3rd king` | `the third king` |
+| Số tiền | `$47.5M` | `forty seven point five million dollars` |
+| Số thập phân | `3.14` | `three point one four` |
+| Số 0 | `0.5`, `007` | `zero point five`, `double oh seven` |
+| Số La Mã thứ tự | `Pope John III` | `pope john the third` |
+| Số La Mã tên | `World War II` | `world war two` |
+| Viết tắt có chấm | `St. Peter`, `Dr. Smith`, `Mr.` | `saint peter`, `doctor smith`, `mister` |
+| Acronym đánh vần | `FBI`, `BCE`, `CEO` | `f b i`, `b c e`, `c e o` |
+| Acronym đọc nguyên | `NASA`, `UNESCO`, `AIDS` | `nasa`, `unesco`, `aids` |
+
+---
+
+#### [NEW] [system_tts_cleanup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/es/system_tts_cleanup.txt)
+
+Prompt AI cho **Spanish** (khác biệt):
+
+| Rule | Input | Output |
+|---|---|---|
+| Ký hiệu | `$100`, `50%`, `@` | `cien dólares`, `cincuenta por ciento`, `arroba` |
+| Số năm | `1492` | `mil cuatrocientos noventa y dos` |
+| Số đếm | `3 barcos` | `tres barcos` |
+| Số thứ tự | `el 3er rey` | `el tercer rey` |
+| Số tiền | `€47,5M` | `cuarenta y siete coma cinco millones de euros` |
+| Viết tắt | `Sr.`, `Dra.`, `Av.` | `señor`, `doctora`, `avenida` |
+| Viết tắt EN trong ES | `Dr.` | `doctor` (giữ nguyên nếu context EN) |
+| Acronym đánh vần | `FBI`, `ONU` | `efe be i`, `o ene u` |
+| Acronym đọc nguyên | `NASA`, `OTAN` | `nasa`, `otan` |
+
+> [!IMPORTANT]
+> **Spanish acronym spelling** dùng tên chữ cái tiếng Tây Ban Nha:
+> `F` = `efe`, `B` = `be`, `I` = `i`, `O` = `o`, `N` = [ene](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#233-355), `U` = `u`
+
+---
+
+### UI
+
+#### [NEW] [tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+
+**Layout:**
+```
+┌──────────────────────────────────────────────┐
+│ Scan Folder │ Add Files │ Lang:[en▼] Tier:[▼]│
+│ Threads: [4] │ Output: [...]           │ Stop│
+├──────────────────────────────────────────────┤
+│ 📁 my_scripts (3)                    Status  │
+│   ✅ Chapter 1 - Bronze Age.txt  1500w  —    │
+│   ✅ Chapter 2 - Dark Ages.txt   1200w  —    │
+│   ✅ Chapter 3 - Vikings.txt     1800w  —    │
+│                                              │
+│ ✅ single_file.txt               1400w  —    │ ← file lẻ, không folder
+├──────────────────────────────────────────────┤
+│ All │ None │ Clear │ Process │ Retry │ Open  │
+└──────────────────────────────────────────────┘
+│ [Log panel]                                  │
+```
+
+**Output ví dụ — folder input:**
+```
+output/
+└── tts_my_scripts/
+    ├── tts_Chapter 1 - Bronze Age.txt
+    ├── tts_Chapter 2 - Dark Ages.txt
+    ├── tts_Chapter 3 - Vikings.txt
+    └── tts_acronyms_report.csv
+```
+
+**Output ví dụ — file lẻ:**
+```
+output/
+├── tts_single_file.txt
+└── tts_acronyms_report.csv
+```
+
+**CSV format (`tts_acronyms_report.csv`):**
+
+| Script | Original | Converted | Type |
+|---|---|---|---|
+| Chapter 1 - Bronze Age | BCE | b c e | spelled |
+| Chapter 1 - Bronze Age | UNESCO | unesco | word |
+| Chapter 2 - Dark Ages | FBI | f b i | spelled |
+| Chapter 2 - Dark Ages | St. | saint | abbreviation |
+
+---
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+Thêm `from ui.tts_tab import TTSTab` + tab "🔊 TTS Cleanup"
+
+---
+
+## Verification Plan
+
+### Manual
+- Scan folder → output tạo `tts_folder/` + CSV
+- Add file lẻ → output file trực tiếp + CSV
+- Test English: numbers, St./Dr., FBI/NASA
+- Test Spanish: $100, Sr., FBI (efe be i), NASA
+- Kiểm tra CSV liệt kê đúng theo từng script

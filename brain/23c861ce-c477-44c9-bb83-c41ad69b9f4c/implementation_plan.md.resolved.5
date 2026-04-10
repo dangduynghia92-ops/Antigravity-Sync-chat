@@ -1,0 +1,74 @@
+# Merge Into 1 Framework + 10 Chapter Structures
+
+## Problem
+
+5 frameworks nhưng AI chỉ chọn 2. Framework ép tất cả chapter cùng độ sâu. Không mix được trong 1 script.
+
+## Solution
+
+**1 unified framework** — chapter structure quyết định cả cách kể VÀ độ sâu.
+
+---
+
+## Kiến Trúc Mới
+
+### 1 Framework: "Bí Ẩn Lịch Sử"
+
+Không còn chọn framework. Tất cả script dùng 1 framework duy nhất. Variety đến từ 10 chapter structures.
+
+**Required Elements** (linh hoạt per structure):
+- `[EVIDENCE]` — bắt buộc mọi chapter
+- `[MAINSTREAM]` — bắt buộc khi structure yêu cầu
+- `[COUNTER]` — bắt buộc khi structure yêu cầu
+- `[CLOSING]` — bắt buộc mọi chapter (theo closing_type)
+
+### 10 Chapter Structures
+
+#### Giữ nguyên 7 cái cũ:
+
+| # | Structure | Flow | Mainstream→Counter? |
+|---|---|---|---|
+| 1 | Mythbuster | Belief → Refute → Real | ✅ Đầy đủ |
+| 2 | Detective Trail | Record → Lab → Discovery | ✅ Đầy đủ |
+| 3 | Bureaucratic Anomaly | System → Gap → Silence | ❌ Gap IS argument |
+| 4 | Eyewitness Report | Witness → Helpless → Erased | ⚠️ Tuỳ data |
+| 5 | Conflicting Accounts | Side A → Side B → Science | ✅ Đầy đủ |
+| 6 | Ticking Clock | Doom → Last acts → Vanish | ❌ Urgency driven |
+| 7 | Innocent Facade | Harmless → Peel → Lethal | ⚠️ Tuỳ data |
+
+#### 3 cái MỚI (từ 3 framework cũ):
+
+| # | Structure | Flow | Mainstream→Counter? | Từ framework |
+|---|---|---|---|---|
+| 8 | **The Grand Scale** | Awe → Anticlimax → Rebuild | ✅ Anticlimax=mainstream | Kinh Ngạc→Thất Vọng |
+| 9 | **The Academic Duel** | Thesis A → Thesis B → Evidence | ✅ Dialectic | Luận Đề→Phản Đề |
+| 10 | **The Human Thread** | Person → Pattern → Implication | ❌ Story driven | Câu Chuyện Nhỏ |
+
+---
+
+## Proposed Changes
+
+### [MODIFY] [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_bí_ẩn_lịch_sử.json)
+
+1. **`frameworks` array**: Gộp thành 1 entry duy nhất "Bí Ẩn Lịch Sử"
+   - `steps`: Required elements linh hoạt
+   - Xóa 5 framework entries cũ
+2. Giữ nguyên: `openings`, `closings`, `techniques`, `checklist`, `transitions`
+
+### [MODIFY] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt)
+
+1. **CHAPTER STRUCTURE section**: Thêm 3 structures mới (#8, #9, #10) với mô tả
+2. **Remove**: Framework selection logic (không cần chọn framework nữa)
+3. Remove `framework_used` from output format (hoặc hardcode "Bí Ẩn Lịch Sử")
+
+### [MODIFY] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt)
+
+1. **BODY CHAPTER section**: Thêm 3 structures mới (#8, #9, #10)
+2. **REQUIRED ELEMENTS**: Đổi thành conditional — `[MAINSTREAM]` và `[COUNTER]` chỉ bắt buộc khi structure yêu cầu
+
+---
+
+## Verification
+
+- Script có 8 mysteries → AI có thể mix: 3 chapter dùng Mythbuster (sâu) + 2 Ticking Clock (nhẹ) + 2 Grand Scale (trung) + 1 Human Thread (nhẹ)
+- Không chapter nào bị ép sâu/nhẹ bởi framework — structure tự quyết

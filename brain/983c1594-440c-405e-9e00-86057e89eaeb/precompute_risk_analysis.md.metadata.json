@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Deep analysis of pre-compute scoring feasibility based on real blueprint data from Einstein, Barbarossa, and Van Gogh. Reveals critical mismatch: blueprint extraction uses free-text tier values (e.g., 'global', 'extreme', 'high') instead of the enum values defined in the style JSON (e.g., 'Civilizational_Level', 'Lethal_Eradication'). This means pre-compute scoring would fail on ALL existing blueprints. Two fix paths identified: (A) fix extraction prompt to enforce enum values, or (B) add fuzzy tier mapping in Python.",
+  "updatedAt":  "2026-04-05T15:02:43.911406300Z",
+  "requestFeedback":  true
+}

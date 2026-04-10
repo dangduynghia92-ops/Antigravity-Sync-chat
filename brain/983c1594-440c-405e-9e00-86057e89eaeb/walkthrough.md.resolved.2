@@ -1,0 +1,92 @@
+# Code Audit — Narrative Niche Dispatch
+
+## Tìm thấy 3 vấn đề + 2 tối ưu
+
+---
+
+### 🔴 Issue #1: `_do_rewrite_chapter` sẽ CRASH (Critical)
+
+[rewrite_style_tab.py:2030](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2030-L2043)
+
+Function `_do_rewrite_chapter()` (re-write single chapters) gọi `write_from_blueprint()` **KHÔNG truyền `niche`**:
+
+```python
+# L2030 — THIẾU niche=...
+rewritten = write_from_blueprint(
+    blueprint=blueprint, style_json=style_json_raw,
+    framework_name=selected_fw, chapter_outline=ch_outline,
+    ...
+)  # ← niche="" → RuntimeError!
+```
+
+Vì giờ `write_from_blueprint` bắt buộc niche, call này sẽ crash với: `"Narrative writer requires a niche"`.
+
+**Fix**: Extract `_niche` từ style file trong `_do_rewrite_chapter`, tương tự cách `_do_renew_style` làm ở L2299.
+
+---
+
+### 🟡 Issue #2: Keyword map không đồng bộ (Medium)
+
+Blueprint extraction map có **8 keywords**, nhưng narrative map chỉ có **5**:
+
+| Keyword | Blueprint | Enrich | Narrative (4 steps) |
+|---------|:---------:|:------:|:-------------------:|
+| `battle` | ✅ | ✅ | ✅ |
+| `war` | ✅ | ✅ | ✅ |
+| `military` | ✅ | ✅ | ✅ |
+| `trận` | ✅ | ✅ | ✅ |
+| `chiến` | ✅ | ✅ | ✅ |
+| `history` | ✅ | ✅ | ❌ **THIẾU** |
+| `lịch sử` | ✅ | ✅ | ❌ **THIẾU** |
+| `combat` | ✅ | ✅ | ❌ **THIẾU** |
+| `siege` | ✅ | ✅ | ❌ **THIẾU** |
+
+Nếu style file có niche = `"lịch sử quân sự"` → Blueprint extracts OK, nhưng narrative outline sẽ fail vì `"lịch sử"` không có trong narrative map.
+
+**Fix**: Thêm `history`, `lịch sử`, `combat`, `siege` vào cả 4 narrative maps.
+
+---
+
+### 🟡 Issue #3: Log message thừa (Minor)
+
+Mỗi function log `"Using niche X prompt: Y"` **trước** khi log hành động chính. Vì cả 4 bước đều log, output sẽ có 4 dòng thừa:
+
+```
+Using niche outline prompt: system_narrative_outline_battle.txt
+Generating outline with framework 'The Investigative Deep-Dive'...
+Using niche audit prompt: system_narrative_audit_battle.txt
+Auditing outline for structural issues...
+```
+
+**Fix**: Chỉ log niche prompt info khi log level = verbose/debug. Hoặc gộp vào dòng log chính.
+
+---
+
+### ⚡ Optimization #1: Dispatch pattern lặp 4 lần
+
+Cả 4 functions có cùng dispatch pattern 10 dòng. Nên extract thành helper:
+
+```python
+def _require_niche_prompt(step: str, niche: str, log_callback=None) -> str:
+    """Get niche prompt or raise RuntimeError with clear message."""
+    if not niche:
+        raise RuntimeError(f"Narrative {step} requires a niche. Please set niche in style_data.")
+    try:
+        prompt_file = _get_niche_prompt(f"narrative_{step}", niche)
+    except ValueError:
+        raise RuntimeError(
+            f"No narrative {step} prompt for niche '{niche}'. "
+            f"Create prompts/system_narrative_{step}_<niche>.txt"
+        )
+    if log_callback:
+        log_callback(f"Using niche {step} prompt: {prompt_file}")
+    return prompt_file
+```
+
+Thì mỗi function chỉ cần: `prompt_file = _require_niche_prompt("outline", niche, log_callback)`
+
+---
+
+### ⚡ Optimization #2: Battle fields dict tạo mỗi lần gọi
+
+`_battle_fields` dict ở `write_from_blueprint` được tạo mới mỗi lần gọi (mỗi chapter = 1 lần). Nên chuyển thành module-level constant.

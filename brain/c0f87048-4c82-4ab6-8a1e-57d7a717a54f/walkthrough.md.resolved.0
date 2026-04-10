@@ -1,0 +1,163 @@
+# Review: Style Rewrite Tab — Narrative Mode
+
+## Tổng quan
+
+File chính: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) (3751 dòng)
+Core functions: [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) (2774 dòng)
+
+Narrative mode được xử lý bởi method [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2060-2596) (L2060–2595), một pipeline 8 bước chạy tuần tự trên worker thread.
+
+---
+
+## Pipeline Flow Diagram
+
+```mermaid
+flowchart TD
+    A["📂 Scan Folder / Add Files"] --> B["▶ Narrative button clicked"]
+    B --> C["Niche Check (Flash AI)"]
+    C --> D["_create_and_submit_job()"]
+    D --> E["_do_renew_style()"]
+    
+    E --> S1["Step 1: Concatenate input texts"]
+    S1 --> S2["Step 2: detect_framework()"]
+    S2 --> S3["Step 3: extract_blueprint()"]
+    S3 --> S4["Step 4: Select framework\n(AI ranking → User popup)"]
+    S4 --> S5["Step 5: generate_renew_outline_v2()"]
+    S5 --> S6["Step 6: audit_outline()"]
+    S6 --> S7["Step 7: write_from_blueprint()\n× N chapters (sequential)"]
+    S7 --> S8["Step 8: review_narrative_full()\n+ auto-patch"]
+    S8 --> M["Merge → FULL_SCRIPT.txt"]
+    M --> V["🎬 Cut Video (optional)"]
+    V --> X["📊 Excel Update (optional)"]
+    
+    style S4 fill:#ffd700,stroke:#333,color:#000
+    style S7 fill:#66bb6a,stroke:#333,color:#000
+    style S8 fill:#ef5350,stroke:#333,color:#fff
+```
+
+---
+
+## Chi tiết 8 bước Pipeline
+
+### Step 1: Concatenate Text (L2163–2169)
+- Gộp tất cả file `.txt` đã chọn thành 1 chuỗi `full_text`
+- Format: `=== PART N: filename ===`
+
+### Step 2: Detect Framework (L2174–2195)
+- Gọi [detect_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L930-L1001) → xác định framework gốc
+- Tier: dùng tier được user chọn (Pro/Flash)
+- Output: `_detection.json` → `{detected_framework, confidence, reasoning}`
+
+### Step 3: Extract Blueprint (L2197–2218)
+- Gọi [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1004-L1044)
+- Trích xuất **chỉ facts/events/themes** — không giữ original text
+- Output: `_blueprint.json` → `{core_topic, key_facts, key_events, arguments, emotional_core}`
+
+### Step 4: Select Framework (L2221–2326)
+- **Manual**: User chọn từ dropdown → bỏ qua AI ranking
+- **Auto**: AI rank tất cả frameworks → hiện popup cho user chọn
+  - Worker thread block tại `_fw_ranking_event.wait()`
+  - UI thread hiện dialog qua signal `_fw_ranking_request`
+  - Output: `_rankings.json`
+
+### Step 5: Generate Outline (L2328–2354)
+- Gọi [generate_renew_outline_v2()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1194-L1251)
+- Input: blueprint + style_json + **mandatory framework name**
+- Không nhận original text → ngăn AI copy
+- Output: `_renew_outline.json` → `{chapters: [{title, summary, key_points, emotional_beat, ends_with}]}`
+
+### Step 6: Audit Outline (L2356–2383)
+- Gọi [audit_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1254-L1319)
+- Kiểm tra structural issues, sửa nếu cần
+- Output: `_audit.json`, `_renew_outline_audited.json` (nếu có fix)
+
+### Step 7: Write Chapters (L2385–2483)
+- Viết tuần tự từng chapter bằng [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1322-L1403)
+- **Sliding context N-2**: mỗi chapter nhận 2 chapter trước làm `previous_context`
+- Word count rule khác nhau theo position: [open](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#554-560) (ch đầu), [body](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#598-606) (giữa), [end](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1631-1686) (ch cuối)
+- Filename: `ch_01_Intro.txt`, `ch_02_Title.txt`, ...
+- Title (line đầu) bị strip khi lưu file riêng, nhưng giữ nguyên trong `rewritten_texts[]`
+
+### Step 8: Cross-chapter Review + Auto-patch (L2485–2563)
+- Gọi [review_narrative_full()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) → đánh giá flow toàn bộ
+- Auto-patch: issues có severity `critical`/`major` → gọi [patch_chapter_overlap()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1535-1585)
+- Dùng `rw_index_map` để map subset index → original index (tránh lệch nếu có chapter fail)
+- Output: `_review.json`, `FULL_SCRIPT.txt`
+
+---
+
+## So sánh Narrative vs Review Pipeline
+
+| Aspect | **Narrative** (8 steps) | **Review** (12 steps) |
+|---|---|---|
+| Entry point | [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2060-2596) | [_do_renew_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2642-3751) |
+| Blueprint | [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045) — generic | [extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091) — product-focused |
+| Extra steps | — | Reality check, Spec verify, Price enrich, Convert units, Unused chapters copy |
+| Outline fn | [generate_renew_outline_v2()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1194-1252) | [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2458-2590) / [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2321-2456) |
+| Write fn | [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) | [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2592-2774) |
+| Review fn | [review_narrative_full()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1489-1533) | [review_cross_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1148-1192) |
+| Dual-framework | ❌ | ✅ (auto-dual mode) |
+| Transitions | N/A | Configurable checkbox |
+| Country/Units | ❌ | ✅ (US/EU conversion) |
+
+---
+
+## Nhận xét Code Quality & Potential Issues
+
+### ✅ Thiết kế tốt
+1. **Thread-safe parameter caching**: Tất cả UI values được cache vào [job](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2010-2029) dict trước khi chuyển sang worker thread (L2091–2114)
+2. **Independent stop_event per job**: Mỗi job có `stop_event` riêng, cho phép stop từng folder
+3. **rw_index_map pattern**: Giải quyết đúng vấn đề index lệch khi có chapter fail
+4. **Blueprint separation**: Original text không được pass vào [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) → ngăn AI copy
+
+### ⚠️ Potential Issues
+
+#### 1. `_detection.json` lưu vào [output_dir](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#561-580) thay vì `_pipeline/`
+**Narrative** (L2190): lưu trực tiếp vào [output_dir](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#561-580)
+```python
+det_path = os.path.join(output_dir, "_detection.json")
+```
+**Review** (L2823): lưu vào `_pipeline/`
+```python
+det_path = os.path.join(pipeline_dir, "_detection.json")
+```
+→ Narrative mode không tạo `_pipeline/` subfolder — tất cả metadata files nằm lẫn với output chapters.
+
+#### 2. [_build_style_prompt()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1267-1306) (L1267) có vẻ không được dùng bởi Narrative pipeline
+- Narrative dùng [_load_style_json_raw()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2045-2059) + [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) trực tiếp
+- [_build_style_prompt()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1267-1306) truyền full style JSON vào system prompt — pattern cũ (không dùng blueprint)
+- Có thể là dead code cho narrative mode
+
+#### 3. Missing `_pipeline/` folder trong Narrative mode
+- Review mode tạo `_pipeline/` subfolder (L2821-2822) để chứa metadata
+- Narrative mode lưu tất cả (`_detection.json`, `_blueprint.json`, `_rankings.json`, `_audit.json`, `_renew_outline.json`) trực tiếp vào [output_dir](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#561-580)
+- → Lẫn metadata với output chapters → khó quản lý
+
+#### 4. Biến [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) dùng trước khi define trong [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2060-2596)
+- L2063, L2084: [log("No chapters selected")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) và [log("✗ No frameworks found")](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) — gọi [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) trước khi hàm [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1840-1948) define [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) lambda
+- Sẽ crash nếu [checked](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#594-626) rỗng hoặc không có frameworks, vì [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) chưa được define ở scope đó
+
+#### 5. `_use_transitions` dùng trong [_do_rewrite_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1739-1985) nhưng không define cho narrative path
+- L1920: `use_transitions=_use_transitions` — biến này chỉ được define ở L2105/2114 bên trong [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2060-2596)
+- Trong [_do_rewrite_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1739-1985) (L1840–1946), `_use_transitions` được dùng ở L1920 nhưng **chưa bao giờ define** trong scope đó
+- Review path (L1920) sẽ crash với `NameError`
+
+#### 6. `_wc_cache` caching rủi ro khi job chạy lâu
+- Word count values được cache 1 lần khi submit job (L2097–2114)
+- Nếu user thay đổi word count giữa chừng → job vẫn dùng giá trị cũ
+- Đây là **intended behavior** (thread-safe) nhưng có thể gây confuse
+
+#### 7. Duplicate filename logic (L2400–2418 vs L3414–3432)
+- Cùng logic tạo filename (`ch_01_xxx.txt`) copy-paste giữa narrative và review
+- Nên refactor thành helper function
+
+---
+
+## Tóm tắt
+
+Narrative pipeline là một pipeline **8-step chặt chẽ** chạy tuần tự. Điểm mạnh chính là:
+- **Tách biệt facts vs prose**: Blueprint chỉ chứa data, AI viết mới hoàn toàn
+- **Framework-aware**: AI chọn và map nội dung vào framework phù hợp
+- **Sliding context**: Duy trì coherence qua N-2 window
+
+Issues chính cần xem xét: missing `_pipeline/` folder, undefined [log](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2747-2752) variable ở top scope, và `_use_transitions` bug trong Re-ch mode.

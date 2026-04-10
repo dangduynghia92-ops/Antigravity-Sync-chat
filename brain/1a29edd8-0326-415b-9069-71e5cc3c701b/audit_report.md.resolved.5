@@ -1,0 +1,114 @@
+# Phân Tích Feedback Chất Lượng Kịch Bản Mystery History
+
+## Tổng Đánh Giá
+
+Feedback **chính xác và có giá trị cao**. Tôi đã đọc cả 10 chương + writer prompt và xác nhận mọi nhận xét.
+
+---
+
+## 1. ❌ Cấu trúc rập khuôn (Predictable Formula)
+
+**Feedback**: Mọi chương đều theo: Mô tả → Mainstream → Phủ nhận → 3 câu hỏi tu từ
+**Thực tế**: **ĐÚNG 100%**. Bảng dưới chứng minh:
+
+| Chapter | Pattern thực tế |
+|---------|----------------|
+| ch_02 Locusta | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_03 Aqua Tofana | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_04 Metsubushi | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_05 Thuggee | **MAINSTREAM** → SCENE → EVIDENCE → COUNTER → 3 questions |
+| ch_06 Macuahuitl | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_07 Alamut | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_08 Venice | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+| ch_09 Greek Fire | SCENE → EVIDENCE → MAINSTREAM → COUNTER → 3 questions |
+
+7/8 chương dùng Pattern A y hệt nhau. Chỉ ch_05 dùng Pattern C.
+
+**Nguyên nhân gốc trong prompt**: Prompt có 4 patterns (A/B/C/D) nhưng AI **mặc định chọn Pattern A** vì nó được liệt kê đầu tiên và labeled "best for: investigative_awe" — đúng tone của niche.
+
+**Fix needed**: Prompt phải **BẮT BUỘC** luân phiên patterns, không chỉ "choose based on tone."
+
+---
+
+## 2. ❌ Lạm dụng "3 câu hỏi tu từ kết chương"
+
+**Feedback**: Mọi chương kết bằng 3 câu hỏi tu từ
+**Thực tế**: **ĐÚNG**. Mọi body chapter kết đúng 3 câu hỏi.
+
+**Nguyên nhân gốc**: Prompt rule line 81: `[MYSTERY] 3-5 rhetorical questions`. AI chọn **3** vì là minimum, và **luôn đặt cuối** vì Pattern A đặt [MYSTERY] cuối.
+
+**Fix needed**: Vary cả SỐ LƯỢNG (2-5) lẫn VỊ TRÍ (không phải lúc nào cũng cuối chương).
+
+---
+
+## 3. ❌ Thiếu ngôi thứ 2 (2nd-person immersion)
+
+**Feedback**: Kịch bản gốc dùng "You are..." rất hiệu quả, bản rewrite lược bỏ hầu hết
+**Thực tế**: **ĐÚNG**. Chỉ ch_01 (hook) và ch_09 (Greek Fire) dùng "You are..." Còn lại 6/8 body chapters dùng temporal anchor ("Rome, 54 CE", "The year is 1256").
+
+**Nguyên nhân gốc**: Prompt rule 14 bảo "ROTATE" giữa 4 loại scene opening, nhưng AI **thiên vị temporal anchor** vì nó an toàn nhất. Prompt cũng nói "Use 2nd-person **only** when it amplifies the visceral experience" — AI đọc "only" = hạn chế.
+
+**Fix needed**: Tăng weight của 2nd-person immersion, yêu cầu **ít nhất 3-4/8** body chapters dùng "You are..." hook.
+
+---
+
+## 4. ❌ Copy so sánh từ kịch bản gốc
+
+**Feedback**: Lấy y xì đúc phép so sánh và mạch logic của kịch bản gốc
+**Thực tế**: **ĐÚNG PHẦN NÀO**. Prompt rule 12 nói "Write as if you ONLY have the raw historical data and have NEVER read the original script" — nhưng blueprint vẫn truyền logic gốc qua field `counter_evidence` và `mainstream_theory`. AI tái tạo logic tương tự vì có cùng input data.
+
+**Fix needed**: Blueprint extraction nên extract **RAW DATA ONLY**, không extracting logic/argumentation chains.
+
+---
+
+## 5. ❌ Outro redundant (liệt kê 8 tên)
+
+**Feedback**: Đọc lại 8 tên tiếng nước ngoài tụt nhịp trước CTA
+**Thực tế**: **ĐÚNG**. ch_10 Outro line 1 liệt kê cả 8: "Locusta... Aqua Tofana... Metsubushi... Thuggee... Macuahuitl... Hashshashin... Venice... Greek Fire."
+
+**Nguyên nhân gốc**: Prompt rule line 143: "CUMULATIVE CALLBACK: Rapidly reference ALL mysteries from body chapters." AI follow bằng liệt kê tên.
+
+**Fix needed**: Rule nên nói "reference by THEME/PATTERN, not by listing names."
+
+---
+
+## 6. ❌ Pivot phrases lặp
+
+**Feedback**: "This explanation, however, collapses..." lặp lại
+**Thực tế**: **ĐÚNG**. Pivot phrases thực tế:
+- ch_02: "This explanation, however, mistakes the ingredients for the recipe"
+- ch_03: "That explanation aligns with...It does not align with..."
+- ch_05: "This explanation of familial tradition, however, collapses..."
+- ch_07: "That explanation, however, confronts a fundamental contradiction"
+- ch_08: "This narrative of efficiency, however, shatters..."
+- ch_09: "That explanation, however, fails to reconcile..."
+
+Pattern rõ ràng: **"This/That explanation, however, [verb]s..."**
+
+**Nguyên nhân gốc**: Prompt rule lines 74-79 liệt kê pivot types, nhưng AI lười — chọn cùng template "This/That explanation, however, ..." cho hầu hết chapters.
+
+**Fix needed**: Cấm pattern "This/That explanation, however" xuất hiện > 2 lần. Force specific different structures.
+
+---
+
+## 7. ✅ Đề xuất 4 loại Hook POV
+
+**Feedback đề xuất**: Victim/Crime Scene, Terrified Conqueror, Archive Anomaly, Modern Science hooks
+**Đánh giá**: **Rất hay và phù hợp**. Prompt hiện có 4 scene opening types nhưng mô tả chung chung. Feedback cho 4 hook cụ thể hơn, có ví dụ gắn với từng loại mystery → AI dễ apply hơn.
+
+**Fix needed**: Thay 4 scene opening types generic bằng 4-5 POV hooks cụ thể này trong prompt.
+
+---
+
+## Tóm Tắt: Prompt Cần Sửa
+
+| Prompt | Vấn đề | Fix |
+|--------|--------|-----|
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | Pattern A mặc định | Bắt buộc luân phiên A→B→C→D |
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | 3 câu hỏi cuối mọi chương | Vary số lượng + vị trí |
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | Thiếu 2nd-person | Yêu cầu ≥3/8 chapters dùng "You are..." |
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | Pivot phrase lặp | Cấm "This/That explanation however" > 2 lần |
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | Scene openings generic | Thay bằng 4-5 POV hooks cụ thể |
+| [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) | Outro liệt kê 8 tên | Callback by theme, not names |
+| [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt) | Extract logic chains | Chỉ extract raw data |
+| [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) | Không enforce pattern rotation | Assign specific pattern per chapter |

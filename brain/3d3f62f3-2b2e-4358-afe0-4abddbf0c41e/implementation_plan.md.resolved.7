@@ -1,0 +1,97 @@
+# Style Analyzer Tab — Implementation Plan
+
+## Goal
+New tab "🔍 Style Analyzer" — phân tích kịch bản YouTube, trích xuất kỹ thuật viết, và tạo Style Guide.
+
+Hỗ trợ gửi **1 hoặc nhiều kịch bản cùng chủ đề** → AI so sánh cross-script patterns.
+
+---
+
+## Proposed Changes
+
+### Prompts
+
+#### [NEW] [system_style_overview.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_overview.txt)
+Bước 1 — Phân tích tổng quan toàn bộ script:
+- Overall structure (mở/thân/kết tỷ lệ)
+- Emotional arc
+- Pacing pattern
+- Narrative strategy tổng thể
+
+#### [NEW] [system_style_detail.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_detail.txt)
+Bước 2 — Phân tích chi tiết từng chapter (gửi kèm chapter trước/sau để thấy transition):
+- Kỹ thuật cụ thể (hook, cliffhanger, rhetorical question...)
+- Giọng văn, từ vựng
+- Cách mở/kết chapter
+- Transition in/out
+- **Bắt buộc trích dẫn** từ script làm evidence
+
+#### [NEW] [system_style_synthesis.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_synthesis.txt)
+Bước 3 — Tổng hợp (overview + all chapter details) → Style Guide:
+- Actionable writing rules
+- Pattern lặp lại
+- Kỹ thuật nổi bật
+- Template outline
+
+---
+
+### Core
+
+#### [NEW] [style_analyzer.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/style_analyzer.py)
+- `scan_script_files(folder)` — quét .txt trong folder
+- `analyze_overview(files, api_client, lang)` — Bước 1: gửi full text/summaries
+- [analyze_chapter(chapter_text, prev_text, next_text, api_client, lang)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#165-216) — Bước 2: per-chapter
+- `synthesize_style_guide(overview, chapter_details, api_client, lang)` — Bước 3: tổng hợp
+- `save_style_guide(guide, output_path)` — lưu ra file .txt / .md
+
+---
+
+### UI
+
+#### [NEW] [style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/style_tab.py)
+Layout theo mẫu TTS tab:
+
+**Row 1**: `Scan Folder` | `Add Files` | `Lang: [en ▾]` | `Tier: [flash ▾]` | `Threads: [4]`
+
+**Row 2**: `Output: [___________] [...]` | `Log API`
+
+**Tree View**: Columns = `Tên File` | `Từ` | `Status`
+- Hiện folder → children = files
+- Checkbox mỗi file/folder
+- Status: `—` → `Analyzing...` → `✓ Done` / `✗ Error`
+
+**Row 3**: `All` | `None` | `Clear` | stretch | `1. Analyze` | `Stop` | `Retry` | `Open`
+
+**Log Panel**: Processing Log ở dưới
+
+3-step flow khi bấm **Analyze**:
+1. Overview (1 API call gửi toàn bộ hoặc summary)
+2. Per-chapter detail (N calls song song theo Threads)
+3. Synthesis (1 API call tổng hợp)
+
+Output:
+- `_STYLE_OVERVIEW.txt` — bước 1
+- `_STYLE_DETAIL_{filename}.txt` — bước 2 per chapter
+- `_STYLE_GUIDE.txt` — bước 3 (final output)
+
+---
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- Import `StyleTab`
+- Thêm tab `"🔍 Style Analyzer"` sau TTS Cleanup
+
+---
+
+## Multi-Script Support
+
+Khi gửi **nhiều kịch bản cùng chủ đề**:
+- Bước 1: Overview covering **all scripts** — AI thấy được cross-script patterns
+- Bước 2: Per-chapter cho từng file riêng
+- Bước 3: Synthesis kết hợp tất cả → Style Guide bao quát hơn
+
+---
+
+## Verification Plan
+- Syntax check tất cả file mới
+- Test UI: scan folder, add files, check/uncheck
+- Test full flow: Analyze → kiểm tra output files

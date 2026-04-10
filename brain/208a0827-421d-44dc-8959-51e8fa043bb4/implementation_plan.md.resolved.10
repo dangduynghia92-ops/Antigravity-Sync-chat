@@ -1,0 +1,83 @@
+# PyQt6 Migration Plan
+
+Migrate entire UI from customtkinter to PyQt6 for smooth, GPU-accelerated rendering. Backend files (api_client, process_controller, prompt_generator, srt_parser, prompt_constraints) **remain unchanged**.
+
+## Migration Scope
+
+11 UI files in [ui/](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#69-95) directory. Migrate in dependency order (leaf → root):
+
+### Phase 1: Foundation + Leaf Components (no UI dependencies)
+
+| # | File | Lines | Description |
+|---|---|---|---|
+| 1 | [theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/theme.py) | ~30 | Color/font constants → convert to QSS stylesheet |
+| 2 | [log_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/log_section.py) | ~71 | Log textbox → QTextEdit |
+| 3 | [searchable_combo.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/searchable_combo.py) | ~80 | Searchable combo → QComboBox with QCompleter |
+| 4 | [srt_preview.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/srt_preview.py) | ~100 | SRT preview panel → QTextEdit |
+
+### Phase 2: Section Components (depend on Phase 1)
+
+| # | File | Lines | Description |
+|---|---|---|---|
+| 5 | [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py) | ~150 | Config bar → QWidget with QHBoxLayout |
+| 6 | [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py) | ~200 | Projects table → QTableWidget |
+| 7 | [actions_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/actions_section.py) | ~100 | Action buttons → QWidget with QPushButton |
+| 8 | [settings_dialog.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/settings_dialog.py) | ~270 | Settings popup → QDialog |
+
+### Phase 3: Tab Pages (depend on Phase 1+2)
+
+| # | File | Lines | Description |
+|---|---|---|---|
+| 9 | [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py) | ~780 | Product tab → QWidget |
+
+### Phase 4: Main Window (depends on everything)
+
+| # | File | Lines | Description |
+|---|---|---|---|
+| 10 | [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py) | ~620 | Main window → QMainWindow with QTabWidget |
+| 11 | [main.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/main.py) | ~30 | Entry point → QApplication |
+
+## Key Mapping: customtkinter → PyQt6
+
+| customtkinter | PyQt6 |
+|---|---|
+| `CTkFrame` | `QWidget` + `QVBoxLayout`/`QHBoxLayout` |
+| `CTkLabel` | `QLabel` |
+| `CTkButton` | `QPushButton` |
+| `CTkEntry` | `QLineEdit` |
+| `CTkTextbox` | `QTextEdit` |
+| `CTkSwitch` | `QCheckBox` (styled) |
+| `CTkComboBox` | `QComboBox` |
+| `CTkSegmentedButton` | `QTabBar` or `QTabWidget` |
+| `CTkToplevel` | `QDialog` |
+| `CTkSlider` | `QSlider` |
+| `pack()`/`grid()` | Layout managers (QVBoxLayout, QGridLayout, etc.) |
+| `self.after(ms, fn)` | `QTimer.singleShot(ms, fn)` or Signal/Slot |
+| `threading.Event` + popup | `QMetaObject.invokeMethod` (thread-safe UI) |
+
+## Dark Theme Strategy
+
+Use **QSS (Qt Style Sheet)** — a CSS-like system for styling:
+- Apply global dark theme via `app.setStyleSheet()`
+- Reuse existing color scheme (#1E293B, #4CAF50, #f44336, etc.)
+- Much more flexible than customtkinter's limited theming
+
+## Thread-Safety Strategy
+
+Replace `self.after()` pattern with Qt's built-in thread-safe mechanisms:
+- **Signals/Slots** for callbacks from background threads
+- **QMetaObject.invokeMethod()** for direct cross-thread UI calls
+- **QTimer.singleShot()** for delayed UI operations
+
+## Verification Plan
+
+1. Install PyQt6: `pip install PyQt6`
+2. Migrate files in phase order (1→2→3→4)
+3. After each phase, verify imports work
+4. After Phase 4, run the full app and test:
+   - Tab switching
+   - SRT processing with endpoint fallback
+   - Product prompt generation
+   - Settings dialog with endpoint toggles
+   - Rate limit popup
+   - Incremental save

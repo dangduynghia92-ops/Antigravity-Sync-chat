@@ -1,0 +1,6 @@
+# Fix Cross-Chapter Review Bugs
+
+- [/] Find patch code that injects [CHAPTER_FILE] labels back into content
+- [ ] Strip labels from patched content after cross-review
+- [ ] Verify FULL_SCRIPT merge doesn't include skipped chapters
+- [ ] Test fix

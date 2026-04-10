@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Audit toàn bộ thay đổi so với git HEAD. Liệt kê 16 files thay đổi, phân loại từng hunk thành biography-only vs shared code, đánh dấu risk level. Phát hiện 4 vấn đề cần kiểm tra: (1) generate_phase_plan chạy cho tất cả niches nhưng chỉ có prompt cho biography, (2) xóa open_loop_resolve/plant fields, (3) audit_outline diff-based logic ảnh hưởng tất cả niches, (4) get_ch_range return empty string.",
+  "updatedAt":  "2026-04-07T11:18:02.943917200Z",
+  "requestFeedback":  true
+}

@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Clean rewrite plan for the entire pipeline: narrative_review.py (visual bible + character pipeline), process_controller.py (orchestration), prompt_generator.py (user message + JSON output). No cache, no locations, no CIVILIAN.",
+  "updatedAt": "2026-03-23T08:29:35.458184Z",
+  "version": "8"
+}

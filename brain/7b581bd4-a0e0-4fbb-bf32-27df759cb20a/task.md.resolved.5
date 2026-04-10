@@ -1,0 +1,12 @@
+# Video Chapter Cutter
+
+- [x] Build core module [core/video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+  - [x] [parse_merge_timecodes()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#11-74) — parse merge file → 20 chapters ✓
+  - [x] [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#118-195) — yt-dlp 1080p mp4
+  - [x] [download_transcript()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#197-248) — yt-dlp subtitle
+  - [x] [cut_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#250-330) — ffmpeg -c copy (no re-encode)
+- [x] Build UI tab [ui/video_cutter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py)
+- [x] Register tab in [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- [x] All imports compile ✓
+- [x] Merge parser tested on real file ✓
+- [ ] Test end-to-end (user test)

@@ -1,0 +1,31 @@
+# Niche-Based TTS Cleanup — Tasks
+
+## Planning
+- [x] Review existing TTS Cleanup code
+- [x] Study threading.Event popup pattern
+- [x] Write implementation plan
+- [x] Get user approval
+
+## Prompt Files
+- [x] Update [system_tts_cleanup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt) — add gap rules + `{NICHE_RULES}` + `---UNCERTAIN---`
+- [x] Update [es/system_tts_cleanup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/es/system_tts_cleanup.txt) — sync Spanish version
+- [x] Create [prompts/system_tts_detect_niche.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_detect_niche.txt)
+- [x] Create [prompts/tts_niche_rules/firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt)
+- [x] Create [prompts/tts_niche_rules/history.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/history.txt)
+
+## Core Module
+- [x] Add [detect_niche()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#80-127), [load_niche_rules()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#69-78), [get_available_niches()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#59-67) to [core/tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+- [x] Update [cleanup_for_tts()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#129-218) — accept niche_rules, return uncertain terms (3-tuple)
+- [x] Add [export_uncertain_csv()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#313-347)
+
+## UI Tab
+- [x] Add niche confirm + uncertain terms signals/events
+- [x] Implement [_show_niche_popup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#789-844) dialog
+- [x] Implement [_show_uncertain_popup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#847-916) dialog
+- [x] Rewrite [_run_cleanup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#500-786) — sequential niche-aware flow
+- [x] Update [_do_stop()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#493-499) — unblock popup events
+- [x] Fix [_rewrite_failed()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#1021-1147) — handle `{NICHE_RULES}` and `---UNCERTAIN---`
+
+## Verification
+- [x] Python syntax check — both files compile cleanly
+- [ ] Manual testing with sample firearms script (user)

@@ -1,0 +1,281 @@
+# Script Creation Tab — Pipeline & Logic Overview
+
+> **File**: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) (4,477 lines)
+> **Class**: `RewriteStyleTab(QWidget)`
+
+---
+
+## UI Layout
+
+### Controls
+| Element | Type | Description |
+|---|---|---|
+| `_combo_mode` | Dropdown | **Narrative** / **Top/List Review** |
+| `_combo_style` | Dropdown | Style JSON file (e.g. `narrative_tiểu_sử_nhân_vật.json`) |
+| `_combo_framework` | Dropdown | Framework (Auto, Investigative Deep-Dive, Sử Thi, etc.) |
+| `_combo_lang` | Dropdown | Tiếng Anh / Tiếng Việt |
+| `_combo_tier` | Dropdown | Pro / Flash |
+| `_wc_*_min/_max` | Spinbox | Word count per section (open/body/end), `0/0 = SKIP` |
+| `_ch_min/_ch_max` | Spinbox | Chapter count range |
+| `_chk_auto_patch` | Checkbox | Auto-patch critical/major issues after review |
+
+### Buttons
+| Button | Color | Action |
+|---|---|---|
+| **▶ Rewrite** | Blue accent | Rewrite existing content (needs input folder with blueprint) |
+| **✦ New Content** | Green | Research from scratch → generate full script |
+
+---
+
+## 2 Pipelines
+
+### Pipeline A: ✦ New Content (from scratch)
+
+```mermaid
+flowchart TD
+    A["🎯 User enters topic\n(popup QInputDialog)"] --> B{Blueprint exists?}
+    B -->|Yes| B1["Load _blueprint.json\n(skip research)"]
+    B -->|No| C["Step 1: Research\n(Plan A: 3 Flash + 3 Pro)"]
+    C --> D["Save _blueprint.json"]
+    B1 --> E
+    D --> E["Step 2: Framework Selection\n(AI ranking or user pick)"]
+    E --> F["For each framework (1-2 versions):"]
+    F --> G["_run_shared_fw_pipeline()"]
+    G --> H["✦ Complete!"]
+```
+
+#### Step 1: Research (Plan A)
+- **Function**: `research_blueprint_multicall()` in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- **Phase 1**: 3 parallel Flash calls → 3 draft sections (Identity, Timeline, Themes)
+- **Phase 2**: 3 parallel Pro calls → expand each draft (2-3x detail)
+- **Output**: Merged blueprint dict → `_pipeline/_blueprint.json`
+- **Skip logic**: If `_blueprint.json` exists, popup asks user → skip or re-research
+
+#### Step 2: Framework Selection
+- **Manual**: User picks from dropdown → single version
+- **Auto**: AI ranks all frameworks → `_rankings.json`
+  - v1 = top scorer (always)
+  - v2 = 2nd scorer only if `score >= 8.5`
+
+#### Steps 3-6: → Shared Pipeline (see below)
+
+---
+
+### Pipeline B: ▶ Rewrite (existing content)
+
+> 2 sub-modes hoàn toàn khác nhau về pipeline
+
+---
+
+#### Mode: Narrative (8 steps) — dùng `_run_shared_fw_pipeline`
+
+```
+Step 1:    Concatenate all input chapter texts
+Step 2:    Detect original framework (AI Flash)
+Step 3:    Extract blueprint from existing content
+Step 3.5:  Enrich blueprint  ← Google Search hoặc AI knowledge
+Step 4:    AI framework ranking → auto-select 1-2 frameworks
+           ├── Battle niche: must-have "Investigative Deep-Dive" + best remaining ≥ 8.5
+           └── Default: top scorer + 2nd if ≥ 8.5
+Step 5-8:  → _run_shared_fw_pipeline()  ← SHARED (outline → audit → write → review → patch → merge)
+```
+
+**Step 3.5: Enrich Blueprint** (Narrative only)
+- **Function**: `enrich_blueprint_google(blueprint, gemini_keys, ...)`
+- **Google Check ON**: Dùng Google Search fallback để bổ sung dữ liệu
+- **Google Check OFF**: Dùng AI knowledge only
+- **Output**: `_enrichment.json`, cập nhật `_blueprint.json`
+- **Non-fatal**: Fail → continue pipeline
+
+**Rewrite-specific extras:**
+- `on_chapter_saved` callback → updates UI status per chapter
+- `auto_patch` = checkbox value (not always True)
+- `log_api` = actual logger (not suppressed)
+
+---
+
+#### Mode: Top/List Review (12 steps) — pipeline riêng, KHÔNG dùng shared
+
+```
+Step 1:    Concatenate texts
+Step 2:    Detect original framework
+Step 3:    Extract blueprint (product-focused)
+Step 4:    Recommend framework (AI ranking)
+Step 5:    Reality check blueprint (historical/spec verification)
+Step 5a:   Spec verify via Google Search (firearms niche only)
+Step 5b:   Price enrichment via Google Search (firearms niche only)
+Step 5c:   Blueprint enrich (always runs — Google or AI)
+Step 6:    Check blueprint completeness
+Step 7:    Convert units (target country)
+Step 8:    Create review outline
+Step 9:    Audit outline
+Step 10:   Write each chapter
+Step 11:   Cross-chapter review + patch (uses review_cross_chapter)
+Step 12:   Merge → FULL_SCRIPT.txt
+```
+
+> [!IMPORTANT]
+> **Top/List Review pipeline KHÔNG dùng `_run_shared_fw_pipeline()`** — nó có pipeline riêng inline
+> vì có thêm nhiều bước đặc thù (reality check, spec verify, price enrich, unit convert)
+> mà Narrative mode không cần.
+
+---
+
+## Shared Pipeline: `_run_shared_fw_pipeline()`
+
+> **Lines**: 1592–1833
+> **Called by**: Both ✦ New Content AND ▶ Rewrite
+> **Single source of truth** — sửa 1 chỗ = cả 2 pipeline đều update
+
+```mermaid
+flowchart TD
+    O["Outline\ngenerate_renew_outline_v2()"] --> AU["Audit\naudit_outline()"]
+    AU --> W["Write Chapters\nwrite_from_blueprint()\n(sequential, with prev_context)"]
+    W --> R["Cross-chapter Review\nreview_narrative_full()"]
+    R --> P{Auto-patch?}
+    P -->|Yes| PA["patch_chapter_overlap()\n(critical/major only)"]
+    P -->|No| M
+    PA --> M["Merge → FULL_SCRIPT.txt"]
+```
+
+### Parameters
+
+```python
+_run_shared_fw_pipeline(
+    fw_name,           # Framework name
+    fw_output_dir,     # Where to save chapter files
+    fw_pipeline_dir,   # Where to save pipeline artifacts
+    fw_log,            # Logging function
+    blueprint,         # Research data dict
+    style_json_raw,    # Style JSON string
+    endpoints,         # API endpoints list
+    tier,              # "pro" or "flash"
+    lang,              # "en" or "vi"
+    niche,             # e.g. "biography tiểu sử nhân vật"
+    stop_check,        # lambda: bool — cancellation
+    get_wc_rule,       # fn(section) → "MIN-MAX words" or "SKIP"
+    get_ch_range,      # fn() → "between 6 and 10 chapters"
+    log_api=None,      # API call logger (Rewrite: actual, New Content: None)
+    on_chapter_saved=None,  # Callback for Rewrite UI tracking
+    auto_patch=True,   # Whether to auto-fix critical issues
+)
+```
+
+### Step-by-step Detail
+
+#### 1. Outline
+- **Function**: `generate_renew_outline_v2(blueprint, style_json, fw_name, api, ...)`
+- **Output**: `_renew_outline.json` with `{chapters: [...], narrative_arc: "..."}`
+- **Each chapter**: `{title, chapter_type, key_points, estimated_word_count, ...}`
+
+#### 2. Audit
+- **Function**: `audit_outline(outline, blueprint, style_json, fw_name, api, ...)`
+- **Tier**: Always Flash (fast + cheap)
+- **Output**: `_audit.json` with issues found, `_renew_outline_audited.json` if fixed
+- **Fixes**: Structural issues, missing coverage, chapter count violations
+
+#### 3. Write Chapters
+- **Function**: `write_from_blueprint(blueprint, style_json, fw_name, ch_outline, ...)`
+- **Sequential**: Each chapter gets `prev_context` = last 2 chapters
+- **Word count**: Per-section rules (open/body/end), `SKIP` = skip entirely
+- **Chapter naming**: `ch_01_Title.txt` (type-aware: hook→Intro, end→Outro_CTA)
+- **Error handling**: Failed chapters → empty string, pipeline continues
+
+#### 4. Review + Patch
+- **Function**: `review_narrative_full(rw_chapters, api, niche, lang, ...)`
+- **Input**: List of `{filename, text, title}` dicts
+- **Output**: `_review.json` with `{overall_flow_score, issues: [...]}`
+- **Auto-patch**: For each critical/major issue:
+  - `patch_chapter_overlap(chapter_text, issue, full_context, api)`
+  - Overwrites both in-memory and file
+
+#### 5. Merge
+- **Output**: `FULL_SCRIPT.txt` with chapter headers and `====` separators
+- **Format**:
+  ```
+  Chapter 1: Title
+  
+  [body text]
+  
+  ============================================================
+  
+  Chapter 2: Title
+  
+  [body text]
+  ```
+
+---
+
+## Output Structure
+
+### New Content
+```
+Documents/
+└── Biography_Albert_Einstein_20260401_1835/
+    ├── v1_Sử_Thi/
+    │   ├── ch_01_Intro.txt
+    │   ├── ch_02_The_Compass_and_the_Prodigy.txt
+    │   ├── ...
+    │   ├── ch_08_Outro_CTA.txt
+    │   ├── FULL_SCRIPT.txt
+    │   └── _pipeline/
+    │       ├── _renew_outline.json
+    │       ├── _audit.json
+    │       └── _review.json
+    ├── v2_Bước_Ngoặt/     (if 2nd framework scored ≥ 8.5)
+    │   └── ... (same structure)
+    └── _pipeline/
+        ├── _blueprint.json
+        ├── _rankings.json
+        └── _research_sections/
+            ├── draft_1_identity.txt
+            ├── draft_2_timeline.txt
+            ├── draft_3_themes.txt
+            ├── expand_1_identity.txt
+            ├── expand_2_timeline.txt
+            └── expand_3_themes.txt
+```
+
+### Rewrite
+```
+[input_folder]/
+└── _rewrite/
+    ├── v1_The_Investigative_Deep-Dive_9.8/
+    │   ├── ch_01_*.txt ... ch_N_*.txt
+    │   ├── FULL_SCRIPT.txt
+    │   └── _pipeline/
+    └── _pipeline/
+        ├── _blueprint.json
+        └── _rankings.json
+```
+
+---
+
+## Key Functions (in core/rewriter.py)
+
+| Function | Purpose |
+|---|---|
+| `research_blueprint_multicall()` | Plan A research: 3 Flash → 3 Pro → merged blueprint |
+| `extract_blueprint()` | Extract blueprint from existing content (Rewrite) |
+| `enrich_blueprint_google()` | Enrich empty blueprint fields (Google Search or AI) |
+| `recommend_framework()` | AI ranks frameworks by blueprint fit |
+| `generate_renew_outline_v2()` | Create chapter outline from blueprint + framework |
+| `audit_outline()` | AI reviews outline for structural issues |
+| `write_from_blueprint()` | Write single chapter with context |
+| `review_narrative_full()` | Cross-chapter review (Narrative mode) |
+| `review_cross_chapter()` | Cross-chapter review (Top/List Review mode) |
+| `patch_chapter_overlap()` | Fix single chapter based on review issue |
+| `verify_specs_google()` | Spec verification via Google (firearms niche) |
+| `detect_framework()` | Detect which framework existing content uses |
+
+---
+
+## Refactoring Done (this session)
+
+| Change | Impact |
+|---|---|
+| Extracted `_run_shared_fw_pipeline()` | **-391 lines**, single source of truth |
+| Both pipelines call same method | Fix once → both updated |
+| `on_chapter_saved` callback | Rewrite-specific UI tracking isolated |
+| `auto_patch` parameter | New Content = always True, Rewrite = checkbox |
+| Niche label mapping | Folder names work for Vietnamese niches |

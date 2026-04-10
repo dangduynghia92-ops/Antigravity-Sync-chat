@@ -1,0 +1,3960 @@
+# Walkthrough: Folder Mode cho Regroup Tab
+
+## Tổng quan
+
+Thêm chế độ **Folder Mode** cho tab Regroup, cho phép phân loại và nhóm **toàn bộ thư mục kịch bản** thay vì từng chapter riêng lẻ. Folders được **move** (di chuyển) chứ không copy.
+
+## Thay đổi
+
+### Files mới
+- [system_regroup_folder.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup_folder.txt) — AI prompt cho folder-mode classification
+- [trang_thiết_bị_quân_sự.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niches/trang_thiết_bị_quân_sự.txt) — 12 ngách tối ưu cho chủ đề quân sự
+
+### Files sửa đổi
+
+#### [regroup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py)
+
+```diff:regroup.py
+"""
+regroup.py — Core logic for the Regroup module.
+Scan split chapters, classify by niche via AI, copy to grouped folders.
+"""
+import os
+import re
+import json
+import shutil
+import hashlib
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+
+
+def _natural_sort_key(name: str):
+    """Sort key for natural ordering: Chapter 1, 2, ..., 10 instead of 1, 10, 2."""
+    return [int(c) if c.isdigit() else c.lower()
+            for c in re.split(r'(\d+)', name)]
+
+
+@dataclass
+class ChapterEntry:
+    """Represents a single chapter found during scanning."""
+    source_script: str       # Subfolder name (e.g. "Top 10 bí ẩn")
+    chapter_title: str       # e.g. "Chapter 2 - Kim tự tháp"
+    chapter_number: int
+    file_path: str           # Absolute path to chapter file
+    summary: str = ""        # From _SUMMARY.txt
+    file_hash: str = ""      # MD5 hash for tracking
+
+    @property
+    def id(self):
+        """Unique ID: 'source/chapter_title'."""
+        return f"{self.source_script}/{self.chapter_title}"
+
+
+# ── Niche Management ────────────────────────────────────────────────
+
+def get_niches_dir():
+    """Return the niches directory path."""
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "niches")
+
+
+def list_broad_topics():
+    """List available broad topic files in niches/ folder."""
+    niches_dir = get_niches_dir()
+    if not os.path.isdir(niches_dir):
+        return []
+    topics = []
+    for f in os.listdir(niches_dir):
+        if f.endswith(".txt"):
+            name = os.path.splitext(f)[0]
+            topics.append(name)
+    return sorted(topics)
+
+
+def load_niche_list(topic_name: str) -> list:
+    """Load niche list from file. Returns list of niche strings."""
+    path = os.path.join(get_niches_dir(), f"{topic_name}.txt")
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        lines = [line.strip() for line in f if line.strip()]
+    return lines
+
+
+def save_niche_list(topic_name: str, niches: list):
+    """Save niche list to file."""
+    niches_dir = get_niches_dir()
+    os.makedirs(niches_dir, exist_ok=True)
+    path = os.path.join(niches_dir, f"{topic_name}.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        for niche in niches:
+            f.write(niche.strip() + "\n")
+
+
+# ── Scanning ────────────────────────────────────────────────────────
+
+def _compute_file_hash(path: str) -> str:
+    """Compute MD5 hash of file content."""
+    try:
+        with open(path, "rb") as f:
+            return hashlib.md5(f.read()).hexdigest()
+    except Exception:
+        return ""
+
+
+def _parse_summary_file(summary_path: str) -> dict:
+    """
+    Parse a _SUMMARY.txt file.
+    Returns dict: {chapter_number: {"title": ..., "summary": ...}}
+    """
+    result = {}
+    try:
+        with open(summary_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        current_num = None
+        current_title = ""
+        current_summary = ""
+
+        for line in content.split("\n"):
+            # Match: "Chapter N: Title"
+            m = re.match(r"Chapter\s+(\d+):\s*(.*)", line)
+            if m:
+                # Save previous
+                if current_num is not None:
+                    result[current_num] = {
+                        "title": current_title,
+                        "summary": current_summary.strip(),
+                    }
+                current_num = int(m.group(1))
+                current_title = m.group(2).strip()
+                current_summary = ""
+                continue
+
+            # Match: "  Summary: ..." or "  Preview: ..."
+            sm = re.match(r"\s+(Summary|Preview):\s*(.*)", line)
+            if sm and current_num is not None:
+                current_summary = sm.group(2).strip()
+
+        # Save last
+        if current_num is not None:
+            result[current_num] = {
+                "title": current_title,
+                "summary": current_summary.strip(),
+            }
+    except Exception:
+        pass
+
+    return result
+
+
+def scan_output_folder(folder: str, log_callback=None, min_content_length: int = 0) -> tuple:
+    """
+    Scan output folder for chapter files and summaries.
+    
+    Args:
+        folder: path to scan
+        log_callback: logging function
+        min_content_length: if > 0, skip chapters with fewer chars than this
+    
+    Returns:
+        (chapters: list[ChapterEntry], missing_summary: list[str])
+    """
+    chapters = []
+    missing_summary = []
+    filtered_count = 0
+
+    if not os.path.isdir(folder):
+        return chapters, missing_summary
+
+    for subdir in sorted(os.listdir(folder), key=_natural_sort_key):
+        subdir_path = os.path.join(folder, subdir)
+        if not os.path.isdir(subdir_path):
+            continue
+
+        # Skip regroup output folders (they contain _GROUP_INFO.json)
+        if os.path.isfile(os.path.join(subdir_path, "_GROUP_INFO.json")):
+            continue
+
+        # Find summary file
+        summary_data = {}
+        summary_files = [f for f in os.listdir(subdir_path) if f.endswith("_SUMMARY.txt")]
+        if summary_files:
+            summary_data = _parse_summary_file(
+                os.path.join(subdir_path, summary_files[0])
+            )
+        else:
+            missing_summary.append(subdir)
+
+        # Find chapter files
+        for f in sorted(os.listdir(subdir_path), key=_natural_sort_key):
+            # Match "Chapter N - ..." or "72_Chapter N - ..."
+            ch_match = re.match(r"(?:\d+_)?Chapter\s+(\d+)", f)
+            is_chapter = (
+                ch_match
+                and (f.endswith(".txt") or f.endswith(".md"))
+                and "_MERGED" not in f
+                and "_SUMMARY" not in f
+                and "_VERIFY" not in f
+            )
+            if not is_chapter:
+                continue
+
+            ch_num = int(ch_match.group(1))
+
+            file_path = os.path.join(subdir_path, f)
+
+            # Filter by content length
+            if min_content_length > 0:
+                try:
+                    content_len = os.path.getsize(file_path)
+                    if content_len < min_content_length:
+                        filtered_count += 1
+                        continue
+                except OSError:
+                    pass
+
+            # Get summary from parsed summary file
+            ch_info = summary_data.get(ch_num, {})
+            summary_text = ch_info.get("summary", "")
+
+            entry = ChapterEntry(
+                source_script=subdir,
+                chapter_title=os.path.splitext(f)[0],
+                chapter_number=ch_num,
+                file_path=file_path,
+                summary=summary_text,
+                file_hash=_compute_file_hash(file_path),
+            )
+            chapters.append(entry)
+
+    if log_callback:
+        log_callback(
+            f"Scanned: {len(chapters)} chapters from "
+            f"{len(set(ch.source_script for ch in chapters))} scripts"
+        )
+        if filtered_count > 0:
+            log_callback(
+                f"Filtered: {filtered_count} chapters skipped (< {min_content_length:,} chars)"
+            )
+        if missing_summary:
+            log_callback(
+                f"Warning: {len(missing_summary)} folder(s) missing summary: "
+                + ", ".join(missing_summary[:5])
+            )
+
+    return chapters, missing_summary
+
+
+# ── Generate Missing Summaries ──────────────────────────────────────
+
+def generate_missing_summary(
+    subdir_path: str,
+    subdir_name: str,
+    api_client,
+    log_callback=None,
+) -> str:
+    """
+    Generate a _SUMMARY.txt for a subfolder that is missing one.
+    Reads all chapter files, sends to AI for summarization.
+    
+    Returns: path to created summary file, or "" on failure.
+    """
+    # Find chapter files
+    chapter_files = []
+    for f in sorted(os.listdir(subdir_path), key=_natural_sort_key):
+        is_chapter = (
+            re.match(r"(?:\d+_)?Chapter\s+\d+", f)
+            and (f.endswith(".txt") or f.endswith(".md"))
+            and "_MERGED" not in f
+            and "_SUMMARY" not in f
+            and "_VERIFY" not in f
+        )
+        if is_chapter:
+            chapter_files.append(f)
+
+    if not chapter_files:
+        if log_callback:
+            log_callback(f"No chapter files in '{subdir_name}'")
+        return ""
+
+    if log_callback:
+        log_callback(f"Generating summary for '{subdir_name}' ({len(chapter_files)} chapters)...")
+
+    # Read all chapters
+    chapters_text = []
+    for f in chapter_files:
+        ch_match = re.match(r"Chapter\s+(\d+)", f)
+        ch_num = int(ch_match.group(1)) if ch_match else 0
+        ch_title = os.path.splitext(f)[0]
+
+        try:
+            with open(os.path.join(subdir_path, f), "r", encoding="utf-8") as fh:
+                content = fh.read()
+        except Exception:
+            content = "(could not read)"
+
+        chapters_text.append(
+            f"Chapter {ch_num}: {ch_title}\nContent:\n{content}"
+        )
+
+    # Send to AI
+    summary_prompt = (
+        "For each chapter below, write a concise 3-6 sentence summary of the main content. "
+        "Focus on key events, arguments, or facts discussed.\n"
+        "Output ONLY valid JSON in this format:\n"
+        '{"summaries": [{"number": 1, "summary": "3-6 sentence summary..."}]}\n\n'
+        + "\n---\n".join(chapters_text)
+    )
+
+    messages = [
+        {"role": "system", "content": "You are a content summarizer. Output ONLY valid JSON."},
+        {"role": "user", "content": summary_prompt},
+    ]
+
+    try:
+        result = api_client.call_api(messages)
+        if not result["success"]:
+            if log_callback:
+                log_callback(f"API error for '{subdir_name}': {result['error']}")
+            return ""
+
+        # Parse AI response
+        content = result["content"]
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            parsed = json.loads(json_match.group())
+        else:
+            parsed = json.loads(content)
+
+        summaries = {}
+        for s in parsed.get("summaries", []):
+            summaries[s.get("number", 0)] = s.get("summary", "")
+
+    except Exception as e:
+        if log_callback:
+            log_callback(f"Summary generation failed for '{subdir_name}': {e}")
+        return ""
+
+    # Write summary file (same format as chapter_splitter.save_summary)
+    safe_name = re.sub(r'[<>:"/\\|?*]', '', subdir_name)
+    summary_path = os.path.join(subdir_path, f"{safe_name}_SUMMARY.txt")
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        f.write(f"Chapter Summary — {subdir_name}\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(f"Total chapters: {len(chapter_files)}\n\n")
+
+        for cf in chapter_files:
+            ch_match = re.match(r"Chapter\s+(\d+)", cf)
+            ch_num = int(ch_match.group(1)) if ch_match else 0
+            ch_title = os.path.splitext(cf)[0]
+
+            f.write(f"Chapter {ch_num}: {ch_title}\n")
+
+            summary = (summaries.get(ch_num) or
+                       summaries.get(ch_num - 1) or
+                       summaries.get(ch_num + 1) or "")
+            if summary:
+                f.write(f"  Summary: {summary}\n\n")
+            else:
+                # Fallback: read first 200 chars
+                try:
+                    with open(os.path.join(subdir_path, cf), "r", encoding="utf-8") as fh:
+                        preview = fh.read(200).replace("\n", " ")
+                    f.write(f"  Preview: {preview}...\n\n")
+                except Exception:
+                    f.write("  Preview: (could not read)\n\n")
+
+    if log_callback:
+        log_callback(f"✓ Summary created for '{subdir_name}'")
+
+    return summary_path
+
+
+# ── AI Classification ───────────────────────────────────────────────
+
+def _load_regroup_prompt():
+    """Load the regroup system prompt."""
+    prompt_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "prompts", "system_regroup.txt"
+    )
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return (
+            "You are a content classifier. Classify each chapter into "
+            "the most fitting niche. Output ONLY valid JSON."
+        )
+
+
+def classify_chapters(
+    chapters: list,
+    niche_list: list,
+    api_client,
+    batch_size: int = 50,
+    log_callback=None,
+) -> dict:
+    """
+    Use AI to classify chapters into niches.
+    Uses sequential numbered IDs (#1, #2, ...) for reliable matching.
+    
+    Returns:
+        dict with "groups" key, each group has "chapters" containing
+        actual ChapterEntry objects (not string IDs).
+    """
+    system_prompt = _load_regroup_prompt()
+    niche_text = "\n".join(f"- {n}" for n in niche_list)
+
+    if log_callback:
+        log_callback(f"Preparing {len(chapters)} chapters for classification...")
+        log_callback(f"Niches: {', '.join(niche_list)}")
+
+    all_groups = {}  # niche -> {"chapters": [], "suggested_titles": []}
+
+    # Build numbered chapter list + index map
+    index_map = {}  # number -> ChapterEntry
+    chapter_lines = []
+    for i, ch in enumerate(chapters, 1):
+        index_map[i] = ch
+        summary_part = f" — {ch.summary}" if ch.summary else ""
+        chapter_lines.append(
+            f"#{i}: [{ch.source_script}] {ch.chapter_title}{summary_part}"
+        )
+        if log_callback and i <= 5:
+            log_callback(f"  #{i}: {ch.source_script}/{ch.chapter_title}")
+    if log_callback and len(chapters) > 5:
+        log_callback(f"  ... and {len(chapters) - 5} more")
+
+    # Split into batches
+    batches = []
+    for i in range(0, len(chapter_lines), batch_size):
+        batch_start = i
+        batch_end = min(i + batch_size, len(chapter_lines))
+        batches.append((batch_start, chapter_lines[batch_start:batch_end]))
+
+    for batch_idx, (offset, batch) in enumerate(batches):
+        if log_callback:
+            log_callback(
+                f"━━ Batch {batch_idx + 1}/{len(batches)} "
+                f"({len(batch)} chapters) → Sending to AI..."
+            )
+
+        user_prompt = (
+            f"Available niches:\n{niche_text}\n\n"
+            f"Chapters to classify (use the # number as ID):\n"
+            + "\n".join(batch)
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        if log_callback:
+            log_callback(f"  Waiting for AI response...")
+
+        result = api_client.call_api(messages)
+        if not result["success"]:
+            if log_callback:
+                log_callback(f"  ❌ API error: {result['error']}")
+            continue
+
+        if log_callback:
+            model_name = result.get("model", "?")
+            endpoint = result.get("endpoint_url", "?")
+            log_callback(f"  ✓ Response from model: {model_name}")
+            log_callback(f"    Endpoint: {endpoint}")
+            log_callback(f"  Parsing response...")
+
+        # Parse AI response
+        try:
+            content = result["content"]
+            # Extract JSON from response
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                parsed = json.loads(json_match.group())
+            else:
+                parsed = json.loads(content)
+
+            for group in parsed.get("groups", []):
+                niche = group.get("niche", "Không khớp")
+                if niche not in all_groups:
+                    all_groups[niche] = {
+                        "chapters": [],
+                        "suggested_titles": group.get("suggested_titles", []),
+                    }
+
+                for ch_ref in group.get("chapters", []):
+                    # Extract the number from the ID
+                    raw_id = ch_ref.get("id", "")
+                    reason = ch_ref.get("reason", "")
+
+                    # Parse number: could be "#3", "3", "#3:", etc.
+                    num_match = re.search(r'#?(\d+)', str(raw_id))
+                    if num_match:
+                        num = int(num_match.group(1))
+                        ch = index_map.get(num)
+                        if ch:
+                            all_groups[niche]["chapters"].append({
+                                "chapter": ch,
+                                "reason": reason,
+                            })
+                        elif log_callback:
+                            log_callback(
+                                f"  ⚠️ ID #{num} out of range (max: {len(chapters)})"
+                            )
+                    elif log_callback:
+                        log_callback(f"  ⚠️ Cannot parse ID: '{raw_id}'")
+
+                # Merge suggested titles
+                for title in group.get("suggested_titles", []):
+                    if title not in all_groups[niche]["suggested_titles"]:
+                        all_groups[niche]["suggested_titles"].append(title)
+
+            if log_callback:
+                batch_total = sum(
+                    len(g["chapters"]) for g in all_groups.values()
+                )
+                log_callback(
+                    f"  ✓ Parsed: {len(parsed.get('groups', []))} groups, "
+                    f"{batch_total} chapters total so far"
+                )
+
+        except (json.JSONDecodeError, KeyError) as e:
+            if log_callback:
+                log_callback(f"  ❌ Failed to parse AI response: {e}")
+                # Log first 200 chars of response for debugging
+                log_callback(f"  Response preview: {content[:200]}...")
+
+    # Convert to final format
+    groups_list = []
+    for niche, data in all_groups.items():
+        ch_count = len(data["chapters"])
+        groups_list.append({
+            "niche": niche,
+            "suggested_titles": data["suggested_titles"],
+            "chapters": data["chapters"],  # now contains {"chapter": ChapterEntry, "reason": str}
+        })
+        if log_callback:
+            titles_str = " | ".join(data["suggested_titles"][:2])
+            log_callback(f"  📁 {niche}: {ch_count} chapters → {titles_str}")
+
+    if log_callback:
+        total = sum(len(g["chapters"]) for g in groups_list)
+        log_callback(
+            f"━━ Classification done: {len(groups_list)} groups, "
+            f"{total}/{len(chapters)} chapters classified"
+        )
+
+    return {"groups": groups_list}
+
+
+# ── Used Tracker ────────────────────────────────────────────────────
+
+def load_used_tracker(folder: str) -> dict:
+    """Load used chapters tracker from folder."""
+    path = os.path.join(folder, "_USED_TRACKER.json")
+    if not os.path.isfile(path):
+        return {"used_chapters": []}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"used_chapters": []}
+
+
+def save_used_tracker(folder: str, data: dict):
+    """Save used chapters tracker to folder."""
+    path = os.path.join(folder, "_USED_TRACKER.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def is_chapter_used(tracker: dict, chapter: ChapterEntry) -> Optional[str]:
+    """
+    Check if chapter is already used.
+    Returns assigned_to group name if used, None otherwise.
+    """
+    for entry in tracker.get("used_chapters", []):
+        if entry.get("path") == chapter.file_path:
+            return entry.get("assigned_to", "unknown")
+        if entry.get("hash") and entry.get("hash") == chapter.file_hash:
+            return entry.get("assigned_to", "unknown")
+    return None
+
+
+def mark_chapters_used(tracker: dict, chapters: list, group_name: str):
+    """Mark chapters as used in tracker."""
+    from datetime import datetime
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    for ch in chapters:
+        tracker["used_chapters"].append({
+            "path": ch.file_path,
+            "hash": ch.file_hash,
+            "source": ch.source_script,
+            "title": ch.chapter_title,
+            "assigned_to": group_name,
+            "date": date_str,
+        })
+
+
+# ── Copy to Group ──────────────────────────────────────────────────
+
+def _sanitize_folder_name(name: str) -> str:
+    """Convert Vietnamese text to safe folder name."""
+    import unicodedata
+    # Normalize unicode
+    name = unicodedata.normalize("NFD", name)
+    # Remove diacritics
+    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
+    # Replace spaces and special chars
+    name = re.sub(r'[<>:"/\\|?*]', '', name)
+    name = re.sub(r'\s+', '_', name.strip())
+    name = name.lower()
+    return name
+
+
+def _find_existing_group(regroup_dir: str, niche_name: str):
+    """Find an existing folder matching the niche name (with or without numbering)."""
+    sanitized = _sanitize_folder_name(niche_name)
+    if not os.path.isdir(regroup_dir):
+        return None
+    for d in os.listdir(regroup_dir):
+        if not os.path.isdir(os.path.join(regroup_dir, d)):
+            continue
+        d_lower = d.lower()
+        # Match exact name or name with _NNN suffix
+        if d_lower == sanitized or re.match(rf"{re.escape(sanitized)}_\d+$", d_lower):
+            return d
+    return None
+
+
+def copy_to_group(
+    chapters: list,
+    niche_name: str,
+    broad_topic: str,
+    suggested_titles: list,
+    regroup_dir: str,
+    scan_folder: str,
+    log_callback=None,
+) -> str:
+    """
+    Copy selected chapter files to a group folder.
+    Reuses existing folder if one matches the niche name,
+    otherwise creates a new one.
+    Updates the used tracker.
+
+    Returns: path to group folder
+    """
+    os.makedirs(regroup_dir, exist_ok=True)
+
+    # Look for existing folder matching this niche
+    existing = _find_existing_group(regroup_dir, niche_name)
+    if existing:
+        folder_name = existing
+        is_new = False
+    else:
+        folder_name = _sanitize_folder_name(niche_name)
+        is_new = True
+
+    group_path = os.path.join(regroup_dir, folder_name)
+    os.makedirs(group_path, exist_ok=True)
+
+    action = "Creating" if is_new else "Appending to"
+    if log_callback:
+        log_callback(f"━━ {action} group: {folder_name}")
+        log_callback(f"   Output: {group_path}")
+        log_callback(f"   Chapters to copy: {len(chapters)}")
+
+    # Copy files (skip if file with same name already exists)
+    copied = 0
+    skipped = 0
+    chapter_info = []
+    for ch in chapters:
+        if not os.path.isfile(ch.file_path):
+            if log_callback:
+                log_callback(f"   ⚠️ File not found: {ch.file_path}")
+            continue
+
+        dest = os.path.join(group_path, os.path.basename(ch.file_path))
+        if os.path.isfile(dest):
+            skipped += 1
+            continue
+        shutil.copy2(ch.file_path, dest)
+        copied += 1
+        if log_callback:
+            log_callback(f"   ✓ Copied: {ch.source_script}/{os.path.basename(ch.file_path)}")
+        chapter_info.append({
+            "source": ch.source_script,
+            "title": ch.chapter_title,
+            "original_path": ch.file_path,
+            "summary": ch.summary,
+        })
+
+    # Update group info (merge with existing if present)
+    info_path = os.path.join(group_path, "_GROUP_INFO.json")
+    if os.path.isfile(info_path) and not is_new:
+        with open(info_path, "r", encoding="utf-8") as f:
+            group_info = json.load(f)
+        group_info["chapters"].extend(chapter_info)
+        group_info["chapter_count"] = len(group_info["chapters"])
+        group_info["updated"] = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+    else:
+        group_info = {
+            "niche": niche_name,
+            "broad_topic": broad_topic,
+            "suggested_titles": suggested_titles,
+            "created": __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "chapter_count": len(chapter_info),
+            "chapters": chapter_info,
+        }
+
+    with open(info_path, "w", encoding="utf-8") as f:
+        json.dump(group_info, f, ensure_ascii=False, indent=2)
+
+    # Update used tracker
+    tracker = load_used_tracker(scan_folder)
+    mark_chapters_used(tracker, chapters, folder_name)
+    save_used_tracker(scan_folder, tracker)
+
+    if log_callback:
+        msg = f"   ✓ Done: {copied} copied"
+        if skipped:
+            msg += f", {skipped} skipped (already exists)"
+        log_callback(msg)
+
+    return group_path
+===
+"""
+regroup.py — Core logic for the Regroup module.
+Scan split chapters, classify by niche via AI, copy to grouped folders.
+"""
+import os
+import re
+import json
+import shutil
+import hashlib
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+
+
+def _natural_sort_key(name: str):
+    """Sort key for natural ordering: Chapter 1, 2, ..., 10 instead of 1, 10, 2."""
+    return [int(c) if c.isdigit() else c.lower()
+            for c in re.split(r'(\d+)', name)]
+
+
+@dataclass
+class ChapterEntry:
+    """Represents a single chapter found during scanning."""
+    source_script: str       # Subfolder name (e.g. "Top 10 bí ẩn")
+    chapter_title: str       # e.g. "Chapter 2 - Kim tự tháp"
+    chapter_number: int
+    file_path: str           # Absolute path to chapter file
+    summary: str = ""        # From _SUMMARY.txt
+    file_hash: str = ""      # MD5 hash for tracking
+
+    @property
+    def id(self):
+        """Unique ID: 'source/chapter_title'."""
+        return f"{self.source_script}/{self.chapter_title}"
+
+
+@dataclass
+class FolderEntry:
+    """Represents an entire script folder (all chapters combined)."""
+    folder_name: str          # Subfolder name
+    folder_path: str          # Absolute path to the subfolder
+    chapter_count: int        # Number of chapter files
+    total_chars: int          # Total character count across all chapters
+    combined_summary: str     # Concatenated summary of all chapters
+    chapters: list = field(default_factory=list)  # List[ChapterEntry]
+
+    @property
+    def id(self):
+        return self.folder_name
+
+
+# ── Niche Management ────────────────────────────────────────────────
+
+def get_niches_dir():
+    """Return the niches directory path."""
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "niches")
+
+
+def list_broad_topics():
+    """List available broad topic files in niches/ folder."""
+    niches_dir = get_niches_dir()
+    if not os.path.isdir(niches_dir):
+        return []
+    topics = []
+    for f in os.listdir(niches_dir):
+        if f.endswith(".txt"):
+            name = os.path.splitext(f)[0]
+            topics.append(name)
+    return sorted(topics)
+
+
+def load_niche_list(topic_name: str) -> list:
+    """Load niche list from file. Returns list of niche strings."""
+    path = os.path.join(get_niches_dir(), f"{topic_name}.txt")
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        lines = [line.strip() for line in f if line.strip()]
+    return lines
+
+
+def save_niche_list(topic_name: str, niches: list):
+    """Save niche list to file."""
+    niches_dir = get_niches_dir()
+    os.makedirs(niches_dir, exist_ok=True)
+    path = os.path.join(niches_dir, f"{topic_name}.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        for niche in niches:
+            f.write(niche.strip() + "\n")
+
+
+# ── Scanning ────────────────────────────────────────────────────────
+
+def _compute_file_hash(path: str) -> str:
+    """Compute MD5 hash of file content."""
+    try:
+        with open(path, "rb") as f:
+            return hashlib.md5(f.read()).hexdigest()
+    except Exception:
+        return ""
+
+
+def _parse_summary_file(summary_path: str) -> dict:
+    """
+    Parse a _SUMMARY.txt file.
+    Returns dict: {chapter_number: {"title": ..., "summary": ...}}
+    """
+    result = {}
+    try:
+        with open(summary_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        current_num = None
+        current_title = ""
+        current_summary = ""
+
+        for line in content.split("\n"):
+            # Match: "Chapter N: Title"
+            m = re.match(r"Chapter\s+(\d+):\s*(.*)", line)
+            if m:
+                # Save previous
+                if current_num is not None:
+                    result[current_num] = {
+                        "title": current_title,
+                        "summary": current_summary.strip(),
+                    }
+                current_num = int(m.group(1))
+                current_title = m.group(2).strip()
+                current_summary = ""
+                continue
+
+            # Match: "  Summary: ..." or "  Preview: ..."
+            sm = re.match(r"\s+(Summary|Preview):\s*(.*)", line)
+            if sm and current_num is not None:
+                current_summary = sm.group(2).strip()
+
+        # Save last
+        if current_num is not None:
+            result[current_num] = {
+                "title": current_title,
+                "summary": current_summary.strip(),
+            }
+    except Exception:
+        pass
+
+    return result
+
+
+def scan_output_folder(folder: str, log_callback=None, min_content_length: int = 0) -> tuple:
+    """
+    Scan output folder for chapter files and summaries.
+    
+    Args:
+        folder: path to scan
+        log_callback: logging function
+        min_content_length: if > 0, skip chapters with fewer chars than this
+    
+    Returns:
+        (chapters: list[ChapterEntry], missing_summary: list[str])
+    """
+    chapters = []
+    missing_summary = []
+    filtered_count = 0
+
+    if not os.path.isdir(folder):
+        return chapters, missing_summary
+
+    for subdir in sorted(os.listdir(folder), key=_natural_sort_key):
+        subdir_path = os.path.join(folder, subdir)
+        if not os.path.isdir(subdir_path):
+            continue
+
+        # Skip regroup output folders (they contain _GROUP_INFO.json)
+        if os.path.isfile(os.path.join(subdir_path, "_GROUP_INFO.json")):
+            continue
+
+        # Find summary file
+        summary_data = {}
+        summary_files = [f for f in os.listdir(subdir_path) if f.endswith("_SUMMARY.txt")]
+        if summary_files:
+            summary_data = _parse_summary_file(
+                os.path.join(subdir_path, summary_files[0])
+            )
+        else:
+            missing_summary.append(subdir)
+
+        # Find chapter files
+        for f in sorted(os.listdir(subdir_path), key=_natural_sort_key):
+            # Match "Chapter N - ..." or "72_Chapter N - ..."
+            ch_match = re.match(r"(?:\d+_)?Chapter\s+(\d+)", f)
+            is_chapter = (
+                ch_match
+                and (f.endswith(".txt") or f.endswith(".md"))
+                and "_MERGED" not in f
+                and "_SUMMARY" not in f
+                and "_VERIFY" not in f
+            )
+            if not is_chapter:
+                continue
+
+            ch_num = int(ch_match.group(1))
+
+            file_path = os.path.join(subdir_path, f)
+
+            # Filter by content length
+            if min_content_length > 0:
+                try:
+                    content_len = os.path.getsize(file_path)
+                    if content_len < min_content_length:
+                        filtered_count += 1
+                        continue
+                except OSError:
+                    pass
+
+            # Get summary from parsed summary file
+            ch_info = summary_data.get(ch_num, {})
+            summary_text = ch_info.get("summary", "")
+
+            entry = ChapterEntry(
+                source_script=subdir,
+                chapter_title=os.path.splitext(f)[0],
+                chapter_number=ch_num,
+                file_path=file_path,
+                summary=summary_text,
+                file_hash=_compute_file_hash(file_path),
+            )
+            chapters.append(entry)
+
+    if log_callback:
+        log_callback(
+            f"Scanned: {len(chapters)} chapters from "
+            f"{len(set(ch.source_script for ch in chapters))} scripts"
+        )
+        if filtered_count > 0:
+            log_callback(
+                f"Filtered: {filtered_count} chapters skipped (< {min_content_length:,} chars)"
+            )
+        if missing_summary:
+            log_callback(
+                f"Warning: {len(missing_summary)} folder(s) missing summary: "
+                + ", ".join(missing_summary[:5])
+            )
+
+    return chapters, missing_summary
+
+
+# ── Generate Missing Summaries ──────────────────────────────────────
+
+def generate_missing_summary(
+    subdir_path: str,
+    subdir_name: str,
+    api_client,
+    log_callback=None,
+) -> str:
+    """
+    Generate a _SUMMARY.txt for a subfolder that is missing one.
+    Reads all chapter files, sends to AI for summarization.
+    
+    Returns: path to created summary file, or "" on failure.
+    """
+    # Find chapter files
+    chapter_files = []
+    for f in sorted(os.listdir(subdir_path), key=_natural_sort_key):
+        is_chapter = (
+            re.match(r"(?:\d+_)?Chapter\s+\d+", f)
+            and (f.endswith(".txt") or f.endswith(".md"))
+            and "_MERGED" not in f
+            and "_SUMMARY" not in f
+            and "_VERIFY" not in f
+        )
+        if is_chapter:
+            chapter_files.append(f)
+
+    if not chapter_files:
+        if log_callback:
+            log_callback(f"No chapter files in '{subdir_name}'")
+        return ""
+
+    if log_callback:
+        log_callback(f"Generating summary for '{subdir_name}' ({len(chapter_files)} chapters)...")
+
+    # Read all chapters
+    chapters_text = []
+    for f in chapter_files:
+        ch_match = re.match(r"Chapter\s+(\d+)", f)
+        ch_num = int(ch_match.group(1)) if ch_match else 0
+        ch_title = os.path.splitext(f)[0]
+
+        try:
+            with open(os.path.join(subdir_path, f), "r", encoding="utf-8") as fh:
+                content = fh.read()
+        except Exception:
+            content = "(could not read)"
+
+        chapters_text.append(
+            f"Chapter {ch_num}: {ch_title}\nContent:\n{content}"
+        )
+
+    # Send to AI
+    summary_prompt = (
+        "For each chapter below, write a concise 3-6 sentence summary of the main content. "
+        "Focus on key events, arguments, or facts discussed.\n"
+        "Output ONLY valid JSON in this format:\n"
+        '{"summaries": [{"number": 1, "summary": "3-6 sentence summary..."}]}\n\n'
+        + "\n---\n".join(chapters_text)
+    )
+
+    messages = [
+        {"role": "system", "content": "You are a content summarizer. Output ONLY valid JSON."},
+        {"role": "user", "content": summary_prompt},
+    ]
+
+    try:
+        result = api_client.call_api(messages)
+        if not result["success"]:
+            if log_callback:
+                log_callback(f"API error for '{subdir_name}': {result['error']}")
+            return ""
+
+        # Parse AI response
+        content = result["content"]
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            parsed = json.loads(json_match.group())
+        else:
+            parsed = json.loads(content)
+
+        summaries = {}
+        for s in parsed.get("summaries", []):
+            summaries[s.get("number", 0)] = s.get("summary", "")
+
+    except Exception as e:
+        if log_callback:
+            log_callback(f"Summary generation failed for '{subdir_name}': {e}")
+        return ""
+
+    # Write summary file (same format as chapter_splitter.save_summary)
+    safe_name = re.sub(r'[<>:"/\\|?*]', '', subdir_name)
+    summary_path = os.path.join(subdir_path, f"{safe_name}_SUMMARY.txt")
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        f.write(f"Chapter Summary — {subdir_name}\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(f"Total chapters: {len(chapter_files)}\n\n")
+
+        for cf in chapter_files:
+            ch_match = re.match(r"Chapter\s+(\d+)", cf)
+            ch_num = int(ch_match.group(1)) if ch_match else 0
+            ch_title = os.path.splitext(cf)[0]
+
+            f.write(f"Chapter {ch_num}: {ch_title}\n")
+
+            summary = (summaries.get(ch_num) or
+                       summaries.get(ch_num - 1) or
+                       summaries.get(ch_num + 1) or "")
+            if summary:
+                f.write(f"  Summary: {summary}\n\n")
+            else:
+                # Fallback: read first 200 chars
+                try:
+                    with open(os.path.join(subdir_path, cf), "r", encoding="utf-8") as fh:
+                        preview = fh.read(200).replace("\n", " ")
+                    f.write(f"  Preview: {preview}...\n\n")
+                except Exception:
+                    f.write("  Preview: (could not read)\n\n")
+
+    if log_callback:
+        log_callback(f"✓ Summary created for '{subdir_name}'")
+
+    return summary_path
+
+
+# ── AI Classification ───────────────────────────────────────────────
+
+def _load_regroup_prompt():
+    """Load the regroup system prompt."""
+    prompt_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "prompts", "system_regroup.txt"
+    )
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return (
+            "You are a content classifier. Classify each chapter into "
+            "the most fitting niche. Output ONLY valid JSON."
+        )
+
+
+def classify_chapters(
+    chapters: list,
+    niche_list: list,
+    api_client,
+    batch_size: int = 50,
+    log_callback=None,
+) -> dict:
+    """
+    Use AI to classify chapters into niches.
+    Uses sequential numbered IDs (#1, #2, ...) for reliable matching.
+    
+    Returns:
+        dict with "groups" key, each group has "chapters" containing
+        actual ChapterEntry objects (not string IDs).
+    """
+    system_prompt = _load_regroup_prompt()
+    niche_text = "\n".join(f"- {n}" for n in niche_list)
+
+    if log_callback:
+        log_callback(f"Preparing {len(chapters)} chapters for classification...")
+        log_callback(f"Niches: {', '.join(niche_list)}")
+
+    all_groups = {}  # niche -> {"chapters": [], "suggested_titles": []}
+
+    # Build numbered chapter list + index map
+    index_map = {}  # number -> ChapterEntry
+    chapter_lines = []
+    for i, ch in enumerate(chapters, 1):
+        index_map[i] = ch
+        summary_part = f" — {ch.summary}" if ch.summary else ""
+        chapter_lines.append(
+            f"#{i}: [{ch.source_script}] {ch.chapter_title}{summary_part}"
+        )
+        if log_callback and i <= 5:
+            log_callback(f"  #{i}: {ch.source_script}/{ch.chapter_title}")
+    if log_callback and len(chapters) > 5:
+        log_callback(f"  ... and {len(chapters) - 5} more")
+
+    # Split into batches
+    batches = []
+    for i in range(0, len(chapter_lines), batch_size):
+        batch_start = i
+        batch_end = min(i + batch_size, len(chapter_lines))
+        batches.append((batch_start, chapter_lines[batch_start:batch_end]))
+
+    for batch_idx, (offset, batch) in enumerate(batches):
+        if log_callback:
+            log_callback(
+                f"━━ Batch {batch_idx + 1}/{len(batches)} "
+                f"({len(batch)} chapters) → Sending to AI..."
+            )
+
+        user_prompt = (
+            f"Available niches:\n{niche_text}\n\n"
+            f"Chapters to classify (use the # number as ID):\n"
+            + "\n".join(batch)
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        if log_callback:
+            log_callback(f"  Waiting for AI response...")
+
+        result = api_client.call_api(messages)
+        if not result["success"]:
+            if log_callback:
+                log_callback(f"  ❌ API error: {result['error']}")
+            continue
+
+        if log_callback:
+            model_name = result.get("model", "?")
+            endpoint = result.get("endpoint_url", "?")
+            log_callback(f"  ✓ Response from model: {model_name}")
+            log_callback(f"    Endpoint: {endpoint}")
+            log_callback(f"  Parsing response...")
+
+        # Parse AI response
+        try:
+            content = result["content"]
+            # Extract JSON from response
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                parsed = json.loads(json_match.group())
+            else:
+                parsed = json.loads(content)
+
+            for group in parsed.get("groups", []):
+                niche = group.get("niche", "Không khớp")
+                if niche not in all_groups:
+                    all_groups[niche] = {
+                        "chapters": [],
+                        "suggested_titles": group.get("suggested_titles", []),
+                    }
+
+                for ch_ref in group.get("chapters", []):
+                    # Extract the number from the ID
+                    raw_id = ch_ref.get("id", "")
+                    reason = ch_ref.get("reason", "")
+
+                    # Parse number: could be "#3", "3", "#3:", etc.
+                    num_match = re.search(r'#?(\d+)', str(raw_id))
+                    if num_match:
+                        num = int(num_match.group(1))
+                        ch = index_map.get(num)
+                        if ch:
+                            all_groups[niche]["chapters"].append({
+                                "chapter": ch,
+                                "reason": reason,
+                            })
+                        elif log_callback:
+                            log_callback(
+                                f"  ⚠️ ID #{num} out of range (max: {len(chapters)})"
+                            )
+                    elif log_callback:
+                        log_callback(f"  ⚠️ Cannot parse ID: '{raw_id}'")
+
+                # Merge suggested titles
+                for title in group.get("suggested_titles", []):
+                    if title not in all_groups[niche]["suggested_titles"]:
+                        all_groups[niche]["suggested_titles"].append(title)
+
+            if log_callback:
+                batch_total = sum(
+                    len(g["chapters"]) for g in all_groups.values()
+                )
+                log_callback(
+                    f"  ✓ Parsed: {len(parsed.get('groups', []))} groups, "
+                    f"{batch_total} chapters total so far"
+                )
+
+        except (json.JSONDecodeError, KeyError) as e:
+            if log_callback:
+                log_callback(f"  ❌ Failed to parse AI response: {e}")
+                # Log first 200 chars of response for debugging
+                log_callback(f"  Response preview: {content[:200]}...")
+
+    # Convert to final format
+    groups_list = []
+    for niche, data in all_groups.items():
+        ch_count = len(data["chapters"])
+        groups_list.append({
+            "niche": niche,
+            "suggested_titles": data["suggested_titles"],
+            "chapters": data["chapters"],  # now contains {"chapter": ChapterEntry, "reason": str}
+        })
+        if log_callback:
+            titles_str = " | ".join(data["suggested_titles"][:2])
+            log_callback(f"  📁 {niche}: {ch_count} chapters → {titles_str}")
+
+    if log_callback:
+        total = sum(len(g["chapters"]) for g in groups_list)
+        log_callback(
+            f"━━ Classification done: {len(groups_list)} groups, "
+            f"{total}/{len(chapters)} chapters classified"
+        )
+
+    return {"groups": groups_list}
+
+
+# ── Used Tracker ────────────────────────────────────────────────────
+
+def load_used_tracker(folder: str) -> dict:
+    """Load used chapters tracker from folder."""
+    path = os.path.join(folder, "_USED_TRACKER.json")
+    if not os.path.isfile(path):
+        return {"used_chapters": []}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"used_chapters": []}
+
+
+def save_used_tracker(folder: str, data: dict):
+    """Save used chapters tracker to folder."""
+    path = os.path.join(folder, "_USED_TRACKER.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def is_chapter_used(tracker: dict, chapter: ChapterEntry) -> Optional[str]:
+    """
+    Check if chapter is already used.
+    Returns assigned_to group name if used, None otherwise.
+    """
+    for entry in tracker.get("used_chapters", []):
+        if entry.get("path") == chapter.file_path:
+            return entry.get("assigned_to", "unknown")
+        if entry.get("hash") and entry.get("hash") == chapter.file_hash:
+            return entry.get("assigned_to", "unknown")
+    return None
+
+
+def mark_chapters_used(tracker: dict, chapters: list, group_name: str):
+    """Mark chapters as used in tracker."""
+    from datetime import datetime
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    for ch in chapters:
+        tracker["used_chapters"].append({
+            "path": ch.file_path,
+            "hash": ch.file_hash,
+            "source": ch.source_script,
+            "title": ch.chapter_title,
+            "assigned_to": group_name,
+            "date": date_str,
+        })
+
+
+# ── Copy to Group ──────────────────────────────────────────────────
+
+def _sanitize_folder_name(name: str) -> str:
+    """Convert Vietnamese text to safe folder name."""
+    import unicodedata
+    # Normalize unicode
+    name = unicodedata.normalize("NFD", name)
+    # Remove diacritics
+    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
+    # Replace spaces and special chars
+    name = re.sub(r'[<>:"/\\|?*]', '', name)
+    name = re.sub(r'\s+', '_', name.strip())
+    name = name.lower()
+    return name
+
+
+def _find_existing_group(regroup_dir: str, niche_name: str):
+    """Find an existing folder matching the niche name (with or without numbering)."""
+    sanitized = _sanitize_folder_name(niche_name)
+    if not os.path.isdir(regroup_dir):
+        return None
+    for d in os.listdir(regroup_dir):
+        if not os.path.isdir(os.path.join(regroup_dir, d)):
+            continue
+        d_lower = d.lower()
+        # Match exact name or name with _NNN suffix
+        if d_lower == sanitized or re.match(rf"{re.escape(sanitized)}_\d+$", d_lower):
+            return d
+    return None
+
+
+def copy_to_group(
+    chapters: list,
+    niche_name: str,
+    broad_topic: str,
+    suggested_titles: list,
+    regroup_dir: str,
+    scan_folder: str,
+    log_callback=None,
+) -> str:
+    """
+    Copy selected chapter files to a group folder.
+    Reuses existing folder if one matches the niche name,
+    otherwise creates a new one.
+    Updates the used tracker.
+
+    Returns: path to group folder
+    """
+    os.makedirs(regroup_dir, exist_ok=True)
+
+    # Look for existing folder matching this niche
+    existing = _find_existing_group(regroup_dir, niche_name)
+    if existing:
+        folder_name = existing
+        is_new = False
+    else:
+        folder_name = _sanitize_folder_name(niche_name)
+        is_new = True
+
+    group_path = os.path.join(regroup_dir, folder_name)
+    os.makedirs(group_path, exist_ok=True)
+
+    action = "Creating" if is_new else "Appending to"
+    if log_callback:
+        log_callback(f"━━ {action} group: {folder_name}")
+        log_callback(f"   Output: {group_path}")
+        log_callback(f"   Chapters to copy: {len(chapters)}")
+
+    # Copy files (skip if file with same name already exists)
+    copied = 0
+    skipped = 0
+    chapter_info = []
+    for ch in chapters:
+        if not os.path.isfile(ch.file_path):
+            if log_callback:
+                log_callback(f"   ⚠️ File not found: {ch.file_path}")
+            continue
+
+        dest = os.path.join(group_path, os.path.basename(ch.file_path))
+        if os.path.isfile(dest):
+            skipped += 1
+            continue
+        shutil.copy2(ch.file_path, dest)
+        copied += 1
+        if log_callback:
+            log_callback(f"   ✓ Copied: {ch.source_script}/{os.path.basename(ch.file_path)}")
+        chapter_info.append({
+            "source": ch.source_script,
+            "title": ch.chapter_title,
+            "original_path": ch.file_path,
+            "summary": ch.summary,
+        })
+
+    # Update group info (merge with existing if present)
+    info_path = os.path.join(group_path, "_GROUP_INFO.json")
+    if os.path.isfile(info_path) and not is_new:
+        with open(info_path, "r", encoding="utf-8") as f:
+            group_info = json.load(f)
+        group_info["chapters"].extend(chapter_info)
+        group_info["chapter_count"] = len(group_info["chapters"])
+        group_info["updated"] = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+    else:
+        group_info = {
+            "niche": niche_name,
+            "broad_topic": broad_topic,
+            "suggested_titles": suggested_titles,
+            "created": __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "chapter_count": len(chapter_info),
+            "chapters": chapter_info,
+        }
+
+    with open(info_path, "w", encoding="utf-8") as f:
+        json.dump(group_info, f, ensure_ascii=False, indent=2)
+
+    # Update used tracker
+    tracker = load_used_tracker(scan_folder)
+    mark_chapters_used(tracker, chapters, folder_name)
+    save_used_tracker(scan_folder, tracker)
+
+    if log_callback:
+        msg = f"   ✓ Done: {copied} copied"
+        if skipped:
+            msg += f", {skipped} skipped (already exists)"
+        log_callback(msg)
+
+    return group_path
+
+
+# ── Folder Mode: Scan ──────────────────────────────────────────────
+
+def scan_output_folder_as_folders(
+    folder: str, log_callback=None, min_content_length: int = 0
+) -> list:
+    """
+    Scan output folder and aggregate chapters into FolderEntry objects.
+    Each subfolder becomes one FolderEntry with combined summary.
+
+    Returns: list[FolderEntry]
+    """
+    folders = []
+
+    if not os.path.isdir(folder):
+        return folders
+
+    for subdir in sorted(os.listdir(folder), key=_natural_sort_key):
+        subdir_path = os.path.join(folder, subdir)
+        if not os.path.isdir(subdir_path):
+            continue
+
+        # Skip regroup output folders
+        if os.path.isfile(os.path.join(subdir_path, "_GROUP_INFO.json")):
+            continue
+
+        # Find summary file
+        summary_data = {}
+        summary_files = [f for f in os.listdir(subdir_path) if f.endswith("_SUMMARY.txt")]
+        if summary_files:
+            summary_data = _parse_summary_file(
+                os.path.join(subdir_path, summary_files[0])
+            )
+
+        # Find chapter files
+        chapter_entries = []
+        total_chars = 0
+        for f in sorted(os.listdir(subdir_path), key=_natural_sort_key):
+            ch_match = re.match(r"(?:\d+_)?Chapter\s+(\d+)", f)
+            is_chapter = (
+                ch_match
+                and (f.endswith(".txt") or f.endswith(".md"))
+                and "_MERGED" not in f
+                and "_SUMMARY" not in f
+                and "_VERIFY" not in f
+            )
+            if not is_chapter:
+                continue
+
+            ch_num = int(ch_match.group(1))
+            file_path = os.path.join(subdir_path, f)
+
+            try:
+                file_size = os.path.getsize(file_path)
+                total_chars += file_size
+            except OSError:
+                pass
+
+            ch_info = summary_data.get(ch_num, {})
+            summary_text = ch_info.get("summary", "")
+
+            entry = ChapterEntry(
+                source_script=subdir,
+                chapter_title=os.path.splitext(f)[0],
+                chapter_number=ch_num,
+                file_path=file_path,
+                summary=summary_text,
+                file_hash=_compute_file_hash(file_path),
+            )
+            chapter_entries.append(entry)
+
+        if not chapter_entries:
+            continue
+
+        # Filter by total content length
+        if min_content_length > 0 and total_chars < min_content_length:
+            continue
+
+        # Build combined summary
+        summaries = []
+        for ch in chapter_entries:
+            if ch.summary:
+                summaries.append(f"Ch{ch.chapter_number}: {ch.summary}")
+        combined = " | ".join(summaries) if summaries else ""
+
+        folder_entry = FolderEntry(
+            folder_name=subdir,
+            folder_path=subdir_path,
+            chapter_count=len(chapter_entries),
+            total_chars=total_chars,
+            combined_summary=combined,
+            chapters=chapter_entries,
+        )
+        folders.append(folder_entry)
+
+    if log_callback:
+        total_ch = sum(fe.chapter_count for fe in folders)
+        log_callback(
+            f"Scanned: {len(folders)} folders, {total_ch} chapters total"
+        )
+
+    return folders
+
+
+# ── Folder Mode: Classify ──────────────────────────────────────────
+
+def _load_regroup_folder_prompt():
+    """Load the folder-mode regroup system prompt."""
+    prompt_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "prompts", "system_regroup_folder.txt"
+    )
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return (
+            "You are a content classifier. Classify each script folder into "
+            "the most fitting niche based on ALL chapters combined. "
+            "Output ONLY valid JSON."
+        )
+
+
+def classify_folders(
+    folders: list,
+    niche_list: list,
+    api_client,
+    batch_size: int = 30,
+    log_callback=None,
+) -> dict:
+    """
+    Use AI to classify entire folders into niches.
+    Each folder is treated as one unit based on its combined chapter summaries.
+
+    Returns:
+        dict with "groups" key, each group has "folders" containing
+        actual FolderEntry objects.
+    """
+    system_prompt = _load_regroup_folder_prompt()
+    niche_text = "\n".join(f"- {n}" for n in niche_list)
+
+    if log_callback:
+        log_callback(f"Preparing {len(folders)} folders for classification...")
+        log_callback(f"Niches: {', '.join(niche_list)}")
+
+    all_groups = {}  # niche -> {"folders": [], "suggested_titles": []}
+
+    # Build numbered folder list + index map
+    index_map = {}  # number -> FolderEntry
+    folder_lines = []
+    for i, fe in enumerate(folders, 1):
+        index_map[i] = fe
+        summary_part = f" — {fe.combined_summary[:500]}" if fe.combined_summary else ""
+        folder_lines.append(
+            f"#{i}: [{fe.folder_name}] ({fe.chapter_count} chapters, "
+            f"{fe.total_chars:,} chars){summary_part}"
+        )
+        if log_callback and i <= 5:
+            log_callback(f"  #{i}: {fe.folder_name} ({fe.chapter_count} ch)")
+    if log_callback and len(folders) > 5:
+        log_callback(f"  ... and {len(folders) - 5} more")
+
+    # Split into batches
+    batches = []
+    for i in range(0, len(folder_lines), batch_size):
+        batch_end = min(i + batch_size, len(folder_lines))
+        batches.append((i, folder_lines[i:batch_end]))
+
+    for batch_idx, (offset, batch) in enumerate(batches):
+        if log_callback:
+            log_callback(
+                f"━━ Batch {batch_idx + 1}/{len(batches)} "
+                f"({len(batch)} folders) → Sending to AI..."
+            )
+
+        user_prompt = (
+            f"Available niches:\n{niche_text}\n\n"
+            f"Script folders to classify (use the # number as ID):\n"
+            + "\n".join(batch)
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        if log_callback:
+            log_callback(f"  Waiting for AI response...")
+
+        result = api_client.call_api(messages)
+        if not result["success"]:
+            if log_callback:
+                log_callback(f"  ❌ API error: {result['error']}")
+            continue
+
+        if log_callback:
+            model_name = result.get("model", "?")
+            log_callback(f"  ✓ Response from model: {model_name}")
+
+        # Parse AI response
+        try:
+            content = result["content"]
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                parsed = json.loads(json_match.group())
+            else:
+                parsed = json.loads(content)
+
+            for group in parsed.get("groups", []):
+                niche = group.get("niche", "Không khớp")
+                if niche not in all_groups:
+                    all_groups[niche] = {
+                        "folders": [],
+                        "suggested_titles": group.get("suggested_titles", []),
+                    }
+
+                for item_ref in group.get("chapters", group.get("folders", [])):
+                    raw_id = item_ref.get("id", "")
+                    reason = item_ref.get("reason", "")
+
+                    num_match = re.search(r'#?(\d+)', str(raw_id))
+                    if num_match:
+                        num = int(num_match.group(1))
+                        fe = index_map.get(num)
+                        if fe:
+                            all_groups[niche]["folders"].append({
+                                "folder": fe,
+                                "reason": reason,
+                            })
+                        elif log_callback:
+                            log_callback(
+                                f"  ⚠️ ID #{num} out of range (max: {len(folders)})"
+                            )
+                    elif log_callback:
+                        log_callback(f"  ⚠️ Cannot parse ID: '{raw_id}'")
+
+                for title in group.get("suggested_titles", []):
+                    if title not in all_groups[niche]["suggested_titles"]:
+                        all_groups[niche]["suggested_titles"].append(title)
+
+            if log_callback:
+                batch_total = sum(len(g["folders"]) for g in all_groups.values())
+                log_callback(
+                    f"  ✓ Parsed: {len(parsed.get('groups', []))} groups, "
+                    f"{batch_total} folders total so far"
+                )
+
+        except (json.JSONDecodeError, KeyError) as e:
+            if log_callback:
+                log_callback(f"  ❌ Failed to parse AI response: {e}")
+                log_callback(f"  Response preview: {content[:200]}...")
+
+    # Convert to final format
+    groups_list = []
+    for niche, data in all_groups.items():
+        groups_list.append({
+            "niche": niche,
+            "suggested_titles": data["suggested_titles"],
+            "folders": data["folders"],
+        })
+        if log_callback:
+            count = len(data["folders"])
+            titles_str = " | ".join(data["suggested_titles"][:2])
+            log_callback(f"  📁 {niche}: {count} folder(s) → {titles_str}")
+
+    if log_callback:
+        total = sum(len(g["folders"]) for g in groups_list)
+        log_callback(
+            f"━━ Classification done: {len(groups_list)} groups, "
+            f"{total}/{len(folders)} folders classified"
+        )
+
+    return {"groups": groups_list}
+
+
+# ── Folder Mode: Move to Group ─────────────────────────────────────
+
+def move_folder_to_group(
+    folder_entries: list,
+    niche_name: str,
+    broad_topic: str,
+    suggested_titles: list,
+    regroup_dir: str,
+    scan_folder: str,
+    log_callback=None,
+) -> str:
+    """
+    Move selected script folders into a niche group directory.
+    Uses shutil.move — original folders are removed.
+
+    Returns: path to the niche group directory.
+    """
+    os.makedirs(regroup_dir, exist_ok=True)
+
+    # Find or create niche directory
+    existing = _find_existing_group(regroup_dir, niche_name)
+    if existing:
+        folder_name = existing
+        is_new = False
+    else:
+        folder_name = _sanitize_folder_name(niche_name)
+        is_new = True
+
+    group_path = os.path.join(regroup_dir, folder_name)
+    os.makedirs(group_path, exist_ok=True)
+
+    action = "Creating" if is_new else "Appending to"
+    if log_callback:
+        log_callback(f"━━ {action} group: {folder_name}")
+        log_callback(f"   Output: {group_path}")
+        log_callback(f"   Folders to move: {len(folder_entries)}")
+
+    moved = 0
+    skipped = 0
+    folder_info = []
+
+    for fe in folder_entries:
+        if not os.path.isdir(fe.folder_path):
+            if log_callback:
+                log_callback(f"   ⚠️ Folder not found: {fe.folder_path}")
+            continue
+
+        dest = os.path.join(group_path, fe.folder_name)
+        if os.path.isdir(dest):
+            skipped += 1
+            if log_callback:
+                log_callback(f"   ⏭ Already exists: {fe.folder_name}")
+            continue
+
+        shutil.move(fe.folder_path, dest)
+        moved += 1
+        if log_callback:
+            log_callback(
+                f"   ✓ Moved: {fe.folder_name} "
+                f"({fe.chapter_count} chapters, {fe.total_chars:,} chars)"
+            )
+        folder_info.append({
+            "folder_name": fe.folder_name,
+            "chapter_count": fe.chapter_count,
+            "total_chars": fe.total_chars,
+            "original_path": fe.folder_path,
+            "summary": fe.combined_summary[:500],
+        })
+
+    # Update group info
+    info_path = os.path.join(group_path, "_GROUP_INFO.json")
+    if os.path.isfile(info_path) and not is_new:
+        with open(info_path, "r", encoding="utf-8") as f:
+            group_info = json.load(f)
+        group_info.setdefault("folders", []).extend(folder_info)
+        group_info["folder_count"] = len(group_info["folders"])
+        group_info["updated"] = (
+            __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+        )
+    else:
+        group_info = {
+            "niche": niche_name,
+            "broad_topic": broad_topic,
+            "suggested_titles": suggested_titles,
+            "mode": "folder",
+            "created": (
+                __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+            ),
+            "folder_count": len(folder_info),
+            "folders": folder_info,
+        }
+
+    with open(info_path, "w", encoding="utf-8") as f:
+        json.dump(group_info, f, ensure_ascii=False, indent=2)
+
+    if log_callback:
+        msg = f"   ✓ Done: {moved} moved"
+        if skipped:
+            msg += f", {skipped} skipped (already exists)"
+        log_callback(msg)
+
+    return group_path
+```
+
+#### [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py)
+
+```diff:regroup_tab.py
+"""
+regroup_tab.py — UI tab for Regroup module.
+Scan split chapters, classify by niche via AI, copy to grouped folders.
+"""
+import os
+import re
+import threading
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QLineEdit, QComboBox, QSpinBox, QCheckBox, QTreeWidget,
+    QTreeWidgetItem, QFileDialog, QGroupBox, QTextEdit,
+    QListWidget, QListWidgetItem, QInputDialog, QHeaderView,
+    QSplitter,
+)
+from PyQt6.QtCore import pyqtSignal, Qt
+from ui.log_section import LogSection
+
+from core.api_client import APIClient
+from core.config_manager import load_config, save_config, load_api_keys
+from core.regroup import (
+    list_broad_topics, load_niche_list, save_niche_list,
+    scan_output_folder, classify_chapters, ChapterEntry,
+    load_used_tracker, is_chapter_used, copy_to_group,
+    generate_missing_summary,
+)
+
+
+class RegroupTab(QWidget):
+    """Tab for regrouping split chapters by niche topic."""
+
+    CONFIG_NAME = "regroup_config"
+
+    progress_text = pyqtSignal(str)  # Update progress column text
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._chapters = []        # All scanned ChapterEntry
+        self._classification = {}  # AI classification result
+        self._tracker = {}         # Used tracker
+        self._build_ui()
+        self._load_saved_config()
+        self.progress_text.connect(self._on_progress_text)
+
+    def _build_ui(self):
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        vsplitter = QSplitter(Qt.Orientation.Vertical)
+
+        content = QWidget()
+        main_layout = QVBoxLayout(content)
+        main_layout.setContentsMargins(8, 8, 8, 4)
+        main_layout.setSpacing(6)
+
+        # ── Row 1: Scan folder + Output ──
+        row1 = QHBoxLayout()
+        row1.setSpacing(6)
+
+        row1.addWidget(QLabel("Scan Folder:"))
+        self._txt_scan = QLineEdit()
+        self._txt_scan.setFixedHeight(28)
+        self._txt_scan.setMinimumWidth(180)
+        self._txt_scan.setPlaceholderText("Folder chứa chapters đã tách...")
+        row1.addWidget(self._txt_scan)
+
+        btn_browse_scan = QPushButton("...")
+        btn_browse_scan.setToolTip("Chọn folder chứa các file chapter")
+        btn_browse_scan.setFixedSize(28, 28)
+        btn_browse_scan.clicked.connect(self._browse_scan)
+        row1.addWidget(btn_browse_scan)
+
+        row1.addWidget(QLabel("Output:"))
+        self._txt_output = QLineEdit()
+        self._txt_output.setFixedHeight(28)
+        self._txt_output.setMinimumWidth(180)
+        self._txt_output.setPlaceholderText("Folder lưu kết quả nhóm...")
+        row1.addWidget(self._txt_output)
+
+        btn_browse_output = QPushButton("...")
+        btn_browse_output.setToolTip("Chọn folder lưu kết quả")
+        btn_browse_output.setFixedSize(28, 28)
+        btn_browse_output.clicked.connect(self._browse_output)
+        row1.addWidget(btn_browse_output)
+
+        btn_save_cfg = QPushButton("Save Config")
+        btn_save_cfg.setToolTip("Lưu cấu hình hiện tại")
+        btn_save_cfg.setFixedSize(100, 28)
+        btn_save_cfg.setProperty("class", "btn-purple")
+        btn_save_cfg.setStyleSheet("font-size: 11px;")
+        btn_save_cfg.clicked.connect(self._save_config)
+        row1.addWidget(btn_save_cfg)
+
+        main_layout.addLayout(row1)
+
+        # ── Row 2: Broad topic + range + tier ──
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+
+        row2.addWidget(QLabel("Chủ đề lớn:"))
+        self._combo_topic = QComboBox()
+        self._combo_topic.setFixedHeight(28)
+        self._combo_topic.setMinimumWidth(180)
+        self._combo_topic.currentTextChanged.connect(self._on_topic_changed)
+        row2.addWidget(self._combo_topic)
+
+        btn_refresh_topics = QPushButton("↻")
+        btn_refresh_topics.setFixedSize(28, 28)
+        btn_refresh_topics.setToolTip("Refresh danh sách chủ đề")
+        btn_refresh_topics.clicked.connect(self._refresh_topics)
+        row2.addWidget(btn_refresh_topics)
+
+        tier_label = QLabel("Tier:")
+        tier_label.setProperty("class", "label-gold")
+        row2.addWidget(tier_label)
+        self._combo_tier = QComboBox()
+        self._combo_tier.addItems(["Flash", "Pro"])
+        self._combo_tier.setFixedHeight(28)
+        self._combo_tier.setMinimumWidth(80)
+        row2.addWidget(self._combo_tier)
+
+        self._chk_min_chars = QCheckBox("Min chars:")
+        self._chk_min_chars.setChecked(True)
+        row2.addWidget(self._chk_min_chars)
+
+        self._spin_min_chars = QSpinBox()
+        self._spin_min_chars.setRange(500, 100000)
+        self._spin_min_chars.setValue(6000)
+        self._spin_min_chars.setSingleStep(500)
+        self._spin_min_chars.setFixedHeight(28)
+        self._spin_min_chars.setMinimumWidth(80)
+        row2.addWidget(self._spin_min_chars)
+
+        row2.addStretch()
+        main_layout.addLayout(row2)
+
+        # ── Row 3: Niche list + actions ──
+        niche_row = QHBoxLayout()
+        niche_row.setSpacing(6)
+
+        # Niche checklist (left side)
+        niche_group = QGroupBox("Danh sách ngách")
+        niche_layout = QVBoxLayout(niche_group)
+        niche_layout.setSpacing(4)
+
+        self._niche_list = QListWidget()
+        self._niche_list.setMaximumHeight(120)
+        niche_layout.addWidget(self._niche_list)
+
+        niche_btn_row = QHBoxLayout()
+        niche_btn_row.setSpacing(4)
+
+        btn_add_niche = QPushButton("+ Thêm ngách")
+        btn_add_niche.setToolTip("Thêm ngách chủ đề mới")
+        btn_add_niche.setFixedHeight(26)
+        btn_add_niche.setProperty("class", "btn-success")
+        btn_add_niche.setStyleSheet("font-size: 11px;")
+        btn_add_niche.clicked.connect(self._add_niche)
+        niche_btn_row.addWidget(btn_add_niche)
+
+        btn_remove_niche = QPushButton("− Xóa ngách")
+        btn_remove_niche.setToolTip("Xóa ngách đang chọn")
+        btn_remove_niche.setFixedHeight(26)
+        btn_remove_niche.setProperty("class", "btn-danger")
+        btn_remove_niche.setStyleSheet("font-size: 11px;")
+        btn_remove_niche.clicked.connect(self._remove_niche)
+        niche_btn_row.addWidget(btn_remove_niche)
+
+        btn_select_all = QPushButton("Chọn tất cả")
+        btn_select_all.setFixedHeight(26)
+        btn_select_all.setProperty("class", "btn-outline")
+        btn_select_all.setStyleSheet("font-size: 11px;")
+        btn_select_all.clicked.connect(self._select_all_niches)
+        niche_btn_row.addWidget(btn_select_all)
+
+        btn_deselect_all = QPushButton("Bỏ chọn")
+        btn_deselect_all.setFixedHeight(26)
+        btn_deselect_all.setProperty("class", "btn-outline")
+        btn_deselect_all.setStyleSheet("font-size: 11px;")
+        btn_deselect_all.clicked.connect(self._deselect_all_niches)
+        niche_btn_row.addWidget(btn_deselect_all)
+
+        niche_btn_row.addStretch()
+        niche_layout.addLayout(niche_btn_row)
+        niche_row.addWidget(niche_group, stretch=1)
+
+        # Action buttons (right side)
+        action_group = QGroupBox("Hành động")
+        action_layout = QVBoxLayout(action_group)
+        action_layout.setSpacing(6)
+
+        btn_scan = QPushButton("1. Scan Chapters")
+        btn_scan.setToolTip("Quét folder và tạo báo cáo tóm tắt cho từng chapter")
+        btn_scan.setFixedHeight(32)
+        btn_scan.setProperty("class", "btn-accent")
+        btn_scan.clicked.connect(self._do_scan)
+        action_layout.addWidget(btn_scan)
+
+        btn_classify = QPushButton("2. AI Classify")
+        btn_classify.setToolTip("AI phân loại chapter vào các ngách chủ đề")
+        btn_classify.setFixedHeight(32)
+        btn_classify.setProperty("class", "btn-warning")
+        btn_classify.clicked.connect(self._do_classify)
+        action_layout.addWidget(btn_classify)
+
+        btn_copy = QPushButton("3. Copy to Group")
+        btn_copy.setToolTip("Copy chapter vào folder nhóm tương ứng")
+        btn_copy.setFixedHeight(32)
+        btn_copy.setProperty("class", "btn-success")
+        btn_copy.clicked.connect(self._do_copy)
+        action_layout.addWidget(btn_copy)
+
+        niche_row.addWidget(action_group, stretch=0)
+        main_layout.addLayout(niche_row)
+
+        # ── Results tree ──
+        self._tree = QTreeWidget()
+        self._tree.setHeaderLabels(["Tên", "Nguồn", "Trạng thái", "Tiến trình"])
+        self._tree.setAlternatingRowColors(True)
+        self._tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
+        self._tree.setRootIsDecorated(True)
+        self._tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        header = self._tree.header()
+        header.setStretchLastSection(False)
+        header.setMinimumSectionSize(60)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        header.resizeSection(0, 300)
+        header.resizeSection(1, 250)
+        header.resizeSection(2, 100)
+        header.resizeSection(3, 100)
+        header.sectionResized.connect(self._on_column_resized)
+
+        main_layout.addWidget(self._tree)
+
+        # ── Bottom controls ──
+        bottom = QHBoxLayout()
+        bottom.setSpacing(6)
+
+        btn_ai_suggest = QPushButton("AI Suggest")
+        btn_ai_suggest.setToolTip("AI gợi ý sắp xếp và phân loại lại")
+        btn_ai_suggest.setFixedSize(100, 28)
+        btn_ai_suggest.setProperty("class", "btn-purple")
+        btn_ai_suggest.setStyleSheet("font-size: 11px;")
+        btn_ai_suggest.clicked.connect(self._ai_suggest)
+        bottom.addWidget(btn_ai_suggest)
+
+        btn_select_all = QPushButton("Chọn tất cả")
+        btn_select_all.setFixedSize(90, 28)
+        btn_select_all.setStyleSheet("font-size: 11px;")
+        btn_select_all.clicked.connect(self._tree_select_all)
+        bottom.addWidget(btn_select_all)
+
+        btn_deselect_all = QPushButton("Bỏ chọn")
+        btn_deselect_all.setFixedSize(80, 28)
+        btn_deselect_all.setStyleSheet("font-size: 11px;")
+        btn_deselect_all.clicked.connect(self._tree_deselect_all)
+        bottom.addWidget(btn_deselect_all)
+
+        self._chk_hide_used = QCheckBox("Ẩn chapters đã dùng")
+        self._chk_hide_used.setChecked(True)
+        self._chk_hide_used.toggled.connect(self._refresh_tree)
+        bottom.addWidget(self._chk_hide_used)
+
+        self._lbl_stats = QLabel("")
+        bottom.addWidget(self._lbl_stats)
+
+        bottom.addStretch()
+
+        btn_export_unmatched = QPushButton("Export ✗")
+        btn_export_unmatched.setFixedSize(80, 28)
+        btn_export_unmatched.setToolTip("Xuất danh sách chapters không khớp ngách")
+        btn_export_unmatched.setStyleSheet("font-size: 11px;")
+        btn_export_unmatched.clicked.connect(self._export_unmatched)
+        bottom.addWidget(btn_export_unmatched)
+
+        btn_open_output = QPushButton("Open Output")
+        btn_open_output.setToolTip("Mở folder output")
+        btn_open_output.setFixedSize(100, 28)
+        btn_open_output.setProperty("class", "btn-warning")
+        btn_open_output.setStyleSheet("font-size: 11px;")
+        btn_open_output.clicked.connect(self._open_output)
+        bottom.addWidget(btn_open_output)
+
+        main_layout.addLayout(bottom)
+
+        vsplitter.addWidget(content)
+
+        # ─── Bottom: log section ───
+        self._log = LogSection()
+        vsplitter.addWidget(self._log)
+
+        vsplitter.setSizes([500, 180])
+        vsplitter.setStretchFactor(0, 4)
+        vsplitter.setStretchFactor(1, 1)
+        outer.addWidget(vsplitter)
+
+    # ── Column Resize ────────────────────────────────────────────────
+
+    def _on_column_resized(self, index, old_size, new_size):
+        """Enforce: sum of all columns == viewport width, each >= min_w."""
+        header = self._tree.header()
+        vw = self._tree.viewport().width()
+        if vw <= 0:
+            return
+
+        min_w = header.minimumSectionSize()
+        n = header.count()  # 3 columns
+
+        header.blockSignals(True)
+
+        if index == n - 1:
+            # User dragged last column — revert it, adjust previous instead
+            header.resizeSection(index, old_size)
+        else:
+            # User dragged col 0 or 1
+            # Other non-dragged, non-last columns keep their size
+            other_fixed = sum(
+                header.sectionSize(i)
+                for i in range(n) if i != index and i != n - 1
+            )
+            # Last column gets whatever remains
+            last_w = vw - new_size - other_fixed
+
+            if last_w < min_w:
+                # Cap dragged column so last col keeps min_w
+                capped = vw - other_fixed - min_w
+                if capped < min_w:
+                    capped = min_w
+                header.resizeSection(index, capped)
+                last_w = vw - capped - other_fixed
+                if last_w < min_w:
+                    last_w = min_w
+
+            header.resizeSection(n - 1, last_w)
+
+        header.blockSignals(False)
+
+    def resizeEvent(self, event):
+        """Re-distribute last column when window resized."""
+        super().resizeEvent(event)
+        header = self._tree.header()
+        vw = self._tree.viewport().width()
+        if vw <= 0:
+            return
+        n = header.count()
+        used = sum(header.sectionSize(i) for i in range(n - 1))
+        last_w = max(vw - used, header.minimumSectionSize())
+        header.blockSignals(True)
+        header.resizeSection(n - 1, last_w)
+        header.blockSignals(False)
+
+    # ── Progress Column ──────────────────────────────────────────────
+
+    def _on_progress_text(self, text):
+        """Thread-safe: set progress column text on ALL top-level items."""
+        for i in range(self._tree.topLevelItemCount()):
+            self._tree.topLevelItem(i).setText(3, text)
+
+    def _set_group_progress(self, group_name, text):
+        """Set progress text for a specific group by name."""
+        for i in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(i)
+            if group_name in item.text(0):
+                item.setText(3, text)
+                break
+
+    # ── Tree Select / Deselect ───────────────────────────────────────
+
+    def _tree_select_all(self):
+        """Check all chapter items in the tree."""
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            for j in range(parent.childCount()):
+                parent.child(j).setCheckState(0, Qt.CheckState.Checked)
+
+    def _tree_deselect_all(self):
+        """Uncheck all chapter items in the tree."""
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            for j in range(parent.childCount()):
+                parent.child(j).setCheckState(0, Qt.CheckState.Unchecked)
+
+    # ── Export Unmatched ─────────────────────────────────────────────
+
+    def _export_unmatched(self):
+        """Export unmatched chapters to a CSV file for review."""
+        import csv
+        from datetime import datetime
+
+        if not self._classification:
+            self._log.log("[Regroup] Chưa có kết quả phân loại. Chạy AI Classify trước.")
+            return
+
+        # Get list of selected niches (user's defined niches)
+        selected_niches = set(n.lower().strip() for n in self._get_selected_niches())
+
+        # Collect chapters from niches that DON'T match user's niches
+        unmatched_rows = []
+        for group in self._classification.get("groups", []):
+            niche = group.get("niche", "?")
+            niche_lower = niche.lower().strip()
+
+            # If AI assigned a niche that's NOT in user's list → unmatched
+            is_unmatched = niche_lower not in selected_niches
+            if not is_unmatched:
+                # Also treat "không khớp" / "other" type niches as unmatched
+                if "không" in niche_lower or "other" in niche_lower or "unmatched" in niche_lower:
+                    is_unmatched = True
+
+            if not is_unmatched:
+                continue
+
+            for ch_ref in group.get("chapters", []):
+                ch = ch_ref.get("chapter")
+                reason = ch_ref.get("reason", "")
+                if ch and hasattr(ch, 'chapter_title'):
+                    unmatched_rows.append((ch, niche, reason))
+
+        if not unmatched_rows:
+            self._log.log("[Regroup] Không có chapters không khớp ngách.")
+            return
+
+        output_dir = self._txt_output.text().strip() or self._txt_scan.text().strip()
+        if not output_dir:
+            self._log.log("[Regroup] Chưa set output folder.")
+            return
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filepath = os.path.join(output_dir, f"unmatched_chapters_{timestamp}.csv")
+        os.makedirs(output_dir, exist_ok=True)
+
+        with open(filepath, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "STT", "Chapter", "Tên Chapter",
+                "Nguồn Script", "Nội dung chính",
+                "Ngách AI gán", "Lý do AI"
+            ])
+            for idx, (ch, ai_niche, reason) in enumerate(unmatched_rows, 1):
+                summary_short = (ch.summary or "").replace("\n", " ").strip()
+                if len(summary_short) > 200:
+                    summary_short = summary_short[:200] + "..."
+                writer.writerow([
+                    idx,
+                    f"Chapter {ch.chapter_number}",
+                    ch.chapter_title,
+                    ch.source_script,
+                    summary_short,
+                    ai_niche,
+                    reason,
+                ])
+
+        self._log.log(
+            f"[Regroup] ✓ Exported {len(unmatched_rows)} unmatched → {filepath}"
+        )
+
+    # ── Browse ──────────────────────────────────────────────────────
+
+    def _browse_scan(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Scan Folder", self._txt_scan.text())
+        if folder:
+            self._txt_scan.setText(folder)
+
+    def _browse_output(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Regroup Output Folder", self._txt_output.text())
+        if folder:
+            self._txt_output.setText(folder)
+
+    def _open_output(self):
+        folder = self._txt_output.text().strip()
+        if folder and os.path.isdir(folder):
+            os.startfile(folder)
+
+    # ── Config ──────────────────────────────────────────────────────
+
+    def _save_config(self):
+        data = {
+            "scan_folder": self._txt_scan.text(),
+            "output_folder": self._txt_output.text(),
+            "broad_topic": self._combo_topic.currentText(),
+            "tier": self._combo_tier.currentText(),
+
+            "hide_used": self._chk_hide_used.isChecked(),
+        }
+        save_config(self.CONFIG_NAME, data)
+        self._log.log("[CONFIG] Regroup config saved ✓")
+
+    def _load_saved_config(self):
+        self._refresh_topics()
+        data = load_config(self.CONFIG_NAME)
+        if not data:
+            return
+        self._txt_scan.setText(data.get("scan_folder", ""))
+        self._txt_output.setText(data.get("output_folder", ""))
+        topic = data.get("broad_topic", "")
+        idx = self._combo_topic.findText(topic)
+        if idx >= 0:
+            self._combo_topic.setCurrentIndex(idx)
+        tier_idx = self._combo_tier.findText(data.get("tier", "Flash"))
+        if tier_idx >= 0:
+            self._combo_tier.setCurrentIndex(tier_idx)
+
+        self._chk_hide_used.setChecked(data.get("hide_used", True))
+
+    # ── Topic & Niche Management ────────────────────────────────────
+
+    def _refresh_topics(self):
+        current = self._combo_topic.currentText()
+        self._combo_topic.clear()
+        topics = list_broad_topics()
+        self._combo_topic.addItems(topics)
+        if current:
+            idx = self._combo_topic.findText(current)
+            if idx >= 0:
+                self._combo_topic.setCurrentIndex(idx)
+
+    def _on_topic_changed(self, topic):
+        self._niche_list.clear()
+        if not topic:
+            return
+        niches = load_niche_list(topic)
+        for niche in niches:
+            item = QListWidgetItem(niche)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked)
+            self._niche_list.addItem(item)
+
+    def _add_niche(self):
+        text, ok = QInputDialog.getText(self, "Thêm ngách", "Tên ngách mới:")
+        if ok and text.strip():
+            item = QListWidgetItem(text.strip())
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked)
+            self._niche_list.addItem(item)
+            self._save_niches_to_file()
+
+    def _remove_niche(self):
+        items = self._niche_list.selectedItems()
+        for item in items:
+            self._niche_list.takeItem(self._niche_list.row(item))
+        self._save_niches_to_file()
+
+    def _select_all_niches(self):
+        for i in range(self._niche_list.count()):
+            self._niche_list.item(i).setCheckState(Qt.CheckState.Checked)
+
+    def _deselect_all_niches(self):
+        for i in range(self._niche_list.count()):
+            self._niche_list.item(i).setCheckState(Qt.CheckState.Unchecked)
+
+    def _save_niches_to_file(self):
+        topic = self._combo_topic.currentText()
+        if not topic:
+            return
+        niches = []
+        for i in range(self._niche_list.count()):
+            niches.append(self._niche_list.item(i).text())
+        save_niche_list(topic, niches)
+
+    def _get_selected_niches(self):
+        niches = []
+        for i in range(self._niche_list.count()):
+            item = self._niche_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                niches.append(item.text())
+        return niches
+
+    # ── Scan ────────────────────────────────────────────────────────
+
+    def _do_scan(self):
+        folder = self._txt_scan.text().strip()
+        if not folder or not os.path.isdir(folder):
+            self._log.log("[Regroup] Scan folder not set or doesn't exist")
+            return
+
+        self._log.log("[Regroup] Scanning chapters...")
+        self._log.set_status("Scanning...", False)
+
+        # Read widget values on main thread before starting background work
+        min_chars = self._spin_min_chars.value() if self._chk_min_chars.isChecked() else 0
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Scanning...")
+                chapters, missing = scan_output_folder(
+                    folder,
+                    log_callback=lambda m: self._log.log(f"[Regroup] {m}"),
+                    min_content_length=min_chars,
+                )
+
+                # Auto-generate missing summaries
+                if missing:
+                    total_missing = len(missing)
+                    self._log.log(
+                        f"[Regroup] ⚠️ {total_missing} folder(s) thiếu summary, đang tạo tự động..."
+                    )
+                    self._log.set_status("Generating summaries...", False)
+
+                    endpoints = load_api_keys()
+                    api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                    for idx, subdir_name in enumerate(missing):
+                        self.progress_text.emit(f"Summary {idx+1}/{total_missing}")
+                        subdir_path = os.path.join(folder, subdir_name)
+                        generate_missing_summary(
+                            subdir_path, subdir_name, api_client,
+                            log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                        )
+
+                    # Re-scan to pick up new summaries
+                    self._log.log("[Regroup] Re-scanning with new summaries...")
+                    chapters, still_missing = scan_output_folder(
+                        folder,
+                        log_callback=lambda m: self._log.log(f"[Regroup] {m}"),
+                        min_content_length=min_chars,
+                    )
+                    if still_missing:
+                        self._log.log(
+                            f"[Regroup] ⚠️ {len(still_missing)} folder(s) vẫn thiếu summary: "
+                            + ", ".join(still_missing[:5])
+                        )
+
+                self._chapters = chapters
+                self._tracker = load_used_tracker(folder)
+
+                self._log.log(
+                    f"[Regroup] Found {len(chapters)} chapters "
+                    f"from {len(set(ch.source_script for ch in chapters))} scripts"
+                )
+                self._log.set_status("Scan done", False)
+                self.progress_text.emit("✓ Done")
+
+                # Build scan results in tree (no classification yet)
+                self._classification = {}
+                self._refresh_tree()
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Scan error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Classify ────────────────────────────────────────────────────
+
+    def _do_classify(self):
+        if not self._chapters:
+            self._log.log("[Regroup] No chapters scanned. Run Scan first.")
+            return
+
+        niches = self._get_selected_niches()
+        if not niches:
+            self._log.log("[Regroup] No niches selected.")
+            return
+
+        self._log.log("[Regroup] Starting AI classification...")
+        self._log.set_status("Classifying...", False)
+
+        # Filter out used chapters if checkbox is on
+        chapters_to_classify = self._chapters
+        hide_used = self._chk_hide_used.isChecked()
+        if hide_used:
+            chapters_to_classify = [
+                ch for ch in self._chapters
+                if not is_chapter_used(self._tracker, ch)
+            ]
+
+        # Read widget values on main thread
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Classifying...")
+                endpoints = load_api_keys()
+                api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                result = classify_chapters(
+                    chapters_to_classify, niches, api_client,
+                    log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                )
+                self._classification = result
+                self._refresh_tree()
+                self._log.set_status("Classification done", False)
+                self.progress_text.emit("✓ Done")
+
+                # Auto-export unmatched chapters to CSV
+                try:
+                    self._export_unmatched()
+                except Exception as ex:
+                    self._log.log(f"[Regroup] Export warning: {ex}")
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Classification error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Tree Display ────────────────────────────────────────────────
+
+    def _refresh_tree(self):
+        self._tree.clear()
+
+        if self._classification and "groups" in self._classification:
+            self._show_classification_tree()
+        elif self._chapters:
+            self._show_scan_tree()
+
+    def _show_scan_tree(self):
+        """Show scan results grouped by source script."""
+        by_source = {}
+        for ch in self._chapters:
+            by_source.setdefault(ch.source_script, []).append(ch)
+
+        total = 0
+        used = 0
+        for source, chs in sorted(by_source.items()):
+            parent = QTreeWidgetItem([f"📁 {source}", "", f"{len(chs)} chapters"])
+            parent.setFlags(parent.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+            parent.setCheckState(0, Qt.CheckState.Unchecked)
+
+            for ch in sorted(chs, key=lambda c: c.chapter_number):
+                used_by = is_chapter_used(self._tracker, ch)
+                total += 1
+
+                if used_by and self._chk_hide_used.isChecked():
+                    used += 1
+                    continue
+
+                status = f"⚠️ đã dùng ({used_by})" if used_by else "✅ chưa dùng"
+                child = QTreeWidgetItem([ch.chapter_title, ch.source_script, status])
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(0, Qt.CheckState.Unchecked if used_by else Qt.CheckState.Checked)
+                child.setData(0, Qt.ItemDataRole.UserRole, ch)
+                parent.addChild(child)
+
+                if used_by:
+                    used += 1
+
+            if parent.childCount() > 0:
+                self._tree.addTopLevelItem(parent)
+
+        self._lbl_stats.setText(f"Tổng: {total} | Đã dùng: {used} | Còn lại: {total - used}")
+
+    def _show_classification_tree(self):
+        """Show AI classification results grouped by niche."""
+        total_classified = 0
+        for group in self._classification.get("groups", []):
+            niche = group.get("niche", "?")
+            chapters_refs = group.get("chapters", [])
+            titles = group.get("suggested_titles", [])
+            title_text = " | ".join(titles[:2]) if titles else ""
+
+            parent = QTreeWidgetItem([
+                f"📁 {niche} ({len(chapters_refs)})",
+                title_text,
+                ""
+            ])
+            parent.setFlags(parent.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+            parent.setCheckState(0, Qt.CheckState.Checked)
+
+            for ch_ref in chapters_refs:
+                # New format: ch_ref has "chapter" (ChapterEntry) and "reason"
+                ch = ch_ref.get("chapter")
+                reason = ch_ref.get("reason", "")
+
+                if not ch:
+                    continue
+
+                used_by = is_chapter_used(self._tracker, ch)
+                if used_by and self._chk_hide_used.isChecked():
+                    continue
+
+                status = f"⚠️ đã dùng ({used_by})" if used_by else "✅"
+                child = QTreeWidgetItem([
+                    ch.chapter_title,
+                    ch.source_script,
+                    status,
+                ])
+                child.setToolTip(0, reason)
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(0, Qt.CheckState.Unchecked if used_by else Qt.CheckState.Checked)
+                child.setData(0, Qt.ItemDataRole.UserRole, ch)
+                parent.addChild(child)
+                total_classified += 1
+
+            if parent.childCount() > 0:
+                self._tree.addTopLevelItem(parent)
+                parent.setExpanded(True)
+
+        self._lbl_stats.setText(f"Phân loại: {total_classified} chapters")
+
+    # ── AI Suggest ──────────────────────────────────────────────────
+
+    def _ai_suggest(self):
+        """Auto-select best N chapters per group using range."""
+        max_n = 999  # No limit — select all available
+
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            child_count = parent.childCount()
+
+            # Uncheck all first
+            for j in range(child_count):
+                parent.child(j).setCheckState(0, Qt.CheckState.Unchecked)
+
+            # Check up to max_n, skip used
+            checked = 0
+            for j in range(child_count):
+                child = parent.child(j)
+                ch = child.data(0, Qt.ItemDataRole.UserRole)
+                if ch and not is_chapter_used(self._tracker, ch):
+                    if checked < max_n:
+                        child.setCheckState(0, Qt.CheckState.Checked)
+                        checked += 1
+
+        self._log.log(f"[Regroup] AI Suggest: selected up to {max_n} chapters per group")
+
+    # ── Copy to Group ───────────────────────────────────────────────
+
+    def _do_copy(self):
+        regroup_dir = self._txt_output.text().strip()
+        scan_dir = self._txt_scan.text().strip()
+        if not regroup_dir:
+            self._log.log("[Regroup] Output folder not set")
+            return
+        if not scan_dir:
+            self._log.log("[Regroup] Scan folder not set")
+            return
+
+        broad_topic = self._combo_topic.currentText()
+
+        # Collect checked chapters per group
+        groups_to_copy = []
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            niche_label = parent.text(0)
+            # Extract niche name (remove icon and count)
+            niche_name = re.sub(r'^📁\s*', '', niche_label)
+            niche_name = re.sub(r'\s*\(\d+\)\s*$', '', niche_name)
+            titles_text = parent.text(1)
+            suggested_titles = [t.strip() for t in titles_text.split("|") if t.strip()]
+
+            checked_chapters = []
+            for j in range(parent.childCount()):
+                child = parent.child(j)
+                if child.checkState(0) == Qt.CheckState.Checked:
+                    ch = child.data(0, Qt.ItemDataRole.UserRole)
+                    if ch:
+                        checked_chapters.append(ch)
+
+            if checked_chapters:
+                groups_to_copy.append((niche_name, suggested_titles, checked_chapters))
+
+        if not groups_to_copy:
+            self._log.log("[Regroup] No chapters selected")
+            return
+
+        total_ch = sum(len(chs) for _, _, chs in groups_to_copy)
+        self._log.log(
+            f"[Regroup] Copying {len(groups_to_copy)} group(s), "
+            f"{total_ch} chapters → {regroup_dir}"
+        )
+        self._log.set_status("Copying...", False)
+
+        def _run():
+            try:
+                total = len(groups_to_copy)
+                for idx, (niche_name, titles, chapters) in enumerate(groups_to_copy):
+                    self.progress_text.emit(f"Copying {idx+1}/{total}...")
+                    group_path = copy_to_group(
+                        chapters, niche_name, broad_topic, titles,
+                        regroup_dir, scan_dir,
+                        log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                    )
+                    self._log.log(f"[Regroup] ✓ Created: {os.path.basename(group_path)}")
+
+                # Reload tracker
+                self._tracker = load_used_tracker(scan_dir)
+                self._refresh_tree()
+
+                self._log.log(
+                    f"[Regroup] Done — {total} group(s) created ✓"
+                )
+                self._log.set_status("Done", False)
+                self.progress_text.emit("✓ Done")
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Copy error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+===
+"""
+regroup_tab.py — UI tab for Regroup module.
+Scan split chapters, classify by niche via AI, copy to grouped folders.
+"""
+import os
+import re
+import threading
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QLineEdit, QComboBox, QSpinBox, QCheckBox, QTreeWidget,
+    QTreeWidgetItem, QFileDialog, QGroupBox, QTextEdit,
+    QListWidget, QListWidgetItem, QInputDialog, QHeaderView,
+    QSplitter,
+)
+from PyQt6.QtCore import pyqtSignal, Qt
+from ui.log_section import LogSection
+
+from core.api_client import APIClient
+from core.config_manager import load_config, save_config, load_api_keys
+from core.regroup import (
+    list_broad_topics, load_niche_list, save_niche_list,
+    scan_output_folder, classify_chapters, ChapterEntry,
+    load_used_tracker, is_chapter_used, copy_to_group,
+    generate_missing_summary,
+    FolderEntry, scan_output_folder_as_folders,
+    classify_folders, move_folder_to_group,
+)
+
+
+class RegroupTab(QWidget):
+    """Tab for regrouping split chapters by niche topic."""
+
+    CONFIG_NAME = "regroup_config"
+
+    progress_text = pyqtSignal(str)  # Update progress column text
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._chapters = []        # All scanned ChapterEntry
+        self._folders = []         # All scanned FolderEntry (folder mode)
+        self._classification = {}  # AI classification result
+        self._tracker = {}         # Used tracker
+        self._build_ui()
+        self._load_saved_config()
+        self.progress_text.connect(self._on_progress_text)
+
+    def _build_ui(self):
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        vsplitter = QSplitter(Qt.Orientation.Vertical)
+
+        content = QWidget()
+        main_layout = QVBoxLayout(content)
+        main_layout.setContentsMargins(8, 8, 8, 4)
+        main_layout.setSpacing(6)
+
+        # ── Row 1: Scan folder + Output ──
+        row1 = QHBoxLayout()
+        row1.setSpacing(6)
+
+        row1.addWidget(QLabel("Scan Folder:"))
+        self._txt_scan = QLineEdit()
+        self._txt_scan.setFixedHeight(28)
+        self._txt_scan.setMinimumWidth(180)
+        self._txt_scan.setPlaceholderText("Folder chứa chapters đã tách...")
+        row1.addWidget(self._txt_scan)
+
+        btn_browse_scan = QPushButton("...")
+        btn_browse_scan.setToolTip("Chọn folder chứa các file chapter")
+        btn_browse_scan.setFixedSize(28, 28)
+        btn_browse_scan.clicked.connect(self._browse_scan)
+        row1.addWidget(btn_browse_scan)
+
+        row1.addWidget(QLabel("Output:"))
+        self._txt_output = QLineEdit()
+        self._txt_output.setFixedHeight(28)
+        self._txt_output.setMinimumWidth(180)
+        self._txt_output.setPlaceholderText("Folder lưu kết quả nhóm...")
+        row1.addWidget(self._txt_output)
+
+        btn_browse_output = QPushButton("...")
+        btn_browse_output.setToolTip("Chọn folder lưu kết quả")
+        btn_browse_output.setFixedSize(28, 28)
+        btn_browse_output.clicked.connect(self._browse_output)
+        row1.addWidget(btn_browse_output)
+
+        btn_save_cfg = QPushButton("Save Config")
+        btn_save_cfg.setToolTip("Lưu cấu hình hiện tại")
+        btn_save_cfg.setFixedSize(100, 28)
+        btn_save_cfg.setProperty("class", "btn-purple")
+        btn_save_cfg.setStyleSheet("font-size: 11px;")
+        btn_save_cfg.clicked.connect(self._save_config)
+        row1.addWidget(btn_save_cfg)
+
+        main_layout.addLayout(row1)
+
+        # ── Row 2: Mode + Broad topic + range + tier ──
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+
+        row2.addWidget(QLabel("Mode:"))
+        self._combo_mode = QComboBox()
+        self._combo_mode.addItems(["Chapter", "Folder"])
+        self._combo_mode.setFixedHeight(28)
+        self._combo_mode.setMinimumWidth(90)
+        self._combo_mode.setToolTip(
+            "Chapter: phân loại từng chapter riêng lẻ\n"
+            "Folder: phân loại toàn bộ thư mục kịch bản"
+        )
+        row2.addWidget(self._combo_mode)
+
+        row2.addWidget(QLabel("Chủ đề lớn:"))
+        self._combo_topic = QComboBox()
+        self._combo_topic.setFixedHeight(28)
+        self._combo_topic.setMinimumWidth(180)
+        self._combo_topic.currentTextChanged.connect(self._on_topic_changed)
+        row2.addWidget(self._combo_topic)
+
+        btn_refresh_topics = QPushButton("↻")
+        btn_refresh_topics.setFixedSize(28, 28)
+        btn_refresh_topics.setToolTip("Refresh danh sách chủ đề")
+        btn_refresh_topics.clicked.connect(self._refresh_topics)
+        row2.addWidget(btn_refresh_topics)
+
+        tier_label = QLabel("Tier:")
+        tier_label.setProperty("class", "label-gold")
+        row2.addWidget(tier_label)
+        self._combo_tier = QComboBox()
+        self._combo_tier.addItems(["Flash", "Pro"])
+        self._combo_tier.setFixedHeight(28)
+        self._combo_tier.setMinimumWidth(80)
+        row2.addWidget(self._combo_tier)
+
+        self._chk_min_chars = QCheckBox("Min chars:")
+        self._chk_min_chars.setChecked(True)
+        row2.addWidget(self._chk_min_chars)
+
+        self._spin_min_chars = QSpinBox()
+        self._spin_min_chars.setRange(500, 100000)
+        self._spin_min_chars.setValue(6000)
+        self._spin_min_chars.setSingleStep(500)
+        self._spin_min_chars.setFixedHeight(28)
+        self._spin_min_chars.setMinimumWidth(80)
+        row2.addWidget(self._spin_min_chars)
+
+        row2.addStretch()
+        main_layout.addLayout(row2)
+
+        # ── Row 3: Niche list + actions ──
+        niche_row = QHBoxLayout()
+        niche_row.setSpacing(6)
+
+        # Niche checklist (left side)
+        niche_group = QGroupBox("Danh sách ngách")
+        niche_layout = QVBoxLayout(niche_group)
+        niche_layout.setSpacing(4)
+
+        self._niche_list = QListWidget()
+        self._niche_list.setMaximumHeight(120)
+        niche_layout.addWidget(self._niche_list)
+
+        niche_btn_row = QHBoxLayout()
+        niche_btn_row.setSpacing(4)
+
+        btn_add_niche = QPushButton("+ Thêm ngách")
+        btn_add_niche.setToolTip("Thêm ngách chủ đề mới")
+        btn_add_niche.setFixedHeight(26)
+        btn_add_niche.setProperty("class", "btn-success")
+        btn_add_niche.setStyleSheet("font-size: 11px;")
+        btn_add_niche.clicked.connect(self._add_niche)
+        niche_btn_row.addWidget(btn_add_niche)
+
+        btn_remove_niche = QPushButton("− Xóa ngách")
+        btn_remove_niche.setToolTip("Xóa ngách đang chọn")
+        btn_remove_niche.setFixedHeight(26)
+        btn_remove_niche.setProperty("class", "btn-danger")
+        btn_remove_niche.setStyleSheet("font-size: 11px;")
+        btn_remove_niche.clicked.connect(self._remove_niche)
+        niche_btn_row.addWidget(btn_remove_niche)
+
+        btn_select_all = QPushButton("Chọn tất cả")
+        btn_select_all.setFixedHeight(26)
+        btn_select_all.setProperty("class", "btn-outline")
+        btn_select_all.setStyleSheet("font-size: 11px;")
+        btn_select_all.clicked.connect(self._select_all_niches)
+        niche_btn_row.addWidget(btn_select_all)
+
+        btn_deselect_all = QPushButton("Bỏ chọn")
+        btn_deselect_all.setFixedHeight(26)
+        btn_deselect_all.setProperty("class", "btn-outline")
+        btn_deselect_all.setStyleSheet("font-size: 11px;")
+        btn_deselect_all.clicked.connect(self._deselect_all_niches)
+        niche_btn_row.addWidget(btn_deselect_all)
+
+        niche_btn_row.addStretch()
+        niche_layout.addLayout(niche_btn_row)
+        niche_row.addWidget(niche_group, stretch=1)
+
+        # Action buttons (right side)
+        action_group = QGroupBox("Hành động")
+        action_layout = QVBoxLayout(action_group)
+        action_layout.setSpacing(6)
+
+        btn_scan = QPushButton("1. Scan Chapters")
+        btn_scan.setToolTip("Quét folder và tạo báo cáo tóm tắt cho từng chapter")
+        btn_scan.setFixedHeight(32)
+        btn_scan.setProperty("class", "btn-accent")
+        btn_scan.clicked.connect(self._do_scan)
+        action_layout.addWidget(btn_scan)
+
+        btn_classify = QPushButton("2. AI Classify")
+        btn_classify.setToolTip("AI phân loại chapter vào các ngách chủ đề")
+        btn_classify.setFixedHeight(32)
+        btn_classify.setProperty("class", "btn-warning")
+        btn_classify.clicked.connect(self._do_classify)
+        action_layout.addWidget(btn_classify)
+
+        btn_copy = QPushButton("3. Copy to Group")
+        btn_copy.setToolTip("Copy chapter vào folder nhóm tương ứng")
+        btn_copy.setFixedHeight(32)
+        btn_copy.setProperty("class", "btn-success")
+        btn_copy.clicked.connect(self._do_copy)
+        action_layout.addWidget(btn_copy)
+
+        niche_row.addWidget(action_group, stretch=0)
+        main_layout.addLayout(niche_row)
+
+        # ── Results tree ──
+        self._tree = QTreeWidget()
+        self._tree.setHeaderLabels(["Tên", "Nguồn", "Trạng thái", "Tiến trình"])
+        self._tree.setAlternatingRowColors(True)
+        self._tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
+        self._tree.setRootIsDecorated(True)
+        self._tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        header = self._tree.header()
+        header.setStretchLastSection(False)
+        header.setMinimumSectionSize(60)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        header.resizeSection(0, 300)
+        header.resizeSection(1, 250)
+        header.resizeSection(2, 100)
+        header.resizeSection(3, 100)
+        header.sectionResized.connect(self._on_column_resized)
+
+        main_layout.addWidget(self._tree)
+
+        # ── Bottom controls ──
+        bottom = QHBoxLayout()
+        bottom.setSpacing(6)
+
+        btn_ai_suggest = QPushButton("AI Suggest")
+        btn_ai_suggest.setToolTip("AI gợi ý sắp xếp và phân loại lại")
+        btn_ai_suggest.setFixedSize(100, 28)
+        btn_ai_suggest.setProperty("class", "btn-purple")
+        btn_ai_suggest.setStyleSheet("font-size: 11px;")
+        btn_ai_suggest.clicked.connect(self._ai_suggest)
+        bottom.addWidget(btn_ai_suggest)
+
+        btn_select_all = QPushButton("Chọn tất cả")
+        btn_select_all.setFixedSize(90, 28)
+        btn_select_all.setStyleSheet("font-size: 11px;")
+        btn_select_all.clicked.connect(self._tree_select_all)
+        bottom.addWidget(btn_select_all)
+
+        btn_deselect_all = QPushButton("Bỏ chọn")
+        btn_deselect_all.setFixedSize(80, 28)
+        btn_deselect_all.setStyleSheet("font-size: 11px;")
+        btn_deselect_all.clicked.connect(self._tree_deselect_all)
+        bottom.addWidget(btn_deselect_all)
+
+        self._chk_hide_used = QCheckBox("Ẩn chapters đã dùng")
+        self._chk_hide_used.setChecked(True)
+        self._chk_hide_used.toggled.connect(self._refresh_tree)
+        bottom.addWidget(self._chk_hide_used)
+
+        self._lbl_stats = QLabel("")
+        bottom.addWidget(self._lbl_stats)
+
+        bottom.addStretch()
+
+        btn_export_unmatched = QPushButton("Export ✗")
+        btn_export_unmatched.setFixedSize(80, 28)
+        btn_export_unmatched.setToolTip("Xuất danh sách chapters không khớp ngách")
+        btn_export_unmatched.setStyleSheet("font-size: 11px;")
+        btn_export_unmatched.clicked.connect(self._export_unmatched)
+        bottom.addWidget(btn_export_unmatched)
+
+        btn_open_output = QPushButton("Open Output")
+        btn_open_output.setToolTip("Mở folder output")
+        btn_open_output.setFixedSize(100, 28)
+        btn_open_output.setProperty("class", "btn-warning")
+        btn_open_output.setStyleSheet("font-size: 11px;")
+        btn_open_output.clicked.connect(self._open_output)
+        bottom.addWidget(btn_open_output)
+
+        main_layout.addLayout(bottom)
+
+        vsplitter.addWidget(content)
+
+        # ─── Bottom: log section ───
+        self._log = LogSection()
+        vsplitter.addWidget(self._log)
+
+        vsplitter.setSizes([500, 180])
+        vsplitter.setStretchFactor(0, 4)
+        vsplitter.setStretchFactor(1, 1)
+        outer.addWidget(vsplitter)
+
+    # ── Column Resize ────────────────────────────────────────────────
+
+    def _on_column_resized(self, index, old_size, new_size):
+        """Enforce: sum of all columns == viewport width, each >= min_w."""
+        header = self._tree.header()
+        vw = self._tree.viewport().width()
+        if vw <= 0:
+            return
+
+        min_w = header.minimumSectionSize()
+        n = header.count()  # 3 columns
+
+        header.blockSignals(True)
+
+        if index == n - 1:
+            # User dragged last column — revert it, adjust previous instead
+            header.resizeSection(index, old_size)
+        else:
+            # User dragged col 0 or 1
+            # Other non-dragged, non-last columns keep their size
+            other_fixed = sum(
+                header.sectionSize(i)
+                for i in range(n) if i != index and i != n - 1
+            )
+            # Last column gets whatever remains
+            last_w = vw - new_size - other_fixed
+
+            if last_w < min_w:
+                # Cap dragged column so last col keeps min_w
+                capped = vw - other_fixed - min_w
+                if capped < min_w:
+                    capped = min_w
+                header.resizeSection(index, capped)
+                last_w = vw - capped - other_fixed
+                if last_w < min_w:
+                    last_w = min_w
+
+            header.resizeSection(n - 1, last_w)
+
+        header.blockSignals(False)
+
+    def resizeEvent(self, event):
+        """Re-distribute last column when window resized."""
+        super().resizeEvent(event)
+        header = self._tree.header()
+        vw = self._tree.viewport().width()
+        if vw <= 0:
+            return
+        n = header.count()
+        used = sum(header.sectionSize(i) for i in range(n - 1))
+        last_w = max(vw - used, header.minimumSectionSize())
+        header.blockSignals(True)
+        header.resizeSection(n - 1, last_w)
+        header.blockSignals(False)
+
+    # ── Progress Column ──────────────────────────────────────────────
+
+    def _on_progress_text(self, text):
+        """Thread-safe: set progress column text on ALL top-level items."""
+        for i in range(self._tree.topLevelItemCount()):
+            self._tree.topLevelItem(i).setText(3, text)
+
+    def _set_group_progress(self, group_name, text):
+        """Set progress text for a specific group by name."""
+        for i in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(i)
+            if group_name in item.text(0):
+                item.setText(3, text)
+                break
+
+    # ── Tree Select / Deselect ───────────────────────────────────────
+
+    def _tree_select_all(self):
+        """Check all chapter items in the tree."""
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            for j in range(parent.childCount()):
+                parent.child(j).setCheckState(0, Qt.CheckState.Checked)
+
+    def _tree_deselect_all(self):
+        """Uncheck all chapter items in the tree."""
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            for j in range(parent.childCount()):
+                parent.child(j).setCheckState(0, Qt.CheckState.Unchecked)
+
+    # ── Export Unmatched ─────────────────────────────────────────────
+
+    def _export_unmatched(self):
+        """Export unmatched chapters to a CSV file for review."""
+        import csv
+        from datetime import datetime
+
+        if not self._classification:
+            self._log.log("[Regroup] Chưa có kết quả phân loại. Chạy AI Classify trước.")
+            return
+
+        # Get list of selected niches (user's defined niches)
+        selected_niches = set(n.lower().strip() for n in self._get_selected_niches())
+
+        # Collect chapters from niches that DON'T match user's niches
+        unmatched_rows = []
+        for group in self._classification.get("groups", []):
+            niche = group.get("niche", "?")
+            niche_lower = niche.lower().strip()
+
+            # If AI assigned a niche that's NOT in user's list → unmatched
+            is_unmatched = niche_lower not in selected_niches
+            if not is_unmatched:
+                # Also treat "không khớp" / "other" type niches as unmatched
+                if "không" in niche_lower or "other" in niche_lower or "unmatched" in niche_lower:
+                    is_unmatched = True
+
+            if not is_unmatched:
+                continue
+
+            for ch_ref in group.get("chapters", []):
+                ch = ch_ref.get("chapter")
+                reason = ch_ref.get("reason", "")
+                if ch and hasattr(ch, 'chapter_title'):
+                    unmatched_rows.append((ch, niche, reason))
+
+        if not unmatched_rows:
+            self._log.log("[Regroup] Không có chapters không khớp ngách.")
+            return
+
+        output_dir = self._txt_output.text().strip() or self._txt_scan.text().strip()
+        if not output_dir:
+            self._log.log("[Regroup] Chưa set output folder.")
+            return
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filepath = os.path.join(output_dir, f"unmatched_chapters_{timestamp}.csv")
+        os.makedirs(output_dir, exist_ok=True)
+
+        with open(filepath, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "STT", "Chapter", "Tên Chapter",
+                "Nguồn Script", "Nội dung chính",
+                "Ngách AI gán", "Lý do AI"
+            ])
+            for idx, (ch, ai_niche, reason) in enumerate(unmatched_rows, 1):
+                summary_short = (ch.summary or "").replace("\n", " ").strip()
+                if len(summary_short) > 200:
+                    summary_short = summary_short[:200] + "..."
+                writer.writerow([
+                    idx,
+                    f"Chapter {ch.chapter_number}",
+                    ch.chapter_title,
+                    ch.source_script,
+                    summary_short,
+                    ai_niche,
+                    reason,
+                ])
+
+        self._log.log(
+            f"[Regroup] ✓ Exported {len(unmatched_rows)} unmatched → {filepath}"
+        )
+
+    # ── Browse ──────────────────────────────────────────────────────
+
+    def _browse_scan(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Scan Folder", self._txt_scan.text())
+        if folder:
+            self._txt_scan.setText(folder)
+
+    def _browse_output(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Regroup Output Folder", self._txt_output.text())
+        if folder:
+            self._txt_output.setText(folder)
+
+    def _open_output(self):
+        folder = self._txt_output.text().strip()
+        if folder and os.path.isdir(folder):
+            os.startfile(folder)
+
+    # ── Config ──────────────────────────────────────────────────────
+
+    def _save_config(self):
+        data = {
+            "scan_folder": self._txt_scan.text(),
+            "output_folder": self._txt_output.text(),
+            "broad_topic": self._combo_topic.currentText(),
+            "tier": self._combo_tier.currentText(),
+            "group_mode": self._combo_mode.currentText(),
+            "hide_used": self._chk_hide_used.isChecked(),
+        }
+        save_config(self.CONFIG_NAME, data)
+        self._log.log("[CONFIG] Regroup config saved ✓")
+
+    def _load_saved_config(self):
+        self._refresh_topics()
+        data = load_config(self.CONFIG_NAME)
+        if not data:
+            return
+        self._txt_scan.setText(data.get("scan_folder", ""))
+        self._txt_output.setText(data.get("output_folder", ""))
+        topic = data.get("broad_topic", "")
+        idx = self._combo_topic.findText(topic)
+        if idx >= 0:
+            self._combo_topic.setCurrentIndex(idx)
+        tier_idx = self._combo_tier.findText(data.get("tier", "Flash"))
+        if tier_idx >= 0:
+            self._combo_tier.setCurrentIndex(tier_idx)
+        mode_idx = self._combo_mode.findText(data.get("group_mode", "Chapter"))
+        if mode_idx >= 0:
+            self._combo_mode.setCurrentIndex(mode_idx)
+
+        self._chk_hide_used.setChecked(data.get("hide_used", True))
+
+    # ── Topic & Niche Management ────────────────────────────────────
+
+    def _refresh_topics(self):
+        current = self._combo_topic.currentText()
+        self._combo_topic.clear()
+        topics = list_broad_topics()
+        self._combo_topic.addItems(topics)
+        if current:
+            idx = self._combo_topic.findText(current)
+            if idx >= 0:
+                self._combo_topic.setCurrentIndex(idx)
+
+    def _on_topic_changed(self, topic):
+        self._niche_list.clear()
+        if not topic:
+            return
+        niches = load_niche_list(topic)
+        for niche in niches:
+            item = QListWidgetItem(niche)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked)
+            self._niche_list.addItem(item)
+
+    def _add_niche(self):
+        text, ok = QInputDialog.getText(self, "Thêm ngách", "Tên ngách mới:")
+        if ok and text.strip():
+            item = QListWidgetItem(text.strip())
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked)
+            self._niche_list.addItem(item)
+            self._save_niches_to_file()
+
+    def _remove_niche(self):
+        items = self._niche_list.selectedItems()
+        for item in items:
+            self._niche_list.takeItem(self._niche_list.row(item))
+        self._save_niches_to_file()
+
+    def _select_all_niches(self):
+        for i in range(self._niche_list.count()):
+            self._niche_list.item(i).setCheckState(Qt.CheckState.Checked)
+
+    def _deselect_all_niches(self):
+        for i in range(self._niche_list.count()):
+            self._niche_list.item(i).setCheckState(Qt.CheckState.Unchecked)
+
+    def _save_niches_to_file(self):
+        topic = self._combo_topic.currentText()
+        if not topic:
+            return
+        niches = []
+        for i in range(self._niche_list.count()):
+            niches.append(self._niche_list.item(i).text())
+        save_niche_list(topic, niches)
+
+    def _get_selected_niches(self):
+        niches = []
+        for i in range(self._niche_list.count()):
+            item = self._niche_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                niches.append(item.text())
+        return niches
+
+    # ── Mode Helper ─────────────────────────────────────────────────
+
+    def _is_folder_mode(self):
+        return self._combo_mode.currentText() == "Folder"
+
+    # ── Scan ────────────────────────────────────────────────────────
+
+    def _do_scan(self):
+        if self._is_folder_mode():
+            return self._do_scan_folders()
+        return self._do_scan_chapters()
+
+    def _do_scan_chapters(self):
+        folder = self._txt_scan.text().strip()
+        if not folder or not os.path.isdir(folder):
+            self._log.log("[Regroup] Scan folder not set or doesn't exist")
+            return
+
+        self._log.log("[Regroup] Scanning chapters...")
+        self._log.set_status("Scanning...", False)
+
+        # Read widget values on main thread before starting background work
+        min_chars = self._spin_min_chars.value() if self._chk_min_chars.isChecked() else 0
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Scanning...")
+                chapters, missing = scan_output_folder(
+                    folder,
+                    log_callback=lambda m: self._log.log(f"[Regroup] {m}"),
+                    min_content_length=min_chars,
+                )
+
+                # Auto-generate missing summaries
+                if missing:
+                    total_missing = len(missing)
+                    self._log.log(
+                        f"[Regroup] ⚠️ {total_missing} folder(s) thiếu summary, đang tạo tự động..."
+                    )
+                    self._log.set_status("Generating summaries...", False)
+
+                    endpoints = load_api_keys()
+                    api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                    for idx, subdir_name in enumerate(missing):
+                        self.progress_text.emit(f"Summary {idx+1}/{total_missing}")
+                        subdir_path = os.path.join(folder, subdir_name)
+                        generate_missing_summary(
+                            subdir_path, subdir_name, api_client,
+                            log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                        )
+
+                    # Re-scan to pick up new summaries
+                    self._log.log("[Regroup] Re-scanning with new summaries...")
+                    chapters, still_missing = scan_output_folder(
+                        folder,
+                        log_callback=lambda m: self._log.log(f"[Regroup] {m}"),
+                        min_content_length=min_chars,
+                    )
+                    if still_missing:
+                        self._log.log(
+                            f"[Regroup] ⚠️ {len(still_missing)} folder(s) vẫn thiếu summary: "
+                            + ", ".join(still_missing[:5])
+                        )
+
+                self._chapters = chapters
+                self._tracker = load_used_tracker(folder)
+
+                self._log.log(
+                    f"[Regroup] Found {len(chapters)} chapters "
+                    f"from {len(set(ch.source_script for ch in chapters))} scripts"
+                )
+                self._log.set_status("Scan done", False)
+                self.progress_text.emit("✓ Done")
+
+                # Build scan results in tree (no classification yet)
+                self._classification = {}
+                self._refresh_tree()
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Scan error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Scan Folders ────────────────────────────────────────────────
+
+    def _do_scan_folders(self):
+        folder = self._txt_scan.text().strip()
+        if not folder or not os.path.isdir(folder):
+            self._log.log("[Regroup] Scan folder not set or doesn't exist")
+            return
+
+        self._log.log("[Regroup-Folder] Scanning folders...")
+        self._log.set_status("Scanning folders...", False)
+
+        min_chars = self._spin_min_chars.value() if self._chk_min_chars.isChecked() else 0
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Scanning...")
+                folder_entries = scan_output_folder_as_folders(
+                    folder,
+                    log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}"),
+                    min_content_length=min_chars,
+                )
+
+                # Check for missing summaries
+                missing = []
+                for fe in folder_entries:
+                    has_summary = any(ch.summary for ch in fe.chapters)
+                    if not has_summary:
+                        missing.append(fe.folder_name)
+
+                if missing:
+                    total_missing = len(missing)
+                    self._log.log(
+                        f"[Regroup-Folder] ⚠️ {total_missing} folder(s) thiếu summary, đang tạo tự động..."
+                    )
+                    self._log.set_status("Generating summaries...", False)
+
+                    endpoints = load_api_keys()
+                    api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                    for idx, subdir_name in enumerate(missing):
+                        self.progress_text.emit(f"Summary {idx+1}/{total_missing}")
+                        subdir_path = os.path.join(folder, subdir_name)
+                        generate_missing_summary(
+                            subdir_path, subdir_name, api_client,
+                            log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}")
+                        )
+
+                    # Re-scan
+                    self._log.log("[Regroup-Folder] Re-scanning with new summaries...")
+                    folder_entries = scan_output_folder_as_folders(
+                        folder,
+                        log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}"),
+                        min_content_length=min_chars,
+                    )
+
+                self._folders = folder_entries
+                self._chapters = []  # Clear chapter mode data
+
+                self._log.log(
+                    f"[Regroup-Folder] Found {len(folder_entries)} folders, "
+                    f"{sum(fe.chapter_count for fe in folder_entries)} chapters total"
+                )
+                self._log.set_status("Scan done", False)
+                self.progress_text.emit("✓ Done")
+
+                self._classification = {}
+                self._refresh_tree()
+
+            except Exception as e:
+                self._log.log(f"[Regroup-Folder] Scan error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Classify ────────────────────────────────────────────────────
+
+    def _do_classify(self):
+        if self._is_folder_mode():
+            return self._do_classify_folders()
+        return self._do_classify_chapters()
+
+    def _do_classify_chapters(self):
+        if not self._chapters:
+            self._log.log("[Regroup] No chapters scanned. Run Scan first.")
+            return
+
+        niches = self._get_selected_niches()
+        if not niches:
+            self._log.log("[Regroup] No niches selected.")
+            return
+
+        self._log.log("[Regroup] Starting AI classification...")
+        self._log.set_status("Classifying...", False)
+
+        # Filter out used chapters if checkbox is on
+        chapters_to_classify = self._chapters
+        hide_used = self._chk_hide_used.isChecked()
+        if hide_used:
+            chapters_to_classify = [
+                ch for ch in self._chapters
+                if not is_chapter_used(self._tracker, ch)
+            ]
+
+        # Read widget values on main thread
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Classifying...")
+                endpoints = load_api_keys()
+                api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                result = classify_chapters(
+                    chapters_to_classify, niches, api_client,
+                    log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                )
+                self._classification = result
+                self._refresh_tree()
+                self._log.set_status("Classification done", False)
+                self.progress_text.emit("✓ Done")
+
+                # Auto-export unmatched chapters to CSV
+                try:
+                    self._export_unmatched()
+                except Exception as ex:
+                    self._log.log(f"[Regroup] Export warning: {ex}")
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Classification error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Classify Folders ────────────────────────────────────────────
+
+    def _do_classify_folders(self):
+        if not self._folders:
+            self._log.log("[Regroup-Folder] No folders scanned. Run Scan first.")
+            return
+
+        niches = self._get_selected_niches()
+        if not niches:
+            self._log.log("[Regroup-Folder] No niches selected.")
+            return
+
+        self._log.log("[Regroup-Folder] Starting AI folder classification...")
+        self._log.set_status("Classifying folders...", False)
+
+        tier = self._combo_tier.currentText().lower()
+
+        def _run():
+            try:
+                self.progress_text.emit("Classifying...")
+                endpoints = load_api_keys()
+                api_client = APIClient(endpoints, log_api=False, tier=tier)
+
+                result = classify_folders(
+                    self._folders, niches, api_client,
+                    log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}")
+                )
+                self._classification = result
+                self._refresh_tree()
+                self._log.set_status("Classification done", False)
+                self.progress_text.emit("✓ Done")
+
+            except Exception as e:
+                self._log.log(f"[Regroup-Folder] Classification error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Tree Display ────────────────────────────────────────────────
+
+    def _refresh_tree(self):
+        self._tree.clear()
+
+        if self._classification and "groups" in self._classification:
+            self._show_classification_tree()
+        elif self._chapters:
+            self._show_scan_tree()
+
+    def _show_scan_tree(self):
+        """Show scan results grouped by source script."""
+        by_source = {}
+        for ch in self._chapters:
+            by_source.setdefault(ch.source_script, []).append(ch)
+
+        total = 0
+        used = 0
+        for source, chs in sorted(by_source.items()):
+            parent = QTreeWidgetItem([f"📁 {source}", "", f"{len(chs)} chapters"])
+            parent.setFlags(parent.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+            parent.setCheckState(0, Qt.CheckState.Unchecked)
+
+            for ch in sorted(chs, key=lambda c: c.chapter_number):
+                used_by = is_chapter_used(self._tracker, ch)
+                total += 1
+
+                if used_by and self._chk_hide_used.isChecked():
+                    used += 1
+                    continue
+
+                status = f"⚠️ đã dùng ({used_by})" if used_by else "✅ chưa dùng"
+                child = QTreeWidgetItem([ch.chapter_title, ch.source_script, status])
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(0, Qt.CheckState.Unchecked if used_by else Qt.CheckState.Checked)
+                child.setData(0, Qt.ItemDataRole.UserRole, ch)
+                parent.addChild(child)
+
+                if used_by:
+                    used += 1
+
+            if parent.childCount() > 0:
+                self._tree.addTopLevelItem(parent)
+
+        self._lbl_stats.setText(f"Tổng: {total} | Đã dùng: {used} | Còn lại: {total - used}")
+
+    def _show_classification_tree(self):
+        """Show AI classification results grouped by niche."""
+        total_classified = 0
+        for group in self._classification.get("groups", []):
+            niche = group.get("niche", "?")
+            chapters_refs = group.get("chapters", [])
+            titles = group.get("suggested_titles", [])
+            title_text = " | ".join(titles[:2]) if titles else ""
+
+            parent = QTreeWidgetItem([
+                f"📁 {niche} ({len(chapters_refs)})",
+                title_text,
+                ""
+            ])
+            parent.setFlags(parent.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+            parent.setCheckState(0, Qt.CheckState.Checked)
+
+            for ch_ref in chapters_refs:
+                # New format: ch_ref has "chapter" (ChapterEntry) and "reason"
+                ch = ch_ref.get("chapter")
+                reason = ch_ref.get("reason", "")
+
+                if not ch:
+                    continue
+
+                used_by = is_chapter_used(self._tracker, ch)
+                if used_by and self._chk_hide_used.isChecked():
+                    continue
+
+                status = f"⚠️ đã dùng ({used_by})" if used_by else "✅"
+                child = QTreeWidgetItem([
+                    ch.chapter_title,
+                    ch.source_script,
+                    status,
+                ])
+                child.setToolTip(0, reason)
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(0, Qt.CheckState.Unchecked if used_by else Qt.CheckState.Checked)
+                child.setData(0, Qt.ItemDataRole.UserRole, ch)
+                parent.addChild(child)
+                total_classified += 1
+
+            if parent.childCount() > 0:
+                self._tree.addTopLevelItem(parent)
+                parent.setExpanded(True)
+
+        self._lbl_stats.setText(f"Phân loại: {total_classified} chapters")
+
+    # ── Folder Mode: Tree Display ───────────────────────────────────
+
+    def _show_folder_scan_tree(self):
+        """Show scan results: one row per folder."""
+        total_ch = 0
+        for fe in self._folders:
+            total_ch += fe.chapter_count
+            summary_short = (fe.combined_summary or "")[:120]
+            if len(fe.combined_summary or "") > 120:
+                summary_short += "..."
+
+            item = QTreeWidgetItem([
+                f"📁 {fe.folder_name}",
+                f"{fe.chapter_count} chapters, {fe.total_chars:,} chars",
+                "✅ sẵn sàng",
+                ""
+            ])
+            item.setToolTip(0, summary_short)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.CheckState.Checked)
+            item.setData(0, Qt.ItemDataRole.UserRole, fe)
+            self._tree.addTopLevelItem(item)
+
+        self._lbl_stats.setText(f"Tổng: {len(self._folders)} folders, {total_ch} chapters")
+
+    def _show_folder_classification_tree(self):
+        """Show AI classification results grouped by niche, with folders as items."""
+        total_classified = 0
+        for group in self._classification.get("groups", []):
+            niche = group.get("niche", "?")
+            folder_refs = group.get("folders", [])
+            titles = group.get("suggested_titles", [])
+            title_text = " | ".join(titles[:2]) if titles else ""
+
+            parent = QTreeWidgetItem([
+                f"📁 {niche} ({len(folder_refs)})",
+                title_text,
+                ""
+            ])
+            parent.setFlags(parent.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+            parent.setCheckState(0, Qt.CheckState.Checked)
+
+            for f_ref in folder_refs:
+                fe = f_ref.get("folder")
+                reason = f_ref.get("reason", "")
+                if not fe:
+                    continue
+
+                child = QTreeWidgetItem([
+                    fe.folder_name,
+                    f"{fe.chapter_count} ch, {fe.total_chars:,} chars",
+                    "✅",
+                ])
+                child.setToolTip(0, reason)
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(0, Qt.CheckState.Checked)
+                child.setData(0, Qt.ItemDataRole.UserRole, fe)
+                parent.addChild(child)
+                total_classified += 1
+
+            if parent.childCount() > 0:
+                self._tree.addTopLevelItem(parent)
+                parent.setExpanded(True)
+
+        self._lbl_stats.setText(f"Phân loại: {total_classified} folders")
+
+    # ── AI Suggest ──────────────────────────────────────────────────
+
+    def _ai_suggest(self):
+        """Auto-select best N chapters per group using range."""
+        max_n = 999  # No limit — select all available
+
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            child_count = parent.childCount()
+
+            # Uncheck all first
+            for j in range(child_count):
+                parent.child(j).setCheckState(0, Qt.CheckState.Unchecked)
+
+            # Check up to max_n, skip used
+            checked = 0
+            for j in range(child_count):
+                child = parent.child(j)
+                ch = child.data(0, Qt.ItemDataRole.UserRole)
+                if ch and not is_chapter_used(self._tracker, ch):
+                    if checked < max_n:
+                        child.setCheckState(0, Qt.CheckState.Checked)
+                        checked += 1
+
+        self._log.log(f"[Regroup] AI Suggest: selected up to {max_n} chapters per group")
+
+    # ── Copy to Group ───────────────────────────────────────────────
+
+    def _do_copy(self):
+        if self._is_folder_mode():
+            return self._do_move_folders()
+        return self._do_copy_chapters()
+
+    def _do_copy_chapters(self):
+        regroup_dir = self._txt_output.text().strip()
+        scan_dir = self._txt_scan.text().strip()
+        if not regroup_dir:
+            self._log.log("[Regroup] Output folder not set")
+            return
+        if not scan_dir:
+            self._log.log("[Regroup] Scan folder not set")
+            return
+
+        broad_topic = self._combo_topic.currentText()
+
+        # Collect checked chapters per group
+        groups_to_copy = []
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            niche_label = parent.text(0)
+            # Extract niche name (remove icon and count)
+            niche_name = re.sub(r'^📁\s*', '', niche_label)
+            niche_name = re.sub(r'\s*\(\d+\)\s*$', '', niche_name)
+            titles_text = parent.text(1)
+            suggested_titles = [t.strip() for t in titles_text.split("|") if t.strip()]
+
+            checked_chapters = []
+            for j in range(parent.childCount()):
+                child = parent.child(j)
+                if child.checkState(0) == Qt.CheckState.Checked:
+                    ch = child.data(0, Qt.ItemDataRole.UserRole)
+                    if ch:
+                        checked_chapters.append(ch)
+
+            if checked_chapters:
+                groups_to_copy.append((niche_name, suggested_titles, checked_chapters))
+
+        if not groups_to_copy:
+            self._log.log("[Regroup] No chapters selected")
+            return
+
+        total_ch = sum(len(chs) for _, _, chs in groups_to_copy)
+        self._log.log(
+            f"[Regroup] Copying {len(groups_to_copy)} group(s), "
+            f"{total_ch} chapters → {regroup_dir}"
+        )
+        self._log.set_status("Copying...", False)
+
+        def _run():
+            try:
+                total = len(groups_to_copy)
+                for idx, (niche_name, titles, chapters) in enumerate(groups_to_copy):
+                    self.progress_text.emit(f"Copying {idx+1}/{total}...")
+                    group_path = copy_to_group(
+                        chapters, niche_name, broad_topic, titles,
+                        regroup_dir, scan_dir,
+                        log_callback=lambda m: self._log.log(f"[Regroup] {m}")
+                    )
+                    self._log.log(f"[Regroup] ✓ Created: {os.path.basename(group_path)}")
+
+                # Reload tracker
+                self._tracker = load_used_tracker(scan_dir)
+                self._refresh_tree()
+
+                self._log.log(
+                    f"[Regroup] Done — {total} group(s) created ✓"
+                )
+                self._log.set_status("Done", False)
+                self.progress_text.emit("✓ Done")
+
+            except Exception as e:
+                self._log.log(f"[Regroup] Copy error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Move Folders ────────────────────────────────────────────────
+
+    def _do_move_folders(self):
+        regroup_dir = self._txt_output.text().strip()
+        scan_dir = self._txt_scan.text().strip()
+        if not regroup_dir:
+            self._log.log("[Regroup-Folder] Output folder not set")
+            return
+        if not scan_dir:
+            self._log.log("[Regroup-Folder] Scan folder not set")
+            return
+
+        broad_topic = self._combo_topic.currentText()
+
+        # Collect checked folders per niche group
+        groups_to_move = []
+        for i in range(self._tree.topLevelItemCount()):
+            parent = self._tree.topLevelItem(i)
+            niche_label = parent.text(0)
+            niche_name = re.sub(r'^📁\s*', '', niche_label)
+            niche_name = re.sub(r'\s*\(\d+\)\s*$', '', niche_name)
+            titles_text = parent.text(1)
+            suggested_titles = [t.strip() for t in titles_text.split("|") if t.strip()]
+
+            checked_folders = []
+            # Check if top-level item itself is a FolderEntry (scan mode, no children)
+            fe_self = parent.data(0, Qt.ItemDataRole.UserRole)
+            if fe_self and isinstance(fe_self, FolderEntry):
+                if parent.checkState(0) == Qt.CheckState.Checked:
+                    checked_folders.append(fe_self)
+            else:
+                # Classified mode: check children
+                for j in range(parent.childCount()):
+                    child = parent.child(j)
+                    if child.checkState(0) == Qt.CheckState.Checked:
+                        fe = child.data(0, Qt.ItemDataRole.UserRole)
+                        if fe and isinstance(fe, FolderEntry):
+                            checked_folders.append(fe)
+
+            if checked_folders:
+                groups_to_move.append((niche_name, suggested_titles, checked_folders))
+
+        if not groups_to_move:
+            self._log.log("[Regroup-Folder] No folders selected")
+            return
+
+        total_f = sum(len(fes) for _, _, fes in groups_to_move)
+        self._log.log(
+            f"[Regroup-Folder] Moving {total_f} folder(s) into "
+            f"{len(groups_to_move)} group(s) → {regroup_dir}"
+        )
+        self._log.set_status("Moving...", False)
+
+        def _run():
+            try:
+                total = len(groups_to_move)
+                for idx, (niche_name, titles, folder_entries) in enumerate(groups_to_move):
+                    self.progress_text.emit(f"Moving {idx+1}/{total}...")
+                    group_path = move_folder_to_group(
+                        folder_entries, niche_name, broad_topic, titles,
+                        regroup_dir, scan_dir,
+                        log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}")
+                    )
+                    self._log.log(
+                        f"[Regroup-Folder] ✓ Created: {os.path.basename(group_path)}"
+                    )
+
+                # Re-scan to update tree (moved folders are gone)
+                self._folders = scan_output_folder_as_folders(
+                    scan_dir,
+                    log_callback=lambda m: self._log.log(f"[Regroup-Folder] {m}"),
+                )
+                self._classification = {}
+                self._refresh_tree()
+
+                self._log.log(
+                    f"[Regroup-Folder] Done — {total} group(s) created ✓"
+                )
+                self._log.set_status("Done", False)
+                self.progress_text.emit("✓ Done")
+
+            except Exception as e:
+                self._log.log(f"[Regroup-Folder] Move error: {e}")
+                self._log.set_status("Error", True)
+                self.progress_text.emit("✗ Error")
+
+        threading.Thread(target=_run, daemon=True).start()
+```
+
+## Verification
+
+| Check | Kết quả |
+|---|---|
+| `core.regroup` import | ✅ OK |
+| `ui.regroup_tab` import | ✅ OK |
+| Syntax errors | ✅ Không có |
+
+## Cách test thủ công
+
+1. Chạy `python main.py`
+2. Mở tab **🔀 Regroup**
+3. Chọn **Mode: Folder** từ dropdown mới
+4. Chọn chủ đề **trang_thiết_bị_quân_sự** → 12 ngách sẽ hiện ra
+5. **Scan** → tree hiển thị folder-level
+6. **AI Classify** → tree nhóm theo ngách
+7. **Copy to Group** → folders được **move** vào output

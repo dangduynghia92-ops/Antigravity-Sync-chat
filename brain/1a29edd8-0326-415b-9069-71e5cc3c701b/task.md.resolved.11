@@ -1,0 +1,10 @@
+# Fix All Pipeline Audit Bugs
+
+- [x] BUG 3: Merge reality check enrichment back into blueprint (CRITICAL)
+- [x] BUG 5: Fix cross-chapter patching index when chapters fail (CRITICAL)
+- [x] BUG 4: Fix `issues_left` count to exclude patched issues
+- [x] BUG 1: Fix comment step numbering to match log
+- [x] BUG 2: Reuse `selected_fw_dict` instead of duplicate lookup
+- [x] BUG 8: Move `import csv` to top of file
+- [x] BUG 9: Fix word count section logic for hook
+- [x] Syntax verify — Both files OK

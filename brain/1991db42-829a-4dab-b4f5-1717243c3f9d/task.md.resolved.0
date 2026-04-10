@@ -1,0 +1,38 @@
+# SRT Chapter Splitter — Task Checklist
+
+## Phase 1: Foundation
+- [ ] Create project structure (directories, `main.py`, `requirements.txt`)
+- [ ] `ui/theme.py` — Dark/Light QSS theme system
+- [ ] `ui/icons/` — SVG arrow icons
+- [ ] `ui/searchable_combo.py` — Searchable ComboBox widget
+- [ ] `ui/log_section.py` — Processing Log panel (copy, clear, timestamp)
+- [ ] `core/api_client.py` — Multi-endpoint API router with failover
+- [ ] `core/config_manager.py` — Config save/load per-tab
+- [ ] `core/srt_parser.py` — SRT file parser
+- [ ] `core/chapter_splitter.py` — AI-based chapter splitting logic
+
+## Phase 2: UI Components
+- [ ] `ui/header_bar.py` — App name, version, Settings, Restart buttons
+- [ ] `ui/settings_dialog.py` — Settings dialog (endpoints, theme, API keys)
+- [ ] `ui/projects_section.py` — Tree view with folder grouping, dedup
+
+## Phase 3: Main Tab + Window
+- [ ] `ui/chapter_tab.py` — Main SRT Chapter tab (config, projects, actions)
+- [ ] `ui/main_window.py` — Main window with tabs, splitter, log panel
+- [ ] `main.py` — Entry point
+
+## Phase 4: Core Processing
+- [ ] `core/process_controller.py` — Start/Pause/Stop with ThreadPoolExecutor
+- [ ] `prompts/` — System, constraint, fallback prompt .txt files
+- [ ] Integration: wire API + splitter + controller + UI
+
+## Phase 5: Output & Merge
+- [ ] Chapter file output (per-chapter .txt files)
+- [ ] Merge all results file
+- [ ] Summary file generation
+
+## Phase 6: Verification
+- [ ] Launch app, verify UI renders correctly
+- [ ] Test Dark/Light theme switching
+- [ ] Test file scanning, adding, dedup
+- [ ] Test config save/load persistence

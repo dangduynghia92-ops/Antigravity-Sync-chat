@@ -1,0 +1,75 @@
+# YouTube Downloader & Scanner Tab
+
+Thêm tab mới "📥 YouTube" vào ứng dụng PyQt6 hiện có, cho phép:
+1. **Scanner**: Scan playlist/channel YouTube → lấy danh sách video (title, duration, views, URL)
+2. **Download**: Download video/thumbnail/subtitle từ link YouTube
+
+Tool sử dụng: **yt-dlp** (command-line wrapper)
+
+## Proposed Changes
+
+### Core Backend
+
+#### [NEW] [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)
+
+Wrapper module gọi `yt-dlp` qua subprocess:
+
+- `scan_channel(url, log_callback)` → trả về `list[dict]` gồm `{title, duration, views, url, thumbnail_url}`
+- `download_video(url, save_dir, options, progress_callback, log_callback)` → download video theo options
+  - Options: `download_thumbnail`, `download_subtitles`, `audio_only`, `subtitle_lang`
+- `get_ytdlp_version()` → trả version hiện tại
+- `update_ytdlp()` → chạy `pip install -U yt-dlp`
+
+Dùng `yt-dlp --flat-playlist --dump-json` cho scan (nhanh, không download). Dùng `yt-dlp` flags cho download (`--write-thumbnail`, `--write-subs`, `--sub-langs`, `-x` for audio).
+
+---
+
+### UI Tab
+
+#### [NEW] [youtube_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py)
+
+Tab chính chứa 2 sub-tab (QTabWidget lồng):
+
+**Sub-tab 1: Download**
+- Ô nhập URL (QLineEdit) + nút "➕ Add" + "📋 Paste"
+- Nút "Bulk Add (from TXT)" + "Add from Scanner"
+- Options group:
+  - Save to (QLineEdit + Browse)
+  - Browser (QComboBox: Chrome, Firefox, Edge, Brave, None) — cho cookies
+  - Cookie file (QLineEdit + Browse) — fallback
+  - Checkboxes: Download Thumbnail, Download Subtitles, Audio Only (MP3)
+- Download Queue (QTreeWidget): URL, Title, Progress, Status
+- Action buttons: Start Download, Stop, Clear Queue, Open Folder
+
+**Sub-tab 2: Playlist/Channel Scanner**
+- Ô nhập URL playlist/channel + nút "🔍 Scan"
+- Scanned Results (QTreeWidget): ✓, Title, Duration, Views, URL
+- Bottom buttons: Export Excel, Export TXT (URLs), Export TXT (Details), Copy Selected URLs
+- Nút "Add Selected to Download" → chuyển sang sub-tab Download
+- Checkbox All / None cho select
+
+**Shared: Log panel** (LogSection, reuse component hiện có)
+
+---
+
+### Integration
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Import `YouTubeTab`
+- Thêm `self._youtube_tab = YouTubeTab()`
+- `self._tabs.addTab(self._youtube_tab, "📥 YouTube")`
+
+#### [MODIFY] [requirements.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt)
+
+- Thêm `yt-dlp>=2024.0.0`
+- Thêm `openpyxl>=3.1.0` (cho Export Excel)
+
+## Verification Plan
+
+### Manual Verification
+1. Chạy `python main.py` → xác nhận tab "📥 YouTube" hiển thị
+2. Vào sub-tab Scanner → paste link channel/playlist → nhấn Scan → xác nhận bảng hiện video
+3. Select vài video → nhấn "Add Selected to Download" → xác nhận chuyển sang Download tab
+4. Nhấn Start Download → xác nhận video/thumbnail/subtitle được download
+5. Test Export Excel / Export TXT

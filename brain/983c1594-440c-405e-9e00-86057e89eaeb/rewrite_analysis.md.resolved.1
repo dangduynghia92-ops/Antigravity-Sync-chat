@@ -1,0 +1,51 @@
+# New Content Pipeline — Run Analysis (Albert Einstein)
+
+## ✅ Hoạt Động Tốt
+- **Research Plan A**: 60,574 chars trong 191.8s (draft 26K → expanded 60K = +128%)
+- **Retry logic**: Draft 1 fail (401) → retry thành công
+- **Framework ranking**: Sử Thi (9.8), Bước Ngoặt (9.2) — hợp lý cho biography
+- **Outline + Audit**: 8 chapters, audit tìm được 4 vấn đề và fix
+- **Write**: 16/16 chapters viết xong, không có chapter fail
+- **Folder structure**: 2 versions output đúng format
+
+## ⚠️ Vấn Đề Cần Fix
+
+### 1. 🔴 Cross-Chapter Review Dùng Sai Function
+**Hiện tại**: Gọi `review_cross_chapter()` — hàm này dành cho **Review mode** (firearms/military/mystery only)  
+**Đúng**: Phải dùng `review_narrative_full()` — hàm dành cho **Narrative mode** (có biography prompt)
+
+**Hậu quả**: Step 6 bị skip cho cả 2 versions → không có quality check
+
+### 2. 🟡 Chapter 1 Quá Ngắn
+| Version | Ch.1 Words | Expected |
+|---|---|---|
+| v1 Sử Thi | 221 | 150+ (Open) |
+| v2 Bước Ngoặt | 247 | 150+ (Open) |
+
+Về kỹ thuật — đạt min (Open min=150). Nhưng nội dung chỉ 3 đoạn, khá ngắn so với body chapters.  
+→ **Không phải bug code**, mà là word count config của user để Open min thấp.
+
+### 3. 🟡 Niche Label Có Thể Sai Với Niche Khác
+
+```python
+niche_label = niche_raw.split()[0].capitalize()
+# "biography tiểu sử nhân vật chân dung cuộc đời" → "Biography"  ✅
+# "bí ẩn lịch sử" → "Bí" → folder "Bí_Topic_timestamp"  ⚠️ 
+```
+
+Niche raw có thể bắt đầu bằng từ tiếng Việt → folder name xấu. Nên dùng mapping thay vì split.
+
+## 📊 Content Quality (v1 Sử Thi)
+
+| Chapter | Words | Quality Notes |
+|---|---|---|
+| Ch.1 The Ghost in the Machine | 221 | Hook mở, hơi ngắn |
+| Ch.2 The Compass and the Prodigy | 1,108 | ✅ Tuổi thơ chi tiết |
+| Ch.3 The Stateless Student | 1,257 | ✅ ETH & nổi loạn |
+| Ch.4 The Miracle in the Clock-Making Capital | 1,341 | ✅✅ Annus Mirabilis xuất sắc |
+| Ch.5 The Eclipse and the Shadow | 1,368 | ✅ General Relativity |
+| Ch.6 The Exile | 1,202 | ✅ WWII period |
+| Ch.7 God Does Not Play Dice | 1,380 | ✅ Quantum debate |
+| Ch.8 The Incomprehensible and the Comprehensible | 1,044 | ✅ Legacy & closure |
+
+**Total: ~8,921 words** — quality tốt, narrative flow liên mạch, chi tiết cụ thể.

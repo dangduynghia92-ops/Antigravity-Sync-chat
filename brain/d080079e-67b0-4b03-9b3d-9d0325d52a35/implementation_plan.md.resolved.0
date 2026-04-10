@@ -1,0 +1,49 @@
+# Google Search Grounding Integration
+
+Thêm khả năng gọi **Gemini native API** với tính năng `google_search` (Search Grounding) vào [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py), cho phép model tự động tìm kiếm Google để trả lời chính xác hơn.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Tính năng này chỉ hoạt động khi gọi trực tiếp Gemini API** (URL `generativelanguage.googleapis.com`), **KHÔNG** hoạt động qua các OpenAI-compatible proxy như localhost:8317 hay api.key4u.shop.
+>
+> Để dùng được, bạn cần có **Gemini API key trực tiếp từ Google** (lấy tại [aistudio.google.com](https://aistudio.google.com/apikey)).
+
+> [!WARNING]
+> Hiện tại tất cả endpoint của bạn đều là OpenAI-compatible proxy. Tính năng `google_search` sẽ chỉ dùng được nếu bạn thêm endpoint trực tiếp đến Google, HOẶC nếu proxy của bạn hỗ trợ forward tham số `tools` đến Gemini API (cần kiểm tra).
+
+## Proposed Changes
+
+### Core API Client
+
+#### [MODIFY] [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py)
+
+1. **Thêm tham số `google_search` vào [call_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#84-226)**:
+   - Thêm `google_search: bool = False` vào signature
+   - Khi `google_search=True`, tự động detect endpoint type:
+     - Nếu URL chứa `generativelanguage.googleapis.com` → gọi Gemini native API
+     - Nếu URL là OpenAI-compatible → thêm `tools` vào payload (một số proxy hỗ trợ)
+
+2. **Thêm method `_call_gemini_native()`** để xử lý Gemini native format:
+   - URL: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+   - Header: `x-goog-api-key` thay vì `Authorization: Bearer`
+   - Body: chuyển `messages` → `contents` format + thêm `tools: [{"google_search": {}}]`
+   - Parse response: `candidates[0].content.parts[0].text`
+   - Trích xuất `groundingMetadata` nếu có
+
+3. **Thêm helper `_convert_messages_to_contents()`**:
+   - Chuyển OpenAI format `[{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]`
+   - Thành Gemini format `{"system_instruction": {...}, "contents": [...]}`
+
+4. **Mở rộng return dict** khi dùng google_search:
+   - Thêm key `grounding_metadata` chứa `webSearchQueries`, `groundingChunks`, `groundingSupports`
+
+## Verification Plan
+
+### Manual Test
+1. Tạo script test đơn giản gọi [call_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#84-226) với `google_search=True` để hỏi một câu hỏi cần thông tin real-time (ví dụ: "Hôm nay thời tiết Hà Nội thế nào?")
+2. Kiểm tra response có `grounding_metadata` với link nguồn
+3. Kiểm tra rằng các luồng hiện tại (không dùng `google_search`) vẫn hoạt động bình thường (backward compatible)
+
+> [!NOTE]
+> Cần bạn xác nhận: Bạn có **Gemini API key trực tiếp** không? Nếu có, mình sẽ test trực tiếp. Nếu chỉ có proxy, mình sẽ thêm hỗ trợ forward `tools` qua proxy format.

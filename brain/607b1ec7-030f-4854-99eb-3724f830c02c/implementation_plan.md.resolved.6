@@ -1,0 +1,108 @@
+# Redesign Character Pipeline — Based on Full Audit
+
+## Audit Findings (Current Code)
+
+### Bug 1: Visual Bible chỉ chạy có điều kiện
+**File**: [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) line 248-295
+```
+if character_sheet  → character pipeline (ok)
+elif historical     → visual bible
+else                → KHÔNG CÓ GÌ ← SAI
+```
+**Đúng**: Visual Bible LUÔN phải chạy.
+
+### Bug 2: Character pipeline kết quả thay thế visual bible
+**File**: [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) line 268
+```python
+visual_bible = pipeline_result  # ← character bible được truyền vào biến visual_bible
+```
+**Vấn đề**: Character bible KHÔNG PHẢI visual bible. Chúng là **2 thứ khác nhau**.
+
+### Bug 3: [_build_user_message](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-279) bảo AI không mô tả ngoại hình cho TẤT CẢ characters
+**File**: [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py) line 214-221  
+```
+"Do NOT describe their physical appearance, clothing, or weapons"
+```
+**Vấn đề**: Đúng cho PROTAGONIST/NAMED (có --cref), nhưng **SAI cho MILITARY** (cần mô tả quân phục trong prompt).
+
+### Bug 4: [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) trùng với KEY LOCATIONS trong Visual Bible
+Visual Bible đã có section `## KEY LOCATIONS & ARCHITECTURE`. File [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) riêng là **thừa**.
+
+---
+
+## Flow Mới
+
+```
+                    SRT files
+                       │
+         ┌─────────────┴──────────────┐
+         │                            │
+   LUÔN CHẠY                   CHỈ KHI BẬT
+                                CHARACTER SHEET
+         │                            │
+  ┌──────▼──────┐            ┌────────▼────────┐
+  │ Visual Bible│            │Character Pipeline│
+  │             │            │  Step 1: Scan    │
+  │ - Context   │            │  Step 2: Bible   │
+  │ - Civilians │            │  Step 3: Sheets  │
+  │ - Buildings │            └────────┬────────┘
+  │ - Props     │                     │
+  │ - Locations │           _character_bible.csv
+  └──────┬──────┘           (LABEL + 4 attrs + SHEET_PROMPT)
+         │                            │
+         └─────────┬──────────────────┘
+                   │
+          ┌────────▼────────┐
+          │ Generate Prompts│
+          │                 │
+          │ AI nhận:        │
+          │  + Visual Bible │  ← bối cảnh chung
+          │  + Char Bible   │  ← nhân vật có sheet
+          │  + Style        │  ← phong cách vẽ
+          │  + Constraints  │  ← rules bổ sung
+          │  + Segment text │  ← nội dung cần vẽ
+          └────────┬────────┘
+                   │
+          Prompt ảnh final:
+          - PROTAGONIST/NAMED → LABEL only
+          - MILITARY → mô tả quân phục (từ char bible)
+          - Civilians/buildings → mô tả đầy đủ (từ visual bible)
+```
+
+---
+
+## Proposed Changes
+
+### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+1. Visual Bible **LUÔN** chạy (bỏ điều kiện `historical`)
+2. Character Pipeline chạy **thêm** khi bật Character Sheet
+3. Truyền **cả 2** vào prompt generator: [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#49-64) + [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#651-676)
+4. Bỏ [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) riêng (đã có trong Visual Bible)
+
+### [MODIFY] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+
+1. [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-279) nhận thêm tham số [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#651-676)
+2. Khi có character_bible:
+   - PROTAGONIST/NAMED labels → ghi rõ "dùng LABEL, không mô tả ngoại hình"
+   - MILITARY descriptions → ghi rõ "mô tả quân phục theo bible"
+3. Visual Bible → ghi rõ "dùng cho bối cảnh, dân thường, kiến trúc"
+
+### [MODIFY] [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt)
+
+Khi Character Sheet ON: Visual Bible **KHÔNG mô tả nhân vật đã có trong character bible**
+→ Chỉ mô tả: civilians, architecture, props, context
+
+### [DELETE] location_prompt.txt — chức năng gộp vào Visual Bible
+
+### Scan + Group prompts — đã sửa xong ở bước trước
+
+---
+
+## Output Files (sau redesign)
+
+| File | Khi nào | Nội dung |
+|---|---|---|
+| `_visual_bible.txt` | **LUÔN** | Bối cảnh, dân thường, kiến trúc |
+| [_character_bible.csv](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_character_bible.csv) | Character Sheet ON | Nhân vật + sheet prompts |
+| `{chapter}_prompts.csv` | **LUÔN** | Prompt ảnh final |

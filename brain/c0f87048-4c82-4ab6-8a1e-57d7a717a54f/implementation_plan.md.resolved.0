@@ -1,0 +1,86 @@
+# Battle Blueprint Extraction — Implementation Plan
+
+## Vấn đề
+
+Prompt [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) hiện tại là generic — dùng cho mọi niche. Với battle history, AI tự quyết cái gì "major" và bỏ sót:
+- Trận đánh phụ / mặt trận phụ (flanks)
+- Chỉ huy cấp dưới nhưng quan trọng
+- Geography chi tiết (terrain ảnh hưởng chiến thuật)
+- Diễn biến chiến thuật theo thời gian (tactical evolution)
+
+## Giải pháp
+
+Tạo `system_extract_blueprint_battle.txt` — prompt riêng cho niche battle, tự động được chọn khi niche chứa keywords battle/war/military.
+
+### Nguyên tắc thiết kế
+
+1. **Bắt buộc liệt kê TẤT CẢ mặt trận** — không để AI bỏ sót flank battles
+2. **Structured geography** — dict với terrain_features, weather_events, strategic_positions
+3. **Commander per front** — mỗi mặt trận phải có commanders, không chỉ top 5 tổng
+4. **Tactical timeline** — pre_battle → opening → turning_points → collapse/resolution
+5. **Weapon asymmetry** — bắt buộc so sánh 2 bên (offensive + defensive)
+6. **Political context** — alliance dynamics, funding, rivalries
+7. **Bỏ fields product review** — không có `product_evaluation`, `ranking_criteria`, `original_order`
+
+---
+
+## Proposed Changes
+
+### Prompts
+
+#### [NEW] [system_extract_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_battle.txt)
+
+Prompt mới với output format riêng cho battle:
+- `battle_phases[]` thay `key_events[]` — bắt buộc cover tất cả fronts/phases
+- `commanders[]` thay `key_characters[]` — gắn với front/faction
+- `geography{}` structured — terrain, weather, strategic positions
+- `tactical_evolution[]` — timeline of tactical shifts
+- `weapon_comparison[]` — so sánh 2 bên cụ thể
+- `political_context{}` — alliances, rivalries, funding
+- Giữ nguyên: `key_facts`, `narrative_moments`, `must_include`, `emotional_core`
+
+---
+
+### Core
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Thêm niche parameter vào [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045) (giống [extract_blueprint_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091) đã có). Khi niche chứa battle keywords → dùng `system_extract_blueprint_battle.txt`.
+
+```diff
+ def extract_blueprint(full_text, api_client, lang="en", log_callback=None):
+-    system_template = _load_prompt("system_extract_blueprint.txt")
++def extract_blueprint(full_text, api_client, lang="en", log_callback=None, niche=""):
++    _BATTLE_KEYWORDS = {"battle", "war", "military", "trận", "chiến"}
++    _is_battle = bool(set(niche.lower().split()) & _BATTLE_KEYWORDS)
++    prompt_file = "system_extract_blueprint_battle.txt" if _is_battle else "system_extract_blueprint.txt"
++    system_template = _load_prompt(prompt_file)
+```
+
+---
+
+### UI
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+Truyền `niche` vào [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045) trong [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2063-2600).
+
+```diff
+ blueprint = extract_blueprint(
+-    full_text, api_bp, lang=lang,
++    full_text, api_bp, lang=lang, niche=_niche,
+     log_callback=lambda m: log(m)
+ )
+```
+
+---
+
+## Verification Plan
+
+### Manual Test
+1. Chạy Narrative mode trên script Lepanto với niche "battle history"
+2. Kiểm tra [_blueprint.json](file:///F:/1.%20Edit%20Videos/7.Youtube/3.%20Battle%20History/1.%20Video%20doi%20thu/63%20How%20Christians%20Crushed%20the%20Ottoman%20Empire%20Battle%20of%20Lepanto%201571%20-%20Google%20T%C3%A0i%20li%E1%BB%87u/1/_blueprint.json) output có đủ:
+   - Trận cánh Bắc (Barbarigo vs Siroco)
+   - Geography structured
+   - Tactical timeline
+   - Weapon comparison cả 2 bên

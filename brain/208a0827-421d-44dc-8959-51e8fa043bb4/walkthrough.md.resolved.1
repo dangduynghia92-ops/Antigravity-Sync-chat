@@ -1,0 +1,26 @@
+# Style Preview Feature — Walkthrough
+
+## Changes Made
+
+### 1. Created `styles/previews/` directory
+Thư mục chứa ảnh preview cho từng style.
+
+### 2. Modified [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+- **Layout 3 cột:** Objects | Results | **Style Preview** (200px)
+- Preview panel hiển thị: ảnh thumbnail, tên style, mô tả dòng đầu
+- Nút "📂 Open Previews" mở thư mục previews
+- Placeholder "No preview" khi chưa có ảnh
+
+### 3. Modified [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+- Thêm ô preview 150×150 bên dưới style hint (SRT tab)
+- Cùng logic load ảnh từ `styles/previews/`
+
+## Cách sử dụng
+1. Mở thư mục `styles/previews/` (nút 📂 Open Previews)
+2. Thêm ảnh mẫu, **tên = tên style** (VD: `Cinematic.png`, `Chinese Ink Wash Painting.jpg`)
+3. Hỗ trợ: `.png`, `.jpg`, `.jpeg`, `.webp`
+4. Chọn style → ảnh preview tự hiện
+
+## Verification
+- App khởi chạy thành công, không lỗi
+- Placeholder "No preview" hiển thị khi chưa có ảnh

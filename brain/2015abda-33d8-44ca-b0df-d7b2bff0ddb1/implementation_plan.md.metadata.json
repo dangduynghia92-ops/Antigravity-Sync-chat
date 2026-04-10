@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Bản thiết kế Tái Cấu Trúc Khung Kịch Bản (Linear Framework Refactoring): Đưa 100% các Framework về trục thời gian tuyến tính để tránh nhảy cóc nội dung, nhưng vẫn giữ bản sắc riêng biệt bằng cách thay đổi \"Lăng kính trần thuật\" (Narrative Lens) ở từng giai đoạn. Kế hoạch bao gồm việc định nghĩa lại 5 Framework: Bản Án, Hai Mặt, Kẻ Xét Lại, Lụi Tàn, Sử Thi.",
+  "updatedAt":  "2026-04-06T00:37:29.449084800Z",
+  "version":  "2",
+  "requestFeedback":  true
+}

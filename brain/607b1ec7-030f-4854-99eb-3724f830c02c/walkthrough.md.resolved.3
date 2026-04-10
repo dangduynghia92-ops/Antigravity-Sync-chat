@@ -1,0 +1,24 @@
+# Pipeline Rewrite — Walkthrough
+
+## What Changed
+
+### narrative_review.py
+- **Removed**: `load_visual_bible()`, `save_visual_bible()`, `load_master_visual_bible()`, `save_master_visual_bible()`, `generate_locations()`
+- **Removed**: Cache check in [run_character_pipeline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#617-733) (no more "Using cached character bible")
+- **Removed**: CIVILIAN from `group_order` and emoji map
+- **Kept**: [generate_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#47-149) — always fresh, accepts [style_content](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#45-55) + `exclude_characters`
+- **Kept**: [run_character_pipeline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#617-733) — always fresh, 3 groups (PROTAGONIST/NAMED/MILITARY)
+
+### process_controller.py
+- **Removed**: imports of `load_visual_bible`, `save_visual_bible`, `load_master_visual_bible`, `save_master_visual_bible`
+- **Rewritten**: Visual Bible section — always generates fresh (no cache check)
+- **Rewritten**: Save visual bible inline (simple file write)
+
+### prompt_generator.py (from earlier)
+- [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#204-365) — separate VISUAL BIBLE + CHARACTER BIBLE sections
+- JSON output when [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#590-615) present, text when not
+
+## Verification
+- ✅ All imports pass
+- ✅ Zero references to removed functions in entire codebase
+- ✅ No old cache logic anywhere

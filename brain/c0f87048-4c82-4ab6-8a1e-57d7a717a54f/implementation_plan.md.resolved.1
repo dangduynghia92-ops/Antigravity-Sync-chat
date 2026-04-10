@@ -1,0 +1,60 @@
+# Blueprint Google Enrichment — Implementation Plan
+
+## Goal
+Fill empty blueprint fields with accurate historical data via Google Search Grounding (Gemini API), inserted as **Step 3.5** in the Narrative pipeline.
+
+## Proposed Changes
+
+### Core — [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+#### [NEW] `enrich_blueprint_google()` (based on [enrich_prices_google()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1964-2120) pattern)
+
+```python
+def enrich_blueprint_google(
+    blueprint: dict,
+    gemini_keys: list,
+    lang: str = "en",
+    log_callback=None,
+    stop_check=None,
+) -> dict:
+```
+
+Logic:
+1. Scan blueprint → identify empty/missing fields
+2. Build targeted search queries from `core_topic` + empty field names
+3. Call `call_gemini_native()` with `google_search=True`
+4. Merge results into blueprint (only fill empty fields, never overwrite)
+5. Return enrichment summary
+
+---
+
+### Prompt — `prompts/system_enrich_blueprint_battle.txt`
+
+#### [NEW] Prompt hướng dẫn AI fill empty fields
+
+Gửi: core_topic + list of empty fields + existing data for context
+Yêu cầu: chỉ trả data cho fields trống, JSON format, verifiable facts only
+
+---
+
+### UI — [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+#### Checkbox (L304, after price_check)
+- Tên: `"🔍 Enrich Data"`
+- Default: **checked** for Narrative, unchecked for Review
+- Tooltip: "Fill missing blueprint fields with historical data via Google Search"
+
+#### Pipeline insertion (L2229, after blueprint save)
+- Step 3.5: `enrich_blueprint_google()`
+- Save enriched blueprint, log summary
+- Skip if checkbox unchecked or no Gemini keys
+
+#### [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1309-1383) (L1327)
+- Add: `self._chk_enrich_data.setChecked(not is_review)` (ON for narrative, OFF for review)
+
+---
+
+## Verification
+- Run Narrative mode on Lepanto with enrichment ON → check fields that were empty get filled
+- Run with enrichment OFF → fields stay empty
+- Check no existing data overwritten

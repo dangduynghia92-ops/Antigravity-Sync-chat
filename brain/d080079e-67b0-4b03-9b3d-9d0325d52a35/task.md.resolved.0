@@ -1,0 +1,7 @@
+# Google Search Grounding Integration
+
+- [/] Research Google Search Grounding API
+- [/] Create implementation plan
+- [ ] Add Gemini native API support to [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py)
+- [ ] Add `google_search` parameter to [call_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#84-226)
+- [ ] Test with a simple script

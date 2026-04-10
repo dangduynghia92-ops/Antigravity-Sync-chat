@@ -1,0 +1,9 @@
+# TTS Cleanup Tab
+
+- [x] Core module [core/tts_cleanup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+- [x] Prompt EN [prompts/system_tts_cleanup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt)
+- [x] Prompt ES [prompts/es/system_tts_cleanup.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/es/system_tts_cleanup.txt)
+- [x] UI tab [ui/tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+- [x] Register in [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- [/] Syntax check
+- [ ] Test

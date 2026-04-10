@@ -1,0 +1,107 @@
+# Redesign Character Pipeline — v2
+
+## Flow Chính
+
+```
+                    SRT files
+                       │
+         ┌─────────────┴──────────────┐
+         │                            │
+   KHI BẬT HISTORICAL           KHI BẬT CHARACTER SHEET
+         │                            │
+  ┌──────▼──────┐            ┌────────▼────────┐
+  │ Visual Bible│            │Character Pipeline│
+  │             │            │  Step 1: Scan    │
+  │ - Context   │            │  Step 2: Bible   │
+  │ - Civilians │            │  + SHEET_PROMPT  │
+  │ - Buildings │            └────────┬────────┘
+  │ - Props     │                     │
+  │ - Locations │           _character_bible.csv
+  └──────┬──────┘                     │
+         │                            │
+         └─────────┬──────────────────┘
+                   │
+          ┌────────▼────────┐
+          │ Generate Prompts│
+          └────────┬────────┘
+                   │
+          {chapter}_prompts.csv
+```
+
+## Điều kiện bật/tắt
+
+| Historical | Character Sheet | Visual Bible | Character Pipeline |
+|---|---|---|---|
+| ❌ | ❌ | ❌ | ❌ |
+| ✅ | ❌ | ✅ (mô tả ALL) | ❌ |
+| ❌ | ✅ | ❌ | ✅ |
+| ✅ | ✅ | ✅ (trừ nhân vật đã có sheet) | ✅ |
+
+---
+
+## Bugs cần sửa
+
+### Bug 1: Character pipeline thay thế visual bible
+**Hiện tại**: `visual_bible = pipeline_result` → character bible ĐÈ visual bible
+**Sửa**: Truyền riêng [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#66-72) + [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#651-676) vào prompt generator
+
+### Bug 2: Prompt bảo AI không mô tả TẤT CẢ nhân vật
+**Sửa**: Chỉ không mô tả PROTAGONIST/NAMED (có --cref). MILITARY vẫn mô tả quân phục.
+
+### Bug 3: [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) trùng Visual Bible
+**Sửa**: Bỏ [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) riêng.
+
+---
+
+## JSON Output cho Prompt Ảnh (MỚI)
+
+Thay vì prompt text thuần, output cấu trúc JSON:
+
+```json
+{
+  "prompt": "A fierce naval battle on wooden galley decks...",
+  "characters": [
+    {
+      "label": "Christian-Commander-A",
+      "ref_type": "cref",
+      "action": "standing on deck, commanding troops"
+    },
+    {
+      "label": "Ottoman-Soldier",
+      "ref_type": "sref",
+      "uniform": "white turban, red vest with gold trim, curved scimitar"
+    }
+  ],
+  "background": "Mediterranean sea, ornate wooden galley with lateen sails",
+  "civilians": "Chained rowers emerging from below decks, ragged clothing",
+  "mood": "intense, smoke-filled, blood-red sunset"
+}
+```
+
+**Mục đích**: User dễ dàng biết ảnh nào gắn `--cref`, ảnh nào `--sref`, và prompt chính là gì.
+
+> [!IMPORTANT]
+> Nếu dùng JSON output, CSV output ([_prompts.csv](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_MERGED_all_prompts.csv)) cần thêm các cột mới cho structured data, hoặc chuyển sang output JSON file thay CSV.
+
+---
+
+## Proposed Changes
+
+### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- Khi Historical + Character Sheet cả hai ON: chạy CẢ visual bible + character pipeline
+- Truyền [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#66-72) và [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#651-676) riêng biệt vào prompt generator
+- Bỏ [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt)
+
+### [MODIFY] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+- [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-279) nhận thêm [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#651-676) riêng
+- PROTAGONIST/NAMED → LABEL only (có --cref)
+- MILITARY → mô tả quân phục (có --sref)
+- Mọi thứ khác → mô tả đầy đủ từ visual bible
+- Hỗ trợ JSON output format
+
+### [MODIFY] [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt)
+- Khi Character Sheet cùng bật: Visual Bible bỏ mô tả nhân vật đã có sheet
+
+### Đã sửa xong:
+- [character_scan_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_scan_prompt.txt) — 3 groups, max 10
+- [character_group_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) — MILITARY focus uniform

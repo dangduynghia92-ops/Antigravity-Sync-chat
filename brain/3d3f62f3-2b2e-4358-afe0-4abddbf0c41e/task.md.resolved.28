@@ -1,0 +1,8 @@
+# Redesign Style Analysis Pipeline
+
+- [x] Step 1: Update [system_style_overview.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_overview.txt) — Voice DNA (no quotes, abstract patterns)
+- [x] Step 2: Update [system_style_detail.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_detail.txt) — Method Analysis (principle + purpose + position + count)
+- [x] Step 3: Add [cross_chapter_analysis()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/style_analyzer.py#235-375) to [style_analyzer.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/style_analyzer.py) — Python statistical aggregation
+- [x] Step 4: Update [system_style_synthesis.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_synthesis.txt) — use cross-chapter data + diversity_rules
+- [x] Step 5: Update [synthesize_style_guide()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/style_analyzer.py#235-295) to auto-run cross-chapter analysis
+- [x] Step 6: Verify compilation — imports OK, backward-compatible signature

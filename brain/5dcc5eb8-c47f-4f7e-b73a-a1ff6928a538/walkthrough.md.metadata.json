@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Summary of queue system and skip feature implementation in Auto Pipeline tab. Details all files changed, new UI elements, queue management behavior, and skip logic for each pipeline phase.",
+  "updatedAt": "2026-03-29T09:50:01.064022Z",
+  "version": "1"
+}

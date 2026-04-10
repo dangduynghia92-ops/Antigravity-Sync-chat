@@ -1,0 +1,195 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+[0] (500,576)<div  />
+	Scrape Creators Documentation
+	Documentation
+	Search...
+	[1] (500,500)<div  />
+	[2] (828,500)<div class='h-full overflow-y-auto' scrollable='true' />
+		[3] (820,1)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/reels/search' />
+			[4] (833,1)<div  />
+				[5] (721,1)<span >GET />
+				[6] (791,1)<span >Search Reels />
+		[7] (820,45)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/instagram/post/comments' />
+			[8] (833,45)<div  />
+				[9] (721,45)<span >GET />
+				[10] (785,45)<span >Comments />
+		[11] (820,88)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/reels' />
+			[12] (833,88)<div  />
+				[13] (721,88)<span >GET />
+				[14] (763,88)<span >Reels />
+		[15] (820,132)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlights' />
+			[16] (833,132)<div  />
+				[17] (721,132)<span >GET />
+				[18] (804,132)<span >Story Highlights />
+		[19] (820,176)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/highlight/detail' />
+			[20] (833,176)<div  />
+				[21] (721,176)<span >GET />
+				[22] (810,176)<span >Highlights Details />
+		[23] (820,232)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/song/reels' />
+			[24] (833,232)<div  />
+				[25] (721,232)<span >GET />
+				[26] (851,232)<span >Reels using Song (Deprecated) />
+		[27] (820,289)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/instagram/user/embed' />
+			[28] (833,289)<div  />
+				[29] (721,289)<span >GET />
+				[30] (795,289)<span >Embed HTML />
+		YouTube
+		[31] (820,394)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel' />
+			[32] (833,394)<div  />
+				[33] (721,394)<span >GET />
+				[34] (802,394)<span >Channel Details />
+		[35] (820,437)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel-videos' />
+			[36] (833,437)<div  />
+				[37] (721,437)<span >GET />
+				[38] (802,437)<span >Channel Videos />
+		[39] (820,481)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/channel/shorts' />
+			[40] (833,481)<div  />
+				[41] (721,481)<span >GET />
+				[42] (801,481)<span >Channel Shorts />
+		[43] (820,525)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video' />
+			[44] (833,525)<div  />
+				[45] (721,525)<span >GET />
+				[46] (817,525)<span >Video/Short Details />
+		[47] (820,568)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video/transcript' />
+			[48] (833,568)<div  />
+				[49] (721,568)<span >GET />
+				[50] (780,568)<span >Transcript />
+		[51] (820,612)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/search' />
+			[52] (833,612)<div  />
+				[53] (721,612)<span >GET />
+				[54] (769,612)<span >Search />
+		[55] (820,655)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/search/hashtag' />
+			[56] (833,655)<div  />
+				[57] (721,655)<span >GET />
+				[58] (814,655)<span >Search by Hashtag />
+		[59] (820,699)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/video/comments' />
+			[60] (833,699)<div  />
+				[61] (721,699)<span >GET />
+				[62] (785,699)<span >Comments />
+		[63] (820,743)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/shorts/trending' />
+			[64] (833,743)<div  />
+				[65] (721,743)<span >GET />
+				[66] (803,743)<span >Trending Shorts />
+		[67] (820,786)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/playlist' />
+			[68] (833,786)<div  />
+				[69] (721,786)<span >GET />
+				[70] (770,786)<span >Playlist />
+		[71] (820,830)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/youtube/community-post' />
+			[72] (833,830)<div  />
+				[73] (721,830)<span >GET />
+				[74] (834,830)<span >Community Post Details />
+		LinkedIn
+		[75] (820,935)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/linkedin/profile' />
+			[76] (833,935)<div  />
+				[77] (721,935)<span >GET />
+				[78] (801,935)<span >Person's Profile />
+		[79] (820,978)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/linkedin/company' />
+			[80] (833,978)<div  />
+				[81] (721,978)<span >GET />
+				[82] (801,978)<span >Company Page />
+	Copy for AI
+	cURL
+	Node.js
+	Python
+	PHP
+	Go
+	Java
+	curl
+	"https://api.scrapecreators.com/v1/youtube/channel"
+	\
+	-H
+	"x-api-key:
+	"
+	200
+	400
+	500
+	[83] (500,541)<div class='p-5 min-w-full overflow-x-auto w-full scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-white/20 dark:scrollbar-thumb-white/20 hover:scrollbar-thumb-white/25 dark:hover:scrollbar-thumb-white/25 active:scrollbar-thumb-white/25 dark:active:scrollbar-thumb-white/25 text-xs leading-[1.35rem] h-[300px]' scrollable='true' />
+		{
+		"channelId"
+		:
+		"UCxcTeAKWJca6XyJ37_ZoKIQ"
+		,
+		"channel"
+		:
+		"http://www.youtube.com/@ThePatMcAfeeShow"
+		,
+		"name"
+		:
+		"The Pat McAfee Show"
+		,
+		"avatar"
+		:
+		{
+		"image"
+		:
+		{
+		"sources"
+		:
+		[
+		{
+		"url"
+		:
+		"https://yt3.googleusercontent.com/ytc/AIdro_nBgMGIxgHehCAlUUepEhd9Yooi1I55k6IF2WExl-v8Q-c=s72-c-k-c0x00ffffff-no-rj"
+		,
+		"width"
+		:
+		72
+		,
+		"height"
+		:
+		72
+		}
+		,
+		{
+		"url"
+		:
+		"https://yt3.googleusercontent.com/ytc/AIdro_nBgMGIxgHehCAlUUepEhd9Yooi1I55k6IF2WExl-v8Q-c=s120-c-k-c0x00ffffff-no-rj"
+		,
+		"width"
+		:
+		120
+		,
+		"height"
+		:
+		120
+		}
+		,
+		{
+		"url"
+		:
+		"https://yt3.googleusercontent.com/ytc/AIdro_nBgMGIxgHehCAlUUepEhd9Yooi1I55k6IF2WExl-v8Q-c=s160-c-k-c0x00ffffff-no-rj"
+		,
+		"width"
+		:
+		160
+		,
+		"height"
+		:
+		160
+		}
+		]
+		,
+		"processor"
+		:
+		{
+		"borderImageProcessor"
+		:
+		{
+		"circular"
+		:
+		true
+		}
+		}
+	Headers
+	x-api-key
+	string
+	required
+	Your Scrape Creators API key
+	Query Parameters
+	channelId
+	string
+
+</current_dom>

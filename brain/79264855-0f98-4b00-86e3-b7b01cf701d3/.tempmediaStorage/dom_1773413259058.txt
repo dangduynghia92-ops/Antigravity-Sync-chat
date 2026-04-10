@@ -1,0 +1,243 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+[0] (500,783)<div  />
+	Scrape Creators Documentation
+	[1] (166,33)<a class='flex items-center' href='https://scrapecreators.com' />
+		[2] (166,33)<img  />
+	[3] (212,33)<a class='flex items-center' href='/' />
+		[4] (212,33)<span >Documentation />
+	[5] (500,33)<button class='w-full flex items-center text-sm leading-6 rounded-xl py-1.5 pl-3.5 pr-3 shadow-sm text-gray-400 dark:text-white/50 bg-background-light dark:bg-background-dark dark:brightness-[1.1] dark:ring-1 dark:hover:brightness-[1.25] ring-1 ring-gray-400/20 hover:ring-gray-600/25 dark:ring-gray-600/30 dark:hover:ring-gray-500/30 focus:outline-primary justify-between truncate gap-2 min-w-[43px]' />
+		[6] (429,33)<div  />
+			[7] (439,33)<div >Search or ask... />
+		[8] (600,33)<span >⌘K />
+	[9] (786,33)<a class='group px-4 py-1.5 relative inline-flex items-center text-sm font-medium' href='https://app.scrapecreators.com' />
+		[10] (786,33)<div  />
+			[11] (783,33)<span >Dashboard />
+	[12] (833,33)<button aria-label='Toggle dark mode' class='group p-2 flex items-center justify-center' />
+	[13] (181,93)<a class='group relative h-full flex items-center text-gray-800 dark:text-gray-200 font-semibold' href='/api-reference/introduction'>API Reference />
+		[14] (181,118)<div  />
+	[15] (225,560)<div class='absolute inset-0 z-10 stable-scrollbar-gutter overflow-auto pr-8 pb-10' scrollable='true' />
+		GET
+		Search Reels
+		GET
+		Comments
+		GET
+		Reels
+		[16] (213,122)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/instagram/user/highlights' />
+			[17] (195,122)<div  />
+				[18] (167,122)<span  />
+					[19] (165,124)<span >GET />
+				[20] (207,122)<div >Story Highlights />
+		[21] (213,160)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/instagram/user/highlight/detail' />
+			[22] (198,160)<div  />
+				[23] (167,160)<span  />
+					[24] (165,162)<span >GET />
+				[25] (210,160)<div >Highlights Details />
+		[26] (213,199)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/instagram/song/reels' />
+			[27] (214,199)<div  />
+				[28] (167,199)<span  />
+					[29] (165,200)<span >GET />
+				[30] (225,199)<div >Reels using Song (Deprecated) />
+		[31] (213,237)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/instagram/user/embed' />
+			[32] (191,237)<div  />
+				[33] (167,237)<span  />
+					[34] (165,238)<span >GET />
+				[35] (203,237)<div >Embed HTML />
+		YouTube
+		[36] (213,345)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/channel' />
+			[37] (195,345)<div  />
+				[38] (167,345)<span  />
+					[39] (165,346)<span >GET />
+				[40] (206,345)<div >Channel Details />
+		[41] (213,383)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/channel-videos' />
+			[42] (195,383)<div  />
+				[43] (167,383)<span  />
+					[44] (165,384)<span >GET />
+				[45] (206,383)<div >Channel Videos />
+		[46] (213,421)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/channel/shorts' />
+			[47] (194,421)<div  />
+				[48] (167,421)<span  />
+					[49] (165,422)<span >GET />
+				[50] (206,421)<div >Channel Shorts />
+		[51] (213,459)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/video' />
+			[52] (201,459)<div  />
+				[53] (167,459)<span  />
+					[54] (165,460)<span >GET />
+				[55] (213,459)<div >Video/Short Details />
+		[56] (213,497)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative bg-primary/10 text-primary font-semibold dark:text-primary-light dark:bg-primary-light/10' href='/v1/youtube/video/transcript' />
+			[57] (186,497)<div  />
+				[58] (167,497)<span  />
+					[59] (165,499)<span >GET />
+				[60] (197,497)<div >Transcript />
+		[61] (213,535)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/search' />
+			[62] (181,535)<div  />
+				[63] (167,535)<span  />
+					[64] (165,537)<span >GET />
+				[65] (192,535)<div >Search />
+		[66] (213,573)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/search/hashtag' />
+			[67] (200,573)<div  />
+				[68] (167,573)<span  />
+					[69] (165,575)<span >GET />
+				[70] (211,573)<div >Search by Hashtag />
+		[71] (213,611)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/video/comments' />
+			[72] (187,611)<div  />
+				[73] (167,611)<span  />
+					[74] (165,613)<span >GET />
+				[75] (199,611)<div >Comments />
+		[76] (213,649)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/shorts/trending' />
+			[77] (195,649)<div  />
+				[78] (167,649)<span  />
+					[79] (165,651)<span >GET />
+				[80] (207,649)<div >Trending Shorts />
+		[81] (213,687)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/playlist' />
+			[82] (181,687)<div  />
+				[83] (167,687)<span  />
+					[84] (165,689)<span >GET />
+				[85] (192,687)<div >Playlist />
+		[86] (213,725)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/youtube/community-post' />
+			[87] (208,725)<div  />
+				[88] (167,725)<span  />
+					[89] (165,727)<span >GET />
+				[90] (220,725)<div >Community Post Details />
+		LinkedIn
+		[91] (213,833)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/linkedin/profile' />
+			[92] (194,833)<div  />
+				[93] (167,833)<span  />
+					[94] (165,835)<span >GET />
+				[95] (206,833)<div >Person's Profile />
+		[96] (213,872)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/linkedin/company' />
+			[97] (194,872)<div  />
+				[98] (167,872)<span  />
+					[99] (165,873)<span >GET />
+				[100] (205,872)<div >Company Page />
+		[101] (213,910)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/linkedin/company/posts' />
+			[102] (195,910)<div  />
+				[103] (167,910)<span  />
+					[104] (165,911)<span >GET />
+				[105] (206,910)<div >Company Posts />
+		[106] (213,948)<a class='group mt-2 lg:mt-0 flex items-center pr-3 py-1.5 cursor-pointer focus:outline-primary dark:focus:outline-primary-light rounded-xl relative hover:bg-gray-600/5 dark:hover:bg-gray-200/5 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300' href='/v1/linkedin/post' />
+			[107] (177,948)<div  />
+				[108] (167,948)<span  />
+					[109] (165,949)<span >GET />
+				[110] (188,948)<div >Post />
+	[111] (332,171)<a class='hover:text-primary dark:hover:text-primary-light transition-colors duration-200' href='/'>Home />
+	Youtube Video API
+	Transcript
+	Get transcript of a video or short
+	1 credit
+	per request
+	[112] (434,394)<div  />
+		[113] (340,394)<div >GET />
+		[114] (446,394)<div class='flex items-center space-x-2 overflow-x-auto flex-1 no-scrollbar relative' scrollable='true' />
+			[115] (442,394)<div  />
+				[116] (522,394)<div  />
+				[117] (410,394)<div >/v1/youtube/video/transcript />
+	[118] (565,394)<button class='flex items-center justify-center px-3 h-9 text-white font-medium rounded-xl mouse-pointer disabled:opacity-70 hover:opacity-80 gap-1.5 bg-[#2AB673]' />
+		[119] (561,394)<span >Try it />
+	🤖 Why Code When AI Can Do It For You?
+	Stop writing code like it's 1970! Let AI do the heavy lifting - click the sparkles to copy a perfectly formatted prompt for ChatGPT, Claude, or your favorite AI assistant.
+	[120] (373,630)<button class='flex items-center gap-2 px-4 py-2 font-medium text-white rounded-lg bg-primary hover:opacity-90 transition-opacity'>Copy for AI />
+	Headers
+	x-api-key
+	string
+	required
+	Your Scrape Creators API key
+	Query Parameters
+	url
+	string
+	required
+	YouTube video or short URL
+	[121] (632,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-primary-light' role='tab' />
+		[122] (632,184)<div >cURL />
+	[123] (667,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[124] (667,184)<div >Node.js />
+	[125] (704,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[126] (704,184)<div >Python />
+	[127] (737,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[128] (737,184)<div >PHP />
+	[129] (763,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[130] (763,184)<div >Go />
+	[131] (790,183)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[132] (790,184)<div >Java />
+	[133] (816,183)<button aria-label='Copy the contents from the code block' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur ' />
+	[134] (834,183)<button aria-label='Copy prompt for AI assistant' class='group relative flex items-center justify-center h-7 w-7 rounded-md backdrop-blur' />
+	curl
+	"https://api.scrapecreators.com/v1/youtube/video/transcript"
+	\
+	-H
+	"x-api-key:
+	"
+	[135] (630,444)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-[#2AB673]' role='tab' />
+		[136] (630,446)<div >200 />
+	[137] (657,444)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[138] (657,446)<div >400 />
+	[139] (685,444)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[140] (685,446)<div >500 />
+	[141] (816,444)<button aria-label='Copy the contents from the code block' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur ' />
+	[142] (834,444)<button aria-label='Toggle fullscreen' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur' />
+	[143] (733,626)<div class='p-5 min-w-full overflow-x-auto w-full scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-white/20 dark:scrollbar-thumb-white/20 hover:scrollbar-thumb-white/25 dark:hover:scrollbar-thumb-white/25 active:scrollbar-thumb-white/25 dark:active:scrollbar-thumb-white/25 text-xs leading-[1.35rem] h-[300px]' scrollable='true' />
+		{
+		"videoId"
+		:
+		"bjVIDXPP7Uk"
+		,
+		"type"
+		:
+		"video"
+		,
+		"url"
+		:
+		"https://www.youtube.com/watch?v=bjVIDXPP7Uk"
+		,
+		"transcript"
+		:
+		[
+		{
+		"text"
+		:
+		"welcome back to the hell farm and the"
+		,
+		"startMs"
+		:
+		"160"
+		,
+		"endMs"
+		:
+		"1920"
+		,
+		"startTimeText"
+		:
+		"0:00"
+		}
+		,
+		{
+		"text"
+		:
+		"backyard trails we built these jumps two"
+		,
+		"startMs"
+		:
+		"1920"
+		,
+		"endMs"
+		:
+		"3919"
+		,
+		"startTimeText"
+		:
+		"0:01"
+		}
+		]
+		,
+		"transcript_only_text"
+		:
+		"welcome back to the hell farm and the backyard trails we built these jumps two years ago and last year we just kind of rebuilt them and this year......"
+		,
+		"language"
+		:
+		"English"
+		}
+
+</current_dom>

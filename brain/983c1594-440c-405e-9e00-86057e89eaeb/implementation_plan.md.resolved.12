@@ -1,0 +1,128 @@
+# Phase Plan: Main/Sub Event Classification
+
+## Vấn đề
+Phase plan đếm TẤT CẢ key_events như nodes → quá nhiều chapters → nội dung lan man ở events không cần scene riêng.
+
+## Giải pháp
+Phân loại events thành `main_key_data` (cần scene) và `sub_key_data` (dệt vào scene khác). Split decision dựa trên main count.
+
+---
+
+## Proposed Changes
+
+### 1. Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+
+**A) Thay thế đoạn `NODE COUNTING RULE` (line 17-24)** bằng:
+
+```
+EVENT CLASSIFICATION RULE (CINEMATIC PACING):
+You are plotting a MOVIE, not writing a textbook.
+
+For each life_phase mapped to this framework step, classify every event:
+
+main_key_data — audience can VISUALIZE it happening on a SPECIFIC DAY:
+  ✓ turning_points and conflicts
+  ✓ key_events with a SPECIFIC ACTION/DATE
+    (e.g., "Killed X in combat", "Arrested on Easter Sunday")
+
+sub_key_data — background texture, woven into scenes:
+  ✗ GRADUAL PROCESSES over months/years
+    (e.g., "Educated in Turkish", "Developed a deep hatred")
+  ✗ DIRECT CONSEQUENCES of a previous main event
+    (e.g., "Forced to flee" = ending of "Seized throne")
+  ✗ achievements, relationships, quotes, myths
+
+SPLIT DECISION: based on len(main_key_data) only.
+  >3 main events → SPLIT into 2 chapters.
+```
+
+**B) Thay thế đoạn `STEPS ≠ CHAPTERS` (line 11-15)** — cập nhật để dùng main count:
+
+```
+STEPS ≠ CHAPTERS (DENSITY-BASED SPLITTING):
+  - 1 chapter (~1200-1500 words) can develop 2-3 main events cinematically
+  - >3 main events in 1 chapter = FORCED SUMMARIZATION = superficial script
+  - Phases with >3 main_key_data → SPLIT into 2 chapters
+  - Phases with ≤3 main_key_data → 1 chapter
+  - sub_key_data does NOT affect split decision
+```
+
+**C) Thay thế `OUTPUT FORMAT`** — bỏ `mapped_nodes`, thêm main/sub:
+
+```json
+{
+  "phase": "Framework step name",
+  "main_key_data": ["scene-worthy events from blueprint"],
+  "sub_key_data": ["texture events — woven into scenes"],
+  "node_count": 4,
+  "capacity_check": "4 main events > 3 threshold → SPLIT into 2 chapters",
+  "chapters": [3, 4],
+  "reason_for_split": "null if 1 chapter, otherwise explain"
+}
+```
+
+`node_count` = `len(main_key_data)`.
+
+---
+
+### 2. Outline Prompt
+
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+> [!IMPORTANT]
+> Outline prompt có NODE COUNTING RULE riêng (line 11-27) giống bản cũ.
+> Nếu không sửa → outline sẽ mâu thuẫn với phase plan (2 rule khác nhau).
+
+**A) Xóa line 11-27** (cả đoạn `STEPS ≠ CHAPTERS` + `NODE COUNTING RULE`).
+
+**B) Thay bằng:**
+
+```
+STEPS ≠ CHAPTERS:
+  If a PRE-PLANNED PHASE → CHAPTER MAPPING is provided, FOLLOW IT EXACTLY.
+  The phase plan provides:
+    - main_key_data: events that need SCENE-LEVEL development → use as key_data for chapters
+    - sub_key_data: background texture → writer decides how to weave in
+  Do NOT re-count or re-classify events. Trust the phase plan classification.
+
+  If NO pre-planned mapping is provided, use the original density-based splitting
+  with the CHAPTER COUNT REQUIREMENT as guide.
+```
+
+**C) Line 209-219 (output `phase_chapter_plan`)** — thêm note:
+
+```
+If pre-planned phase_chapter_plan was provided, copy it as-is into your output.
+```
+
+---
+
+### 3. Code
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+**Không cần sửa code.**
+
+Lý do: Line 2891-2900 đã serialize toàn bộ `phase_chapter_plan` thành JSON và inject vào outline prompt. Nếu phase plan output chứa `main_key_data`/`sub_key_data`, chúng tự động truyền xuống outline.
+
+Tùy chọn (không bắt buộc): thêm log cảnh báo nếu `node_count != len(main_key_data)` để debug.
+
+---
+
+## Không thay đổi
+- Không hard cap chapters/phase hay total chapters
+- Không thay đổi writer prompt
+- Không thay đổi audit prompt
+- Không thay đổi temperature (giữ 0.0 cho phase plan)
+- Không thay đổi code logic
+
+## Verification Plan
+
+Chạy lại Vlad + Sử Thi, kiểm tra:
+1. Phase plan output có `main_key_data` / `sub_key_data` thay vì `mapped_nodes`
+2. `node_count` = `len(main_key_data)`
+3. Outline nhận và follow phase plan classification
+4. Total chapters giảm so với 15ch nhưng phases kịch tính (Trỗi Dậy, Đỉnh Cao) giữ nguyên chapter count
+5. Sub events vẫn xuất hiện trong script (không bị mất)

@@ -1,0 +1,25 @@
+# SRT-to-Prompt Converter Application
+
+## Planning
+- [/] Design application architecture and create implementation plan
+- [ ] Get user approval on plan
+
+## Execution
+- [ ] Create project structure and config files (`config.json`, `api_keys.json`)
+- [ ] Create style preset files (`styles/Cinematic.txt`, `styles/Documentary.txt`)
+- [ ] Build core SRT parser module (`core/srt_parser.py`)
+- [ ] Build API client module with multi-endpoint fallback (`core/api_client.py`)
+- [ ] Build prompt generator module (`core/prompt_generator.py`)
+- [ ] Build process controller with start/pause/stop (`core/process_controller.py`)
+- [ ] Build Tab 1 — SRT Input & Settings UI (`tabs/tab_srt_input.py`)
+- [ ] Build Tab 2 — Style Management UI (`tabs/tab_styles.py`)
+- [ ] Build Tab 3 — API Configuration UI (`tabs/tab_api_config.py`)
+- [ ] Build Tab 4 — Process & Progress UI (`tabs/tab_process.py`)
+- [ ] Build Tab 5 — Output & Results UI (`tabs/tab_output.py`)
+- [ ] Build main application entry point (`main.py`)
+
+## Verification
+- [ ] Test SRT parsing with sample file
+- [ ] Test API configuration save/load
+- [ ] Test style scanning and selection
+- [ ] Test full workflow via browser/UI

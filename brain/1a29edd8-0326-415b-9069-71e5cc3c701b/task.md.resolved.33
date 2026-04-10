@@ -1,0 +1,12 @@
+# Transition Toggle Feature
+
+- [x] Research codebase: writer pipeline, UI, prompt assembly
+- [x] Create implementation plan
+- [/] Add checkbox to UI (rewrite_style_tab.py)
+  - [ ] Add `_chk_transitions` widget
+  - [ ] Visibility toggle in [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1100-1167)
+  - [ ] Save/Load config
+  - [ ] Pass flag to writer at both call sites
+- [ ] Add `use_transitions` param to [write_review_chapter](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2259-2406) (rewriter.py)
+- [ ] Strip/replace TRANSITIONS section conditionally
+- [ ] Verify changes

@@ -1,0 +1,7 @@
+# Transition Toggle Feature
+
+- [/] Research codebase: writer pipeline, UI, prompt assembly
+- [ ] Modify writer prompt to support conditional transitions
+- [ ] Add `use_transitions` flag to rewriter pipeline
+- [ ] Add checkbox to UI (top/list mode only)
+- [ ] Verify changes

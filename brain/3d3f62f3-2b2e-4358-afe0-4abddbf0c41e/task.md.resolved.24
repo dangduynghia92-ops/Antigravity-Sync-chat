@@ -1,0 +1,7 @@
+# Implement Renew Feature for Style Rewrite Tab
+
+- [x] Create [system_renew_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_renew_outline.txt) prompt (style JSON + framework aware)
+- [x] Add [generate_renew_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#871-921) in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Add ▶ Renew button in UI ([rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py))
+- [x] Implement [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1043-1315) flow (6 steps)
+- [x] Verify import + quick test

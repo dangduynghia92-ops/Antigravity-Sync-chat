@@ -1,0 +1,62 @@
+# Migration: Download Backend to pytubefix + youtube-transcript-api
+
+## Goal
+Replace yt-dlp as primary downloader with:
+- **`pytubefix`** → video download, video info, thumbnail
+- **`youtube-transcript-api`** → transcript download
+- **`yt-dlp`** → fallback only
+
+## Test Results
+
+| Feature | Library | Result |
+|---|---|---|
+| Video info (title, length, author) | pytubefix | ✅ Works |
+| Thumbnail URL | pytubefix | ✅ `yt.thumbnail_url` → `https://i.ytimg.com/vi/{id}/sddefault.jpg` |
+| Video 1080p stream | pytubefix | ✅ itag 137 (mp4), 248 (webm), 399 (av01) |
+| Captions | pytubefix | ✅ `yt.captions['a.en']` |
+| Transcript (380 snippets) | youtube-transcript-api | ✅ `text + start + duration` |
+| Proxy | pytubefix | ✅ `proxies={"https": "..."}` |
+
+## Proposed Changes
+
+### [MODIFY] [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)
+
+#### Functions to migrate:
+
+| Function | Current (yt-dlp) | New (primary) | Fallback |
+|---|---|---|---|
+| [get_video_info()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#352-399) | subprocess yt-dlp | `pytubefix.YouTube` | yt-dlp |
+| [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#119-252) | subprocess yt-dlp | `pytubefix` stream download | yt-dlp |
+| [download_thumbnail_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#607-671) | yt-dlp metadata + requests | `yt.thumbnail_url` + requests | yt-dlp |
+| [get_transcript_ytdlp()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#711-804) | subprocess yt-dlp json3 | `youtube-transcript-api` | yt-dlp → ScrapeCreators |
+| [scan_playlist()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#139-346) | subprocess yt-dlp | `pytubefix.Playlist` | yt-dlp |
+
+#### Functions unchanged:
+- [extract_channel_name()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#72-112), [normalize_timestamp()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#401-424), [extract_timestamps()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#426-467), [build_transcript_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#469-503)
+- All Excel functions ([save_scan_to_excel](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1017-1100), `load_excel_*`, `update_excel_*`)
+- [_format_transcript()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#877-893), [_format_upload_date()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#899-907), [_format_duration()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#909-922)
+
+### [MODIFY] [video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+
+- Video download in cutter also uses yt-dlp subprocess → migrate to pytubefix
+- Keep yt-dlp as fallback
+
+## User Review Required
+
+> [!IMPORTANT]
+> This is a large refactoring (5+ functions in [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)). 
+> Do you want me to migrate all at once or one function at a time?
+
+> [!WARNING]
+> `pytubefix` depends on `nodejs-wheel-binaries` (41MB) → bundles Node.js automatically.
+> Cookie file support is NOT available in pytubefix (uses OAuth instead).
+> Current cookie manager system will only be used for yt-dlp fallback.
+
+## Verification Plan
+
+### Automated Tests
+1. Test [get_video_info()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#352-399) with pytubefix → verify title, length, chapters
+2. Test [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py#119-252) → verify 1080p video-only download
+3. Test [download_thumbnail_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#607-671) → verify image saved
+4. Test transcript download → verify text content
+5. Test fallback to yt-dlp when pytubefix fails

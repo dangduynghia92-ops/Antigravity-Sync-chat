@@ -1,0 +1,134 @@
+# Audit: Review Pipeline (Style Rewrite Tab)
+
+## Pipeline Flow (12 Steps)
+
+| Step | Log | Mô tả | Line |
+|---|---|---|---|
+| 1 | Step 1/12 | Nối toàn bộ text input thành 1 chuỗi | 1463-1468 |
+| 2 | Step 2/12 | Detect framework gốc của kịch bản | 1473-1497 |
+| 3 | Step 3/12 | Trích xuất blueprint (specs, products) | 1502-1524 |
+| 4 | Step 4/12 | Xếp hạng frameworks → popup cho user chọn | 1529-1595 |
+| 5 | Step 5/12 | Reality check: bổ sung data thiếu | 1607-1667 |
+| 6 | Step 6/12 | Kiểm tra blueprint có đủ data cho framework | 1672-1700 |
+| 7 | Step 7/12 | Chuyển đổi đơn vị theo quốc gia | 1705-1716 |
+| 8 | Step 8/12 | Tạo outline (chọn/sắp xếp items, gán chapters) | 1718-1743 |
+| 9 | Step 9/12 | Audit outline (kiểm tra logic, sửa lỗi) | 1745-1780 |
+| 10 | Step 10/12 | Viết từng chapter | 1782-1860 |
+| 11 | Step 11/12 | Cross-chapter review + auto-patch | 1884-1963 |
+| 12 | Step 12/12 | Merge thành FULL_SCRIPT.txt | 1965-1982 |
+
+---
+
+## Các vấn đề phát hiện
+
+### BUG 1: Comment step numbering sai
+**Severity**: Cosmetic
+**Location**: Lines 1705, 1718, 1745, 1782
+
+Comments trong code ghi `Step 5`, `Step 6`, `Step 7`, `Step 8` nhưng log hiển thị `Step 7/12`, `Step 8/12`, `Step 9/12`, `Step 10/12`. Gây khó hiểu khi debug.
+
+```python
+# Line 1705: Comment ghi "Step 5" nhưng log ghi "Step 7/12"
+# Line 1718: Comment ghi "Step 6" nhưng log ghi "Step 8/12"
+# Line 1745: Comment ghi "Step 7" nhưng log ghi "Step 9/12"
+# Line 1782: Comment ghi "Step 8" nhưng log ghi "Step 10/12"
+```
+
+**Fix**: Sửa comments cho khớp với log.
+
+---
+
+### BUG 2: Tìm framework dict 2 lần — lần 2 bỏ qua kết quả lần 1
+**Severity**: Low (waste)
+**Location**: Lines 1601-1605 và 1753-1757
+
+Dòng 1601 tìm `selected_fw_dict`, dùng ở Step 6 (completeness check). Dòng 1753 lại tìm `fw_dict` y hệt cho Step 9 (audit). Nên dùng lại biến đã có.
+
+**Fix**: Bỏ lần tìm thứ 2, dùng `selected_fw_dict`.
+
+---
+
+### BUG 3: Reality check KHÔNG merge dữ liệu bổ sung vào blueprint
+**Severity**: 🔴 Critical
+**Location**: Lines 1607-1667
+
+Reality check tìm data thiếu (barrel length, country of origin...) và lưu vào `_reality_check.json`. Nhưng **không merge ngược vào [blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1676-1728)**. Kết quả: outline và writer vẫn dùng blueprint thiếu data → data bổ sung bị bỏ phí hoàn toàn.
+
+**Fix**: Sau khi reality check, merge `enriched_data.fields_added` vào blueprint trước khi tiếp tục.
+
+---
+
+### BUG 4: `issues_left` hiển thị TỔNG issues, không phải issues còn lại
+**Severity**: Medium (misleading log)
+**Location**: Line 1954
+
+```python
+issues_left = len(review_result.get("issues", []))
+```
+
+Biến tên `issues_left` gợi ý "issues chưa fix", nhưng thực tế đếm TẤT CẢ issues (kể cả đã patch). Nên đếm issues chưa patch.
+
+**Fix**: `issues_left = len(issues) - auto_patched`
+
+---
+
+### BUG 5: Cross-chapter patching có thể index sai khi có chapter fail
+**Severity**: 🔴 Critical
+**Location**: Lines 1927-1942
+
+`fix_ch_num` là số chapter (1-based) từ AI review. Nhưng `rw_chapters` chỉ chứa chapters thành công (bỏ qua fail). Nếu chapter 3 fail, `rw_chapters[2]` sẽ là chapter 4 thay vì chapter 3. AI trả `fix_chapter=4` nhưng code sửa chapter 5.
+
+**Fix**: Cần map `fix_ch_num` thông qua `rw_index_map` thay vì dùng trực tiếp.
+
+---
+
+### BUG 6: Outline không nhận `selection_criteria` và `ordering_criteria`
+**Severity**: Medium
+**Location**: [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) → [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1962-2094)
+
+Outline prompt đã nói "đọc `selection_criteria` và `ordering_criteria`", nhưng hàm [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1962-2094) truyền toàn bộ framework JSON nên AI có thể đọc được. Tuy nhiên, nên verify rằng framework dict thực sự được truyền đầy đủ.
+
+**Status**: Cần verify — có thể OK nếu framework_json chứa đủ fields.
+
+---
+
+### BUG 7: `unique_selling_point` chưa có trong outline prompt output JSON
+**Severity**: Medium
+**Location**: [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) lines 54-57
+
+Chúng ta đã thêm `unique_selling_point` vào schema nhưng nên verify rằng AI thực sự output field này. Nếu AI bỏ qua, writer sẽ nhận "N/A".
+
+**Status**: Cần test — phụ thuộc vào AI có follow schema hay không.
+
+---
+
+### BUG 8: `import csv` nằm trong loop body
+**Severity**: Low (performance)
+**Location**: Line 1630
+
+`import csv` nằm trong hàm [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1458-1990). Python cache import nên không crash, nhưng nên chuyển lên đầu file.
+
+---
+
+### BUG 9: Word count section logic có thể sai cho hook
+**Severity**: Low
+**Location**: Lines 1801-1808
+
+```python
+if ch_type == "hook" or i == 0:
+    wc_section = "open"
+```
+
+Nếu chapter đầu KHÔNG phải hook (ví dụ body), vẫn bị gán word count rule [open](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#384-390). Nên ưu tiên `ch_type` trước, fallback `i == 0` sau.
+
+---
+
+## Tóm tắt
+
+| Severity | Số lượng | Ghi chú |
+|---|---|---|
+| 🔴 Critical | 2 | BUG 3 (enrichment lost), BUG 5 (patching wrong chapter) |
+| 🟡 Medium | 3 | BUG 4, 6, 7 |
+| 🟢 Low/Cosmetic | 4 | BUG 1, 2, 8, 9 |
+
+> **Recommended priority**: Fix BUG 3 và BUG 5 trước — đây là logic bugs ảnh hưởng trực tiếp đến chất lượng output.

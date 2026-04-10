@@ -1,0 +1,187 @@
+# Cải Thiện Prompt Biography Writer
+
+## Bối Cảnh
+
+Prompt hiện tại (337 dòng, 12 sections) có 3 vấn đề structural:
+1. **Chắp vá**: Voice rules rải ở 3 nơi (dòng 42, 293, style JSON)
+2. **Thiếu Scene Hierarchy**: Không phân biệt "deep scene" vs "fast bridge"
+3. **Thiếu Spoken Rhythm**: Không enforce sóng ngắn-dài-ngắn
+
+## Phát Hiện Từ Nghiên Cứu
+
+| Nguồn | Key Insight |
+|---|---|
+| Kịch bản gốc TBN | 3 scene sâu + 8 câu bridge = có ĐỈNH và THUNG LŨNG |
+| AI narration research | "Sentence Variance" — enforce short + long alternation |
+| Scene brief technique | Chỉ cung cấp data CẦN THIẾT cho scene hiện tại |
+| LLM scene/summary | Phải define rõ khi nào SCENE (real-time) vs SUMMARY (bridge) |
+| Documentary voiceover | "Start as late as possible" — vào thẳng action |
+
+## Proposed Changes
+
+### 1. Merge & Simplify Structure
+
+**Trước (12 sections rải rác):**
+```
+VOICE AND EMOTIONAL REGISTER (dòng 42)
+WRITING CRAFT (dòng 57) — 8 rules
+TRANSITIONS (dòng 113)
+BODY CHAPTER STRUCTURES (dòng 127) — 8 structures
+OPEN LOOPS (dòng 245)
+CLOSING TYPE (dòng 260)
+VOICE-OVER CLARITY (dòng 293)
+GOLDEN SAMPLE (dòng 306)
+PRIORITY ORDER (dòng 318)
+OUTPUT (dòng 329)
+```
+
+**Sau (7 sections gọn):**
+```
+1. PERSONA + VOICE (merge Voice + Voice-over + Write for Ear)
+2. SCENE HIERARCHY (MỚI — thay WRITING CRAFT)
+3. SPOKEN RHYTHM (MỚI — sentence wave rules)
+4. CHAPTER STRUCTURE (giữ nguyên 8 structures)
+5. CHAPTER FLOW (merge Transitions + Open Loops + Closing Type)
+6. GOLDEN SAMPLE (giữ nguyên)
+7. PRIORITY + OUTPUT (merge)
+```
+
+---
+
+### 2. Section MỚI: SCENE HIERARCHY
+
+Thay thế WRITING CRAFT (quá nhiều rules liệt kê, AI bỏ qua).
+
+```
+═══════════════════════════════════════
+SCENE HIERARCHY (HOW TO USE DATA)
+═══════════════════════════════════════
+
+The blueprint is a MENU, not a checklist. You write a SPOKEN SCRIPT,
+not a Wikipedia article.
+
+For each chapter, identify:
+- 2-3 KEY MOMENTS → build FULL SCENES (real-time, sensory, dialogue)
+- Everything else → FAST BRIDGE (1-2 sentences max, then move on)
+
+SCENE (expand — slow down time):
+- Turning points, conflicts, emotional_beat events
+- Include: physical actions, quotes, sensory details, internal state
+- Minimum 100 words per scene
+
+BRIDGE (compress — speed through time):
+- Context, time jumps, career moves, location changes
+- Maximum 2 sentences per bridge
+- Example: "Three years passed. He was still at the patent office."
+
+Result: each chapter has PEAKS (scenes) and VALLEYS (bridges).
+This creates rhythm. Without it, everything is flat and forgettable.
+
+ANTI-PATTERN:
+  ✗ 9 paragraphs of equal length = Wikipedia  
+  ✓ 3 deep scenes + 6 one-sentence bridges = documentary
+```
+
+---
+
+### 3. Section MỚI: SPOKEN RHYTHM
+
+```
+═══════════════════════════════════════
+SPOKEN RHYTHM (SENTENCE PATTERNS)
+═══════════════════════════════════════
+
+This text will be READ ALOUD. Write in WAVES, not flat lines.
+
+1. WAVE PATTERN: alternate short and long sentences.
+   SHORT (1-8 words): for impact, facts, punch lines
+   LONG (15-25 words): for atmosphere, context, descriptions
+   ✗ Do NOT stack 3+ sentences of similar length
+   ✓ Short. Short. Then a longer sentence that builds atmosphere. Short again.
+
+2. BREATH POINTS: after every dense or emotional passage,
+   insert a landing sentence (1-5 words).
+   "That was the end." / "He was alone." / "Nobody knew."
+
+3. CONTRACTIONS: use them. "He didn't" not "He did not".
+   "It's" not "It is". "They're" not "They are".
+
+4. ONE IDEA PER SENTENCE: never pack 2 facts into 1 sentence.
+   ✗ "He moved to Berlin in 1914, where he began work on
+   general relativity and separated from Mileva."
+   ✓ "In 1914, he moved to Berlin. 
+   His marriage was over. His greatest work was about to begin."
+
+5. ACTIVE VOICE: subject does action.
+   ✗ "A letter was sent by Einstein to Roosevelt."
+   ✓ "Einstein signed the letter. He sent it to Roosevelt."
+
+6. BANNED PATTERNS:
+   - "Furthermore" / "Moreover" / "In addition"
+   - "It is worth noting that"
+   - "A testament to" / "In the realm of"
+   - "This was truly" / "This was a profound"
+   - Starting 3+ paragraphs with the same word
+```
+
+---
+
+### 4. Strengthen CHAPTER FLOW (merge 3 sections)
+
+```
+═══════════════════════════════════════
+CHAPTER FLOW (TRANSITIONS + LOOPS + CLOSING)
+═══════════════════════════════════════
+
+OPENING:
+- If open_loop_resolve exists: FIRST 1-2 sentences MUST answer it
+  (this is MANDATORY, not optional)
+- Then proceed with chapter_structure's opening pattern
+- Do NOT add bridge sentences ("Previously..." / "Tiếp tục...")
+
+CLOSING:
+- Execute the assigned closing_type (see list below)
+- The ends_with text must be WOVEN into your final paragraph
+  — do NOT copy it as a separate paragraph
+- If open_loop_plant exists: plant it in the final 2 sentences
+
+[... closing types list stays the same ...]
+```
+
+---
+
+### 5. Đơn Giản Hóa VOICE Section
+
+Merge 3 sections thành 1:
+
+```
+═══════════════════════════════════════
+VOICE
+═══════════════════════════════════════
+
+You are a storyteller speaking directly to ONE listener.
+Intimate but authoritative. You know things others don't.
+
+- Speak as if sharing a secret over coffee
+- Use specific details: dates, places, names, objects
+- Use direct quotes when available — they make scenes LIVE
+- When something shocking happens: state it flat. No adjectives.
+- Show, don't tell: replace emotion labels with physical reactions
+- No academic jargon — if a term needs a dictionary, explain it
+  or replace it in the same sentence
+```
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. Bạn muốn tôi giữ nguyên 8 CHAPTER STRUCTURES (origin_story, dark_revelation...) hay cũng cần đơn giản?
+> 2. GOLDEN SAMPLE — giữ sample hiện tại hay thay bằng 1 đoạn từ kịch bản gốc TBN (dịch sang EN)?
+> 3. Show Don't Tell rules — giữ trong VOICE section ngắn gọn hay cần chi tiết hơn?
+
+## Verification Plan
+
+1. Sau khi sửa prompt → chạy lại Ch2 Einstein với prompt mới
+2. So sánh output mới vs output cũ vs kịch bản gốc
+3. Đếm: câu ngắn %, scene depth, bridges count

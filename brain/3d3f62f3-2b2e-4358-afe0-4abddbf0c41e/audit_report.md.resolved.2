@@ -1,0 +1,21 @@
+# Audit Report: [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+## Issues Found & Fixed
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| 1 | 🔴 **Critical** | **Narrative Step 4 index mismatch**: `rw_chapters` filters out error chapters (empty texts), so its indices diverged from `rewritten_texts`. `rewritten_texts[idx]` would update the wrong chapter or crash. | Added `rw_index_map[]` to track original indices. `rewritten_texts[rw_index_map[rw_idx]] = patched` now correctly syncs back. |
+| 2 | 🟡 Medium | **[_save_status_safe](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#584-594) with empty `_group_path`**: When only using Add button (no scan), `_group_path` is `""` → writes `_status.json` to CWD. | Added `if not group_path: return` guard. |
+| 3 | 🟢 Minor | **Unused imports**: `QGroupBox`, `QDialog`, `QTextBrowser`, `QDialogButtonBox` imported but never used. | Removed. |
+
+## Areas Verified ✓
+
+- **API signatures**: [rewrite_chapter(system_prompt_override=)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#246-290), [verify_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#297-344), [save_rewritten_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#608-620) — all match
+- **[save_rewritten_file](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#608-620)** already calls `os.makedirs(output_dir, exist_ok=True)` — no issue
+- **Thread safety**: `self._lock` used correctly around `chapters_data` mutations
+- **Signal/slot**: [progress_text](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#648-665), [score_update](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#666-683), `tree_refresh` — all connected, emitted from worker threads, received on main thread via Qt signal mechanism ✓
+- **Tree grouping**: [_on_item_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py#633-645) propagates check state; [_get_checked_chapters](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#568-581) recursively collects from children ✓
+- **Natural sort**: [_natural_sort_key](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#372-377) correctly handles numeric parts
+- **Top/List flow**: parallel via `ThreadPoolExecutor`, rewrite → verify, error handling per-chapter ✓
+- **Narrative flow**: outline → sequential rewrite (with prev context) → verify → review+patch → final review ✓
+- **Stop flag**: checked at appropriate points in both flows ✓

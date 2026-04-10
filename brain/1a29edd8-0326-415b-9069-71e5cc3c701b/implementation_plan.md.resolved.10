@@ -1,0 +1,133 @@
+# Đề Xuất: Tiêu Chí Chọn & Sắp Xếp Items Per Framework (Súng/Đạn)
+
+> Áp dụng khi kịch bản gốc có N items nhưng chapter range chỉ cho phép M < N
+
+---
+
+## Budget Warrior (countdown)
+
+**Chọn items**: Ưu tiên items có **chênh lệch giá vs benchmark rõ ràng nhất** + có đủ data specs để so sánh
+- ✅ Giữ: Sản phẩm có giá < benchmark VÀ vượt ≥1 metric quan trọng
+- ❌ Bỏ: Sản phẩm giá gần bằng benchmark hoặc thiếu data so sánh
+
+**Sắp xếp**: Yếu nhất → Mạnh nhất (value proposition)
+- Tiêu chí: [(số metrics vượt benchmark × mức chênh lệch) ÷ giá](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1458-1990)
+- Item cuối (#1) = giá rẻ nhất MÀ vượt nhiều metrics nhất
+
+---
+
+## Tier List
+
+**Chọn items**: Ưu tiên items **phân bổ đều các tier** — cần ít nhất 1 item mỗi tier (C/B/A/S)
+- ✅ Giữ: Item đại diện tốt nhất cho mỗi tier (rõ ràng thuộc tier đó)
+- ❌ Bỏ: Items nằm giữa 2 tier, không rõ ràng (borderline)
+
+**Sắp xếp**: Tier thấp → Tier cao (C → S)
+- Tiêu chí: Tổng điểm trên các tiêu chí đánh giá của framework
+- Trong cùng tier: sắp theo niche (CCW trước, duty sau, competition cuối)
+
+---
+
+## Contrarian Takedown
+
+**Chọn items**: Ưu tiên items có **sự khác biệt lớn giữa popular belief vs thực tế**
+- ✅ Giữ: Sản phẩm mà dân chơi nghĩ tốt nhưng data cho thấy khác, hoặc ngược lại
+- ❌ Bỏ: Items mà popular belief = thực tế (không có gì contrarian)
+
+**Sắp xếp**: Ít bất ngờ → Nhiều bất ngờ nhất
+- Tiêu chí: Mức chênh lệch giữa perception (forum/marketing) vs data thực
+- Dimension cuối = fact gây sốc nhất trong cộng đồng
+
+---
+
+## Underdog Champion
+
+**Chọn items**: Ưu tiên **brands ít tên tuổi** nhưng data tốt bất ngờ
+- ✅ Giữ: Turkish imports, lesser-known Mỹ, new entrants có test data ấn tượng
+- ❌ Bỏ: Brands nổi tiếng (S&W, Sig, CZ) — đây không phải underdog
+
+**Sắp xếp**: Stereotype yếu nhất → Surprise mạnh nhất
+- Tiêu chí: Brand recognition thấp + performance cao = underdog score cao
+- #1 = brand ít ai biết nhưng outperform cả big names
+
+---
+
+## Head-to-Head Duel
+
+**Chọn items**: Chỉ **2 sản phẩm** cùng phân khúc, cùng giá, direct competitors
+- ✅ Giữ: 2 items cạnh tranh trực tiếp nhất (cùng caliber, cùng size, cùng use case)
+- ❌ Bỏ: Tất cả items còn lại — đây là 1v1
+
+**Sắp xếp**: Không countdown. Mỗi chapter = 1 round (criterion)
+- Tiêu chí: Rounds sắp từ ít decisive → most decisive
+- Round cuối = criterion quan trọng nhất quyết định winner
+
+---
+
+## High-Stakes Scenario
+
+**Chọn items**: Ưu tiên items có **data tin cậy về reliability, durability, adverse conditions**
+- ✅ Giữ: Items có torture test data, military/LE adoption, round count records
+- ❌ Bỏ: Items chỉ có range/accuracy data mà thiếu reliability data
+
+**Sắp xếp**: Stakes thấp → Stakes cao
+- Tiêu chí: Range day → CCW daily carry → Home defense → Duty use → Survival
+- #1 = item bạn tin tưởng nhất khi đời sống phụ thuộc vào nó
+
+---
+
+## Myth Buster
+
+**Chọn items**: Chọn **myths, không phải products** — mỗi chapter = 1 myth
+- ✅ Giữ: Myths phổ biến trong cộng đồng US (VD: "striker-fired unsafe", "Turkish guns unreliable", ".45 beats 9mm")
+- ❌ Bỏ: Myths quá niche hoặc đã được debunk rộng rãi
+
+**Sắp xếp**: Ít gây tranh cãi → Gây tranh cãi nhất
+- Tiêu chí: Mức độ controversial trong cộng đồng
+- Myth cuối = myth mà kết luận sẽ gây shock nhiều nhất
+
+---
+
+## Evolution Timeline
+
+**Chọn items**: Chọn **các thế hệ** của 1 product line (Gen 1→Gen N)
+- ✅ Giữ: Generations có thay đổi significant (redesign, caliber change, new platform)
+- ❌ Bỏ: Minor refreshes chỉ thay màu sắc/accessories
+
+**Sắp xếp**: Cũ → Mới (chronological, không thay đổi)
+- Tiêu chí: Năm ra mắt
+
+---
+
+## Legacy Justification
+
+**Chọn items**: Ưu tiên items có **heritage rõ ràng** (≥20 năm trên thị trường)
+- ✅ Giữ: Items có military/LE service record + vẫn đang bán
+- ❌ Bỏ: Items mới (<5 năm) hoặc đã discontinued
+
+**Sắp xếp**: Heritage mới nhất → Cũ nhất
+- Tiêu chí: Thâm niên + mức độ iconic
+- #1 = classic lâu đời nhất mà vẫn relevant
+
+---
+
+## Golden Age Legacy
+
+**Chọn items**: Ưu tiên **classics/vintage** mà khán giả nostalgic
+- ✅ Giữ: Items từ "golden age" (pre-2000) mà vẫn mua được
+- ❌ Bỏ: Items quá hiếm (collector-only), không mua nổi
+
+**Sắp xếp**: Common nostalgia pick → Most surprising still-relevant
+- Tiêu chí: Mức độ bất ngờ khi classic vẫn cạnh tranh được với modern
+
+---
+
+## Industry Shakeup
+
+**Chọn items**: Ưu tiên **sản phẩm mới/announcement** gây chấn động thị trường
+- ✅ Giữ: Items launch gần đây, thay đổi competitive landscape
+- ❌ Bỏ: Items incremental update, không gây impact
+
+**Sắp xếp**: Ít disruptive → Nhiều disruptive nhất
+- Tiêu chí: Market impact score = (price disruption + feature innovation + brand surprise)
+- #1 = announcement gây shock lớn nhất trong industry

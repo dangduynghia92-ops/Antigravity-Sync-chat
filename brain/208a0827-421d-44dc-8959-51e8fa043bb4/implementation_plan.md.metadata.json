@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to redesign Product Prompt tab with: removing Generated Prompts preview panel, adding File Import section for .txt/.docs/Google Docs links, AI-powered object extraction with tree view output, transfer-to-objects workflow, separate Generate buttons per section, and full layout redesign.",
+  "updatedAt": "2026-02-27T06:06:44.166041Z",
+  "version": "11"
+}

@@ -1,0 +1,150 @@
+<current_dom_explanation>
+This is a temporary snapshot of the current page's DOM structure. The DOM will change if you navigate to or interact with another page. Use a tool like browser_get_dom to capture and preserve the DOM in your trajectory if needed for later reference.
+</current_dom_explanation>
+<current_dom>
+[0] (500,910)<div  />
+	Scrape Creators Documentation
+	[1] (32,34)<a class='flex items-center' href='https://scrapecreators.com' />
+		[2] (32,34)<img  />
+	[3] (129,34)<a class='flex items-center' href='/' />
+		[4] (129,34)<span >Documentation />
+	[5] (935,34)<button class='text-gray-500 w-8 h-8 flex items-center justify-center hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300' id='search-bar-entry-mobile'>Search... />
+		Search...
+	[6] (972,34)<button aria-label='Toggle mobile menu' class='h-7 w-5 flex items-center justify-end' />
+	[7] (1172,500)<div class='h-full overflow-y-auto' scrollable='true' />
+	Copy for AI
+	[8] (54,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-primary-light' role='tab' />
+		[9] (54,98)<div >cURL />
+	[10] (125,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[11] (125,98)<div >Node.js />
+	[12] (202,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[13] (202,98)<div >Python />
+	[14] (270,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[15] (270,98)<div >PHP />
+	[16] (325,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[17] (325,98)<div >Go />
+	[18] (380,97)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[19] (380,98)<div >Java />
+	[20] (907,97)<button aria-label='Copy the contents from the code block' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur ' />
+	[21] (946,97)<button aria-label='Copy prompt for AI assistant' class='group relative flex items-center justify-center h-7 w-7 rounded-md backdrop-blur' />
+	curl
+	"https://api.scrapecreators.com/v1/youtube/search"
+	\
+	-H
+	"x-api-key:
+	"
+	[22] (50,366)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-[#2AB673]' role='tab' />
+		[23] (50,368)<div >200 />
+	[24] (106,366)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[25] (106,368)<div >400 />
+	[26] (162,366)<button class='group flex items-center relative px-2 pt-2.5 pb-2 outline-none whitespace-nowrap font-medium text-gray-400' role='tab' />
+		[27] (162,368)<div >500 />
+	[28] (907,366)<button aria-label='Copy the contents from the code block' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur ' />
+	[29] (946,366)<button aria-label='Toggle fullscreen' class='h-7 w-7 flex items-center justify-center rounded-md backdrop-blur' />
+	[30] (500,554)<div class='p-5 min-w-full overflow-x-auto w-full scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-white/20 dark:scrollbar-thumb-white/20 hover:scrollbar-thumb-white/25 dark:hover:scrollbar-thumb-white/25 active:scrollbar-thumb-white/25 dark:active:scrollbar-thumb-white/25 text-xs leading-[1.35rem] h-[300px]' scrollable='true' />
+		{
+		"videos"
+		:
+		[
+		{
+		"type"
+		:
+		"video"
+		,
+		"id"
+		:
+		"BzSzwqb-OEE"
+		,
+		"url"
+		:
+		"https://www.youtube.com/watch?v=BzSzwqb-OEE"
+		,
+		"title"
+		:
+		"NF - RUNNING (Audio)"
+		,
+		"thumbnail"
+		:
+		"https://i.ytimg.com/vi/BzSzwqb-OEE/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCasEKav1CLqeSSE2IYDqjGiIMBGw"
+		,
+		"channel"
+		:
+		{
+		"id"
+		:
+		"UCoRR6OLuIZ2-5VxtnQIaN2w"
+		,
+		"title"
+		:
+		"NFrealmusic"
+		,
+		"handle"
+		:
+		"channel/UCoRR6OLuIZ2-5VxtnQIaN2w"
+		,
+		"thumbnail"
+		:
+		"https://yt3.ggpht.com/J1_Si0TYNZ-991v09y8RpCh4_Z_ALwKmPgMYnJqjNhoglVtipf3oEN8LpzG1kS0qsv8Jptpmmg=s88-c-k-c0x00ffffff-no-rj"
+		}
+		,
+		"viewCountText"
+		:
+		"14,860,541 views"
+		,
+		"viewCountInt"
+		:
+		14860541
+		,
+		"publishedTimeText"
+		:
+		"2 years ago"
+		,
+		"publishedTime"
+		:
+		"2023-05-28T17:08:46.499Z"
+		,
+		"lengthText"
+		:
+		"4:14"
+		,
+		"lengthSeconds"
+		:
+		254
+		,
+		"badges"
+		:
+		[
+		]
+		}
+		,
+		{
+		"type"
+		:
+		"video"
+		,
+		"id"
+		:
+		"-tLKoLN-dz4"
+		,
+		"url"
+		:
+		"https://www.youtube.com/watch?v=-tLKoLN-dz4"
+		,
+		"title"
+		:
+		"Not Alone, Racing the High Lonesome 100"
+		,
+		"thumbnail"
+		:
+		"https://i.ytimg.com/vi/-tLKoLN-dz4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLD1ziOa9dTFWSL6lyK6m6eO_uZkJg"
+	Headers
+	x-api-key
+	string
+	required
+	Your Scrape Creators API key
+	Query Parameters
+	query
+	string
+	required
+
+</current_dom>

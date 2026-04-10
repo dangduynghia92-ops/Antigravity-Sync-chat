@@ -1,0 +1,99 @@
+# Simplify Mystery Framework Architecture
+
+## Problem
+
+5 frameworks nhưng thực tế AI chỉ chọn 2 (Hồ Sơ Bí Ẩn, Tổng Hợp Bí Ẩn) vì format Top/List = mỗi chapter là 1 mystery độc lập. 3 framework còn lại là dead weight.
+
+## Solution
+
+Xóa 3 framework thừa, giữ 2. Variety đến từ 4 tầng storytelling:
+
+---
+
+## Kiến Trúc 4 Tầng Storytelling
+
+### Tầng 1: Framework (2) — Tốc độ & Độ sâu
+
+Quyết định mỗi mystery item đi qua bao nhiêu bước:
+
+#### 🗂️ Hồ Sơ Bí Ẩn — 5 bước/item (SÂU)
+
+| Step | Tên | Nội dung |
+|---|---|---|
+| 1 | Immersive Hook | Đặt khán giả vào hiện trường lịch sử (ngôi 2, sensory) |
+| 2 | Trình Bày Bằng Chứng | Data dump: dates, names, measurements, citations |
+| 3 | Lý Thuyết Chính Thống | Giải thích mainstream — công bằng, KHÔNG strawman |
+| 4 | Phản Biện Có Hệ Thống | Pivot mạnh + counter-evidence → lỗ hổng mainstream |
+| 5 | Câu Hỏi Chưa Giải | Kết theo closing_type (questions/cold fact/irony/consequence) |
+
+**Dùng khi**: Cần dialectic đầy đủ, mỗi mystery được phân tích kỹ
+
+#### 📚 Tổng Hợp Bí Ẩn — 3 bước/item (NHANH)
+
+| Step | Tên | Nội dung |
+|---|---|---|
+| 1 | Bối Cảnh & Data | Facts cứng + hình ảnh anchor |
+| 2 | Điều Kỳ Lạ | 1-2 chi tiết KHÔNG giải thích được |
+| 3 | Hệ Quả & Dấu Vết | Còn gì/mất gì → bridge sang item tiếp |
+
+**Dùng khi**: Nhiều mystery, cần pace nhanh, không bắt buộc dialectic
+
+---
+
+### Tầng 2: Chapter Structure (7) — Cách kể chuyện
+
+Mỗi body chapter được gán 1 structure khác nhau (2 chapter liên tiếp KHÔNG trùng):
+
+| # | Structure | Flow | Phù hợp |
+|---|---|---|---|
+| 1 | **Mythbuster** | Niềm tin → Phản bác → Bí ẩn thật | Misconceptions |
+| 2 | **Detective Trail** | Ghi chép cổ → Điều tra hiện đại → Phát hiện | Lab, DNA, khảo cổ |
+| 3 | **Bureaucratic Anomaly** | Hệ thống chi tiết → 1 lỗ hổng → Im lặng | Văn khố, hồ sơ |
+| 4 | **Eyewitness Report** | Nhân chứng → Bất lực → Kiến thức bị xóa | Vũ khí khiếp sợ |
+| 5 | **Conflicting Accounts** | Bên A → Bên B mâu thuẫn → Khoa học phân xử | Tường thuật đối lập |
+| 6 | **Ticking Clock** | Doom clock → Hành động cuối → Biến mất | Bí mật chết theo văn minh |
+| 7 | **Innocent Facade** | Vô hại → Bóc lớp → Chết người | Vũ khí ngụy trang |
+
+---
+
+### Tầng 3: Closing Type (4) — Cách kết chapter
+
+Mỗi body chapter gán 1 closing type (2 chapter liên tiếp KHÔNG trùng):
+
+| Type | Cách kết |
+|---|---|
+| `rhetorical_questions` | 2-4 câu hỏi không trả lời |
+| `cold_fact` | 1 tuyên bố lạnh, nặng nề |
+| `physical_consequence` | Cái còn lại / đã mất vĩnh viễn |
+| `irony` | Kẻ bảo vệ bí mật hủy diệt chính nó |
+
+---
+
+### Tầng 4: Techniques (8) — Công cụ viết
+
+| Technique | Tần suất | Mục đích |
+|---|---|---|
+| Đối Chiếu & Phản Bác | 100% | Engine argumentative cốt lõi |
+| Loạt Câu Hỏi Tu Từ | 100% | 3-5 câu hỏi cuối segment |
+| Trích Dẫn Nguồn Uy Tín | 100% | Names, dates, publications |
+| Immersive Direct Address | >90% | Ngôi 2 + sensory details |
+| Lặp Cấu Trúc | >90% | Rhythm nhất quán trong listicle |
+| So Sánh Hiện Đại | >80% | Scale cổ đại → tương đương hiện đại |
+| Callback Cao Trào | >80% | Conclusion summarize tất cả anomaly |
+| Nén Thời Gian & Đối Chiếu | >60% | Date cổ vs date khoa học confirm |
+
+---
+
+## Proposed Changes
+
+### [MODIFY] [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_bí_ẩn_lịch_sử.json)
+
+Xóa 3 framework entries khỏi `frameworks` array:
+- ~~Kinh Ngạc – Thất Vọng – Hoài Nghi~~ (L73-109)
+- ~~Luận Đề – Phản Đề – Tổng Hợp~~ (L110-147)
+- ~~Câu Chuyện Nhỏ Dẫn Đến Lý Thuyết Lớn~~ (L148-189)
+
+Giữ nguyên: Hồ Sơ Bí Ẩn (L26-72) + Tổng Hợp Bí Ẩn (L190-227)
+
+> [!NOTE]
+> Opening, closing, techniques, checklist, transitions — KHÔNG thay đổi.

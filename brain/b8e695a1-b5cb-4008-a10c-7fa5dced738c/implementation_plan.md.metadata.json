@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Implementation plan for per-niche config auto-save. Changes to config_manager.py (add save/load niche functions) and rewrite_style_tab.py (auto-save per style, auto-load on mode/style change). Includes flow diagram and manual verification steps.",
+  "updatedAt": "2026-03-25T04:36:53.824909700Z"
+}

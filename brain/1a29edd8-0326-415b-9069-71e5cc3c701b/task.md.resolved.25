@@ -1,0 +1,12 @@
+# Mystery History Pipeline
+
+- [x] Tạo [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt)
+- [x] Tạo [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt)
+- [x] Thêm [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1973-2108) vào [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Đăng ký niche `"mystery"` vào `_niche_prompt_map`
+- [x] Wire vào [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- [x] Compile check
+- [x] Tạo style guide `Review_bí_ẩn_lịch_sử.json` trong `styles/`
+- [ ] Test thủ công
+
+

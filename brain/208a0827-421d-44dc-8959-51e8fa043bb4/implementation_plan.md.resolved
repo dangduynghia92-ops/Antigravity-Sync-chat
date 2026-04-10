@@ -1,0 +1,136 @@
+# Product Tab Redesign — File Import & Object Extraction
+
+## Goal
+Redesign the Product Prompt tab to:
+1. Remove the "Generated Prompts" preview panel
+2. Add file/link import for AI-powered object extraction
+3. Restructure layout with 3 panels and separated controls
+
+## Current Layout
+```
+┌──────────────────────────────────────────────┐
+│  Config Bar (Style, Count, Tier, Threads...) │
+├────────────────────┬─────────────────────────┤
+│  📦 Objects        │  📸 Generated Prompts   │ ← Remove right panel
+│  (Paste/Clear)     │  (placeholder text)     │
+│  [Tree: Name,      │                         │
+│   Status, Progress]│                         │
+├────────────────────┴─────────────────────────┤
+│  [Generate Selected] [Generate ALL]          │
+│  [Retry] [Stop]          [Merge][Open][Copy] │
+├──────────────────────────────────────────────┤
+│  Processing Log                              │
+└──────────────────────────────────────────────┘
+```
+
+## New Layout
+```
+┌──────────────────────────────────────────────┐
+│  Config Bar (Style, Count, Tier, Threads...) │
+├──────────────────────────────────────────────┤
+│         Left Panel         │   Right Panel   │
+│  ┌──────────────────────┐  │  ┌───────────┐  │
+│  │  📄 File Import      │  │  │📦 Objects │  │
+│  │  [Add Files][Add URL]│  │  │[Paste]    │  │
+│  │  [Tree: filename,    │  │  │[Clear]    │  │
+│  │   extracted objects] │  │  │[Tree:     │  │
+│  │                      │  │  │ Name,     │  │
+│  │  [Extract Objects]   │  │  │ Status,   │  │
+│  │  [Export CSV]        │  │  │ Progress] │  │
+│  │  [→ Send to Objects] │  │  │           │  │
+│  └──────────────────────┘  │  │           │  │
+│  [Generate from Files]     │  │           │  │
+│                            │  │[Gen Sel]  │  │
+│                            │  │[Gen ALL]  │  │
+│                            │  └───────────┘  │
+├──────────────────────────────────────────────┤
+│  [Retry] [Stop]          [Merge][Open][Copy] │
+├──────────────────────────────────────────────┤
+│  Processing Log                              │
+└──────────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> **Object extraction** dùng API AI (cùng endpoint đã cấu hình) để đọc nội dung file và lọc ra danh sách object chính. Cần tạo system prompt riêng cho task extraction này → lưu trong `prompts/extract_objects.txt`.
+
+## Proposed Changes
+
+### UI Layer
+
+---
+
+#### [MODIFY] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+**Remove:**
+- [_build_results_panel()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#239-247) — xóa toàn bộ panel Generated Prompts bên phải
+- [_show_placeholder()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#274-283) — không còn cần
+- `result_text` widget và references
+
+**Add — Left Panel (File Import):**
+- `_build_file_import_panel()`:
+  - Header: "📄 File Import"
+  - Nút **Add Files** — `QFileDialog` chọn file [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/srt_default.txt), `.docx`
+  - Nút **Add URL** — dialog nhập link Google Docs
+  - `QTreeWidget` hiển thị files đã thêm + extracted objects (tree format):
+    ```
+    ▼ Voice/
+        Chapter 1 The Missing Maps...    Pending
+        Chapter 2 Giants...              Pending
+    ```
+  - Nút **Extract Objects** — gọi API AI để lọc tên objects từ nội dung file
+  - Nút **Export CSV** — xuất kết quả (filename, object name)
+  - Nút **→ Send to Objects** — chuyển objects đã lọc sang panel Objects bên phải
+
+**Modify — Right Panel (Objects):**
+- Giữ nguyên cấu trúc Objects panel nhưng:
+  - TreeWidget hỗ trợ **tree format** (nhóm theo folder/file source)
+  - `setRootIsDecorated(True)` để có arrows expand/collapse
+  - Thêm cột source (file gốc, nếu import từ file)
+
+**Modify — Actions:**
+- **Tách 2 nhóm Generate buttons:**
+  - Panel trái: nút "Extract Objects" + "Generate from Files" (cho file import)
+  - Panel phải: nút "Generate Selected" + "Generate ALL" (cho Objects)
+- Giữ nguyên row control: Retry Failed, Stop, Merge, Open, Copy
+
+**Modify — [_build_ui()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py#69-153):**
+- Thay splitter 2 panel (objects|results) → splitter 2 panel (file_import|objects)
+- Mỗi panel có actions riêng ở dưới
+
+---
+
+### Core Layer
+
+---
+
+#### [NEW] [file_reader.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/file_reader.py)
+
+- `read_txt_file(path) → str` — đọc file .txt
+- `read_docx_file(path) → str` — đọc file .docx (dùng `python-docx`)
+- `read_google_doc(url) → str` — tải Google Docs public (export as text)
+
+#### [NEW] [extract_objects.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/extract_objects.txt)
+
+System prompt cho AI extraction:
+```
+You are an expert content analyzer. Read the provided document and extract
+ONLY the main objects being analyzed, reviewed, or ranked in the content.
+
+Rules:
+- Extract ONLY primary objects (e.g., chapter titles, main subjects)
+- Do NOT include objects mentioned as references, comparisons, or side mentions
+- Return one object name per line, no numbering, no explanation
+```
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Mở app → Product Prompt tab → panel Generated Prompts đã biến mất
+2. Panel trái có File Import với Add Files / Add URL
+3. Thêm file .txt → hiển thị trong tree
+4. Extract → AI lọc tên → hiện tree kết quả
+5. Send to Objects → objects chuyển sang panel phải
+6. Generate Selected/ALL hoạt động trên cả 2 panel
+7. Export CSV hoạt động

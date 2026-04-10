@@ -1,0 +1,77 @@
+# Walkthrough — Biography Narrative Pipeline Optimization (Session 2)
+
+## Tóm tắt thay đổi
+
+### 1. Writer prompt — 3 Audience Connection Techniques
+**File**: [system_narrative_write_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_biography.txt#L102-L130)
+
+Thêm section `AUDIENCE CONNECTION TECHNIQUES` giữa SCENE HIERARCHY và SPOKEN RHYTHM:
+- **Cost of Achievement**: Luôn show CÁI GIÁ bên cạnh thành tựu
+- **Before/After Contrast**: Paint BEFORE → snap AFTER tại turning points
+- **POV Shift**: "bạn/you" tối đa 1-2 lần/chapter, chỉ cho lived experience
+
+### 2. Prompt cross-audit — 6 files, 12 rules
+**Artifact**: [prompt_audit.md](file:///C:/Users/Admin/.gemini/antigravity/brain/983c1594-440c-405e-9e00-86057e89eaeb/prompt_audit.md)
+
+- ✅ 12/12 rules nhất quán
+- 1 xung đột đã fix: Audit prompt `plot_twist` nói 30% → sửa thành "theo framework step"
+
+### 3. personal_profile — 3 bugs chồng nhau đã fix
+
+| Bug | File | Vấn đề | Fix |
+|-----|------|--------|-----|
+| #1 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1542-L1571) | Multi-call `_RESEARCH_SECTION_A` không có personal_profile | Thêm field + 6 sub-fields + examples |
+| #2 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L315-L322) | `_extract_chapter_blueprint()` filter ra personal_profile | Thêm always-include |
+| #3 | [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L1630-L1639) | Key normalization thiếu variants | Thêm 3 alias mappings |
+
+### 4. Debug feature — Save filtered blueprint per chapter
+**Files**: [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#L2806-L2815) + [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L1718)
+
+Mỗi chapter giờ lưu filtered blueprint vào:
+```
+_pipeline/_chapter_data/ch01_blueprint.json
+_pipeline/_chapter_data/ch02_blueprint.json
+...
+```
+
+### 5. Documentation — 3 nơi phải sửa khi thêm field
+**File**: [niche_pipeline_builder_guide.md](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/docs/niche_pipeline_builder_guide.md#L561-L572)
+
+Khi thêm field mới vào blueprint, PHẢI sửa CẢ BA:
+1. Prompt file (`system_research_blueprint_<niche>.txt`)
+2. `_RESEARCH_SECTION_X` trong `rewriter.py`
+3. `_extract_chapter_blueprint()` nếu field cần gửi cho MỌI chapter
+
+---
+
+## Verification
+
+### E2E test — 30/30 checks passed
+**Script**: [_test_e2e_personal_profile.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/_test_e2e_personal_profile.py)
+
+```
+STEP 1: Research sections ───── ✅ 12/12
+STEP 2: Blueprint data ──────── ✅  7/7
+STEP 3: Chapter filter ──────── ✅  2/2
+STEP 4: Writer prompt ────────  ✅  6/6
+STEP 5: Style JSON ──────────── ✅  4/4
+STEP 6: Outline prompt ──────── ✅  2/2
+```
+
+### API test — personal_profile returned
+**Script**: [_test_personal_profile.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/_test_personal_profile.py)
+
+Model trả về 28 items: physical_traits (6), behavioral_quirks (6), cognitive_style (4), health_conditions (4), unusual_advantages (4), unusual_disadvantages (4).
+
+---
+
+## ⚠️ Action Required
+
+> [!IMPORTANT]
+> **RESTART APP** trước khi chạy pipeline.
+> GUI app (PyQt) load code vào memory khi khởi động. Sửa file `.py` trên disk KHÔNG tự động áp dụng. Phải đóng app rồi mở lại.
+
+Sau restart, chạy pipeline mới sẽ:
+1. Blueprint có `personal_profile` (28 items)
+2. Mỗi chapter nhận `personal_profile` trong filtered blueprint
+3. `_pipeline/_chapter_data/chXX_blueprint.json` — verify data thực tế gửi cho writer

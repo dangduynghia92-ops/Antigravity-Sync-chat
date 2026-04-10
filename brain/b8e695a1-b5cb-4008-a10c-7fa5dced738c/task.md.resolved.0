@@ -1,0 +1,11 @@
+# Per-Niche Config Auto-Save
+
+- [x] Research current config save/load mechanism
+- [x] Research [_on_mode_changed](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1319-1397) and checkbox defaults
+- [/] Write implementation plan
+- [ ] Get user approval
+- [ ] Add `save_niche_config` / `load_niche_config` to [config_manager.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/config_manager.py)
+- [ ] Modify [_save_config](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#686-713) in [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) to also save per-niche
+- [ ] Modify [_load_saved_config](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#714-764) to load per-niche on mode+style change
+- [ ] Modify [_on_mode_changed](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1319-1397) to trigger niche config load
+- [ ] Test with switching modes and styles

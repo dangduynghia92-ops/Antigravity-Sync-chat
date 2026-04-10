@@ -1,0 +1,69 @@
+# Review Pipeline Comprehensive Overhaul
+
+## Research Summary: How Review/Ranking Content Works
+
+From analyzing the user's style analysis data and industry best practices:
+
+### OUTLINE Level (what [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) should ensure)
+
+| Element | Best Practice | Current Status | Gap? |
+|---|---|---|---|
+| **Ranking criteria stated in hook** | Hook must explain HOW products are ranked | ❌ No rule | ✅ NEEDS FIX |
+| **Product selection logic** | Drop products that don't fit the angle | ✅ Done | — |
+| **Ranking order by framework angle** | Framework criteria determines order | ✅ Done | — |
+| **Transition design per chapter** | `ends_with` must bridge to next product's strength | ✅ Done | — |
+| **Escalation tracking** | Each product must feel MORE impressive than the last | ❌ No rule | ✅ NEEDS FIX |
+| **"Who it's for" per product** | Each product identifies its ideal user | ❌ Not in outline | ✅ NEEDS FIX |
+| **Ranking justification** | Output should include WHY each product is ranked where it is | ❌ Not in output | ✅ NEEDS FIX |
+
+### WRITER Level (what [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) should ensure)
+
+| Element | Best Practice | Current Status | Gap? |
+|---|---|---|---|
+| **Product chapter template** | Each body chapter follows a consistent structure | ⚠️ Framework has template but writer prompt doesn't enforce it | ✅ NEEDS FIX |
+| **Pros/Cons balance** | Cover both strengths AND weaknesses | ❌ No rule about cons | ✅ NEEDS FIX |
+| **"Who it's for"** | End each product with who should buy it | ❌ Not in writer | ✅ NEEDS FIX |
+| **Transition execution** | Use `ends_with` from outline to create bridge | ⚠️ `ends_with` provided but no rule to USE it | ✅ NEEDS FIX |
+| **Data from blueprint ONLY** | Specs must come from blueprint, no hallucination | ⚠️ Rule 10 says "don't contradict" but not "don't invent" | ✅ NEEDS FIX |
+| **Countdown number in text** | Each chapter must explicitly state its rank | ❌ No rule | ✅ NEEDS FIX |
+
+### CONCLUSION Level (end chapter)
+
+| Element | Best Practice | Current Status | Gap? |
+|---|---|---|---|
+| **Recap by category** | "Best for budget", "Best trigger", "Best overall" | ❌ Only generic "summary verdict" | ✅ NEEDS FIX |
+| **Restate ranking criteria** | Remind audience how you ranked | ❌ Missing | ✅ NEEDS FIX |
+
+---
+
+## Proposed Changes
+
+### 1. Outline prompt ([system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt))
+
+**HOOK section** — add:
+- Hook must hint at the ranking criteria (so audience knows HOW you'll judge)
+
+**BODY section** — add:
+- Each chapter must include `ranking_reason`: why this product is ranked here (1 sentence)
+- Each chapter must include `target_user`: who should buy this product
+- Escalation: each product must score HIGHER on the framework's angle than the previous
+
+**END section** — add:
+- Must include category awards: "Best for X", "Best for Y"
+- Must restate the ranking criteria used
+
+**Output JSON** — add fields:
+- `ranking_reason` per chapter
+- `target_user` per chapter
+- `category_awards` in `cta`
+
+### 2. Writer prompt ([system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt))
+
+Add rules:
+- For body chapters: follow the framework's `chapter_template` if it exists
+- For body chapters: mention at least 1 weakness/con (honesty builds credibility)
+- For body chapters: end with "who this is for" recommendation
+- For body chapters: include the countdown number explicitly (e.g., "Number 7")
+- Use `ends_with` from outline to write the transition to next chapter
+- Do NOT invent specs — if a number is not in the blueprint, do not make one up
+- Do NOT cite or re-cite the ranking criteria in every chapter — it's established in the hook

@@ -1,0 +1,31 @@
+# Audit: Narrative Mode Compatibility
+
+## Kết quả kiểm tra
+
+### ✅ Không ảnh hưởng (hoạt động đúng)
+
+| Hạng mục | Giải thích |
+|---|---|
+| **Job parameter** | [_do_renew_style(job=...)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1190-1677) nhận chapters + group_path từ job dict ✅ |
+| **Output dir** | [_resolve_output_dir(checked[0]["filepath"])](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#430-449) — lấy từ chapter path, không phụ thuộc UI ✅ |
+| **group_path** | `job["group_path"]` derived from chapter filepath in [_do_rewrite()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1098-1174) ✅ |
+| **Excel update** | [_update_excel_rewrite(group_path)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1697-1720) — dùng group_path từ job ✅ |
+| **Status updates** | [_update_input_chapters_status()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#837-846) dùng [checked](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#462-494) list từ job ✅ |
+| **Stop event** | 36 refs đã thay bằng [_stopped()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1770-1774) — per-job ✅ |
+
+### ⚠️ Có ảnh hưởng nhưng không nghiêm trọng
+
+| Vấn đề | Mức độ | Chi tiết |
+|---|---|---|
+| **`self._running`** | Thấp | Flag chia sẻ, nhưng chỉ dùng để guard "already running" (đã xóa guard). Khi job finish → set False, nhưng không gây crash |
+| **Hardcoded log `[Renew]`** | Thấp | ~30 chỗ trong Narrative pipeline dùng `"[Renew]"` thay vì `log_prefix`. Khi chạy concurrent, log sẽ **không hiện tên folder** — khó phân biệt job nào. Không crash nhưng khó debug |
+| **Hardcoded log `[Review]`** | Thấp | ~50 chỗ trong Review pipeline, cùng vấn đề |
+
+### ❌ Không có lỗi nghiêm trọng
+
+Narrative mode **sẽ chạy được** với concurrent — không crash, không sai logic. Chỉ có 2 minor issues trên.
+
+## Khuyến nghị fix
+
+1. **`self._running`** — Có thể bỏ qua (không gây crash, chỉ cosmetic)
+2. **Log prefix** — Fix sau nếu muốn (thay `"[Renew]"` bằng `log_prefix` trong ~80 chỗ). Không bắt buộc để concurrent hoạt động đúng

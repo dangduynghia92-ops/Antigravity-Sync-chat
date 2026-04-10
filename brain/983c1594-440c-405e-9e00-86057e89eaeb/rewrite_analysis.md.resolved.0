@@ -1,0 +1,99 @@
+# Einstein Rewrite Analysis — New Run Results
+
+## Summary
+
+| Metric | v1 (Hai Mặt) | v2 (Sử Thi) | Improvement |
+|---|---|---|---|
+| **Chapters** | 7 | **8** | +1 (Sụp Đổ split) |
+| **Total words** | 4,844w | **6,380w** | +32% |
+| **Flow score** | 8.0 | **8.5** | Better |
+| **Issues** | 6 (3 critical/major) | **3 (1 critical)** | Fewer |
+| **phase_chapter_plan** | ✅ Present (no splits) | ✅ **Active split** | Working! |
+
+---
+
+## ✅ Enrichment Phase — FIXED
+
+```
+[11:24:19] Step 3.5: Enriching blueprint via Google Search...
+[11:24:19] 📋 Found 3 empty field(s)
+[11:25:06] ✓ Phase 1 (AI knowledge): filled 3 field(s) ← NO JSON ERRORS!
+[11:25:06] ✓ All fields filled in Phase 1 — skipping Google Search
+```
+
+**JSON cleaning fix working**: No parse errors during enrichment (previously crashed here).
+
+---
+
+## ✅ phase_chapter_plan — WORKING
+
+### v2 (Sử Thi) — SPLIT detected:
+
+```
+[Sụp Đổ] → Ch [6, 7] ⚡ SPLIT
+Reason: "covers two distinct 'falls': the moral fall related to the 
+atomic bomb and the subsequent scientific/personal fall"
+```
+
+AI correctly identified "Sụp Đổ" as data-heavy → split into 2 chapters:
+- **Ch6**: "The Devil's Bargain" (atomic bomb moral crisis) — 945w
+- **Ch7**: "The Lonely God" (scientific isolation, later years) — 954w
+
+### v1 (Hai Mặt) — No splits (7 steps = 7 chapters)
+
+All phases mapped 1:1 — makes sense because "Hai Mặt" framework's steps naturally map to single chapters (each step = one distinct angle).
+
+---
+
+## Word Count Comparison
+
+### v1 (Hai Mặt) — 4,844w total
+| Chapter | Words | Target |
+|---|---|---|
+| Ch1 Intro | 214 | ~400 |
+| Ch2 The Miracle Year | 932 | ~650 |
+| Ch3 A Contract for a Cold Heart | 674 | ~650 |
+| Ch4 The Weight of Spacetime | 931 | ~650 |
+| Ch5 The Children He Left Behind | 827 | ~650 |
+| Ch6 The Greatest Mistake | 906 | ~650 |
+| Ch7 Outro | 360 | ~450 |
+
+> [!NOTE]
+> Body chapters exceed target BUT total is low because targets were set at ~650w.
+
+### v2 (Sử Thi) — 6,380w total ⭐
+| Chapter | Words | Target |
+|---|---|---|
+| Ch1 Intro | 163 | ~300 |
+| Ch2 The Compass and the Escape | 896 | ~450 |
+| Ch3 The Clerk's Secret Universe | 1,020 | ~450 |
+| Ch4 Wrestling with Gravity | 1,030 | ~450 |
+| Ch5 The Saint and the Monster | 959 | ~450 |
+| Ch6 The Devil's Bargain | 945 | ~450 |
+| Ch7 The Lonely God | 954 | ~450 |
+| Ch8 Outro | 413 | ~400 |
+
+> [!IMPORTANT]
+> **Body chapters consistently ~2x target** (950-1030w vs ~450w target).
+> This is actually GOOD — the writer prompt enforces `wc_body_min=1000` from the UI config, overriding the outline's conservative targets.
+> 8 chapters × ~1000w = ~8000w potential. Actual = 6,380w (hook/outro are shorter).
+
+---
+
+## Historical Comparison
+
+| Run | Date | Framework | Chapters | Total Words |
+|---|---|---|---|---|
+| Previous run | Yesterday | Sử Thi | 7 | ~3,700w |
+| **This run** | **Today** | **Sử Thi** | **8** | **6,380w** |
+| Improvement | | | +1 chapter | **+72%** words |
+
+---
+
+## Remaining Issues
+
+1. **Outline word targets too low** (~450w) vs actual writer output (~1000w). The outline targets don't match `wc_body_min` from UI config. This is cosmetic — writer correctly follows UI config.
+
+2. **v1 review found 3 critical/major issues** — "Hai Mặt" framework may need more work or the 7-step structure is too compressed for this topic.
+
+3. **Hook chapter is short** (163w for Sử Thi) — may need minimum word count enforcement for hooks.

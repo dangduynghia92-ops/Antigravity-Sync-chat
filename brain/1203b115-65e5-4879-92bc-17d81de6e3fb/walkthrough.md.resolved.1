@@ -1,0 +1,1071 @@
+# Walkthrough — Rate Limit & Timeout Fixes + Gemini Key UI
+
+## Changes Made (Session 2)
+
+### A. `call_gemini_native()` — Rate Limit + 429 Retry
+
+```diff:api_client.py
+"""
+API Client Module
+Multi-endpoint API client with automatic fallback for rate limiting (429).
+Supports OpenAI-compatible chat/completions endpoints.
+"""
+import json
+import os
+import time
+import requests
+from datetime import datetime
+from dataclasses import dataclass, field
+from typing import List, Optional, Callable
+
+# Path constants
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_APP_DIR = os.path.dirname(_SCRIPT_DIR)
+API_KEYS_FILE = os.path.join(_APP_DIR, "api_keys.json")
+API_LOG_DIR = os.path.join(_APP_DIR, "logs")
+API_LOG_FILE = os.path.join(API_LOG_DIR, "api_history.jsonl")
+
+
+@dataclass
+class Endpoint:
+    """Single API endpoint configuration."""
+    name: str
+    base_url: str
+    api_key: str
+    flash_model: str = ""
+    pro_model: str = ""
+    is_primary: bool = False
+    enabled: bool = True
+    fail_count: int = 0
+    last_fail_time: float = 0.0
+
+
+class APIClient:
+    """
+    Multi-endpoint API client with automatic fallback.
+    When one endpoint hits rate limits (429), automatically switches to the next.
+    """
+
+    def __init__(self, keys_file: str = None):
+        self.keys_file = keys_file or API_KEYS_FILE
+        self.primary: Optional[Endpoint] = None
+        self.endpoints: List[Endpoint] = []
+        self._current_idx = 0
+        self.log_api: bool = False  # Toggle: save request/response history
+        self.load_config()
+
+    def load_config(self):
+        """Load API configuration from api_keys.json."""
+        if not os.path.exists(self.keys_file):
+            return
+
+        try:
+            with open(self.keys_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return
+
+        # Load primary endpoint
+        if "primary" in data:
+            p = data["primary"]
+            self.primary = Endpoint(
+                name=p.get("name", "Primary API"),
+                base_url=p.get("base_url", ""),
+                api_key=p.get("api_key", ""),
+                flash_model=p.get("model", ""),
+                pro_model=p.get("model", ""),
+                is_primary=True
+            )
+
+        # Load fallback endpoints
+        self.endpoints = []
+        for ep in data.get("endpoints", []):
+            self.endpoints.append(Endpoint(
+                name=ep.get("name", ""),
+                base_url=ep.get("base_url", ""),
+                api_key=ep.get("api_key", ""),
+                flash_model=ep.get("flash_model", ""),
+                pro_model=ep.get("pro_model", ""),
+                enabled=ep.get("enabled", True),
+            ))
+
+    def save_config(self):
+        """Save current API configuration to api_keys.json."""
+        data = {}
+
+        if self.primary:
+            data["primary"] = {
+                "name": self.primary.name,
+                "base_url": self.primary.base_url,
+                "api_key": self.primary.api_key,
+                "model": self.primary.flash_model
+            }
+
+        data["endpoints"] = []
+        for ep in self.endpoints:
+            data["endpoints"].append({
+                "name": ep.name,
+                "base_url": ep.base_url,
+                "api_key": ep.api_key,
+                "flash_model": ep.flash_model,
+                "pro_model": ep.pro_model,
+                "enabled": ep.enabled,
+            })
+
+        with open(self.keys_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
+    def get_all_endpoints(self) -> List[Endpoint]:
+        """Get list of all enabled, configured endpoints (primary first)."""
+        result = []
+        if self.primary and self.primary.api_key:
+            result.append(self.primary)
+        result.extend([ep for ep in self.endpoints if ep.api_key and ep.enabled])
+        return result
+
+    def _build_url(self, base_url: str) -> str:
+        """Build the chat completions URL from base URL."""
+        base = base_url.rstrip('/')
+        if base.endswith('/chat/completions'):
+            return base
+        if base.endswith('/v1') or base.endswith('/v1beta/openai'):
+            return f"{base}/chat/completions"
+        return f"{base}/chat/completions"
+
+    @staticmethod
+    def _safe_log(log_callback: Optional[Callable], message: str):
+        """Log a message safely, handling Unicode errors on Windows."""
+        if not log_callback:
+            return
+        try:
+            log_callback(message)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            # Strip emoji and retry if encoding fails (Windows cp1252)
+            import re
+            clean = re.sub(r'[^\x00-\x7F]+', '', message).strip()
+            try:
+                log_callback(clean if clean else "(log message contained unsupported characters)")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _save_api_log(self, endpoint_name: str, model: str,
+                       system_prompt: str, user_message: str,
+                       response_text: str, status: str):
+        """Save request/response to logs/api_history.jsonl (one JSON per line)."""
+        if not self.log_api:
+            return
+        try:
+            os.makedirs(API_LOG_DIR, exist_ok=True)
+            entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "endpoint": endpoint_name,
+                "model": model,
+                "status": status,
+                "system_prompt": system_prompt,
+                "user_message": user_message,
+                "response": response_text
+            }
+            with open(API_LOG_FILE, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+
+    def send_request(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tier: str = "Flash",
+        temperature: float = 0.7,
+        max_tokens: int = 16384,
+        log_callback: Optional[Callable] = None,
+        on_all_failed: Optional[Callable] = None,
+    ) -> Optional[str]:
+        """
+        Send a chat completion request with automatic endpoint fallback.
+        
+        Args:
+            system_prompt: System prompt (from style file).
+            user_message: User message (SRT segment text).
+            tier: 'Flash' or 'Pro' to select model.
+            temperature: Generation temperature.
+            max_tokens: Max response tokens.
+            log_callback: Optional function to log messages.
+            on_all_failed: Optional callback when ALL endpoints fail.
+                Returns 'retry' to retry, 'skip' to skip, 'stop' to stop.
+        
+        Returns:
+            Generated text response, or None if all endpoints fail.
+        """
+        available = self.get_all_endpoints()
+        if not available:
+            self._safe_log(log_callback, "[X] No API endpoints configured!")
+            return None
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+
+        max_retries = 3
+        retry_delays = [5, 10, 15]  # seconds between retry rounds (multiples of 5)
+
+        while True:
+            for retry in range(max_retries + 1):
+                if retry > 0:
+                    delay = retry_delays[min(retry - 1, len(retry_delays) - 1)]
+                    self._safe_log(log_callback, f"[↻] Retry {retry}/{max_retries} after {delay}s...")
+                    time.sleep(delay)
+
+                # Try each endpoint
+                for attempt, endpoint in enumerate(available):
+                    model = endpoint.flash_model if tier.lower() == "flash" else endpoint.pro_model
+                    if not model:
+                        model = endpoint.flash_model or endpoint.pro_model
+
+                    url = self._build_url(endpoint.base_url)
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {endpoint.api_key}"
+                    }
+                    payload = {
+                        "model": model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    }
+
+                    try:
+                        self._safe_log(log_callback, f">> [{tier}] Trying {endpoint.name} → {model}")
+
+                        response = requests.post(
+                            url, headers=headers, json=payload, timeout=60
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            if content:
+                                endpoint.fail_count = 0
+                                self._save_api_log(endpoint.name, model,
+                                                    system_prompt, user_message,
+                                                    content.strip(), "success")
+                                return content.strip()
+
+                        elif response.status_code == 429:
+                            endpoint.fail_count += 1
+                            endpoint.last_fail_time = time.time()
+                            self._safe_log(log_callback, f"[!] {endpoint.name} rate limited (429). Switching...")
+                            time.sleep(1)
+                            continue
+
+                        else:
+                            endpoint.fail_count += 1
+                            error_text = response.text[:200]
+                            self._safe_log(log_callback, f"[X] {endpoint.name} error {response.status_code}: {error_text}")
+                            continue
+
+                    except requests.exceptions.Timeout:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[T] {endpoint.name} timeout. Switching...")
+                        continue
+                    except requests.exceptions.ConnectionError:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[C] {endpoint.name} connection failed. Switching...")
+                        continue
+                    except Exception as e:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[X] {endpoint.name} error: {str(e)}")
+                        continue
+
+            # All retries exhausted — ask user what to do
+            if on_all_failed:
+                self._safe_log(log_callback, "[!] All endpoints failed! Waiting for user decision...")
+                action = on_all_failed()  # Blocking call — waits for user input
+                if action == "retry":
+                    # Reload endpoints (user may have enabled/added new ones)
+                    self.load_config()
+                    available = self.get_all_endpoints()
+                    if available:
+                        self._safe_log(log_callback, f"[↻] Retrying with {len(available)} endpoint(s)...")
+                        continue  # Go back to while True loop
+                    else:
+                        self._safe_log(log_callback, "[X] Still no endpoints available!")
+                        return None
+                else:
+                    # "skip" or "stop"
+                    return None
+
+            self._safe_log(log_callback, "[X] All endpoints failed after retries!")
+            self._save_api_log("ALL", "", system_prompt, user_message, "", "all_failed")
+            return None
+
+    def test_connection(self, endpoint: Endpoint, tier: str = "Flash") -> tuple:
+        """
+        Test if an endpoint is reachable and responding.
+        
+        Returns:
+            (success: bool, message: str)
+        """
+        model = endpoint.flash_model if tier.lower() == "flash" else endpoint.pro_model
+        if not model:
+            model = endpoint.flash_model or endpoint.pro_model
+
+        url = self._build_url(endpoint.base_url)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {endpoint.api_key}"
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "Hello, respond with OK."}],
+            "max_tokens": 10
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            if response.status_code == 200:
+                return True, f"✅ Connected! Model: {model}"
+            else:
+                return False, f"❌ Status {response.status_code}: {response.text[:100]}"
+        except requests.exceptions.Timeout:
+            return False, "❌ Connection timeout (15s)"
+        except requests.exceptions.ConnectionError:
+            return False, "❌ Cannot connect to server"
+        except Exception as e:
+            return False, f"❌ Error: {str(e)}"
+
+    def send_vision_request(
+        self,
+        image_path: str,
+        prompt: str,
+        log_callback: Optional[Callable] = None,
+    ) -> Optional[str]:
+        """Send an image + text prompt to the API for vision analysis.
+
+        Args:
+            image_path: Path to the image file.
+            prompt: Text prompt to send alongside the image.
+            log_callback: Optional function to log messages.
+
+        Returns:
+            Generated text response, or None if all endpoints fail.
+        """
+        import base64
+
+        # Read and encode image
+        try:
+            with open(image_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            self._safe_log(log_callback, f"[X] Cannot read image: {e}")
+            return None
+
+        # Detect mime type
+        ext = os.path.splitext(image_path)[1].lower()
+        mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".webp": "image/webp", ".gif": "image/gif"}
+        mime_type = mime_map.get(ext, "image/png")
+
+        # Build multimodal message (OpenAI-compatible format)
+        messages = [
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_data}"}},
+                {"type": "text", "text": prompt},
+            ]}
+        ]
+
+        available = self.get_all_endpoints()
+        if not available:
+            self._safe_log(log_callback, "[X] No API endpoints configured!")
+            return None
+
+        for endpoint in available:
+            model = endpoint.flash_model or endpoint.pro_model
+            if not model:
+                continue
+
+            url = self._build_url(endpoint.base_url)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {endpoint.api_key}"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": 256,
+                "temperature": 0.1,
+            }
+
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if content:
+                        return content.strip()
+                else:
+                    self._safe_log(log_callback,
+                                   f"[X] Vision {endpoint.name}: {response.status_code}")
+                    continue
+            except Exception as e:
+                self._safe_log(log_callback, f"[X] Vision error: {str(e)}")
+                continue
+
+        return None
+===
+"""
+API Client Module
+Multi-endpoint API client with automatic fallback for rate limiting (429).
+Supports OpenAI-compatible chat/completions endpoints.
+"""
+import json
+import os
+import time
+import requests
+from datetime import datetime
+from dataclasses import dataclass, field
+from typing import List, Optional, Callable
+
+# Path constants
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_APP_DIR = os.path.dirname(_SCRIPT_DIR)
+API_KEYS_FILE = os.path.join(_APP_DIR, "api_keys.json")
+API_LOG_DIR = os.path.join(_APP_DIR, "logs")
+API_LOG_FILE = os.path.join(API_LOG_DIR, "api_history.jsonl")
+
+
+@dataclass
+class Endpoint:
+    """Single API endpoint configuration."""
+    name: str
+    base_url: str
+    api_key: str
+    flash_model: str = ""
+    pro_model: str = ""
+    is_primary: bool = False
+    enabled: bool = True
+    fail_count: int = 0
+    last_fail_time: float = 0.0
+
+
+class APIClient:
+    """
+    Multi-endpoint API client with automatic fallback.
+    When one endpoint hits rate limits (429), automatically switches to the next.
+    """
+
+    def __init__(self, keys_file: str = None):
+        self.keys_file = keys_file or API_KEYS_FILE
+        self.primary: Optional[Endpoint] = None
+        self.endpoints: List[Endpoint] = []
+        self._current_idx = 0
+        self.log_api: bool = False  # Toggle: save request/response history
+        self._gemini_last_call: float = 0.0  # Rate limit tracker for Gemini native
+        self.load_config()
+
+    @staticmethod
+    def _interruptible_sleep(seconds: float, stop_check: Optional[Callable] = None) -> bool:
+        """Sleep in 0.5s chunks, checking stop_check. Returns False if stopped."""
+        if not stop_check:
+            time.sleep(seconds)
+            return True
+        end_t = time.time() + seconds
+        while time.time() < end_t:
+            if stop_check():
+                return False
+            time.sleep(min(0.5, max(0, end_t - time.time())))
+        return True
+
+    def load_config(self):
+        """Load API configuration from api_keys.json."""
+        if not os.path.exists(self.keys_file):
+            return
+
+        try:
+            with open(self.keys_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return
+
+        # Load primary endpoint
+        if "primary" in data:
+            p = data["primary"]
+            self.primary = Endpoint(
+                name=p.get("name", "Primary API"),
+                base_url=p.get("base_url", ""),
+                api_key=p.get("api_key", ""),
+                flash_model=p.get("model", ""),
+                pro_model=p.get("model", ""),
+                is_primary=True
+            )
+
+        # Load fallback endpoints
+        self.endpoints = []
+        for ep in data.get("endpoints", []):
+            self.endpoints.append(Endpoint(
+                name=ep.get("name", ""),
+                base_url=ep.get("base_url", ""),
+                api_key=ep.get("api_key", ""),
+                flash_model=ep.get("flash_model", ""),
+                pro_model=ep.get("pro_model", ""),
+                enabled=ep.get("enabled", True),
+            ))
+
+    def save_config(self):
+        """Save current API configuration to api_keys.json."""
+        data = {}
+
+        if self.primary:
+            data["primary"] = {
+                "name": self.primary.name,
+                "base_url": self.primary.base_url,
+                "api_key": self.primary.api_key,
+                "model": self.primary.flash_model
+            }
+
+        data["endpoints"] = []
+        for ep in self.endpoints:
+            data["endpoints"].append({
+                "name": ep.name,
+                "base_url": ep.base_url,
+                "api_key": ep.api_key,
+                "flash_model": ep.flash_model,
+                "pro_model": ep.pro_model,
+                "enabled": ep.enabled,
+            })
+
+        with open(self.keys_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
+    def get_all_endpoints(self) -> List[Endpoint]:
+        """Get list of all enabled, configured endpoints (primary first)."""
+        result = []
+        if self.primary and self.primary.api_key:
+            result.append(self.primary)
+        result.extend([ep for ep in self.endpoints if ep.api_key and ep.enabled])
+        return result
+
+    def _build_url(self, base_url: str) -> str:
+        """Build the chat completions URL from base URL."""
+        base = base_url.rstrip('/')
+        if base.endswith('/chat/completions'):
+            return base
+        if base.endswith('/v1') or base.endswith('/v1beta/openai'):
+            return f"{base}/chat/completions"
+        return f"{base}/chat/completions"
+
+    @staticmethod
+    def _safe_log(log_callback: Optional[Callable], message: str):
+        """Log a message safely, handling Unicode errors on Windows."""
+        if not log_callback:
+            return
+        try:
+            log_callback(message)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            # Strip emoji and retry if encoding fails (Windows cp1252)
+            import re
+            clean = re.sub(r'[^\x00-\x7F]+', '', message).strip()
+            try:
+                log_callback(clean if clean else "(log message contained unsupported characters)")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _save_api_log(self, endpoint_name: str, model: str,
+                       system_prompt: str, user_message: str,
+                       response_text: str, status: str):
+        """Save request/response to logs/api_history.jsonl (one JSON per line)."""
+        if not self.log_api:
+            return
+        try:
+            os.makedirs(API_LOG_DIR, exist_ok=True)
+            entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "endpoint": endpoint_name,
+                "model": model,
+                "status": status,
+                "system_prompt": system_prompt,
+                "user_message": user_message,
+                "response": response_text
+            }
+            with open(API_LOG_FILE, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+
+    def send_request(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tier: str = "Flash",
+        temperature: float = 0.7,
+        max_tokens: int = 16384,
+        log_callback: Optional[Callable] = None,
+        on_all_failed: Optional[Callable] = None,
+    ) -> Optional[str]:
+        """
+        Send a chat completion request with automatic endpoint fallback.
+        
+        Args:
+            system_prompt: System prompt (from style file).
+            user_message: User message (SRT segment text).
+            tier: 'Flash' or 'Pro' to select model.
+            temperature: Generation temperature.
+            max_tokens: Max response tokens.
+            log_callback: Optional function to log messages.
+            on_all_failed: Optional callback when ALL endpoints fail.
+                Returns 'retry' to retry, 'skip' to skip, 'stop' to stop.
+        
+        Returns:
+            Generated text response, or None if all endpoints fail.
+        """
+        available = self.get_all_endpoints()
+        if not available:
+            self._safe_log(log_callback, "[X] No API endpoints configured!")
+            return None
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+
+        max_retries = 3
+        retry_delays = [5, 10, 15]  # seconds between retry rounds (multiples of 5)
+
+        while True:
+            for retry in range(max_retries + 1):
+                if retry > 0:
+                    delay = retry_delays[min(retry - 1, len(retry_delays) - 1)]
+                    self._safe_log(log_callback, f"[↻] Retry {retry}/{max_retries} after {delay}s...")
+                    time.sleep(delay)
+
+                # Try each endpoint
+                for attempt, endpoint in enumerate(available):
+                    model = endpoint.flash_model if tier.lower() == "flash" else endpoint.pro_model
+                    if not model:
+                        model = endpoint.flash_model or endpoint.pro_model
+
+                    url = self._build_url(endpoint.base_url)
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {endpoint.api_key}"
+                    }
+                    payload = {
+                        "model": model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    }
+
+                    try:
+                        self._safe_log(log_callback, f">> [{tier}] Trying {endpoint.name} → {model}")
+
+                        # Dynamic timeout: Pro needs more time
+                        req_timeout = 180 if tier.lower() == "pro" else 60
+                        response = requests.post(
+                            url, headers=headers, json=payload, timeout=req_timeout
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            if content:
+                                endpoint.fail_count = 0
+                                self._save_api_log(endpoint.name, model,
+                                                    system_prompt, user_message,
+                                                    content.strip(), "success")
+                                return content.strip()
+
+                        elif response.status_code == 429:
+                            endpoint.fail_count += 1
+                            endpoint.last_fail_time = time.time()
+                            self._safe_log(log_callback, f"[!] {endpoint.name} rate limited (429). Switching...")
+                            time.sleep(1)
+                            continue
+
+                        else:
+                            endpoint.fail_count += 1
+                            error_text = response.text[:200]
+                            self._safe_log(log_callback, f"[X] {endpoint.name} error {response.status_code}: {error_text}")
+                            continue
+
+                    except requests.exceptions.Timeout:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[T] {endpoint.name} timeout. Switching...")
+                        continue
+                    except requests.exceptions.ConnectionError:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[C] {endpoint.name} connection failed. Switching...")
+                        continue
+                    except Exception as e:
+                        endpoint.fail_count += 1
+                        self._safe_log(log_callback, f"[X] {endpoint.name} error: {str(e)}")
+                        continue
+
+            # All retries exhausted — ask user what to do
+            if on_all_failed:
+                self._safe_log(log_callback, "[!] All endpoints failed! Waiting for user decision...")
+                action = on_all_failed()  # Blocking call — waits for user input
+                if action == "retry":
+                    # Reload endpoints (user may have enabled/added new ones)
+                    self.load_config()
+                    available = self.get_all_endpoints()
+                    if available:
+                        self._safe_log(log_callback, f"[↻] Retrying with {len(available)} endpoint(s)...")
+                        continue  # Go back to while True loop
+                    else:
+                        self._safe_log(log_callback, "[X] Still no endpoints available!")
+                        return None
+                else:
+                    # "skip" or "stop"
+                    return None
+
+            self._safe_log(log_callback, "[X] All endpoints failed after retries!")
+            self._save_api_log("ALL", "", system_prompt, user_message, "", "all_failed")
+            return None
+
+    def test_connection(self, endpoint: Endpoint, tier: str = "Flash") -> tuple:
+        """
+        Test if an endpoint is reachable and responding.
+        
+        Returns:
+            (success: bool, message: str)
+        """
+        model = endpoint.flash_model if tier.lower() == "flash" else endpoint.pro_model
+        if not model:
+            model = endpoint.flash_model or endpoint.pro_model
+
+        url = self._build_url(endpoint.base_url)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {endpoint.api_key}"
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "Hello, respond with OK."}],
+            "max_tokens": 10
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            if response.status_code == 200:
+                return True, f"✅ Connected! Model: {model}"
+            else:
+                return False, f"❌ Status {response.status_code}: {response.text[:100]}"
+        except requests.exceptions.Timeout:
+            return False, "❌ Connection timeout (15s)"
+        except requests.exceptions.ConnectionError:
+            return False, "❌ Cannot connect to server"
+        except Exception as e:
+            return False, f"❌ Error: {str(e)}"
+
+    def send_vision_request(
+        self,
+        image_path: str,
+        prompt: str,
+        log_callback: Optional[Callable] = None,
+    ) -> Optional[str]:
+        """Send an image + text prompt to the API for vision analysis.
+
+        Args:
+            image_path: Path to the image file.
+            prompt: Text prompt to send alongside the image.
+            log_callback: Optional function to log messages.
+
+        Returns:
+            Generated text response, or None if all endpoints fail.
+        """
+        import base64
+
+        # Read and encode image
+        try:
+            with open(image_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            self._safe_log(log_callback, f"[X] Cannot read image: {e}")
+            return None
+
+        # Detect mime type
+        ext = os.path.splitext(image_path)[1].lower()
+        mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".webp": "image/webp", ".gif": "image/gif"}
+        mime_type = mime_map.get(ext, "image/png")
+
+        # Build multimodal message (OpenAI-compatible format)
+        messages = [
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_data}"}},
+                {"type": "text", "text": prompt},
+            ]}
+        ]
+
+        available = self.get_all_endpoints()
+        if not available:
+            self._safe_log(log_callback, "[X] No API endpoints configured!")
+            return None
+
+        for endpoint in available:
+            model = endpoint.flash_model or endpoint.pro_model
+            if not model:
+                continue
+
+            url = self._build_url(endpoint.base_url)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {endpoint.api_key}"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": 256,
+                "temperature": 0.1,
+            }
+
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if content:
+                        return content.strip()
+                else:
+                    self._safe_log(log_callback,
+                                   f"[X] Vision {endpoint.name}: {response.status_code}")
+                    continue
+            except Exception as e:
+                self._safe_log(log_callback, f"[X] Vision error: {str(e)}")
+                continue
+
+        return None
+
+    def call_gemini_native(
+        self,
+        messages: list,
+        gemini_api_key: str,
+        model: str = "gemini-2.5-flash",
+        temperature: float = 0.7,
+        max_tokens: int = 65536,
+        timeout: int = 120,
+        google_search: bool = True,
+        stop_check: Optional[Callable] = None,
+    ) -> dict:
+        """Call Gemini API directly (native format) with Google Search Grounding.
+
+        Args:
+            messages: OpenAI-style messages [{"role": "...", "content": "..."}]
+            gemini_api_key: Direct Gemini API key (AIza...)
+            model: Model name (e.g. "gemini-2.5-flash")
+            google_search: Enable Google Search Grounding for fact-checking
+            stop_check: Optional callable returning True to abort
+
+        Returns:
+            dict with keys: success, content, model, error, grounding_metadata, status_code
+        """
+        _FAIL = lambda err, sc=0: {
+            "success": False, "content": "", "model": model,
+            "error": err, "grounding_metadata": None, "status_code": sc,
+        }
+
+        if stop_check and stop_check():
+            return _FAIL("Stopped by user")
+
+        # Rate limiting — min 2s between Gemini native calls
+        _min_delay = 2.0
+        elapsed = time.time() - self._gemini_last_call
+        if elapsed < _min_delay:
+            wait = _min_delay - elapsed
+            if not self._interruptible_sleep(wait, stop_check):
+                return _FAIL("Stopped by user")
+
+        # Build Gemini native URL
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+        # Convert OpenAI messages → Gemini native format
+        system_text = ""
+        contents = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            text = msg.get("content", "")
+            if role == "system":
+                system_text += text + "\n"
+            else:
+                gemini_role = "user" if role == "user" else "model"
+                contents.append({
+                    "role": gemini_role,
+                    "parts": [{"text": text}]
+                })
+
+        payload = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system_text.strip():
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_text.strip()}]
+            }
+        if google_search:
+            payload["tools"] = [{"google_search": {}}]
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": gemini_api_key,
+        }
+
+        # Retry logic for 429 rate limiting
+        max_retries = 2
+        backoff = 5  # Initial backoff seconds
+
+        for attempt in range(max_retries + 1):
+            if stop_check and stop_check():
+                return _FAIL("Stopped by user")
+
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+                status = resp.status_code
+                self._gemini_last_call = time.time()
+
+                if status == 200:
+                    data = resp.json()
+                    content = ""
+                    grounding_meta = None
+                    if "candidates" in data and data["candidates"]:
+                        candidate = data["candidates"][0]
+                        parts = candidate.get("content", {}).get("parts", [])
+                        content = "".join(p.get("text", "") for p in parts)
+                        if "groundingMetadata" in candidate:
+                            grounding_meta = candidate["groundingMetadata"]
+
+                    return {
+                        "success": True,
+                        "content": content,
+                        "model": model,
+                        "error": "",
+                        "grounding_metadata": grounding_meta,
+                        "status_code": 200,
+                    }
+
+                elif status == 429:
+                    if attempt < max_retries:
+                        # Retry with exponential backoff
+                        if not self._interruptible_sleep(backoff, stop_check):
+                            return _FAIL("Stopped by user", 429)
+                        backoff = min(backoff * 2, 30)
+                        continue
+                    return _FAIL(f"Rate limited (429) after {max_retries} retries", 429)
+
+                elif status >= 500:
+                    if attempt < max_retries:
+                        if not self._interruptible_sleep(5, stop_check):
+                            return _FAIL("Stopped by user", status)
+                        continue
+                    return _FAIL(f"Server error ({status}): {resp.text[:300]}", status)
+
+                else:
+                    return _FAIL(f"HTTP {status}: {resp.text[:500]}", status)
+
+            except requests.exceptions.Timeout:
+                if attempt < max_retries:
+                    continue
+                return _FAIL("Timeout", 0)
+            except Exception as e:
+                return _FAIL(str(e), 0)
+
+        return _FAIL("Max retries exceeded", 0)
+
+
+def load_gemini_keys(app_dir: str = None) -> list:
+    """Load Gemini API keys from gemini_keys.json.
+
+    Args:
+        app_dir: Application directory. If None, uses the default app directory.
+
+    Returns:
+        List of API key strings, or empty list if file not found.
+    """
+    if app_dir is None:
+        app_dir = _APP_DIR
+    keys_path = os.path.join(app_dir, "gemini_keys.json")
+    if not os.path.exists(keys_path):
+        return []
+    try:
+        with open(keys_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return [k for k in data.get("keys", []) if k and k.strip()]
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def save_gemini_keys(keys: list, app_dir: str = None):
+    """Save Gemini API keys list to gemini_keys.json.
+
+    Args:
+        keys: List of API key strings.
+        app_dir: Application directory. If None, uses the default app directory.
+    """
+    if app_dir is None:
+        app_dir = _APP_DIR
+    keys_path = os.path.join(app_dir, "gemini_keys.json")
+    with open(keys_path, "w", encoding="utf-8") as f:
+        json.dump({"keys": keys}, f, indent=2, ensure_ascii=False)
+
+```
+
+**Before:** No rate limiting, no retry on 429, single attempt only.
+
+**After:**
+- **Rate limiting**: 2s minimum delay between Gemini native calls (interruptible)
+- **429 retry**: Exponential backoff 5s → 10s, max 2 retries per call
+- **500+ retry**: Wait 5s then retry, max 2 retries
+- **Timeout retry**: Auto-retry on timeout, max 2 retries
+- **Status code**: Returns `status_code` in response for caller to distinguish error types
+- **`_interruptible_sleep()`**: Sleeps in 0.5s chunks, checks `stop_check` — user can cancel during wait
+
+### B. `historical_verifier.py` — Smart Key Rotation
+
+**Before:** Try all 7 keys with 0 delay between them.
+
+**After:**
+- Max 5 keys (don't burn all)
+- After 429 error: wait **10s** before next key
+- After other errors: wait **3s** before next key
+- Logs which key is being tried: `[VERIFY] Switching to key 2/5...`
+- Uses `status_code` from `call_gemini_native()` to distinguish error types
+
+### C. `send_request()` — Dynamic Timeout
+
+**Before:** Fixed 60s timeout for all tiers.
+
+**After:**
+- **Flash tier**: 60s (unchanged)
+- **Pro tier**: 180s (increased from 60s — Pro models need more time for long prompts)
+
+### D. Gemini API Key UI — Header Button + Dialog
+
+**New UI elements:**
+- 🔑 Gemini API Key button (amber/orange) in header bar
+- Badge showing key count: `(7 keys)`
+- Dialog with:
+  - Key list (masked: `AIzaSyAh•••••••pHw`)
+  - Add key input with paste support
+  - 👁/🙈 toggle to show/hide real keys
+  - Remove Selected button
+  - OK (saves to `gemini_keys.json`) / Cancel
+
+| File | Change |
+|---|---|
+| [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py) | `_interruptible_sleep()`, `_gemini_last_call`, 429 retry, `save_gemini_keys()`, dynamic timeout |
+| [historical_verifier.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/historical_verifier.py) | Smart key rotation with 429-aware delays |
+| [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py) | Gemini Key button + dialog + badge |
+
+## What Was Tested
+- All imports pass: `APIClient`, `ProcessController`, `MainWindow`, `historical_verifier`
+- `_gemini_last_call` initialized to 0.0
+- `_interruptible_sleep` method exists on APIClient
+- `load_gemini_keys()` correctly loads 7 keys
+- `save_gemini_keys()` function available

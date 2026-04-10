@@ -1,0 +1,289 @@
+# So sánh toàn diện: Narrative vs Top/List Review Pipeline
+
+## Tổng quan kiến trúc
+
+Cả hai mode đều nằm trong [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) và chia sẻ hạ tầng job management chung. Khi user nhấn **▶ Rewrite**, dispatcher tại [L2126-2131](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2126-L2131) phân luồng:
+
+```python
+if m == "Top/List Review":
+    self._do_renew_review(job=j)  # 12-step pipeline
+else:
+    self._do_renew_style(job=j)   # 8-step pipeline
+```
+
+---
+
+## Pipeline Steps So sánh
+
+### 📊 Overview bảng
+
+| Step | Narrative (`_do_renew_style`) | Top/List Review (`_do_renew_review`) |
+|------|------|------|
+| **1** | Concatenate text | Concatenate text |
+| **2** | Detect framework (`detect_framework`) | Detect framework (`detect_framework`) |
+| **3** | Extract blueprint (`extract_blueprint`) | Extract blueprint (`extract_blueprint_review`) ⚡ |
+| **3.5** | Enrich blueprint (Google/AI) | _(tích hợp vào Step 5)_ |
+| **4** | Rank & auto-select frameworks | Rank & select framework (manual popup or auto-dual) |
+| **5** | _(bắt đầu FW pipeline)_ | Reality check blueprint (`reality_check_blueprint`) + Strip source tags |
+| **5a** | ❌ Không có | Spec verify (Google Search — chỉ firearms) |
+| **5b** | ❌ Không có | Price enrichment (Google Search — chỉ firearms) |
+| **5c** | ✅ Enrichment blueprint (trong step 3.5) | ✅ Enrichment blueprint (luôn chạy) |
+| **6** | Audit outline (`audit_outline`) | Check blueprint completeness (`check_blueprint`) |
+| **7** | _(trong FW pipeline)_ | Convert units (`convert_units`) |
+| **8** | _(trong FW pipeline)_ | Create review outline (`create_review_outline`) |
+| **9** | — | Audit outline (`audit_outline_review`) ⚡ 2-pass |
+| **10** | Write chapters (`write_from_blueprint`) | Write chapters (`write_review_chapter`) |
+| **11** | Cross-chapter review (`review_narrative_full`) | Cross-chapter review (`review_cross_chapter`) ⚡ |
+| **12** | — | Merge + Unused chapters copy |
+
+> ⚡ = Feature mạnh hơn so với đối thủ
+
+---
+
+## Chi tiết từng điểm khác biệt
+
+### 1. Blueprint Extraction — Khác hoàn toàn
+
+````carousel
+**Narrative** (`extract_blueprint`)
+- Prompt: [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) (6.7KB)
+- Output: `key_facts`, `key_events`, `battle_phases`, `narrative_moments`
+- Tập trung vào **sự kiện, nhân vật, timeline**
+- Niche-specific variants: `_battle.txt`, `_mystery.txt`
+<!-- slide -->
+**Top/List Review** (`extract_blueprint_review`)
+- Prompt: Niche-specific prompts (firearms: 6.2KB, mystery: 10.7KB)
+- Output: `product_evaluation[]` — mỗi product có specs, pricing, USP, cons
+- **Source tags**: mỗi data point có `{value, source}` để truy vết
+- Tập trung vào **data extraction + product comparison**
+````
+
+> [!IMPORTANT]
+> Review blueprint có **source tags** (`{value: "4.5 lbs", source: "part_3"}`) cho phép truy vết data → giúp verify và debug. Narrative blueprint **không có** tính năng này.
+
+---
+
+### 2. Data Verification — Review vượt trội
+
+````carousel
+**Narrative**: Không có verification step riêng. Enrichment chỉ bổ sung empty fields.
+```
+Step 3.5: enrich_blueprint_google()
+  → Chỉ fill empty fields
+  → Không verify existing data
+  → Không check myths/anachronisms
+```
+<!-- slide -->
+**Top/List Review**: 3 verification layers chạy song song
+```
+Step 5 (parallel via ThreadPoolExecutor):
+  ├── 5a: verify_specs_google()      ← Google Search verify specs
+  ├── 5b: enrich_prices_google()     ← Google Search real-time prices  
+  └── 5c: enrich_blueprint_google()  ← Fill empty fields (same as narrative)
+
+Step 5 (pre-verification):
+  └── reality_check_blueprint()
+      → Strip source tags
+      → Apply corrections from ai_knowledge_checks
+      → Save _reality_check.csv (audit trail)
+```
+````
+
+> [!TIP]
+> **Cơ hội upgrade Narrative**: Narrative có thể adopt `reality_check_blueprint()` để verify historical dates, people names, event accuracy trước khi viết. Hiện tại narrative **không có bước nào verify facts**.
+
+---
+
+### 3. Outline Generation — Khác về output schema
+
+| Aspect | Narrative (`generate_renew_outline_v2`) | Review (`create_review_outline`) |
+|--------|-------|--------|
+| Prompt | [system_renew_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_renew_outline.txt) (2.9KB) | Niche-specific: `system_review_outline_firearms.txt` (9.9KB), `system_mystery_outline.txt` (12.7KB) |
+| Prompt size | **~3KB** | **~10-13KB** — gấp 3-4 lần |
+| Chapter schema | `title, framework_step, summary, key_points, emotional_beat, ends_with` | + `products_covered, evaluation_criteria, primary_criterion, depth_focus, unique_selling_point, ranking_reason, target_user, cons_to_mention, techniques_to_use, tone_category, countdown_position` |
+| Product shuffling | ❌ | ✅ `random.shuffle()` + strip ordering clues |
+| Skip logic | ❌ | ✅ Remove hook/end chapters when wc=SKIP |
+
+> [!IMPORTANT]
+> Review outline có **tới 10+ fields per chapter** vs Narrative chỉ có **6 fields**. Đây là lý do review chapters consistent hơn — AI writer nhận được nhiều guidance hơn cho mỗi chapter.
+
+---
+
+### 4. Outline Audit — Review mạnh hơn
+
+````carousel
+**Narrative** (`audit_outline`)
+- Prompt: [system_audit_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline.txt) (2KB)
+- Single-pass: detect + fix cùng lúc
+- 5 checklist items: chronology, cramming, missing, overlap, framework fit
+- JSON output: `{audit_issues, outline}`
+<!-- slide -->
+**Top/List Review** (`audit_outline_review`)
+- Prompt: [system_audit_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_firearms.txt) (3KB)
+- **2-pass strategy**: Pass 1 detect → Pass 2 fix (implemented in code logic)
+- 7 checklist items: chapter count, countdown order, product/chapter, hook/end, criteria, word count, dropped products
+- **"CHAPTER COUNT IS KING"** constraint — hard rule
+- **"DO NOT ADD chapters"** constraint — prevents scope creep
+````
+
+> [!TIP]
+> **Cơ hội upgrade Narrative**: Adopt 2-pass audit. Hiện tại narrative audit chạy single-pass → dễ bị JSON parse error vì output quá lớn (detect + fix + full outline cùng lúc). Review tách thành 2 bước nhỏ hơn, reliable hơn.
+
+---
+
+### 5. Writer Prompt — Review có structured injection
+
+````carousel
+**Narrative** writer: [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt) (3.3KB)
+- 15 writing instructions — **generic, all-encompassing**
+- Injects: `{blueprint}`, `{framework_name}`, `{chapter_title}`, `{key_points}`, `{emotional_beat}`, `{ends_with}`
+- No chapter-type-specific rules
+- No pattern selection logic
+
+<!-- slide -->
+**Review** writer: [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) (10KB — gấp 3 lần)
+- **Chapter-type-specific sections**: BODY (4 patterns A/B/C/D), HOOK (5 methods), END (separate rules)
+- **REQUIRED ELEMENTS**: `[IDENTITY]`, `[USP]`, `[SPECS+BENEFIT]`, `[WEAKNESS]`, `[CLOSER]` — tất cả đều bắt buộc
+- BAD/GOOD examples cho mỗi element
+- **Pattern selection based on `tone_category`**
+- 13 universal rules — highly specific
+- Injects MANY more fields: `{countdown_position}`, `{evaluation_criteria}`, `{primary_criterion}`, `{depth_focus}`, `{target_user}`, `{cons_to_mention}`, `{techniques_to_use}`, `{tone_category}`
+````
+
+> [!WARNING]
+> Narrative writer prompt chỉ **3.3KB** vs review **10KB** — thiếu structured guidance. Đây là root cause chính khiến narrative output không consistent.
+
+---
+
+### 6. Cross-Chapter Review — Cùng pattern, khác checklist
+
+| Aspect | Narrative (`review_narrative_full`) | Review (`review_cross_chapter`) |
+|--------|-------|--------|
+| Prompt | [system_narrative_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review.txt) — tiếng Việt | Niche-specific: `system_review_cross_chapter_firearms.txt` |
+| Focus | Trùng lặp, mạch truyện, callback, thừa, thiếu | Data consistency, comparison, duplication, transitions, benchmark, redundancy, missing threads |
+| **Data verification** | ❌ Không check data | ✅ Verify specs/prices consistent across chapters |
+| Chapter labeling | Basic | `[CHAPTER_FILE N]` labels — prevents AI confusing ranking # vs file position |
+| Transition filtering | ❌ | ✅ Filter transition issues when transitions=OFF |
+
+---
+
+### 7. Dual-Framework Pipeline
+
+````carousel
+**Narrative**: 
+```
+Auto mode → AI ranks → top 1 + Investigative fallback
+→ ThreadPoolExecutor cho 2 frameworks song song
+→ Output: v1_Framework_A/, v2_The_Investigative_Deep_Dive/
+```
+Mỗi FW chạy steps 5-8 độc lập trong versioned directories.
+
+<!-- slide -->
+**Top/List Review**:
+```
+Auto-dual mode → top 2 frameworks
+→ v2 starts as separate Thread BEFORE v1's Step 5
+→ v2 gets deepcopy of blueprint, skips Steps 2-3
+→ Output: v1_Framework_A_9.2/, v2_Framework_B_8.5/
+```
+Review dual-framework có score suffix trong tên folder.
+````
+
+---
+
+## 🔑 Top/List Features phù hợp để upgrade Narrative
+
+### ✅ 1. Reality Check Blueprint (HIGH VALUE)
+
+- **Hiện trạng Narrative**: Không verify data trước khi viết
+- **Từ Review**: `reality_check_blueprint()` checks historical dates, people, events
+- **Điều chỉnh**: Tạo `system_reality_check_narrative.txt` với checklist cho historical accuracy, date verification, naming consistency
+- **Impact**: Giảm hallucination trong narrative scripts
+
+### ✅ 2. 2-Pass Audit Strategy (HIGH VALUE)
+
+- **Hiện trạng Narrative**: Single-pass audit → JSON parse errors khi outline lớn
+- **Từ Review**: `audit_outline_review()` dùng 2-pass (detect → fix)
+- **Điều chỉnh**: Tách `audit_outline()` thành 2 calls: Pass 1 chỉ trả issues[], Pass 2 fix outline
+- **Impact**: Giảm JSON parse errors, tăng reliability
+
+### ✅ 3. Enriched Chapter Outline Schema (MEDIUM VALUE)
+
+- **Hiện trạng Narrative**: 6 fields per chapter
+- **Từ Review**: 10+ fields per chapter — `techniques_to_use`, `tone_category`, `emotional_beat`, `depth_focus`
+- **Điều chỉnh**: Thêm fields cho narrative: `chapter_structure` (opening method), `pacing_style`, `narrative_techniques`, `callback_to` (reference previous chapter), `foreshadow` (hint next chapter)
+- **Impact**: Writer AI nhận được nhiều guidance hơn → consistent output
+
+### ✅ 4. Structured Writer Prompt with Patterns (MEDIUM VALUE)
+
+- **Hiện trạng Narrative**: Generic 15-rule prompt, same rules cho mọi chapter type
+- **Từ Review**: Chapter-type-specific sections (BODY/HOOK/END), Pattern selection (A/B/C/D), REQUIRED ELEMENTS
+- **Điều chỉnh**: Tạo narrative patterns cho mystery/battle — e.g., Pattern A: Chronological Discovery, Pattern B: Revelation First, Pattern C: Personal Story First
+- **Impact**: Mỗi chapter có identity rõ ràng, tránh sameness
+
+### ✅ 5. Chapter File Labeling in Cross-Review (LOW VALUE, EASY WIN)
+
+- **Hiện trạng Narrative**: Basic chapter text concatenation
+- **Từ Review**: `[CHAPTER_FILE N]` labels
+- **Điều chỉnh**: Thêm labels vào narrative review
+- **Impact**: AI reviewer không nhầm chapter number
+
+### ✅ 6. Transition Filtering in Review (LOW VALUE, EASY WIN)
+
+- **Hiện trạng Narrative**: Transitions checkbox exists nhưng narrative review không filter transition issues
+- **Từ Review**: Filter transition issues khi transitions=OFF
+- **Điều chỉnh**: Mirror logic
+- **Impact**: Giảm false-positive issues
+
+### ⚠️ 7. Unit Conversion (NICHE-DEPENDENT)
+
+- **Hiện trạng Narrative**: Không convert units
+- **Từ Review**: `convert_units(blueprint, target_country)`
+- **Nhận xét**: Chỉ hữu ích cho narrative niches liên quan đến military/firearms, không cần cho mystery history
+
+### ⚠️ 8. Source Tags (COMPLEX, LOW PRIORITY)
+
+- Blueprint review có `{value, source}` cho traceability
+- Narrative blueprint không cần vì data là events/timeline, không phải specs
+- **Không recommend** cho narrative
+
+---
+
+## 🏗 Kiến trúc Code — So sánh
+
+### Shared infrastructure
+Both modes share: job management, ThreadPoolExecutor, stop_event, word count caching, niche config
+
+### Narrative: [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2176) (L2176-2801)
+- ~625 lines
+- 8-step pipeline
+- Dual-framework via nested `_run_fw_pipeline()` helper
+
+### Review: [_do_renew_review()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2848) (L2848-4118)
+- ~1270 lines — **gấp đôi narrative**
+- 12-step pipeline
+- Niche-specific branching (`_SPEC_NICHES`, `_PRICE_NICHES`)
+- Product shuffling, unused chapters tracking, source mapping
+- Dual-framework via Thread + v2 job cloning
+
+### Prompt files size comparison
+
+| Category | Narrative | Review |
+|----------|-----------|--------|
+| Writer prompt | 3.3KB | 10-19KB |
+| Outline prompt | 2.9KB | 9.9-12.7KB |
+| Audit prompt | 2KB | 3-3.3KB |
+| Review prompt | 2.7KB | 2.4-3.8KB |
+| Blueprint extract | 6.7-10.7KB | 6.2-10.7KB |
+
+---
+
+## Kết luận
+
+**Review pipeline mạnh hơn nhờ**: structured prompts, multi-layer verification, enriched outline schema, 2-pass audit  
+**Narrative pipeline nhẹ hơn nhờ**: simpler blueprint, fewer steps, faster execution  
+
+**Top 3 upgrades nên áp dụng ngay cho Narrative (ROI cao nhất)**:
+1. **Reality Check** — verify historical facts trước khi viết
+2. **2-Pass Audit** — tách detect/fix → giảm JSON parse errors
+3. **Enriched Chapter Schema** — thêm `techniques`, `pacing`, `callbacks` vào outline

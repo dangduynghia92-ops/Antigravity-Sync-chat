@@ -1,0 +1,23 @@
+# Character Pipeline Implementation
+
+## Prompt Files
+- [x] Create [prompts/character_scan_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_scan_prompt.txt) (Step 2)
+- [x] Create [prompts/character_group_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) (Step 3)
+- [x] Create [prompts/location_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/location_prompt.txt) (Step 4)
+
+## Core Logic — [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+- [x] Add [scan_characters()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#409-451) — Step 2 (1 API call)
+- [x] Add [generate_group_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#488-551) — Step 3 (per-group call)
+- [x] Add [generate_locations()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#553-591) — Step 4 (1 API call)
+- [x] Add [save_character_bible_csv()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#644-669) — parse output → CSV
+- [x] Add [run_character_pipeline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#671-814) — orchestrate multi-pass
+
+## Integration — [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- [x] Replace old single-pass Bible with new multi-pass flow
+- [x] Save `_character_bible.csv` + `_locations.txt` outputs
+
+## Scene Prompts — [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+- [x] Update [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-279) to use labels (not visual descriptions)
+
+## Verification
+- [x] Import check — All OK

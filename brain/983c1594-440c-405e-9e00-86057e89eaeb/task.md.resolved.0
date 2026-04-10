@@ -1,0 +1,13 @@
+# Niche Battle Prompts — Task Tracker
+
+- [ ] 1. Prompt: `system_narrative_outline_battle.txt`
+- [ ] 2. Prompt: `system_narrative_audit_battle.txt`
+- [ ] 3. Prompt: `system_narrative_write_battle.txt`
+- [ ] 4. Prompt: `system_narrative_review_battle.txt`
+- [ ] 5. Code: Update `_NICHE_PROMPT_MAP` in `rewriter.py`
+- [ ] 6. Code: Update `generate_renew_outline_v2()` — add `niche` param + dispatch
+- [ ] 7. Code: Update `audit_outline()` — add `niche` param + dispatch
+- [ ] 8. Code: Update `write_from_blueprint()` — add `niche` param + dispatch
+- [ ] 9. Code: Update `review_narrative_full()` — add `niche` + `lang` param + dispatch
+- [ ] 10. Code: Update `rewrite_style_tab.py` — pass `niche` to all 4 functions
+- [ ] 11. Verify: Syntax check / import test

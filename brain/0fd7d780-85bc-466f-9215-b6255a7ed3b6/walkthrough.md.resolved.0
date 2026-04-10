@@ -1,0 +1,144 @@
+# TTS Cleanup — Code Review & Architecture Walkthrough
+
+## Overview
+The TTS Cleanup feature converts AI-written scripts to TTS-ready text by normalizing numbers, abbreviations, acronyms, symbols, and casing via an AI API call.
+
+---
+
+## Architecture Diagram
+
+```mermaid
+flowchart TD
+    A["🔊 TTS Tab (UI)"] --> B["Scan Folder / Add Files"]
+    B --> C["TreeWidget: file list with ✓ checkboxes"]
+    C --> D["Process button"]
+    D --> E{"Language mismatch warning?"}
+    E -->|No| F["_run_cleanup()"]
+    E -->|Yes, user confirms| F
+    F --> G["ThreadPoolExecutor (N threads)"]
+    G --> H["process_one() per file"]
+    H --> H1["1. Read .txt file"]
+    H1 --> H2["2. API call → cleanup_for_tts()"]
+    H2 --> H3["3. Validate non-empty"]
+    H3 --> H4["4. Write tts_{filename}.txt"]
+    H4 --> H5["Collect acronyms"]
+    H5 --> I["Export tts_acronyms_report.csv"]
+    F --> J{"Verify enabled?"}
+    J -->|Yes| K["Sequential verify via verify_tts_content() (Pro model)"]
+    K --> L{"Any failures?"}
+    L -->|Yes| M["Export tts_verify_report.csv + Show popup"]
+    M --> N["User selects files → Rewrite Selected"]
+    N --> O["_rewrite_failed(): AI re-cleanup with error context"]
+    O --> P["Re-verify & update status"]
+```
+
+---
+
+## File Map
+
+| File | Lines | Role |
+|------|-------|------|
+| [tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py) | 277 | Core logic: cleanup, verify, scan, CSV export |
+| [tts_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) | 932 | UI tab: file management, threading, verify popup |
+| [system_tts_cleanup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt) | 60 | AI prompt for TTS text conversion |
+| [system_tts_verify.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_verify.txt) | 37 | AI prompt for verifying content fidelity |
+| [tts_config_config.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/tts_config_config.json) | 6 | Saved config: lang, tier, threads, output_dir |
+
+---
+
+## Core Module: [core/tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+
+### Functions
+
+| Function | Purpose |
+|----------|---------|
+| [detect_language(text)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#26-56) | Simple word-frequency detection → `"en"` / `"es"` / `"unknown"` |
+| [cleanup_for_tts(text, api, lang, log_callback)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#58-117) | Sends text + system prompt to AI. Parses response: cleaned text + `---ACRONYMS---` section. Returns [(cleaned_text, acronyms_list)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#825-930) |
+| [verify_tts_content(original, tts, api, lang, log_callback)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#119-174) | Compares original vs TTS text via AI (always Pro). Returns JSON `{match, score, issues[]}` |
+| [export_acronym_csv(data, path)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#176-210) | Writes acronym conversions to CSV (handles locked file with retry) |
+| [scan_txt_files(folder, recursive)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#212-277) | Discovers [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/_CRASH_LOG.txt) files, skips system files (`_SUMMARY`, `_VERIFY`, [tts_](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#119-174) prefix, etc.). Returns file metadata list |
+
+### Key Design Patterns
+- **Response parsing**: AI response uses `---ACRONYMS---` separator between cleaned text and acronym table
+- **Locked-file retry**: CSV export retries up to 10 times with `_N` suffix if file is locked
+- **Skip patterns**: `_SUMMARY`, `_VERIFY`, `_STATUS`, `_MERGE`, `_REORDER`, `FULL_SCRIPT`, `_PREVIEW`, `_STYLE_`, `_REWRITE_STATUS`, [tts_](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#119-174) prefix
+
+---
+
+## UI Tab: [ui/tts_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py) (TTSTab)
+
+### UI Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 🔊 TTS Cleanup                                      │
+├─────────────────────────────────────────────────────┤
+│ [Scan Folder] [Add Files]   Lang:[en▼] Tier:[flash▼]│
+│                          Threads:[4] ☑ Verify        │
+├─────────────────────────────────────────────────────┤
+│ Output: [________________________] [...] [Log API]   │
+├─────────────────────────────────────────────────────┤
+│ ✓ 📁 folder_name (3)                                │
+│   ✓ chapter_001.txt    2500   —                     │
+│   ✓ chapter_002.txt    3100   ✓ 100%                │
+│   ✓ chapter_003.txt    1800   40%                   │
+├─────────────────────────────────────────────────────┤
+│ [All] [None] [Clear] [Remove]     [Process] [Stop]  │
+│                                   [Retry] [Open]     │
+├─────────────────────────────────────────────────────┤
+│ Log Panel                                            │
+└─────────────────────────────────────────────────────┘
+```
+
+### Signals
+
+| Signal | Args | Purpose |
+|--------|------|---------|
+| `progress_update` | [(filepath, status)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#825-930) | Update tree item status from worker thread |
+| `tree_refresh` | — | Full tree rebuild |
+| `verify_results_ready` | [(failed_files, csv_path)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#825-930) | Trigger verify popup on main thread |
+
+### Processing Flow
+
+1. **File Discovery**: `Scan Folder` (recursive) or `Add Files` (individual)
+2. **Pre-check**: Language mismatch warning (samples first 5 files)
+3. **Parallel Cleanup** via `ThreadPoolExecutor`:
+   - Read → API call → Write `tts_{filename}.txt` in [tts/](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#58-117) subfolder
+   - Progress: `20%` → `40%` → `80%` → `90%` → `✓ 100%`
+4. **Acronym CSV**: Exported after all files complete
+5. **Sequential Verify** (if enabled): Each file verified via Pro model
+6. **Failure Popup**: Checkbox list of failed files with issues. Options:
+   - **Open Review** → opens CSV
+   - **Rewrite Selected** → re-runs cleanup with error context injected into system prompt
+
+### Output Path Logic
+
+| Scenario | Output Path |
+|----------|-------------|
+| `output_dir` set + grouped files | `{output_dir}/tts_001/tts_{filename}` |
+| `output_dir` empty + grouped files | `{source_dir}/tts/tts_{filename}` |
+| `output_dir` set + loose files | `{output_dir}/tts_{filename}` |
+| `output_dir` empty + loose files | `{source_dir}/tts/tts_{filename}` |
+
+### Error Handling
+- **Error files** collected in `_error_files` list → **Retry** button re-processes them
+- **Rewrite failed** ([_rewrite_failed](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#810-932)): Injects previous verify issues as error context into the system prompt, always uses Pro model, temperature=0.15
+
+---
+
+## Current Capabilities Summary
+
+| Feature | Status |
+|---------|--------|
+| Batch file scanning (recursive) | ✅ |
+| TreeWidget with folder grouping | ✅ |
+| Multi-threaded cleanup | ✅ |
+| Language detection + warning | ✅ |
+| Acronym CSV report | ✅ |
+| Content verification (Pro) | ✅ |
+| Verify failure popup + rewrite | ✅ |
+| Error retry | ✅ |
+| Stop mid-process | ✅ |
+| API log toggle | ✅ |
+| Config persistence | ✅ |
+| Spanish language support | ✅ |

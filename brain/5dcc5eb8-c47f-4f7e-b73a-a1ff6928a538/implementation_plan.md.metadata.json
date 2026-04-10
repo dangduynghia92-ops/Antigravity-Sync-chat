@@ -1,0 +1,7 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to add URL queue + skip completed steps to Auto Pipeline tab. Queue allows adding URLs one by one (can add while running). Skip feature detects existing transcript/chapters/video files and skips re-downloading/splitting, but always re-runs rewrite. Merge mode stays as-is (no queue). Queue is session-only, no persistence.",
+  "updatedAt": "2026-03-29T09:32:05.247344Z",
+  "version": "2",
+  "requestFeedback": true
+}

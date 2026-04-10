@@ -1,0 +1,38 @@
+{
+    "title": "AI-Powered Narrative and Visual Workflow Systems",
+    "summary": "A comprehensive knowledge base for building AI-driven desktop applications focused on narrative and visual content generation. It covers hierarchical processing, framework-guided restructuring, and sequential rewriting with context. Key patterns include Concurrent Folder Processing (Parallel folders via ThreadPoolExecutor + Sequential chapters via OrderedDict grouping), In-Place Output Resolution (relative pathing), Interruptible API Resilience (stop_check callbacks for immediate cancellation), and Style Synthesis refinements (using descriptive example_hints). The system emphasizes robust error handling, structured CSV outputs, and thread-safe UI interactions.",
+    "references": [
+        {
+            "type": "conversation_id",
+            "value": "208a0827-421d-44dc-8959-51e8fa043bb4"
+        },
+        {
+            "type": "conversation_id",
+            "value": "1991db42-829a-4dab-b4f5-1717243c3f9d"
+        },
+        {
+            "type": "conversation_id",
+            "value": "0ec85050-4a1a-44aa-954a-1dd56628d353"
+        },
+        {
+            "type": "file",
+            "value": "f:/1. Edit Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py"
+        },
+        {
+            "type": "file",
+            "value": "f:/1. Edit Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py"
+        },
+        {
+            "type": "file",
+            "value": "f:/1. Edit Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py"
+        },
+        {
+            "type": "conversation_id",
+            "value": "4248"
+        },
+        {
+            "type": "conversation_id",
+            "value": "607b1ec7-030f-4854-99eb-3724f830c02c"
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Detailed audit of 15 sub_key_data promotions in the Newton (Sử Thi) pipeline. Each item is evaluated against 3 tests (Scene, Turning Point, Causal Independence). 11/15 promotions are correct (73%). 4 items were incorrectly promoted due to validator bias toward vivid imagery and intellectual significance over actual scene-worthiness. However, even if corrected, the total chapter count remains 17 due to threshold boundaries.",
+  "updatedAt": "2026-04-09T09:53:16.374332500Z",
+  "requestFeedback": true
+}

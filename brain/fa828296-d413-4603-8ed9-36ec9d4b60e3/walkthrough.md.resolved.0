@@ -1,0 +1,205 @@
+# Style Rewrite Tab — Code Review & Pipeline Walkthrough
+
+## Architecture Overview
+
+The Style Rewrite tab has **2 modes** that share the same UI but run **completely different backend pipelines**:
+
+| | **Top/List Review** | **Narrative** |
+|---|---|---|
+| Pipeline function | [_do_renew_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2605-3524) | [_do_renew_style()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2056-2559) |
+| Steps | **12 steps** | **8 steps** |
+| Style filter | `pipeline: "review"` styles | `pipeline: "narrative"` styles |
+| Blueprint extractor | [extract_blueprint_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091) | [extract_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045) |
+| Outline creator | [create_review_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2283-2415) / [create_mystery_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2146-2281) | [generate_renew_outline_v2()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1194-1252) |
+| Writer | [write_review_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2417-2599) | [write_from_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) |
+| Cross-chapter review | [review_cross_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1148-1192) | [review_narrative_full()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1489-1533) |
+| Extra features | Price Check, Reality Check, Unit Conversion, Unused Chapters | — |
+
+---
+
+## Entry Point & Job Dispatch
+
+```mermaid
+flowchart TB
+    A["▶ Rewrite button clicked"] --> B["_do_rewrite()"]
+    B --> C{"Multiple folders?"}
+    C -->|Yes| D{"User choice"}
+    D -->|"⚡ Riêng"| E["_do_rewrite_each()"]
+    D -->|"🔗 Gộp"| F["_do_rewrite_merge()"]
+    C -->|No| E
+    
+    B --> N["Niche Check\n(AI Flash detect)"]
+    N -->|Mismatch| N2{"User confirms?"}
+    N2 -->|Run all| E
+    N2 -->|Matched only| E
+    N2 -->|Cancel| STOP
+
+    E --> G["_create_and_submit_job()\nper folder"]
+    F --> G2["_create_and_submit_job()\nmerged"]
+
+    G --> H{"Mode?"}
+    G2 --> H
+    H -->|"Top/List Review"| I["_do_renew_review()"]
+    H -->|"Narrative"| J["_do_renew_style()"]
+    
+    I --> K{"Cut Video ON?"}
+    J --> K
+    K -->|Yes| L["_do_cut_video_for_group()"]
+    K -->|No| M["✅ Done"]
+    L --> M
+```
+
+**Key mechanisms:**
+- Jobs run in a `ThreadPoolExecutor(max_workers=3)`
+- Each job has its own `stop_event` (threading.Event) for cancellation
+- [_stopped()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2652-2656) callback propagated to every `APIClient` for immediate abort
+- UI updates via `pyqtSignal`: [progress_text](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#995-1010), `tree_refresh`, `job_update`
+
+---
+
+## Top/List Review Pipeline (12 Steps)
+
+> Function: [_do_renew_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2605)
+
+```mermaid
+flowchart TB
+    S1["1️⃣ Concatenate\nall input .txt"] --> S2["2️⃣ Detect Framework\n(detect_framework)"]
+    S2 --> S3["3️⃣ Extract Blueprint\n(extract_blueprint_review)"]
+    S3 --> S4["4️⃣ Recommend Framework\n(recommend_framework → popup)"]
+    S4 --> S5["5️⃣ Reality Check\n(reality_check_blueprint)"]
+    S5 --> S5b["5b Price Enrichment\n(enrich_prices_google)"]
+    S5b --> S6["6️⃣ Check Completeness\n(check_blueprint)"]
+    S6 --> S7["7️⃣ Convert Units\n(convert_units)"]
+    S7 --> S8["8️⃣ Create Outline\n(create_review_outline)"]
+    S8 --> S9["9️⃣ Audit Outline\n(audit_outline_review)"]
+    S9 --> S10["🔟 Write Chapters\n(write_review_chapter) × N"]
+    S10 --> S11["1️⃣1️⃣ Cross-Chapter Review\n+ Auto Patch"]
+    S11 --> S12["1️⃣2️⃣ Merge\n→ FULL_SCRIPT.txt\n+ Unused chapters copy"]
+```
+
+### Step Details
+
+| Step | What | AI Function | Prompt | Output File |
+|------|------|-------------|--------|-------------|
+| 1 | Concat all input text | — | — | (in-memory) |
+| 2 | Detect original framework | [detect_framework()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#930-1002) | [system_detect_framework.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_framework.txt) | `_pipeline/_detection.json` |
+| 3 | Extract blueprint (products, specs, pros/cons) | [extract_blueprint_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1047-1091) | [system_extract_blueprint_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) | `_pipeline/_blueprint_raw.json` |
+| 4 | AI ranks frameworks → user popup | [recommend_framework()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1631-1686) | [system_recommend_framework.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) | `_pipeline/_rankings.json` |
+| 5 | Verify facts, fix errors, enrich data | [reality_check_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1882-1932) | [system_reality_check.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt) | `_pipeline/_reality_check.json` + `_blueprint.json` |
+| 5b | Google Search price lookup (firearms niche) | [enrich_prices_google()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1934-2090) | Gemini + Google Search grounding | `_pipeline/_price_enrichment.json` |
+| 6 | Check data completeness vs framework needs | [check_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1688-1743) | [system_check_blueprint.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) | `_pipeline/_completeness_check.json` |
+| 7 | Convert units (metric/imperial by country) | [convert_units()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1745-1880) | — (rule-based) | `_pipeline/_blueprint_converted.json` |
+| 8 | Create chapter outline | [create_review_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2283-2415) or [create_mystery_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2146-2281) | [system_review_outline.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) | `_pipeline/_review_outline.json` |
+| 9 | Audit outline structure | [audit_outline_review()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1093-1146) | [system_audit_outline_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt) | `_pipeline/_audit.json` + `_review_outline_audited.json` |
+| 10 | Write each chapter sequentially | [write_review_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2417-2599) | [system_write_from_blueprint_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) | `ch_01_Intro.txt`, `ch_02_ProductName.txt`, ... |
+| 11 | Cross-chapter review + auto-patch | [review_cross_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1148-1192) + [patch_chapter_overlap()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1535-1585) | [system_review_cross_chapter.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) | `_pipeline/_review.json` |
+| 12 | Merge + copy unused | — | — | `FULL_SCRIPT.txt` + `_pipeline/_source_mapping.json` |
+
+### Review Pipeline Special Features
+
+**Product Shuffling (Step 8):** Before creating the outline, products are shuffled randomly and ordering clues (`comparisons`, `narrative_moments`, `source_parts`) are stripped. This prevents the AI from simply replicating the source order.
+
+**Unused Chapters (Step 12):** Products not selected by the outline are tracked. Their source chapter files are copied to the "Unused" folder for potential reuse.
+
+**Price Check (Step 5b):** Only activates when:
+1. `💰 Price Check` checkbox is ON
+2. Style niche matches firearms/ammo keywords
+3. Gemini API keys are configured in header bar
+
+**Transitions Toggle:** When `↔ Transitions` is OFF, transition-related issues in the cross-chapter review are filtered out.
+
+---
+
+## Narrative Pipeline (8 Steps)
+
+> Function: [_do_renew_style()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L2056)
+
+| Step | What | AI Function | Output File |
+|------|------|-------------|-------------|
+| 1 | Concat all input text | — | (in-memory) |
+| 2 | Detect original framework | [detect_framework()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#930-1002) | `_detection.json` |
+| 3 | Extract content blueprint | [extract_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1004-1045) | `_blueprint.json` |
+| 4 | Select new framework (AI rank → user popup) | inline AI call | `_rankings.json` |
+| 5 | Generate new outline | [generate_renew_outline_v2()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1194-1252) | `_renew_outline.json` |
+| 6 | Audit outline | [audit_outline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1254-1320) | `_audit.json` + `_renew_outline_audited.json` |
+| 7 | Write chapters from blueprint | [write_from_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) | `ch_01_*.txt`, `ch_02_*.txt`, ... |
+| 8 | Cross-chapter review + patch | [review_narrative_full()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1489-1533) + [patch_chapter_overlap()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1535-1585) | `_review.json` + `FULL_SCRIPT.txt` |
+
+---
+
+## Sequential Writing Pattern (Both Pipelines)
+
+Chapters are written one-by-one with a **sliding context window (N-2)**:
+
+- **Chapter 1 (hook):** No previous context
+- **Chapter 2:** Context = Chapter 1
+- **Chapter 3:** Context = Chapters 1-2
+- **Chapter N:** Context = Chapters N-2 and N-1
+- **Last chapter (end):** Context = **ALL previous chapters** (review mode only)
+
+**Word count rules** vary by position:
+- First chapter → `Open` word count range
+- Last chapter → `End` word count range  
+- Middle chapters → `Body` word count range
+- `chapter_type` field (`hook`/[end](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1631-1686)) overrides positional logic
+
+---
+
+## Re-ch (Re-write Chapter) Flow
+
+> Function: [_do_rewrite_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#L1735)
+
+For rewriting individual chapters **without** re-running the full pipeline:
+
+1. Locates `_pipeline/` folder in the output directory
+2. Loads existing `_blueprint.json` and outline (`_review_outline*.json` or `_renew_outline*.json`)
+3. Parses chapter index from filename (`ch_05_xxx.txt` → index 4)
+4. Builds context from adjacent chapter files (ch[i-1] + ch[i+1])
+5. Calls [write_review_chapter()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2417-2599) or [write_from_blueprint()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1322-1404) 
+6. Overwrites the output file in-place
+
+---
+
+## Job Management
+
+- `_jobs` dict: `job_id → {id, task_num, folder_name, group_path, mode, stop_event, status, progress, checked, future}`
+- `_job_pool`: `ThreadPoolExecutor(max_workers=3)` — up to 3 folders processing simultaneously
+- Stop: Single job via menu, or "Stop All"
+- Retry: Resets error/stopped jobs and re-dispatches
+
+---
+
+## Key Files
+
+| File | Purpose | Size |
+|------|---------|------|
+| [rewrite_style_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) | UI + job dispatch + both pipelines | 3524 lines |
+| [rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Core AI functions (detect, extract, outline, write, review, patch) | 2599 lines |
+| [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py) | API endpoint rotation, rate-limit recovery | 15 KB |
+| `styles/*.json` | Style guide JSON files (filtered by `pipeline` field) | varies |
+| `prompts/` | System prompt templates (48 files) | varies |
+
+### Output Structure (Review Pipeline)
+```
+source_folder/
+└── style_rewrite/
+    ├── _pipeline/
+    │   ├── _detection.json
+    │   ├── _blueprint_raw.json
+    │   ├── _blueprint.json
+    │   ├── _blueprint_converted.json
+    │   ├── _rankings.json
+    │   ├── _reality_check.json
+    │   ├── _reality_check.csv
+    │   ├── _price_enrichment.json
+    │   ├── _completeness_check.json
+    │   ├── _review_outline.json
+    │   ├── _review_outline_audited.json
+    │   ├── _audit.json
+    │   ├── _review.json
+    │   └── _source_mapping.json
+    ├── ch_01_Intro.txt
+    ├── ch_02_ProductName.txt
+    ├── ...
+    └── FULL_SCRIPT.txt
+```

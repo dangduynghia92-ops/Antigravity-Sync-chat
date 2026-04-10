@@ -1,0 +1,63 @@
+# Complete Pipeline Rewrite
+
+## Flow
+
+```
+Start → Parse SRT → Load Style
+  │
+  ├─ Historical ON → Visual Bible (style-aware, no cache)
+  ├─ CharSheet ON  → Character Pipeline (no cache, no CIVILIAN)
+  │
+  ├─ Generate Prompts per segment
+  │   ├─ CharSheet ON  → JSON output
+  │   └─ CharSheet OFF → Text output  
+  │
+  └─ Save CSV
+```
+
+## Files to Rewrite
+
+### 1. [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+
+**Remove:**
+- [load_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#49-64) — no cache
+- [save_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#66-72) — save directly in process_controller
+- [generate_locations()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#588-626) — merged into Visual Bible
+- Cache check in [run_character_pipeline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#706-831)
+
+**Rewrite:**
+- [generate_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#74-176) — always regenerate, accept style_content + exclude_characters
+- [run_character_pipeline()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#706-831) — always regenerate, 3 groups only (PROTAGONIST/NAMED/MILITARY)
+
+---
+
+### 2. [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+**Rewrite section** [_process_single_project](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#183-378) lines 246-310:
+- No cache check for either Visual Bible or Character Pipeline
+- Character Pipeline first (if CharSheet ON)
+- Visual Bible second (if Historical ON), excluding characters with sheets
+- Pass both + style to prompt generator
+
+**Rewrite section** [_process_loop](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#379-464) lines 426-441:
+- Narrative mode: shared Character Pipeline, no cache
+
+---
+
+### 3. [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+
+Already done — [_build_user_message](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#204-365) handles:
+- Visual Bible → settings, civilians, architecture
+- Character Bible → LABEL for named, uniform for military
+- JSON output when character_bible present
+
+---
+
+### 4. Prompt Files (already updated)
+- [character_scan_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_scan_prompt.txt) — 3 groups, max 10
+- [character_group_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) — MILITARY focus uniform
+- [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) — style-aware
+
+## Verification
+- Import check
+- Delete old output files, run fresh test

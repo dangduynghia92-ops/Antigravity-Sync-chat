@@ -1,0 +1,27 @@
+# Download Backend Migration
+
+## 1. Transcript Download (youtube-transcript-api)
+- [x] Migrate [get_transcript_ytdlp()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#1061-1169) → use `youtube-transcript-api` as primary
+- [x] Keep yt-dlp as fallback, then ScrapeCreators
+- [x] Test transcript download
+
+## 2. Video Info (pytubefix)
+- [x] Migrate [get_video_info()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#489-545) → use `pytubefix.YouTube` as primary
+- [x] Keep yt-dlp as fallback
+- [x] Test video info retrieval
+
+## 3. Thumbnail Download (pytubefix)
+- [x] Migrate [download_thumbnail_file()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#864-952) → use `yt.thumbnail_url` + requests
+- [x] Keep yt-dlp fallback
+- [x] Test thumbnail download
+
+## 4. Video Download (pytubefix)
+- [x] Migrate [download_video()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#768-862) → use pytubefix stream download
+- [x] Migrate video download in [video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+- [x] Keep yt-dlp as fallback
+- [x] Test video download
+
+## 5. Playlist Scan (pytubefix)
+- [x] Migrate [scan_playlist()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py#233-448) → use `pytubefix.Playlist`
+- [x] Keep yt-dlp as fallback
+- [x] Test playlist scan

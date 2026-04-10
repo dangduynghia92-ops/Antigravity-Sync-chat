@@ -1,0 +1,8 @@
+# TTS Verify Report & Fix Flow
+
+- [x] Move verify step to AFTER all files are processed (not per-file)
+- [x] Run verify on all completed files sequentially (always Pro)
+- [x] Export `tts_verify_report.csv` with score + issues for failed files
+- [x] Add pyqtSignal to emit verify results to main thread
+- [x] Create popup dialog: list failed chapters with checkboxes + Open Review + Rewrite buttons
+- [x] Implement Rewrite: re-run TTS cleanup on selected files with error context in prompt

@@ -1,0 +1,31 @@
+# Style Rewrite Pipeline — Detect Framework + Write New
+
+## Completed
+- [x] Analyze current pipeline (root cause: sends original text → paraphrase)
+- [x] Design 5 rich frameworks (Deep-Dive, Domino, Zoom, Trial, Pendulum)
+- [x] Build [cinematic_military_v2.json](file:///C:/Users/Admin/.gemini/antigravity/brain/9cc5599d-f325-48cb-8ba0-b577b6195dae/cinematic_military_v2.json) — full style guide with rich frameworks
+
+## In Progress
+- [x] Pipeline implementation
+
+### Step 1: New prompts
+- [x] [system_detect_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_framework.txt)
+- [x] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+- [x] [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt)
+
+### Step 2: Core functions
+- [x] [extract_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#969-1010) in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] [detect_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#930-967) in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1070-1149) + [generate_renew_outline_v2()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1012-1068)
+
+### Step 3: UI/Pipeline integration
+- [x] Copy style JSON to `styles/`
+- [x] Update [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1187-1485) — 7-step pipeline:
+  1. Detect original framework
+  2. Select different framework
+  3. Extract blueprint
+  4. Generate outline with new framework
+  5. Write chapters from blueprint + outline
+
+## Later
+- [ ] Manual testing with real scripts

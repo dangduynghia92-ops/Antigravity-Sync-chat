@@ -1,0 +1,32 @@
+# Tasks
+
+- [x] Thread Safety Fixes
+- [x] Content Length Filter (Regroup tab)
+- [x] Chapter Reorder Suggestion (Narrative)
+- [x] JSON parse error fallback (analyze_chapter)
+- [x] Crash logging (main.py)
+- [x] Remove word count from review scoring
+- [x] Multi-Language Support
+- [x] Add descending_spiral method
+- [x] Remove wave_pulse method
+- [x] Remove method combination option
+- [x] Fix QMetaObject merge error → signal
+- [x] Add lang prefix to output filenames
+- [x] Merge Preview — Theme Grouping
+- [x] Verify: Add original vs rewrite comparison
+- [x] JSON parse / empty response → error (not default)
+- [x] [_safe_csv_path()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#18-38) for all CSV exports
+- [x] Chapter count: min/max/range flexible rules
+- [x] Smart Retry button
+  - [x] Track `error_step` (analyze/rewrite) + `error_msg`
+  - [x] Track `rewrite_mode` (list/narrative)
+  - [x] Auto-run errors grouped by step
+  - [x] Fix narrative mode: per-chapter error handling
+  - [x] Fix narrative verify: store all fields (comparison, issues, strengths)
+- [/] Summary-based merge grouping (100+ chapters)
+  - [ ] Add [summary](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#87-131) to verify prompt (system_review.txt × 3)
+  - [ ] Store [summary](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#87-131) in status after verify
+  - [ ] Add `summarize_chapter()` for backfill missing summaries
+  - [ ] Modify merge load to read summaries from status
+  - [ ] Modify [ai_order_chapters](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#331-408) to use summaries
+  - [ ] Auto-summarize at merge time if missing

@@ -1,0 +1,52 @@
+# Fix Language Mixing in TTS Prompts
+
+## Problem
+Niche rules ([firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt), [history.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/history.txt)) and [system_tts_verify.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_verify.txt) only have one version used for all languages. When `lang=es`, English pronunciation examples leak into Spanish context.
+
+## Solution: Language-Aware Niche Rules
+
+### Architecture Change
+
+```
+prompts/
+  tts_niche_rules/
+    firearms.txt          ← English (default)  
+    history.txt           ← English (default)
+    es/                   ← Spanish overrides
+      firearms.txt        
+      history.txt         
+  es/
+    system_tts_verify.txt ← NEW (Spanish verify examples)
+```
+
+### Code Change
+
+#### [MODIFY] [load_niche_rules()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#69-78) in [tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+
+Add [lang](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#392-394) parameter. Try `tts_niche_rules/{lang}/{niche}.txt` first, fallback to `tts_niche_rules/{niche}.txt`.
+
+#### [MODIFY] [_run_cleanup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#496-814) in [tts_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+
+Pass [lang](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#392-394) to [load_niche_rules(niche, lang)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#69-78).
+
+---
+
+### New/Modified Files
+
+#### [NEW] `prompts/tts_niche_rules/es/firearms.txt`
+Move current [firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt) (Spanish) → [es/firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt). Write new English version for [firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt).
+
+#### [MODIFY] [prompts/tts_niche_rules/firearms.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/firearms.txt)
+Rewrite with English pronunciations (three oh eight, forty five seventy, etc.)
+
+#### [NEW] `prompts/tts_niche_rules/es/history.txt` 
+Research + write Spanish history rules (mil cuatrocientos noventa y dos, etc.)
+
+#### [MODIFY] [prompts/tts_niche_rules/history.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/history.txt)
+Keep as English default — already correct.
+
+#### [NEW] `prompts/es/system_tts_verify.txt`
+Spanish version with examples: `1942 → mil novecientos cuarenta y dos`, `$ → dólares`, `FBI → efe be i`
+
+## Prevention
+[load_niche_rules(niche, lang)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#69-78) ensures future niches automatically support multi-language — just add an [es/](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/.gitattributes) version.

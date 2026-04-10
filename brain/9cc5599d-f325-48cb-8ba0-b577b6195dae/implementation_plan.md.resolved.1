@@ -1,0 +1,57 @@
+# Style Rewrite Pipeline — Detect Framework → Write New
+
+## Pipeline Flow
+
+```mermaid
+graph TD
+    A["Original Script"] --> B["1. Detect Framework"]
+    B --> C["Original uses: e.g. Deep-Dive"]
+    A --> D["2. Extract Blueprint"]
+    D --> E["Blueprint JSON: facts, events, themes"]
+    C --> F["3. Select Different Framework"]
+    F --> G["Selected: e.g. Zoom Lens"]
+    G --> H["4. Generate Outline"]
+    E --> H
+    H --> I["New Outline with new structure"]
+    I --> J["5. Write Each Chapter"]
+    E --> J
+    J --> K["New Script — same content, different structure"]
+```
+
+## Proposed Changes
+
+### New Prompts
+
+#### [NEW] [system_detect_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_framework.txt)
+AI reads original script + list of 5 framework names → returns which one matches best.
+
+#### [NEW] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+AI reads original script → extracts JSON blueprint containing ONLY facts, events, themes, arguments. **NO original sentences.**
+
+#### [MODIFY] [system_renew_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_renew_outline.txt)
+Add instruction to use a **specific** framework (not "choose the best one").
+
+---
+
+### Core Functions
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- `detect_framework()` — calls `system_detect_framework.txt`
+- `extract_blueprint()` — calls `system_extract_blueprint.txt`  
+- `write_from_blueprint()` — writes chapter from blueprint + style, **no original text**
+
+---
+
+### UI Pipeline
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+Update [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1185-1467) to use new 5-step flow.
+
+---
+
+### Style File
+
+#### [NEW] Copy [cinematic_military_v2.json](file:///C:/Users/Admin/.gemini/antigravity/brain/9cc5599d-f325-48cb-8ba0-b577b6195dae/cinematic_military_v2.json) → `styles/`
+
+## Verification
+- Manual: run pipeline on real script, compare output vs original

@@ -1,0 +1,140 @@
+# API Tier Audit Report (v2)
+
+Tổng: **52 APIClient** trên **7 tab** — **42 user-selected**, **10 hardcoded** (8 flash, 2 pro).
+
+---
+
+## A. Tất cả User-Selected Calls (42)
+
+### 1. `rewrite_style_tab.py` — Top/List Review Pipeline (15 calls)
+
+| # | Line | Var | Bước pipeline | Mô tả | Nên mặc định flash? |
+|---|---|---|---|---|---|
+| 1 | L1994 | `api_w` | Write Chapter | Viết lại 1 chapter theo style | ❌ Cần pro — output dài, chất lượng cao |
+| 2 | L2284 | `api_det` | Framework Detection | detect_framework() — nhận diện framework gốc | ✅ **Flash OK** — output ngắn, classify đơn giản |
+| 3 | L2310 | `api_bp` | Blueprint Extraction | extract_blueprint_review() — trích xuất thông tin chính | ❌ Cần pro — input dài 50-60K chars |
+| 4 | L2406 | `api_sel` | Framework Selection | Chọn framework tốt nhất từ danh sách | ✅ **Flash OK** — ranking/scoring đơn giản |
+| 5 | L2486 | `api_out` | Generate Outline | Tạo outline cho viết lại | ❌ Cần pro — cần reasoning sâu |
+| 6 | L2509 | `api_audit` | Audit Outline | Kiểm tra outline vs blueprint | ✅ **Flash OK** — so khớp, output JSON nhỏ |
+| 7 | L2580 | `api_w` | Write Chapter | Viết chapter (trong pipeline chính) | ❌ Cần pro |
+| 8 | L2637 | `api_rev` | Cross-Chapter Review | review_cross_chapter() — kiểm tra giữa các chapter | ✅ **Flash OK** — compare text, output JSON |
+| 9 | L2661 | `api_p` | Patch Chapter | patch_chapter_overlap() — sửa issue | ✅ **Flash OK** — sửa nhỏ |
+| 10 | L3019 | `api_bp` | Blueprint (Narrative) | Blueprint extraction cho narrative mode | ❌ Cần pro |
+| 11 | L3196 | `api_rc` | Recommend Framework (Narrative) | Suggest framework | ✅ **Flash OK** |
+| 12 | L3412 | `api_chk` | Blueprint Enrichment Check | Kiểm tra cần search bổ sung | ✅ **Flash OK** |
+| 13 | L3466 | `api_out` | Generate Outline (Narrative) | Tạo outline cho narrative | ❌ Cần pro |
+| 14 | L3551 | `api_audit` | Audit Outline (Narrative) | Kiểm tra outline | ✅ **Flash OK** |
+| 15 | L3721 | `api_w` | Write Chapter (Narrative) | Viết chapter narrative | ❌ Cần pro |
+
+### 2. `rewrite_style_tab.py` — Narrative Review Pipeline (2 calls)
+
+| # | Line | Var | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 16 | L3809 | `api_rev` | Cross-Chapter Review | Review giữa các chapter | ✅ **Flash OK** |
+| 17 | — | `api_p` | Patch | (hardcoded flash — xem bảng B) | — |
+
+### 3. `rewrite_tab.py` — Top/List Rewrite Pipeline (7 calls)
+
+| # | Line | Var | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 18 | L859 | `api` | Analyze (Retry) | analyze_chapter() khi retry | ❌ Cần pro |
+| 19 | L910 | `api` | Rewrite (Retry) | rewrite_chapter() khi retry | ❌ Cần pro |
+| 20 | L1015 | `api` | Analyze (Step 1) | analyze_chapter() — tìm method, hook, tension | ❌ Cần pro |
+| 21 | L1143 | `api` | Rewrite (Step 2) | rewrite_chapter() — viết lại chapter | ❌ Cần pro |
+| 22 | L2247 | `api` | Merge | merge_chapters() — gộp chapters | ❌ Cần pro |
+| 23 | L2576 | `api` | Renew Rewrite | Viết lại hoàn toàn mới | ❌ Cần pro |
+
+### 4. `rewrite_tab.py` — Narrative Rewrite Pipeline (10 calls)
+
+| # | Line | Var | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 24 | L1276 | `api` | Generate Outline | generate_narrative_outline() | ❌ Cần pro |
+| 25 | L1289 | `api_reorder` | Suggest Chapter Order | AI đề xuất sắp xếp chapter | ✅ **Flash OK** |
+| 26 | L1320 | `api_outline2` | Regenerate Outline | Tạo lại outline sau reorder | ❌ Cần pro |
+| 27 | L1379 | `api_r` | Rewrite Chapter | rewrite_chapter() sequential | ❌ Cần pro |
+| 28 | L1478 | `api_rev` | Cross-Chapter Review | review giữa các chapter | ✅ **Flash OK** |
+| 29 | L1502 | `api_p` | Patch Issue | patch_chapter_overlap() | ✅ **Flash OK** |
+| 30 | L1521 | `api_final` | Final Write | Viết lần cuối sau patch | ❌ Cần pro |
+
+### 5. `rewrite_tab.py` — Narrative Review Sub-pipeline (5 calls)
+
+| # | Line | Var | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 31 | L1811 | `api` | Rewrite Chapter | Viết lại trong review flow | ❌ Cần pro |
+| 32 | L1835 | `api_a` | Analyze | Phân tích chapter | ❌ Cần pro |
+| 33 | L1855 | `api_r` | Rewrite | Viết lại | ❌ Cần pro |
+| 34 | L1909 | `api_rev` | Cross-Chapter Review | Review | ✅ **Flash OK** |
+
+### 6. `tts_tab.py` — TTS Cleanup Pipeline (5 calls, vừa đổi hết sang user-selected)
+
+| # | Line | Var | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 35 | L573 | `api_detect` | Niche Detect | detect_niche() — nhận diện thể loại | ✅ **Flash OK** — classify nhẹ |
+| 36 | L667 | `api` | TTS Cleanup | cleanup_for_tts() — xử lý chính | ❌ Cần pro cho chính xác |
+| 37 | L798 | `api_v` | TTS Verify | verify_tts_content() — kiểm tra output | ❌ Pro chính xác hơn |
+| 38 | L1150 | `api` | TTS Rewrite-Fix | Sửa lại file failed | ❌ Cần pro |
+| 39 | L1180 | `api_v` | TTS Re-Verify | Verify lại sau fix | ❌ Pro chính xác hơn |
+
+### 7. `style_tab.py` + `chat_tab.py` (2 calls)
+
+| # | Line | Tab | Bước | Mô tả | Flash? |
+|---|---|---|---|---|---|
+| 40 | L629 | `style_tab` | Full Analysis | Toàn bộ style analysis pipeline | ❌ Cần pro |
+| 41 | L187 | `chat_tab` | Chat | Chat trực tiếp với AI | Tùy user chọn |
+
+---
+
+## B. Hardcoded Calls Còn lại (10)
+
+### Flash (8 calls) — ✅ Hợp lý, giữ nguyên
+
+| # | Tab | Line | Bước | Lý do giữ flash |
+|---|---|---|---|---|
+| 1 | `rewrite_style_tab.py` | L1673 | Niche Detection Ping | max_tokens=30, timeout=15s |
+| 2 | `rewrite_style_tab.py` | L2985 | Framework Detection (Review) | Classify đơn giản |
+| 3 | `rewrite_style_tab.py` | L3058 | Framework Ranking (Review) | Ranking nhẹ |
+| 4 | `rewrite_style_tab.py` | L3868 | Patch Chapter (Narrative review) | Sửa nhỏ |
+| 5 | `rewrite_tab.py` | L919 | Verify (Top/List Retry) | Chấm điểm |
+| 6 | `rewrite_tab.py` | L1170 | Auto-Verify (Top/List) | Chấm điểm |
+| 7 | `rewrite_tab.py` | L1423 | Verify (Narrative) | Chấm điểm |
+| 8 | `rewrite_tab.py` | L1882 | Verify (Narrative review) | Chấm điểm |
+
+### Pro (2 calls) — ✅ Hợp lý, giữ nguyên
+
+| # | Tab | Line | Bước | Lý do giữ pro |
+|---|---|---|---|---|
+| 1 | `video_cutter_tab.py` | L775 | Chapter Split (AI) | Cần reasoning để chia chapter |
+| 2 | `video_cutter_tab.py` | L767 | Classify Script Type | Flash — classify nhẹ |
+
+### Hardcoded Analyze (Narrative) — L1353
+
+| Tab | Line | Bước | Hiện tại | Mô tả |
+|---|---|---|---|---|
+| `rewrite_tab.py` | L1353 | Analyze trong Narrative one-shot | `flash` | `analyze_chapter()` — phân tích method, hook, counter_argument, key_tension **trong flow narrative kết hợp analyze+rewrite**. Đây là bước phân tích nhanh trước khi rewrite, dùng flash để tiết kiệm thời gian vì rewrite ngay sau đó sẽ dùng pro. |
+
+### Hardcoded Summarize (Merge) — L2226
+
+| Tab | Line | Bước | Hiện tại | Mô tả |
+|---|---|---|---|---|
+| `rewrite_tab.py` | L2226 | Summarize (Merge) | `flash` | `summarize_chapter()` — tạo tóm tắt ngắn cho chapter khi gộp merge. Flash đủ cho summary. |
+
+---
+
+## C. Tổng hợp đề xuất "Nên mặc định Flash"
+
+Những bước dưới đây khi user chọn Pro thì **lãng phí** vì task nhẹ, output nhỏ:
+
+| Bước | Các lines liên quan | Lý do flash đủ |
+|---|---|---|
+| Framework Detection | L2284, L2985 | Classify 1 từ, output ~50 tokens |
+| Framework Selection/Ranking | L2406, L3058, L3196 | So sánh list, output JSON nhỏ |
+| Audit Outline | L2509, L3551 | So khớp blueprint vs outline |
+| Blueprint Enrichment Check | L3412 | Yes/No decision |
+| Cross-Chapter Review | L2637, L3809, L1478, L1909 | Compare text, output JSON |
+| Patch Chapter | L2661, L1502, L3868 | Sửa vài câu |
+| Suggest Chapter Order | L1289 | Output ranking list |
+| Niche Detect (TTS) | L573 | Classify nhẹ |
+| Verify | L919, L1170, L1423, L1882 | Chấm điểm, output JSON nhỏ |
+
+> [!IMPORTANT]
+> Hiện tại các bước trên vẫn **theo user chọn**. Nếu muốn hardcode flash cho chúng thì cần sửa code — bạn chỉ cần nói.

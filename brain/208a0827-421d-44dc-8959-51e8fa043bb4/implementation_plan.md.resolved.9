@@ -1,0 +1,64 @@
+# Incremental Save + Rate Limit Popup
+
+## Problem
+1. **Data Loss Risk**: Results only saved AFTER all segments complete. If app crashes, network dies, or any unhandled error occurs mid-process → ALL collected results are LOST. API calls are expensive.
+2. **No User Intervention**: When all endpoints hit rate limit (429), [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py) returns `None` immediately → segment marked "failed". No chance for user to enable another endpoint.
+
+## Proposed Changes
+
+### 1. Incremental Save (Data Safety)
+
+#### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+In [_process_single_project()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py#173-276), save results **after EACH successful segment** instead of only at the end:
+
+```diff
+-# After ALL segments processed:
+-project.results = results
+-if output_dir and results:
+-    self._save_results(project, output_dir)
+
++# After EACH segment (inside generate loop):
++# Append to results + save immediately
++project.results = results  # Update continuously
++if output_dir:
++    self._save_results(project, output_dir)  # Overwrite file each time
+```
+
+This means: even if app crashes at segment 50/100, the output file already has segments 1-49.
+
+---
+
+### 2. Rate Limit Popup Dialog
+
+#### [MODIFY] [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py)
+
+When ALL endpoints fail, instead of returning `None`, call an `on_all_failed` callback that the UI can hook into:
+
+```python
+# Before: return None immediately
+# After: call callback → UI shows popup → user decides
+if on_all_failed:
+    action = on_all_failed()  # "retry" or "skip" or "stop"
+    if action == "retry":
+        continue  # Try all endpoints again
+    elif action == "stop":
+        return None
+```
+
+#### [NEW] Popup in [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+Show a blocking popup with 3 buttons:
+- **🔄 Retry** — "Go to Settings to enable an endpoint, then click Retry"
+- **⏭ Skip** — Skip this segment, continue with next ones
+- **⏹ Stop & Save** — Stop processing, save all results collected so far
+
+The popup **stays open until user clicks** — no timeout. If user is away, it just waits.
+
+## Verification Plan
+
+### Manual Testing
+1. Run process with 1 endpoint enabled2. Disable that endpoint mid-process via Settings
+3. Verify popup appears when rate limit hit
+4. Test all 3 buttons: Retry, Skip, Stop & Save
+5. Kill app mid-process → verify output file has partial results

@@ -1,0 +1,473 @@
+# Narrative Mystery — Implementation Plan (v2 — Research Enhanced)
+
+> Sources: Internal codebase (battle narrative, review mystery) + external research on YouTube retention, investigative documentary structure, open loop theory, evidence stacking, steelmanning, and mystery screenplay structure.
+
+---
+
+## Section 0: Core Design Philosophy
+
+### Tại sao Narrative Mystery KHÁC Review Mystery?
+
+| Dimension | Review Mystery (Top/List) | **Narrative Mystery (Deep Dive)** |
+|-----------|--------------------------|-----------------------------------|
+| **Scope** | 7-12 bí ẩn, mỗi cái 1 chapter | **1 bí ẩn duy nhất**, 7-12 chapters |
+| **Audience contract** | "Tôi sẽ cho bạn xem N điều thú vị" | "Tôi sẽ dẫn bạn đến SỰ THẬT" |
+| **Retention mechanism** | Variety — mỗi chapter là topic mới | **Curiosity gap** — mỗi chapter thêm 1 lớp |
+| **Drop-off risk** | Low (bored ở ch.5? ch.6 là topic mới) | **HIGH** (bored ở ch.5? không có topic mới) |
+| **Solution** | Sine wave tone rotation | **Open loops + evidence stacking + narrative pivots** |
+
+> [!WARNING]
+> Single-mystery format có drop-off risk CAO HƠN review format vì không có "topic mới mỗi chapter" để reset interest. Mọi retention mechanism phải được thiết kế xung quanh **cognitive investment** — audience đã đầu tư trí tuệ vào việc hiểu mystery → không muốn bỏ dở.
+
+### Tham chiếu từ external research
+
+| Concept | Source | Ứng dụng |
+|---------|--------|----------|
+| **Zeigarnik Effect** | Open loop research | Não ghi nhớ task chưa hoàn thành → mở loop cuối mỗi chapter |
+| **Evidence Stacking** | Video essay retention | Layer evidence tăng dần → audience cảm thấy argument đang build |
+| **Narrative Pivot** | Screenplay structure | Shift context/perspective giữa video → reset attention |
+| **Steelmanning** | Debate theory | Present mainstream theory ở dạng MẠNH NHẤT → phá vỡ nó mới impressive |
+| **Rehooking** | YouTube retention data | Mini-hook cuối mỗi segment → bridge ý sang segment tiếp |
+| **Jigsaw vs Ball of Twine** | LEMMiNO/Wendigoon analysis | Ball of twine cho mystery dài (linear investigation); Jigsaw cho mystery phức (nonlinear clues) |
+| **Midpoint Revelation** | Screenplay structure | Giữa video: MỘT revelation thay đổi cách hiểu toàn bộ case |
+| **Controlled Information** | Documentary analysis | Giấu 1 fact quan trọng → reveal đúng lúc audience cần |
+
+---
+
+## Section 1: INVESTIGATION ARC (5 Phases)
+
+### 1.1 Arc Overview
+
+```
+HOOK ──── Paradox/impossibility → "Tại sao?"
+  │
+FOUNDATION ──── Bối cảnh + mainstream theory (steelmanned)
+  │              Audience hiểu "câu chuyện chính thống" TRƯỚC
+  │              [OPEN LOOP: "Nhưng có 1 chi tiết không khớp..."]
+  │
+DEEP DIVE ──── Evidence layers (1-3 chapters)
+  │             Mỗi chapter tấn công mainstream từ 1 góc MỚI
+  │             [EVIDENCE STACKING: mỗi chapter thêm trọng lượng]
+  │             [OPEN LOOPS: mỗi chapter kết bằng "chưa hết..."]
+  │
+CONFRONTATION ──── Theory vs Theory (MIDPOINT REVELATION)
+  │                Peak tension — audience phải chọn
+  │                [NARRATIVE PIVOT: context shift]
+  │
+VERDICT ──── Phán quyết + reflection + CTA
+             [CLOSE ALL LOOPS]
+```
+
+### 1.2 Pacing Slots (chi tiết)
+
+| Phase | Chapters | % Video | Tempo | Emotional Texture |
+|-------|----------|---------|-------|-------------------|
+| **HOOK** | 1 | ~8% | Fast, punchy | Shock → curiosity |
+| **FOUNDATION** | 1 | ~12% | Measured, authoritative | "Tôi hiểu rồi" → false confidence |
+| **DEEP_DIVE** | 2-4 | ~45% | Escalating, investigative | Doubt → fascination → "wait what??" |
+| **CONFRONTATION** | 1-2 | ~20% | Intense, adversarial | Tension → intellectual adrenaline |
+| **VERDICT** | 1 | ~15% | Reflective, weighty | Resolution → lingering thought |
+
+### 1.3 Pacing Rules
+
+1. Không bao giờ 2 chapters liên tiếp có cùng `investigation_phase` trừ DEEP_DIVE
+2. DEEP_DIVE chapters phải alternate giữa **analytical** (cold evidence, data) và **sensory** (vivid reconstruction, human story)
+3. CONFRONTATION phải đến SAU ít nhất 2 DEEP_DIVE chapters (audience cần đủ evidence để đánh giá)
+4. Mỗi chapter phải có ít nhất 1 **OPEN LOOP** chưa resolved
+
+---
+
+## Section 2: CHAPTER STRUCTURES (7 Structures)
+
+### Thiết kế từ 3 nguồn:
+- **Review mystery** structures (mythbuster, detective_trail, conflicting_accounts) → adapt cho single-mystery
+- **Battle narrative** structures (fog_of_war, commander_focus) → inspiration cho "personal anchor" và "perspective shift"
+- **External research** (evidence stacking, narrative pivot, steelmanning) → inform HOW each structure works
+
+### 2.1 Seven Structures
+
+#### STRUCTURE 1: EVIDENCE EXCAVATION
+```
+Flow: Phát hiện bằng chứng → Truy nguồn → Đánh giá credibility
+How: Mở bằng MỘT bằng chứng cụ thể (artifact, tài liệu, phát hiện).
+     Truy nguồn: ai tìm, khi nào, hoàn cảnh nào, chain of custody.
+     Đánh giá: multiple expert opinions, potential contamination/bias.
+     Kết: evidence này support hay undermine mainstream theory?
+Best for: FOUNDATION, early DEEP_DIVE
+Tone affinity: foundation, deep_dive
+Pattern interrupt: Sensory details của moment phát hiện
+```
+
+#### STRUCTURE 2: THEORY BUILDING
+```
+Flow: Thu thập evidence → Kết nối logic → Xây giả thuyết → Test gaps
+How: Tổng hợp 3-5 evidence đã trình bày các chapter trước.
+     Show HOW they connect (timeline, geography, personnel overlap).
+     Build 1 coherent hypothesis. THEN: test nó — giả thuyết này 
+     KHÔNG giải thích được gì? Honest gap analysis.
+Best for: DEEP_DIVE (mid-to-late)
+Tone affinity: deep_dive
+Open loop: "Theory này giải thích 80%... nhưng 20% còn lại..."
+```
+
+#### STRUCTURE 3: COUNTER INVESTIGATION (Steelman Pattern)
+```
+Flow: Mainstream theory (STRONGEST version) → Systematic attack → What remains
+How: STEELMAN mainstream: present nó ở dạng MẠNH NHẤT — credentials 
+     của supporters, evidence hỗ trợ, logic nội tại. Để audience 
+     genuinely consider nó. THEN: systematic evidence-based attack.
+     NEVER strawman. Mỗi attack = specific evidence, not opinion.
+     Kết: mainstream giải thích được X, nhưng fails ở Y.
+Best for: DEEP_DIVE → CONFRONTATION bridge
+Tone affinity: deep_dive, confrontation
+Key principle: "If we're going to reject the experts, we owe them 
+               the courtesy of understanding their BEST argument first."
+```
+
+#### STRUCTURE 4: HUMAN ANCHOR
+```
+Flow: 1 person's story → Their discovery/experience → Larger implications
+How: Anchor chapter vào 1 NHÂN VẬT CỤ THỂ — researcher, witness, 
+     explorer, victim. Name, date, place. Show their moment of 
+     discovery or confrontation with the mystery. Use SENSORY details.
+     Then zoom out: this person's experience reveals what about 
+     the larger mystery?
+Best for: DEEP_DIVE (to alternate with analytical chapters)
+Tone affinity: deep_dive
+Pattern interrupt: Shifts from data to STORY → resets attention
+Inspired by: Review mystery "Human Anchor" + Battle "Commander Focus"
+```
+
+#### STRUCTURE 5: TIMELINE RECONSTRUCTION
+```
+Flow: Official timeline → Anomalies → Revised sequence → Implications
+How: Lay out official chronology. Identify gaps, contradictions,
+     impossible sequences (X happened before Y but Y is prerequisite).
+     Reconstruct: what does the evidence ACTUALLY suggest happened?
+     What does this revised timeline reveal that official version hides?
+Best for: DEEP_DIVE (when chronology IS the mystery)
+Tone affinity: deep_dive, confrontation
+Visual metaphor: "Timeline đối chiếu — 2 dòng chạy song song"
+```
+
+#### STRUCTURE 6: CREDIBILITY TRIAL
+```
+Flow: Source A says X → Source B says Y → Cross-examine → Rate reliability
+How: Framed as intellectual "trial". Expert 1: credentials, methodology,
+     what they claim, potential biases/funding. Expert 2: same.
+     Primary sources: what do ORIGINAL documents say?
+     Physical evidence: what does SCIENCE say?
+     Verdict: which source is most reliable and WHY?
+Best for: CONFRONTATION (peak tension chapter)
+Tone affinity: confrontation
+Key rule: Audience must feel like THEY are the jury
+Inspired by: Review mystery "Conflicting Accounts"
+```
+
+#### STRUCTURE 7: VERDICT SYNTHESIS
+```
+Flow: What's confirmed → What's probable → What's unknowable → Legacy
+How: Classify ALL evidence into 3 tiers:
+       TIER 1: Confirmed facts (multiple independent sources)
+       TIER 2: Probable (strong but not conclusive evidence)
+       TIER 3: Unknowable (evidence destroyed, sources contradictory)
+     For each major theory: which tier does it fall in?
+     Close with the LARGER QUESTION: what does this mystery tell us 
+     about [history/humanity/knowledge]?
+Best for: VERDICT chapter (final body or end)
+Tone affinity: verdict
+Key rule: NEVER declare absolute truth — leave space for doubt
+```
+
+### 2.2 Structure-Phase Affinity
+
+| Phase | PREFER | ACCEPTABLE | AVOID |
+|-------|--------|------------|-------|
+| **foundation** | evidence_excavation, primary_source* | timeline_reconstruction | verdict_synthesis, credibility_trial |
+| **deep_dive** | theory_building, counter_investigation, human_anchor | timeline_reconstruction, evidence_excavation | verdict_synthesis |
+| **confrontation** | credibility_trial, counter_investigation | theory_building | evidence_excavation |
+| **verdict** | verdict_synthesis | human_anchor (for emotional close) | evidence_excavation |
+
+* `primary_source` = structure mới, xem Section 2.3
+
+### 2.3 Structure mới: PRIMARY SOURCE ANALYSIS
+```
+Flow: Document/artifact → Context of creation → What it reveals vs hides
+How: Focus vào 1 primary source cụ thể (bản thảo cổ, bản đồ, bia khắc,
+     tài liệu giải mật, hình ảnh satellite). 
+     Layer 1: Literal reading — nó NÓI gì?
+     Layer 2: Context — ai tạo, cho ai, khi nào, WHY?
+     Layer 3: What it DOESN'T say — omissions, coded language,
+              deliberate gaps. The silence IS the evidence.
+Best for: FOUNDATION or early DEEP_DIVE when a primary source anchors the mystery
+Inspired by: Review mystery "Bureaucratic Anomaly" (gap = argument)
+```
+
+---
+
+## Section 3: CLOSING TYPES (5 types)
+
+| # | Type | Mô tả | Mechanism |
+|---|------|--------|-----------|
+| 1 | **RHETORICAL_QUESTIONS** | 2-3 câu hỏi chưa có lời giải — mỗi chapter format khác | Zeigarnik Effect |
+| 2 | **COLD_FACT** | Kết bằng 1 fact lạnh lùng, stark, không bình luận | Shock → silence → processing |
+| 3 | **EVIDENCE_CLIFF** | Reveal 1 evidence MỚI ở cuối → chưa phân tích → ch tiếp | Open loop / mini-cliffhanger |
+| 4 | **IMPOSSIBILITY_STATEMENT** | Khẳng định 1 điều KHÔNG THỂ giải thích | Cognitive tension |
+| 5 | **PERSPECTIVE_SHIFT** | Cuối chapter: "Nhưng nếu nhìn từ góc X..." → chuyển lens | Narrative pivot / rehook |
+
+> [!IMPORTANT]
+> - Hai chapters liên tiếp KHÔNG ĐƯỢC dùng cùng closing type
+> - EVIDENCE_CLIFF chỉ dùng trong DEEP_DIVE (cần chapter tiếp để resolve)
+> - VERDICT chapter dùng closing_type = `"echo"` (callback về hook)
+> - Mỗi chapter RHETORICAL_QUESTIONS phải dùng **format câu hỏi KHÁC** chapter trước
+
+---
+
+## Section 4: HOOK DESIGN
+
+### 4.1 Opening Methods (4 types)
+
+| Method | Khi nào dùng | Ví dụ |
+|--------|-------------|-------|
+| **PARADOX DROP** | Khi mystery có 1 fact IMPOSSIBLE nhưng TRUE | "Năm 1513, Piri Reis vẽ bản đồ bờ biển Nam Cực — 300 năm trước khi lục địa này được phát hiện. Bờ biển đó nằm dưới 1.6km băng." |
+| **CRIME SCENE** | Khi có 1 location/artifact cụ thể, vivid | "Năm 1986, khi nhóm khảo cổ mở cánh cửa hầm mộ, không khí bên trong bốc ra... và cỏ bên ngoài chết trong vòng 3 giờ." |
+| **IMPOSSIBLE QUESTION** | Khi central mystery = 1 câu hỏi clear | "Làm sao 1 nền văn minh 4,500 năm trước cắt granite với độ chính xác 0.002 inch — bằng với máy CNC hiện đại?" |
+| **TIMELINE BREAK** | Khi evidence phá vỡ chronology | "Artifact này carbon-dated 12,000 năm tuổi. Nhưng nền văn minh tạo ra nó, theo sách giáo khoa, chưa tồn tại." |
+
+### 4.2 Hook Rules
+- **60 giây đầu**: Must establish THE CENTRAL PARADOX — viewer phải hiểu TẠI SAO nên ở lại
+- **KHÔNG** phân tích sâu — chỉ present the impossible/shocking fact
+- **OPEN LOOP**: Đặt 1 câu hỏi/promise sẽ trả lời ở cuối video
+- **MYSTERY COUNT**: Nếu hook mention scope ("bí ẩn 4000 năm tuổi này có 3 lớp"), phải chính xác
+- **TONE**: Shock đầu tiên → curiosity thứ hai → "tôi PHẢI biết"
+
+---
+
+## Section 5: END DESIGN
+
+### 5.1 End Elements (mandatory)
+
+| Element | Mô tả | Rule |
+|---------|--------|------|
+| **EVIDENCE SUMMARY** | Phân loại: Confirmed / Probable / Unknown | 3 tier system from blueprint evidence |
+| **THEORY ASSESSMENT** | Đánh giá từng theory: evidence strength | KHÔNG rating số — dùng ngôn ngữ: "strongly supported", "possible but unproven", "lacks evidence" |
+| **CALLBACK** | Quay về hình ảnh/fact hook → giờ audience hiểu sâu hơn | "Bản đồ Piri Reis vẫn nằm trong bảo tàng Topkapi. Nhưng giờ bạn biết — nó KHÔNG CHỈ là 1 bản đồ." |
+| **GRAND THESIS** | 1-2 câu: mystery này nói gì về [history/knowledge/humanity]? | Big picture, not just the mystery itself |
+| **OPEN QUESTION** | 1 câu hỏi audience THỰC SỰ chưa trả lời được | Must be genuinely unresolved |
+| **CTA** | Question → comments + subscribe | Natural, integrated into Grand Thesis |
+
+### 5.2 End Anti-Patterns
+- ❌ NEVER tuyên bố kết luận tuyệt đối ("đây chính là sự thật")
+- ❌ NEVER tease video tiếp theo
+- ❌ NEVER list lại tất cả evidence (đã làm ở body)
+- ❌ NEVER dùng "Tóm lại..." hoặc "Kết luận..." (signal ending → drop-off)
+
+---
+
+## Section 6: RETENTION ENGINEERING (10-15 phút)
+
+### 6.1 Minute-by-Minute Pacing Map (12-minute video, 8 chapters)
+
+| Time | Chapter | Phase | Structure | Retention Mechanism |
+|------|---------|-------|-----------|---------------------|
+| 0:00-0:45 | Hook | HOOK | — | **Paradox Drop** — impossible fact |
+| 0:45-2:00 | Foundation | FOUNDATION | evidence_excavation | **False confidence** — audience thinks they understand |
+| 2:00-3:30 | Deep Dive 1 | DEEP_DIVE | counter_investigation | **Steelman + attack** — mainstream cracks |
+| 3:30-5:00 | Deep Dive 2 | DEEP_DIVE | human_anchor | **Story shift** — data → human → reset attention |
+| 5:00-6:30 | Deep Dive 3 | DEEP_DIVE | timeline_reconstruction | **Visual contrast** — 2 timelines side by side |
+| 6:30-8:30 | Confrontation | CONFRONTATION | credibility_trial | **Jury mode** — audience chooses sides |
+| 8:30-10:00 | Deep Resolution | DEEP_DIVE | theory_building | **Synthesis** — connecting ALL dots |
+| 10:00-12:00 | Verdict | VERDICT | verdict_synthesis | **Callback + open question** — lingers |
+
+### 6.2 Anti-Drop-Off Mechanisms
+
+| Mechanism | Where | How |
+|-----------|-------|-----|
+| **Open Loop** | END of every chapter | Tease 1 evidence/revelation chưa giải thích → resolve ở ch tiếp |
+| **Evidence Stacking** | Throughout DEEP_DIVE | Mỗi chapter THÊM trọng lượng → argument feels like it's building |
+| **Narrative Pivot** | Chapter 4-5 (mid-video) | Shift từ data → human story HOẶC ngược lại → reset attention |
+| **Midpoint Revelation** | Chapter 5-6 | MỘT fact thay đổi cách hiểu TOÀN BỘ case → "wait, WHAT?" |
+| **Rehook** | START of every chapter (after ch.1) | Câu đầu tiên phải relate to previous chapter's open loop |
+| **Small Payoffs** | Every 2-3 chapters | Close 1 smaller loop → give audience satisfaction → họ tin tưởng ở lại cho bigger payoff |
+
+### 6.3 Open Loop Protocol
+
+```
+Chapter N ending:
+  "...nhưng khi phân tích kỹ hơn bản đồ này, người ta phát hiện 
+   1 chi tiết mà — đến giờ — không chuyên gia nào giải thích được."
+   [OPEN LOOP: chi tiết gì?]
+
+Chapter N+1 opening:
+  "Chi tiết đó nằm ở góc trái phía dưới bản đồ."
+  [RESOLVE loop immediately → audience feels rewarded → trust builds]
+  [...content...]
+  "Và điều này dẫn đến 1 câu hỏi khó chịu hơn..."
+  [NEW OPEN LOOP]
+```
+
+> [!IMPORTANT]
+> **KHÔNG BAO GIỜ** resolve loop rồi mở loop mới trong CÙNG PARAGRAPH. Phải có content giữa. Nếu làm liên tục → audience cảm thấy bị manipulated.
+
+---
+
+## Section 7: STEELMAN PROTOCOL
+
+Đây là rule quan trọng nhất cho thể loại conspiracy/alternative history:
+
+### 7.1 Rules
+
+1. **ALWAYS steelman mainstream** — represent official theory ở dạng MẠNH NHẤT
+2. **Name the experts** — "Mark Lehner, PhD, ĐH Harvard, 40 năm nghiên cứu" — không "các chuyên gia cho rằng..."
+3. **Acknowledge what mainstream DOES explain** — fair credit before criticism
+4. **Attack with EVIDENCE, not rhetoric** — mỗi counter-point = specific data
+5. **Mark credibility** — "[transcript]" vs "[ai_knowledge]" source tagging
+6. **NEVER** declare winners — present evidence, let audience evaluate
+7. **Rate arguments, not people** — "Argument X lacks supporting evidence" not "Expert Y is wrong"
+
+### 7.2 Alternative History / Conspiracy Sub-genre Rules
+
+Khi xử lý "lịch sử thay thế", "giả thuyết", "thuyết âm mưu có cơ sở":
+
+1. **Distinguish levels**: Peer-reviewed research > Expert opinion > Circumstantial evidence > Speculation
+2. **NO "Just Asking Questions"** — if you raise a question, you MUST present evidence on BOTH sides
+3. **Flag speculation explicitly**: "Đây là giả thuyết chưa được kiểm chứng, nhưng based on..."
+4. **Physical evidence > Testimony > Theory**: Always prioritize physical/measurable evidence
+5. **Cho audience tool, không cho kết luận**: "Dựa trên evidence X, Y, Z — giả thuyết A strong hơn B ở [specific dimension]"
+
+---
+
+## Section 8: VOCABULARY & LANGUAGE RULES
+
+### 8.1 Vocabulary Ban (HARD — ZERO TOLERANCE)
+
+| BANNED | WHY | THAY THẾ |
+|--------|-----|----------|
+| "cuộc điều tra" / "investigation" | Framework terminology | hành trình, quá trình tìm hiểu, lần theo dấu vết |
+| "hồ sơ" / "case file" / "dossier" | Framework terminology | câu chuyện, tài liệu, ghi chép |
+| "Tóm lại..." / "In conclusion..." | Signal ending → drop-off | (không dùng, chuyển thẳng vào verdict) |
+| "Như đã đề cập..." / "As mentioned..." | Recap → boring | (reference bằng content, không meta-reference) |
+| "Chúng ta sẽ tìm hiểu..." / "We'll explore..." | Promise without payoff feel | (directly present the thing) |
+
+### 8.2 Second-Person (YOU) Rules
+
+Dùng "bạn/you" CHỈ KHI:
+- **VIVID RECONSTRUCTION**: "Bạn đứng trước cánh cửa hầm mộ — ánh đuốc hắt bóng xuống bậc thang đá ẩm..."
+- **THOUGHT EXPERIMENT**: "Hãy tưởng tượng bạn là nhà khảo cổ mở chiếc hộp đó..."
+- **IMPOSSIBLE SCALE**: "Nhìn lên — 2.3 triệu khối đá xếp chồng, mỗi khối nặng hơn chiếc xe của bạn..."
+
+KHÔNG dùng khi: analysis, data presentation, theory comparison → 3rd person omniscient
+
+---
+
+## Section 9: ENRICHED CHAPTER SCHEMA
+
+```json
+{
+  "chapter_number": 1,
+  "chapter_type": "hook | body | end",
+  "title": "Evocative, content-specific title",
+  "framework_step": "Step from framework",
+  "summary": "2-3 sentences",
+  
+  "investigation_phase": "foundation | deep_dive | confrontation | verdict",
+  "evidence_layer": "What layer of the mystery this chapter peels (1 sentence)",
+  "evidence_type": "physical | documentary | testimonial | circumstantial | scientific",
+  "key_evidence": ["Specific evidence 1 from blueprint", "Evidence 2"],
+  "theories_addressed": ["Theory 1", "Theory 2"],
+  "sources_featured": ["Expert/source name + credentials"],
+  "credibility_focus": "Which claim is evaluated for reliability",
+  
+  "open_loop_plant": "What question/tease is planted at chapter END",
+  "open_loop_resolve": "Which previous loop is resolved at chapter START (null for ch.1)",
+  "midpoint_revelation": "Only for ch ~halfway: the fact that changes everything (null otherwise)",
+  
+  "chapter_structure": "evidence_excavation | theory_building | counter_investigation | human_anchor | primary_source | timeline_reconstruction | credibility_trial | verdict_synthesis",
+  "closing_type": "rhetorical_questions | cold_fact | evidence_cliff | impossibility_statement | perspective_shift",
+  
+  "pacing_texture": "analytical | sensory | adversarial | reflective",
+  "narrative_techniques": ["Technique 1", "Technique 2"],
+  "emotional_beat": "curiosity | doubt | shock | intellectual_awe | dread | resolution | empathy",
+  "callback_to": "Reference to previous chapter element",
+  "foreshadow": "Hint at what's coming",
+  "ends_with": "Transition/cliffhanger text",
+  "word_count_target": 400
+}
+```
+
+---
+
+## Section 10: REQUIRED ELEMENTS (Body chapters)
+
+| Tag | Content | BAD example | GOOD example |
+|-----|---------|-------------|--------------|
+| **[EVIDENCE]** | Specific data from blueprint | "Có nhiều bằng chứng" | "Mẫu đá basalt từ Puma Punku, phân tích quang phổ 2019, cho thấy vết cắt với độ chính xác 0.003mm — tương đương máy laser công nghiệp" |
+| **[MAINSTREAM]** | Official theory (STEELMANNED) | "Các nhà khoa học cho rằng..." | "Mark Lehner, 40 năm nghiên cứu tại Giza, PhD Harvard, 2008: hệ thống ramp nội bộ dài 1.6km, sử dụng lực kéo 20 người/khối..." |
+| **[COUNTER]** | Evidence AGAINST mainstream | "Nhưng có ý kiến khác" | "Nhưng ramp 1.6km cần 3 triệu m³ đất — nhiều hơn thể tích kim tự tháp. Không có dấu vết ramp nào được phát hiện bởi GPR scan 2017." |
+| **[SOURCE]** | Expert + credentials + bias | "Theo 1 chuyên gia" | "Robert Schoch, PhD Địa chất ĐH Boston — lưu ý: kết luận bị phản bác bởi 83% Egyptologists trong khảo sát ARCE 2020" |
+| **[IMPOSSIBILITY]** | What CANNOT be explained | "Vẫn chưa rõ" | "20 tấn granite từ mỏ đá Aswan, 800km phía nam — bằng cách nào, khi bánh xe chưa được sử dụng ở Ai Cập thời đó?" |
+
+---
+
+## Section 11: IMPLEMENTATION PLAN
+
+### 11.1 Files to Create (4 prompt files)
+
+| # | File | Est. Size | Source Reference |
+|---|------|----------|------------------|
+| 1 | `system_narrative_outline_mystery.txt` | ~12KB | Battle outline schema + Review mystery outline logic + Investigation Arc |
+| 2 | `system_narrative_audit_mystery.txt` | ~4KB | Battle audit pattern + mystery-specific checks |
+| 3 | `system_narrative_write_mystery.txt` | ~14KB | Battle writer (7 structures) + Review mystery writer + Steelman protocol |
+| 4 | `system_narrative_review_mystery.txt` | ~5KB | Battle review + open loop consistency checks |
+
+### 11.2 Blueprint — KHÔNG cần tạo mới
+
+`system_extract_blueprint_mystery.txt` đã tồn tại. Logic differences:
+- Review: input text chứa 7-12 mysteries → blueprint có 7-12 `product_evaluation` entries
+- Narrative: input text chứa 1 mystery → blueprint có 1 `product_evaluation` entry (with richer detail)
+- Blueprint extractor tự adapt vì nó extract "whatever is in the text"
+
+### 11.3 Code Changes (rewriter.py)
+
+Thêm vào `_NICHE_PROMPT_MAP` cho 4 step keys:
+
+```python
+# Keywords cho niche "mystery" trong narrative pipeline
+"narrative_outline": {
+    ...existing battle entries...,
+    "mystery":       "system_narrative_outline_mystery.txt",
+    "bí ẩn":         "system_narrative_outline_mystery.txt",
+    "enigma":        "system_narrative_outline_mystery.txt",
+    "conspiracy":    "system_narrative_outline_mystery.txt",
+    "âm mưu":        "system_narrative_outline_mystery.txt",
+    "giả thuyết":    "system_narrative_outline_mystery.txt",
+    "alternative":   "system_narrative_outline_mystery.txt",
+    "thay thế":      "system_narrative_outline_mystery.txt",
+},
+# ... same pattern for audit, writer, review
+```
+
+### 11.4 Verification Plan
+
+1. **Syntax check**: `ast.parse()` on rewriter.py
+2. **Dispatch test**: `_get_niche_prompt("narrative_outline", "bí ẩn lịch sử")` → correct file
+3. **Prompt completeness**: Verify all 7 structures mentioned in outline appear in writer
+4. **Schema consistency**: Verify all fields in outline schema have replacements in writer
+5. **Anti-double-transition**: Verify writer has TRANSITIONS section
+6. **Open loop protocol**: Verify outline includes `open_loop_plant` / `open_loop_resolve` fields
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1: Credibility Rating Format**
+> Verdict chapter: hiện tại plan dùng ngôn ngữ ("strongly supported", "possible but unproven") thay vì số (7/10). Bạn muốn giữ format nào?
+
+> [!IMPORTANT]
+> **Q2: "Jigsaw" vs "Ball of Twine" Mode**
+> Research cho thấy 2 approach: **Ball of Twine** (linear investigation, A→B→C) vs **Jigsaw Puzzle** (out-of-order clues, audience pieces together). Plan hiện tại dùng hybrid — có muốn thêm field `investigation_style: "linear" | "jigsaw"` vào outline để LLM chọn?
+
+> [!IMPORTANT]
+> **Q3: Midpoint Revelation**
+> Plan yêu cầu 1 chapter (~giữa video) phải có "midpoint revelation" — 1 fact thay đổi cách hiểu toàn bộ case. Bạn có muốn enforce cứng rule này, hay để optional?

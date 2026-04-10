@@ -1,0 +1,15 @@
+# Mystery History Pipeline v2
+
+## Đã hoàn thành (v1)
+- [x] 7 prompt files cho niche routing
+- [x] Code routing trong rewriter.py + rewrite_style_tab.py
+
+## Nâng cấp v2 — Prompt Quality
+- [x] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) — Macro Tone Arc + assign structure/closing/pov_hook
+- [x] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) — 7 Structures + 4 Closings + 2nd-person + Feynman + Pivot blacklist + Echo outro
+- [x] [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt) — anti-comparison rules
+- [x] [system_review_cross_chapter_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter_mystery.txt) — 4 new checks (pivot, closing, 2nd-person, vocab)
+- [x] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) — 3 new .replace() for tone_slot/chapter_structure/closing_type
+- [x] `Review_bí_ẩn_lịch_sử.json` — transitions + checklist updated for 4 closing types + Echo outro
+- [x] Compile check ✓
+- [x] JSON validity check ✓

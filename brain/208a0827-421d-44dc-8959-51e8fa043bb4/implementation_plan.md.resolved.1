@@ -1,0 +1,139 @@
+# SRT-to-Prompt Converter — Redesigned Plan
+
+Ứng dụng Python chuyển đổi file SRT thành prompt tạo ảnh/video qua API. Thiết kế **dashboard single-view** theo tham chiếu AZ-Labs V3.9.
+
+## UI Layout — Dashboard Style
+
+> [!IMPORTANT]
+> Thay vì 5 tabs rời rạc, gộp thành **1 giao diện chính** với các section + **Settings popup** riêng.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  SRT Prompt Generator v1.0     [Cheap Keys] [Restart Tool] [⚙ Settings] │  ← Header bar
+├─────────────────────────────────┬────────────────────────────┤
+│ 🎨 Configuration               │  ⏱ Gen SRT:  [5 sec/prompt] ▲▼│
+│ Style: [Cinematic Default    ▼] │  📁 Output:  [path...]    [...] │
+│  Chọn 1 style để xem prompt... │  🔄 Tier:    [Flash       ▼]  │
+│ Mode:  [Character Mode     ▼]  │  🧵 Threads: [2            ] ▲▼│
+│ 🖼 Ref Image: [path or URL...] │          [💾 Save Config]      │
+├─────────────────────────────────┼────────────────────────────┤
+│ 📂 Projects                    │ 📄 SRT Preview              │
+│ [Scan Folder][+Project][Clear]  │                              │
+│ ┌──────────────────────────┐   │  Select an SRT file to       │
+│ │ Name │ Style │Status│Prog│   │  preview...                  │
+│ │      │       │      │    │   │                              │
+│ └──────────────────────────┘   │                              │
+│ [Rename][▶][⏸][Remove]         │                              │
+│ [Add SRT][Style][All]           │                              │
+├─────────────────────────────────┴────────────────────────────┤
+│ 🚀 Actions                                                    │
+│ [▶ Process Selected Project]      [🔥 Process ALL Projects]   │
+│ [🔄 Retry Failed] [⏹ Stop]                    [📂 Open Output]│
+├──────────────────────────────────────────────────────────────┤
+│ 📋 Processing Log                                             │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │                                                          │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│ [🗑 Clear Log] [📋 Copy Log]                          Ready   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Settings Popup Dialog** (mở khi nhấn ⚙):
+- Appearance → Theme (Light/Dark)
+- Primary API (API Key, Base URL, Model Name)
+- Dual API — Multi-Endpoint Router (thêm/sửa/xóa endpoints)
+- Dependencies (check trạng thái packages)
+- [Save] [Cancel]
+
+---
+
+## Project Structure
+
+```
+1.Prompt_Image/
+├── main.py                     # Entry point + main window
+├── config.json                 # App settings (output, threads, etc.)
+├── api_keys.json               # API keys riêng biệt
+├── requirements.txt
+├── styles/                     # Style preset files
+│   ├── Cinematic.txt
+│   └── Documentary.txt
+├── core/                       # Core logic
+│   ├── __init__.py
+│   ├── srt_parser.py           # Parse & group SRT segments
+│   ├── api_client.py           # Multi-endpoint API + fallback
+│   ├── prompt_generator.py     # Generate prompts from SRT
+│   └── process_controller.py   # Start/Pause/Stop threading
+└── ui/                         # UI components
+    ├── __init__.py
+    ├── main_window.py           # Main dashboard layout
+    ├── settings_dialog.py       # Settings popup (API, Theme, Deps)
+    ├── config_section.py        # Configuration section (Style, Mode, etc.)
+    ├── projects_section.py      # Projects table + SRT actions
+    ├── srt_preview.py           # SRT Preview panel
+    ├── actions_section.py       # Action buttons (Process, Stop, etc.)
+    └── log_section.py           # Processing log + status bar
+```
+
+---
+
+## Proposed Changes
+
+### Core Modules
+
+#### [NEW] [srt_parser.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_parser.py)
+- Parse `.srt` → list `{index, start_time, end_time, text}`
+- `group_by_interval(segments, seconds)` — gom text theo khoảng thời gian chỉ định
+
+#### [NEW] [api_client.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py)
+- Class `APIClient` — multi-endpoint with auto-fallback (429 → next endpoint)
+- Load keys từ `api_keys.json`, hỗ trợ Flash Model + Pro Model
+- Rate limiting & retry logic
+
+#### [NEW] [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+- Nhận grouped segments + style content → gửi API → nhận prompt kết quả
+
+#### [NEW] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- Threading: `IDLE` → `RUNNING` → `PAUSED` / `STOPPED`
+- Callback system update progress + log
+
+---
+
+### UI Components
+
+#### [NEW] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+- CustomTkinter main window, header bar với Restart Tool + Settings button
+- Layout manager chia sections theo grid
+
+#### [NEW] [settings_dialog.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/settings_dialog.py)
+- Popup CTkToplevel — Appearance, Primary API, Multi-Endpoint Router, Dependencies
+- Endpoint cards: Base URL, API Key (masked), Flash Model, Pro Model
+- [Add Endpoint] [Reset Defaults] [Save] [Cancel]
+
+#### [NEW] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+- Style dropdown (auto-scan `/styles`), Mode dropdown
+- Gen SRT interval spinbox, Output folder picker, Tier, Threads
+
+#### [NEW] [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py)
+- Projects table (Name, Style, Status, Progress)
+- Buttons: Scan Folder, +Project, Clear All, Rename, Remove, Add SRT
+
+#### [NEW] [srt_preview.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/srt_preview.py)
+- Preview panel hiển thị nội dung SRT file được chọn
+
+#### [NEW] [actions_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/actions_section.py)
+- Process Selected / Process ALL / Retry Failed / Stop / Open Output
+
+#### [NEW] [log_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/log_section.py)
+- Processing log textbox + Clear Log, Copy Log + status bar "Ready"
+
+---
+
+## Verification Plan
+
+1. `pip install -r requirements.txt` → chạy `python main.py`
+2. Kiểm tra giao diện dashboard hiển thị đúng layout
+3. Mở Settings popup → nhập API config → Save/Load
+4. Load SRT file → preview + chỉnh interval
+5. Chọn Style → kiểm tra dropdown scan đúng thư mục
+6. Process → kiểm tra progress, pause, stop, log output

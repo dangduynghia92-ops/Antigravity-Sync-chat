@@ -1,0 +1,37 @@
+# Regroup Module — Task Checklist
+
+## Planning
+- [x] Thảo luận yêu cầu với user
+- [x] Viết implementation plan
+- [x] User review & approve plan
+
+## Implementation
+
+### Core Logic
+- [x] Tạo [core/regroup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py) — scan, parse summaries, build chapter map
+- [x] Tạo [prompts/system_regroup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup.txt) — prompt phân loại
+- [x] Tạo [niches/](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#32-35) folder + file mẫu `bí_ẩn_lịch_sử.txt`
+- [x] Logic gọi AI phân loại (batch nếu >100 summaries)
+- [x] Logic copy files + tạo folder nhóm + `_GROUP_INFO.json`
+- [x] `_USED_TRACKER.json` — tracking chapters đã dùng
+
+### UI
+- [x] Tạo [ui/regroup_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py) — giao diện tab Regroup
+- [x] Thêm tab "Regroup" vào [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- [x] Dropdown chủ đề lớn + checkbox ngách
+- [x] Bảng kết quả phân loại với checkboxes
+- [x] Range spinbox (min-max chapters per group)
+- [x] Nút: Scan, AI Suggest, Copy to Group
+- [x] Toggle "Ẩn chapters đã dùng"
+
+### Edge Cases
+- [x] Thiếu summary → cảnh báo
+- [x] Chapter thuộc nhiều ngách → cho phép
+- [x] Path không còn tồn tại → validate khi copy
+- [x] Hỗ trợ .txt + .md chapter files
+- [x] Skip regroup output folders khi scan
+
+## Verification
+- [x] Import test — compile OK
+- [ ] UI test — chạy app, kiểm tra tab
+- [ ] Functional test — scan, phân loại, copy (cần data thực tế)

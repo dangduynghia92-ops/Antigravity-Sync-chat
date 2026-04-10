@@ -1,0 +1,86 @@
+# Video Chapter Cutter Feature
+
+Thêm tab mới "✂ Video Cutter" cho phép cắt video YouTube thành từng chapter dựa trên file merge có sẵn hoặc tự download+split transcript.
+
+## Flow xử lý
+
+### Flow A: Có file merge (ưu tiên)
+```
+User dán YTB URL + add file merge
+  → Parse merge file → lấy timecodes từng chapter
+  → Download video (yt-dlp, best quality)
+  → ffmpeg cắt video theo timecodes
+  → Lưu: [thư mục chứa file merge]/video_chapters/
+        Ch_00_Introduction.mp4
+        Ch_01_BNT_APC9_Pro.mp4
+        ...
+```
+
+### Flow B: Không có file merge (cảnh báo)
+```
+User dán YTB URL (không add file merge)
+  → Hiện dialog cảnh báo: "Không tìm thấy file merge, tiếp tục?"
+  → Nếu Yes:
+      → Download transcript (yt-dlp --write-sub)
+      → Auto classify (top_list/narrative)
+      → AI split chapters (dùng pipeline SRT Chapter tab)
+      → Download video
+      → ffmpeg cắt theo chapters
+      → Lưu: C:/Downloads/video_chapters/<video_title>/
+            Ch_00_xxx.mp4
+            Ch_01_xxx.mp4
+```
+
+## Proposed Changes
+
+### Core module: Video Cutter
+
+#### [NEW] [video_cutter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/video_cutter.py)
+
+Functions:
+- `parse_merge_timecodes(merge_path)` → `[{number, title, start_sec, end_sec}]`
+  - Parse file merge, lấy [(mm:ss)](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#30-34) đầu tiên và cuối cùng của mỗi chapter → start/end seconds
+- `download_video(url, output_dir)` → path to downloaded video
+  - Dùng `yt-dlp` via subprocess
+- `download_transcript(url, output_dir)` → path to SRT file
+  - Dùng `yt-dlp --write-sub --sub-lang en --skip-download`
+- `cut_video(video_path, chapters, output_dir)` → list of output files
+  - Dùng `ffmpeg -ss START -to END -c copy` (không re-encode, cắt nhanh)
+  - Tên file: `Ch_00_Title_here.mp4`
+
+---
+
+### UI: Video Cutter Tab
+
+#### [NEW] [video_cutter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py)
+
+Layout:
+```
+┌─────────────────────────────────────────────┐
+│ YouTube URL:  [________________________] 📋 │
+│ Merge File:   [________________________] 📂 │
+│                                             │
+│ [▶ Start Cutting]           [Open Output]   │
+│                                             │
+│ ┌─ Progress Log ──────────────────────────┐ │
+│ │ ...                                     │ │
+│ └─────────────────────────────────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+Inputs:
+- **YouTube URL**: text field + paste button
+- **Merge File**: file browser (filter: `*.txt`)
+
+---
+
+### Main Window
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- Import + add `VideoCutterTab` as new tab "✂ Video Cutter"
+
+## Verification Plan
+
+### Manual Verification
+- Paste YouTube URL + add merge file → verify video cuts match chapters
+- Paste YouTube URL without merge file → verify warning dialog → transcript download + split + cut

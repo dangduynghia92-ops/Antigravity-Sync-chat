@@ -1,0 +1,26 @@
+# Build Review Trang Thiết Bị Quân Sự Mode
+
+## Style Guide
+- [x] Style Guide JSON — 8 frameworks, core_rules, openings, closings, techniques
+- [x] `evaluation_focus` per framework — which criteria to focus/skip
+
+## Prompts
+- [x] [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt) — 7 evaluation criteria per product
+- [x] [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt) — score & rank frameworks
+- [x] [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt) — data completeness audit
+- [x] [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — Hook/Body/End outline
+- [x] [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt) — chapter_type + evaluation_focus + CTA
+- [x] [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt) — fact check + unit conversion
+
+## Python Functions (rewriter.py)
+- [x] [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1140-1238) — updated for new prompt fields
+- [x] [recommend_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1465-1520) — scores all review frameworks
+- [x] [check_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1522-1574) — data completeness vs framework
+- [x] [convert_units()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1576-1703) — pure Python US/EU conversion
+- [x] [verify_facts()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1705-1757) — fact-check + unit check
+- [x] [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1759-1830) — outline with Hook/Body/End
+- [x] UI imports updated in [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+## Pending
+- [ ] Wire functions into Renew mode worker thread
+- [ ] Test with real script

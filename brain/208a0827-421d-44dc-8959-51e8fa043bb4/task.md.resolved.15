@@ -1,0 +1,22 @@
+# PyQt6 Migration
+
+## Phase 1: Foundation
+- [ ] Install PyQt6
+- [ ] [theme.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/theme.py) — QSS dark theme stylesheet
+- [ ] [log_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/log_section.py) — QTextEdit log widget
+- [ ] [searchable_combo.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/searchable_combo.py) — QComboBox + QCompleter
+- [ ] [srt_preview.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/srt_preview.py) — SRT preview panel
+
+## Phase 2: Section Components
+- [ ] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py) — Config bar
+- [ ] [projects_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/projects_section.py) — Projects table (QTableWidget)
+- [ ] [actions_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/actions_section.py) — Action buttons
+- [ ] [settings_dialog.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/settings_dialog.py) — Settings QDialog
+
+## Phase 3: Tab Pages
+- [ ] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py) — Product tab
+
+## Phase 4: Main Window
+- [ ] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py) — QMainWindow + QTabWidget
+- [ ] [main.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/main.py) — QApplication entry point
+- [ ] Final verification

@@ -1,0 +1,5 @@
+# UI Fixes Phase 3
+
+- [/] Fix tab switch lag — use grid + tkraise instead of pack/pack_forget
+- [ ] Add dropdown arrow ▼ button to SearchableCombo
+- [ ] Reorganize config_section layout — use full width

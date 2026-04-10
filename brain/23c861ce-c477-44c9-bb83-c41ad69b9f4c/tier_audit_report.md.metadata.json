@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Complete audit of all 52 APIClient calls across 7 tabs. Lists all 42 user-selected calls grouped by tab with step descriptions, and 10 remaining hardcoded calls. Provides recommendations for which user-selected calls should default to flash. TTS tab has been changed to user-selected.",
+  "updatedAt": "2026-03-27T13:33:23.519518200Z",
+  "version": "1"
+}

@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Walkthrough documenting the implementation of the Narrative Rewrite Pipeline feature for the Rewrite tab. Covers new prompts, core functions, UI changes, and versioned output structure.",
+  "updatedAt":  "2026-03-01T07:14:29.530454500Z",
+  "version":  "2"
+}

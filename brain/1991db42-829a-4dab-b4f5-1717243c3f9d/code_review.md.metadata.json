@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive review of the Script Split Chapter tool covering: 3 bugs found (duplicate timecode handling, retry missing chapter_count, duplicate filter), 3 potential issues (timeout, empty response, memory), and 7 improvement ideas (preview before save, chapter guide UI, export formats, etc.).",
+  "updatedAt": "2026-02-27T03:16:21.239566600Z"
+}

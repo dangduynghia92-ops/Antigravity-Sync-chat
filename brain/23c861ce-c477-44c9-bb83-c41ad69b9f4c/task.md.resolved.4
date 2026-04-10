@@ -1,0 +1,17 @@
+# Upgrade Mystery Blueprint + Tách Prompt Riêng Theo Niche
+
+## Phase 1: Mystery Blueprint Upgrade
+- [x] Add 5 structured categories to [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+- [x] Remove 3 deprecated fields (`ranking_criteria`, `original_order`, `thesis_angle`)
+- [x] Update [system_reality_check_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_mystery.txt) for new fields
+- [x] Update [system_check_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_mystery.txt) for new fields
+
+## Phase 2: Tách Prompt Riêng
+- [x] Create 6 firearms-specific prompts (copy from shared)
+- [x] Create 6 military-specific prompts (copy from shared)
+- [x] Add `_NICHE_PROMPT_MAP` + [_get_niche_prompt()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#83-100) to [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [x] Refactor 5 dispatch functions from `_is_mystery` to [_get_niche_prompt()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#83-100)
+- [x] Add [niche](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#83-100) param to [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2758-2892), unify callsite
+- [x] Remove [create_mystery_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#2621-2756) import from UI
+- [x] Delete 6 old shared prompts
+- [x] Verify: no broken references to deleted prompts

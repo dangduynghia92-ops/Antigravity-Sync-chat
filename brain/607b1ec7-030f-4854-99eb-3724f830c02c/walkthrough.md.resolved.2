@@ -1,0 +1,55 @@
+# Pipeline Redesign — Walkthrough
+
+## Changes Made
+
+### 1. Separated Visual Bible + Character Bible
+**Files**: [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py), [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+
+- [visual_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#49-64) and [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#679-704) are now **independent variables**
+- Character Pipeline runs first (when Character Sheet ON)
+- Visual Bible runs after (when Historical ON), excluding characters that have sheets
+- Both passed separately to prompt generator
+
+### 2. Style-Aware Visual Bible
+**Files**: [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py), [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt)
+
+- [generate_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#74-176) now accepts [style_content](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#45-55)
+- Style prepended to system prompt → Visual Bible descriptions adapted to chosen art style
+- Removed conflicting "do NOT include artistic style" instruction from prompt
+
+### 3. Removed Locations Duplication
+**File**: [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+
+- Removed Step 4 ([generate_locations](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#588-626)) from character pipeline
+- Removed [_locations.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/2.%20Mysteries%20Top%20list/3.%20Merge%20tao%20kich%20ban%20moi/001_Nh%E1%BB%AFng_B%C3%AD_M%E1%BA%ADt_%C4%90en_T%E1%BB%91i_C%E1%BB%A7a_Th%E1%BA%BF_Chi%E1%BA%BFn_II/tts/Test1/_locations.txt) output — already part of Visual Bible's KEY LOCATIONS section
+- Removed CIVILIAN from `group_order` (only PROTAGONIST, NAMED, MILITARY)
+
+### 4. JSON Output Format
+**File**: [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+
+When [character_bible](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#679-704) is present, AI outputs structured JSON:
+
+```json
+{
+  "scene": { "action", "era", "location" },
+  "characters": [
+    { "label", "ref_type": "cref/sref", "action", "uniform"... }
+  ],
+  "setting": { "architecture", "environment", "key_props" },
+  "atmosphere": { "lighting", "mood", "weather", "effects" },
+  "camera": { "shot", "angle", "focus" },
+  "flat_prompt": "complete text prompt"
+}
+```
+
+### 5. Updated Prompt Files
+
+| File | Change |
+|---|---|
+| [character_scan_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_scan_prompt.txt) | 3 groups only, max 10 characters |
+| [character_group_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) | MILITARY focus uniform+weapon |
+| [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) | Style adaptation, removed "no style" rule |
+
+## Verification
+- ✅ All module imports pass
+- ✅ No breaking changes to existing flow (non-character-sheet mode unchanged)

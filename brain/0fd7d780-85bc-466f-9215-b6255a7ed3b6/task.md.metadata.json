@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_TASK",
+  "summary": "Checklist for renaming language codes to full names, creating language-aware niche rules, fixing language mixing, and updating UI/code.",
+  "updatedAt": "2026-03-14T13:28:50.765005300Z",
+  "version": "3"
+}

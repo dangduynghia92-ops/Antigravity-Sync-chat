@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Comprehensive audit of hook/intro chapter instructions across all 3 narrative niches (biography, battle, mystery). Cross-references writer prompts, style JSON framework-level hook definitions, and outline prompt rules. Identifies inconsistencies: biography has detailed 3-part structure but conflicts with style JSON, battle has minimal rules, mystery delegates entirely to style JSON. Proposes unified hook architecture.",
+  "updatedAt":  "2026-04-05T13:44:27.199906700Z",
+  "requestFeedback":  true
+}

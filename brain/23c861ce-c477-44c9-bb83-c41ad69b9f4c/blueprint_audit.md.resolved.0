@@ -1,0 +1,134 @@
+# Audit: Blueprint Extraction — Mystery vs Battle
+
+## TL;DR
+
+Mystery blueprint **thiếu nghiêm trọng** so với Battle blueprint. Battle có **12 category** chuyên biệt với schema cụ thể, trong khi Mystery chỉ có **4 category** và dồn tất cả vào 1 mảng `detailed_facts` phẳng, không có cấu trúc.
+
+---
+
+## 1. So sánh quy mô
+
+| Metric | Battle (Narrative) | Mystery (Top/List) | Review (Top/List) |
+|---|---|---|---|
+| File size | 8,427 bytes | 6,692 bytes | 6,240 bytes |
+| Lines | 168 | 94 | 98 |
+| Data categories | **12** | **4** | **5** |
+| JSON schema fields | ~40+ nested | ~12 flat | ~14 flat |
+| Dedicated enrichment prompt | ✅ [system_enrich_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_battle.txt) | ❌ None | ❌ None |
+
+---
+
+## 2. Field-by-Field Gap Matrix
+
+### ✅ Có trong Mystery Blueprint
+
+| Category | Mystery Field | Notes |
+|---|---|---|
+| Core Topic | `core_topic` | Tương đương battle |
+| Per-Mystery Data | `product_evaluation[]` | Chứa `key_specs`, `detailed_facts`, `mainstream_theory`, `counter_evidence`, `named_sources` |
+| Ordering | `ranking_criteria`, `original_order`, `thesis_angle` | Tương đương |
+| Key Claims | `key_claims` | Tương đương |
+| Source Tagging | `{fact, source}` format | Battle **KHÔNG** có — mystery ưu việt hơn |
+| Comparisons | `comparisons` | Tương đương review |
+
+### ❌ Thiếu trong Mystery Blueprint — Battle có nhưng Mystery KHÔNG
+
+| # | Battle Category | Tại sao Mystery CẦN | Impact nếu thiếu |
+|---|---|---|---|
+| 1 | **`political_context`** — factions, strategic interests, internal conflicts, funding, catalyst | Mystery liên quan sâu đến bối cảnh chính trị: đế chế, hội kín, âm mưu chính phủ, chiến tranh bí mật | Writer phải tự bịa bối cảnh → thiếu chiều sâu |
+| 2 | **`commanders`** / Historical Figures — name, faction, rank, background, key decisions, fate | Mystery có nhiều nhân vật lịch sử quan trọng (vua, nhà khoa học, thám hiểm gia, sát thủ...) | Nhân vật bị flatten thành 1 dòng fact → mất depth |
+| 3 | **`battle_phases`** / Mystery Phases — distinct phases with location, actors, tactics, turning point | Mỗi mystery có các giai đoạn: phát hiện → điều tra → kết luận tranh cãi | Không có timeline structure → writer tự xây |
+| 4 | **`technology_and_weapons`** — how_it_works, strengths, weaknesses | Mystery thường liên quan đến công nghệ cổ đại (Greek Fire, Antikythera, Damascus steel...) | Writer thiếu chi tiết kỹ thuật → mô tả sơ sài |
+| 5 | **`geography`** — terrain, weather, strategic positions, distances | Geography là KEY cho mystery: vị trí đền thờ, khoảng cách bất khả thi, địa hình bí ẩn | Lost context cho "core impossibility" |
+| 6 | **`narrative_moments`** — physical/sensory details per phase | Writer prompt yêu cầu 2nd-person immersion ("You brush away the sand...") nhưng blueprint KHÔNG cung cấp raw sensory data | Writer phải bịa sensory details → inconsistent |
+| 7 | **`emotional_drivers`** — emotion, cause, manifestation | Mystery cần emotional depth: fear of the unknown, obsession, desperation | Writer thiếu emotional anchor |
+| 8 | **`must_include`** — critical details, ironies, powerful statistics | Mỗi mystery có facts quá powerful để bỏ qua | Risk of missing the "wow" moment |
+| 9 | **`arguments_and_legacy`** — claim, evidence_for, evidence_against | Mystery blueprint CÓ `mainstream_theory` + `counter_evidence` nhưng **THIẾU** structured debate format | Debate structure bị flatten |
+
+---
+
+## 3. Vấn đề cấu trúc: "Flat Facts" vs "Structured Data"
+
+### Battle Blueprint (Structured)
+```json
+{
+  "commanders": [
+    {
+      "name": "Themistocles",
+      "faction": "Greek Alliance",
+      "rank": "Strategos of Athens",
+      "background": "Rose from non-aristocratic family...",
+      "key_decisions": "Lured Persians into narrow strait...",
+      "fate": "Exiled by Athens, died in Persian service"
+    }
+  ],
+  "geography": {
+    "terrain": ["Narrow strait ~1km wide limited fleet maneuver"],
+    "strategic_positions": ["Psyttaleia island - trapped Persian forces"]
+  }
+}
+```
+
+### Mystery Blueprint (Flat)
+```json
+{
+  "detailed_facts": [
+    {"fact": "Themistocles lured Persians into narrow strait", "source": "transcript"},
+    {"fact": "Strait was approximately 1km wide", "source": "transcript"},
+    {"fact": "Themistocles was exiled by Athens", "source": "transcript"}
+  ]
+}
+```
+
+> [!WARNING]
+> Tất cả data về một nhân vật bị rải rác trong `detailed_facts`, không có structure. Writer phải tự ghép lại — dễ miss data, khó build coherent character arc.
+
+---
+
+## 4. Downstream Impact — Writer Prompt cần gì nhưng Blueprint KHÔNG cung cấp
+
+Writer prompt [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) yêu cầu:
+
+| Writer Requirement | Blueprint cung cấp? | Gap |
+|---|---|---|
+| `[EVIDENCE]` — Core data with authority citations | ⚠️ Partial — `named_sources` flat list, `detailed_facts` unstructured | Thiếu mapping: fact → source |
+| `[MAINSTREAM]` — Present official theory FAIRLY | ✅ `mainstream_theory` field | OK |
+| `[COUNTER]` — Specific counter-evidence | ✅ `counter_evidence` list | OK nhưng thiếu context |
+| 2nd-person immersion — sensory details | ❌ **Không có** `narrative_moments` | Writer phải bịa hoàn toàn |
+| Chapter structure execution — e.g. "The Detective Trail" needs modern investigation → ancient connection | ❌ Không có phase/timeline | Writer thiếu raw material |
+| Feynman technique — everyday analogies for technical terms | ❌ Không có `technology` với `how_it_works` | Technical details buried in flat list |
+| `core_impossibility` — the ONE thing mainstream can't explain | ⚠️ Có trong outline, data từ `counter_evidence` | Thiếu structured `arguments_and_legacy` |
+
+---
+
+## 5. So sánh với Standard Review Blueprint
+
+Standard Review ([system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt)) cũng đơn giản tương tự Mystery, nhưng nó **phù hợp** với niche review vì:
+- Product specs → `key_specs` đủ chi tiết
+- Product facts → `detailed_facts` phù hợp cho dữ liệu bảng spec
+- `benchmark` field → so sánh rõ ràng
+
+**Mystery khác biệt** vì mỗi mystery subject phức tạp hơn product review rất nhiều:
+- Mystery = Nhân vật + Địa lý + Timeline + Bằng chứng + Lý thuyết + Tranh cãi học thuật
+- Product = Specs + Facts + Price → flat structure phù hợp
+
+---
+
+## 6. Kết luận & Kiến nghị
+
+> [!IMPORTANT]
+> Mystery blueprint đang dùng **cùng schema** với standard product review, nhưng mystery subject **phức tạp hơn nhiều**. Kết quả: writer phải đào bới data từ mảng `detailed_facts` phẳng, dễ miss thông tin, và phải tự bịa sensory/emotional/geographic details.
+
+### Nên bổ sung các category sau (tham khảo battle):
+
+| Priority | Category to Add | Tương đương Battle Field |
+|---|---|---|
+| 🔴 Critical | **`key_figures`** — tên, vai trò, background, key actions, fate | `commanders` |
+| 🔴 Critical | **`narrative_moments`** — sensory/physical details cho 2nd-person immersion | `narrative_moments` |
+| 🟡 High | **`historical_context`** — political backdrop, power dynamics, catalyst | `political_context` |
+| 🟡 High | **`geography_and_setting`** — locations, terrain, distances, scale indicators | `geography` |
+| 🟡 High | **`technology_and_artifacts`** — how_it_works, strengths, weaknesses | `technology_and_weapons` |
+| 🟢 Medium | **`emotional_drivers`** — fear, obsession, desperation + manifestation | `emotional_drivers` |
+| 🟢 Medium | **`must_include`** — critical details, powerful ironies/statistics | `must_include` |
+| 🟢 Medium | **`scholarly_debate`** — structured claim/evidence_for/evidence_against | `arguments_and_legacy` |
+| 🔵 Optional | **`mystery_timeline`** — chronological phases of the mystery | `battle_phases` |

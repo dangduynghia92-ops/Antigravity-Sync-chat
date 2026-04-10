@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Analysis of why the chapters feel disjointed despite having open_loop_chain in the outline. Identifies 3 root causes: open loop resolves not being executed, ends_with being duplicated as a separate paragraph, and abrupt topic jumps within chapters.",
+  "updatedAt":  "2026-04-02T00:43:01.208407600Z",
+  "requestFeedback":  true
+}

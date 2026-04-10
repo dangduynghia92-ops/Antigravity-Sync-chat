@@ -1,0 +1,198 @@
+# Blueprint Curation — Giải Pháp Nâng Chất Lượng New Content
+
+## Phân Tích Vấn Đề Gốc
+
+### Pipeline hiện tại
+```
+Phase 1: Flash draft → 3 sections (encyclopedic data dump)
+Phase 2: Pro expand → "ADD more, EXPAND, include ALL"  ← VẤN ĐỀ Ở ĐÂY
+```
+
+### Prompt Research hiện tại đang nói gì:
+- `"Include ALL known details. Do NOT skip any life event."` (section A)
+- `"Include ALL known items. Do NOT skip any."` (section B)  
+- `"ADD missing events... If a list has few items, ADD more"` (expand prompt)
+
+→ **Cả draft LẪN expand đều incentivize THÊM DATA**, không có chỉ dẫn nào về narrative value.
+
+### Prompt Writer có thể cứu không?
+
+Writer prompt (242 dòng) rất mạnh: 8 structures, 6 closing types, voice-over clarity. **NHƯNG**:
+
+```python
+# Line 2617 — blueprint 60K chars được inject VÀO system prompt
+system_prompt = template.replace("{blueprint}", blueprint_json)
+```
+
+Khi context window chứa 60K chars blueprint + 25K outline + 14K prompt = **~100K chars**, LLM bị:
+1. **Attention dilution** — khó focus vào chi tiết hay nhất khi có quá nhiều chi tiết
+2. **Selection paralysis** — không biết chọn quote/anecdote nào → chọn đều → viết dàn trải
+3. **Tone contamination** — ngôn ngữ encyclopedic từ blueprint "nhiễm" vào output
+
+> [!IMPORTANT]
+> **Prompt writer HƯỚNG DẪN kỹ thuật viết, nhưng KHÔNG CHỌN LỌC nguyên liệu.**
+> Writer phải xử lý raw data → vừa chọn lọc vừa viết = chia sẻ cognitive load.
+
+---
+
+## 3 Giải Pháp (từ nhẹ đến nặng)
+
+### Option A: Sửa Prompt Research + Expand (nhẹ nhất, ít thay đổi code)
+
+**Thay đổi**: Chỉ sửa prompt text, không sửa code pipeline.
+
+**Sửa `_build_research_section_prompt`:**
+```diff
+- "You are a biographical research specialist. Research '{topic}' and extract data."
++ "You are a biographical SCREENWRITER RESEARCHER. Research '{topic}' 
++  for a YouTube documentary script. Extract data that is NARRATIVELY COMPELLING."
+```
+
+**Sửa `_build_research_expand_prompt`:**
+```diff
+- "ADD missing events, facts..."
+- "EXPAND items that are too brief"
++ "CURATE the data for maximum dramatic impact:"
++ "1. For key_events: keep ONLY events with dramatic tension, 
++    irony, or emotional resonance. Remove encyclopedia-style entries."
++ "2. For key_quotes: find quotes that REVEAL CHARACTER, not famous quotes."
++ "3. For dual_nature: sharpen the CONTRAST — make each side more extreme."
++ "4. For turning_points: focus on MOMENTS, not periods."
++ "5. Remove generic entries. Keep max 5-8 items per list."
+```
+
+**Sửa `system_research_blueprint_biography.txt`:**
+```diff
+- "Include ALL known details. Do NOT skip ANY known fact."
++ "Include details that are NARRATIVELY COMPELLING for a documentary script.
++  Prefer: anecdotes, dramatic moments, ironic contrasts, specific dialogue.
++  Skip: generic encyclopedia facts, routine events, well-known trivia."
+```
+
+| Pros | Cons |
+|---|---|
+| Zero code change | Vẫn dùng 2-phase (Flash+Pro), có thể vẫn overgenerate |
+| Có thể test ngay | Khó kiểm soát output size |
+| Không thêm API call | Pro expand vẫn có xu hướng ADD thêm |
+
+---
+
+### Option B: Thêm Step 1.5 — Blueprint Curation (tối ưu nhất) ⭐
+
+**Thay đổi**: Thêm 1 API call (Flash) sau research, trước outline.
+
+```
+Step 1:   Research (giữ nguyên — thu thập ALL data) → raw blueprint ~60K
+Step 1.5: Curation (NEW) — AI đọc blueprint → giữ top items → ~25K
+Step 2:   Framework selection
+Step 3-6: Shared pipeline (dùng curated blueprint)
+```
+
+**Curation prompt sẽ yêu cầu AI:**
+
+```
+You are a senior documentary EDITOR. You have a raw biography blueprint 
+with ALL known facts. Your job is to CURATE it for a script — keep ONLY 
+the most dramatically compelling material.
+
+RAW BLUEPRINT:
+{raw_blueprint}
+
+CURATION RULES:
+1. life_phases: Keep ALL phases but trim key_events to max 4-5 per phase.
+   KEEP: Events with dramatic tension, irony, failure, triumph, or surprise.
+   CUT: Routine chronological entries ("family moved to X", "entered school").
+
+2. key_quotes: Keep max 6-8 quotes. KEEP quotes that:
+   - Reveal CHARACTER (not just intelligence)
+   - Show CONFLICT or PAIN
+   - Have emotional context (who said it to whom, why it hurt)
+   CUT: Famous inspirational quotes everyone knows. Motivational posters.
+
+3. achievements: Keep max 5. For each, rewrite impact_immediate 
+   in CINEMATIC language ("the room fell silent" not "peers reacted").
+
+4. dual_nature:
+   - light_side: Keep 3-4 STRONGEST virtues, rewrite in vivid language
+   - dark_side: Keep 3-4 MOST SHOCKING flaws, add specific details
+   - Ensure MAXIMUM CONTRAST between light and dark
+
+5. turning_points: Keep max 5. Must be MOMENTS (not periods). 
+   Rewrite as "On [date], [specific action] — and nothing was the same."
+
+6. key_relationships: Keep max 6. For each, ensure key_moment is 
+   a SPECIFIC SCENE (dialogue, action) not a summary.
+
+7. myths_vs_reality: Keep max 4 most SURPRISING ones.
+
+8. Overall target: ~25,000 characters (current: {current_chars}).
+   If above target, aggressively cut the LEAST dramatic items.
+
+OUTPUT: Same JSON structure, curated content. No commentary.
+```
+
+**Code change**: ~40 lines in `_new_content_worker` + 1 prompt file.
+
+| Pros | Cons |
+|---|---|
+| Research vẫn toàn diện (không mất data) | Thêm 1 API call (~30s) |
+| Curation prompt rõ ràng, có thể tune | Blueprint raw vẫn lưu để backup |
+| Target size 25K = match transcript blueprint | |
+| Giữ nguyên pipeline khác | |
+
+---
+
+### Option C: Redesign Research thành 3-Phase (nặng nhất)
+
+```
+Phase 1: Flash → Draft (giữ nguyên)
+Phase 2: Pro → CURATE thay vì expand (ĐỔI MỤC ĐÍCH)
+Phase 3: Flash → Editorial sweep (MỚI)
+```
+
+**Đổi mục đích Phase 2**: Thay vì "expand and add more", Pro sẽ "curate and sharpen".
+
+| Pros | Cons |
+|---|---|
+| Tận dụng Pro cho curation (chất lượng cao) | Breaking change cho expand prompt |
+| Không thêm API call | Mất khả năng research thêm data |
+| Blueprint output trực tiếp | Rollback khó hơn |
+
+---
+
+## Đề Xuất: Option B (Step 1.5)
+
+> [!IMPORTANT]
+> **Option B là tối ưu nhất** vì:
+> 1. **Không phá pipeline hiện tại** — research vẫn thu thập ALL data (có thể cần cho niches khác)
+> 2. **Kiểm soát được output** — curation prompt có target size rõ ràng
+> 3. **Có thể toggle ON/OFF** — nếu user muốn full data (ví dụ cho academic content), skip curation
+> 4. **Cost thấp** — 1 Flash call (~30s, rẻ)
+> 5. **Dễ iterate** — chỉ cần sửa prompt để tune chất lượng
+
+### Proposed Changes
+
+#### [NEW] `prompts/system_curate_blueprint_biography.txt`
+- Curation prompt (~100 lines)
+- Hướng dẫn AI cắt từ 60K → 25K, giữ dramatic value
+
+#### [MODIFY] `core/rewriter.py`
+- Add function `curate_blueprint(raw_blueprint, api, niche, lang, log, stop)` (~50 lines)
+- Load niche-specific curation prompt
+- Single Flash call
+- Return curated blueprint
+
+#### [MODIFY] `ui/rewrite_style_tab.py`
+- Add Step 1.5 call in `_new_content_worker` after research, before framework selection (~15 lines)
+- Save both `_blueprint_raw.json` and `_blueprint.json` (curated)
+
+### Verification
+- Run New Content with same topic (Albert Einstein)
+- Compare curated blueprint size (target: 20K-28K chars)
+- Compare output script quality vs previous
+
+## Open Questions
+
+1. **Option B thêm UI toggle không?** (checkbox "Curate Blueprint" — default ON)
+2. **Có muốn áp dụng curation cho Rewrite mode luôn không?** (Step 3.5 Enrich hiện tại khác mục đích — nó ADD data, không CUT)
+3. **Có muốn kết hợp Option A + B?** (sửa prompt research + thêm curation step — phòng 2 lớp)

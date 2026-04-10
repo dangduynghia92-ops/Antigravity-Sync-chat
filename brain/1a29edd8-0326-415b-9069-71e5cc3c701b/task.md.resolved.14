@@ -1,0 +1,15 @@
+# Rewrite Pipeline Improvements
+
+## Task 1: Fix Status/Score/Progress Columns
+- [x] Analyze how chapter status tracking works in Renew vs Rewrite
+- [x] Add real-time status updates per chapter during both pipelines
+- [x] Show progress (step X/Y, Ch X/Y done) per chapter
+- [x] Added processing/writing states to status_map
+- [ ] Test and verify
+
+## Task 2: Concurrent Rewrite Support
+- [ ] Plan design for concurrent job execution
+- [ ] Add ThreadPoolExecutor-based job runner
+- [ ] UI: allow adding folders while running
+- [ ] Job status display
+- [ ] Test

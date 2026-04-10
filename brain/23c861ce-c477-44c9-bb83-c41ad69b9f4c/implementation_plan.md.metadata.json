@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Plan to split 1 monolithic writer prompt into base + 7 individual structure prompts. Includes detailed narrative design for each structure (hook technique, build method, climax, closing approach) based on documentary storytelling research. Covers file structure, code changes needed in rewriter.py, and verification plan.",
+  "updatedAt": "2026-03-27T05:36:59.508006200Z",
+  "version": "6"
+}

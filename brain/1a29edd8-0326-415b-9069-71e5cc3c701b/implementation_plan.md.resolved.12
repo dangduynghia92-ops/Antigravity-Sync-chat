@@ -1,0 +1,141 @@
+# Framework-Specific Ending Methods
+
+## Rationale
+
+Hiện tại tất cả 11 framework dùng chung 1 ending template generic. Ending cần phản ánh **logic riêng** của framework — ending Tier List (tổng bảng xếp hạng) rất khác ending Myth Buster (phá myth cuối).
+
+## Nghiên cứu: Pattern ending từ top channels
+
+| Pattern | Khi nào dùng | Ví dụ |
+|---|---|---|
+| **Winner Declaration** | So sánh trực tiếp | "The clear winner is..." (Honest Outlaw) |
+| **Category Awards** | Nhiều sản phẩm, nhiều tiêu chí | "Best for EDC... Best for range..." (TFB TV) |
+| **Verdict Table** | Ranking/Tier | Recap bảng xếp hạng cuối cùng |
+| **Surprise Twist** | Contrarian/Myth Buster | "But here's what nobody expected..." |
+| **Future Outlook** | Evolution/Industry | "What this means for the next 5 years..." |
+| **Scenario Recap** | Test thực tế | "In a real self-defense scenario, the answer is..." |
+| **Value Verdict** | Budget | "Dollar for dollar, the winner is..." |
+
+---
+
+## Proposed Closing Methods
+
+### 1. The Contrarian Takedown
+```
+method: "verdict_reversal"
+elements:
+  - Recap conventional wisdom vs reality revealed
+  - Acknowledge what the popular choice DOES do well
+  - Declare when contrarian pick genuinely wins and when it doesn't
+  - Viewer challenge: "Test it yourself before judging"
+```
+
+### 2. The Underdog Champion
+```
+method: "underdog_vindication"
+elements:
+  - Recap the surprises discovered
+  - Acknowledge where the underdog still falls short
+  - Declare clear use-case where underdog wins
+  - Forward look: "Watch this space — the gap is closing"
+```
+
+### 3. The High-Stakes Scenario
+```
+method: "scenario_verdict"
+elements:
+  - Restate the scenario tested
+  - Declare which product survived the scenario best
+  - Context: "In a real [situation], this is what matters"
+  - Viewer prompt: "What scenario should we test next?"
+```
+
+### 4. The Legacy Justification
+```
+method: "legacy_verdict"
+elements:
+  - Modern relevance summary: does it still hold up?
+  - Specific use-cases where legacy product still wins
+  - Acknowledge where modern alternatives are better
+  - Respect closing: "Legends earn their place for a reason"
+```
+
+### 5. The Tier List
+```
+method: "tier_recap"
+elements:
+  - Quick visual recap of final rankings (top 3 highlight)
+  - Criteria reminder: "Ranked by [criteria]"
+  - Biggest surprise/upset in the rankings
+  - Viewer poll: "Did your pick make the top 3?"
+```
+
+### 6. The Myth Buster
+```
+method: "myth_scorecard"
+elements:
+  - Scorecard: X myths confirmed, Y myths busted
+  - Highlight the most surprising bust
+  - Practical takeaway: "What this actually means for your setup"
+  - Viewer challenge: "What myth should we bust next?"
+```
+
+### 7. The Evolution Timeline
+```
+method: "evolution_conclusion"
+elements:
+  - Timeline recap: key turning points highlighted
+  - Current state of the art
+  - Prediction: where the technology goes next
+  - Historical perspective: "X years of innovation led to this"
+```
+
+### 8. The Head-to-Head Duel
+```
+method: "winner_declaration"
+elements:
+  - Round-by-round scorecard recap
+  - Declare overall winner with margin
+  - Loser's consolation: where loser still excels
+  - Final take: "If you can only buy one..."
+```
+
+### 9. The Golden Age Legacy
+```
+method: "golden_age_reflection"
+elements:
+  - What made the era special vs today
+  - Products that still deserve attention
+  - What modern shooters can learn from this era
+  - Nostalgia close: "They don't make them like this anymore — or do they?"
+```
+
+### 10. The Industry Shakeup
+```
+method: "market_impact"
+elements:
+  - Recap which announcements will actually ship vs vaporware
+  - Predict market ripple effects (price drops, competitors react)
+  - Bold prediction: "The one that changes everything is..."
+  - Forward look: "Check back in 6 months for the real verdict"
+```
+
+### 11. The Budget Warrior
+```
+method: "value_verdict"
+elements:
+  - Price-performance winner declared
+  - Quick comparison: winner vs premium benchmark savings
+  - Best value per use-case (EDC, range, home defense)
+  - Final advice: "Where to spend and where to save"
+```
+
+---
+
+## Prompt Changes
+
+#### [MODIFY] [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt)
+- Update END CHAPTER RULES to reference framework closing method/elements
+
+#### [MODIFY] [Review_trang thiết bị quân sự.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_trang%20thiết%20bị%20quân%20sự.json)
+- Add `structure.closing` with `method` and `elements` to all 11 frameworks

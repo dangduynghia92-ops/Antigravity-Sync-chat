@@ -1,0 +1,171 @@
+# Tách Structure Prompts — Thiết Kế Storytelling
+
+## Mục tiêu
+
+Tách `system_write_review_mystery.txt` (2,200w) thành:
+- `base_mystery_writer.txt` (~1,000w) — rules chung
+- 7 file `structure_*.txt` (~300-400w mỗi file) — storytelling riêng
+
+AI chỉ nhận **base + 1 structure** thay vì toàn bộ.
+
+---
+
+## Thiết kế 7 Storytelling Methods
+
+Mỗi structure có 4 phần: **HOOK → BUILD → CLIMAX → CLOSE**
+
+---
+
+### 1. `structure_mythbuster.txt` — Phá Niềm Tin
+
+**Kỹ thuật chính**: Cognitive Dissonance (tạo xung đột nhận thức)
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *False Confidence* | Mở bằng điều "ai cũng biết" — trình bày tự tin, có NGUỒN. Để khán giả gật đầu 2-3 câu. Hoặc mở bằng AWE nếu topic là quy mô bất khả thi |
+| **BUILD** | *Progressive Demolition* | Evidence → Mainstream explanation (trình bày công bằng, có weight) → data bắt đầu conflict |
+| **CLIMAX** | *Pivot + Counter* | 1 câu pivot mạnh phá vỡ mọi thứ → counter-evidence không thể bác bỏ → real mystery emerges |
+| **CLOSE** | Theo `closing_type` | Kết bằng bí ẩn THẬT — sâu hơn niềm tin ban đầu |
+
+**POV**: Ngôi 3 analyst → ngôi 2 cho moment "bạn vừa bị lừa"
+**Yêu cầu**: `[MAINSTREAM]` + `[COUNTER]` bắt buộc
+
+---
+
+### 2. `structure_detective_trail.txt` — Cuộc Điều Tra
+
+**Kỹ thuật chính**: Progressive Revelation (tiết lộ dần)
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *Cold Open hiện đại* | Mở tại phòng lab / dig site / bảo tàng NGÀY NAY. Researcher cầm artifact, chạy test. KHÔNG kể chuyện cổ đại trước |
+| **BUILD** | *Investigation Sequence* | Theo nhà nghiên cứu: test 1 → kết quả bất thường → test 2 → deeper → cross-reference với ghi chép cổ |
+| **CLIMAX** | *Impossible Connection* | Kết quả lab kết nối với ghi chép cổ theo cách BẤT KHẢ THI → mainstream explanation sụp |
+| **CLOSE** | Theo `closing_type` | Điều nhà nghiên cứu tìm được mở ra câu hỏi lớn hơn |
+
+**POV**: Ngôi 3 researcher → ngôi 2 cho discovery moment ("You are staring at...")
+**Yêu cầu**: `[MAINSTREAM]` + `[COUNTER]` bắt buộc
+
+---
+
+### 3. `structure_bureaucratic_anomaly.txt` — Lỗ Hổng Hệ Thống
+
+**Kỹ thuật chính**: Pattern Disruption (phá vỡ quy luật)
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *Obsessive Completeness* | Mở bằng sự chi tiết ám ảnh của hệ thống — mỗi đồng xu đếm, mỗi lính ghi tên, mỗi giao dịch lưu 3 bản |
+| **BUILD** | *Stack the Pattern* | Tiếp tục build: 10,000 pages, 200 years, every single X recorded... cho khán giả cảm giác "hệ thống này KHÔNG bỏ sót gì" |
+| **CLIMAX** | *The Gap* | Zoom vào 1 THỨ DUY NHẤT bị thiếu — hồ sơ bị xóa, trang bị giật, nguyên 1 thập kỷ biến mất. Sự vắng mặt IS the horror |
+| **CLOSE** | Theo `closing_type` | Im lặng cố ý — ai xóa, tại sao? |
+
+**POV**: Ngôi 3 document-focused — narrate RECORDS, không narrate con người
+**Yêu cầu**: `[EVIDENCE]` only — KHÔNG cần mainstream/counter (gap IS the argument)
+
+---
+
+### 4. `structure_human_anchor.txt` — Câu Chuyện Con Người
+
+**Kỹ thuật chính**: Emotional Anchoring + Zoom Out
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *In Medias Res cá nhân* | Mở bằng 1 NGƯỜI: tên, ngày, nơi, khoảnh khắc cụ thể — lúc họ phát hiện / đối mặt / bất lực. Sensory details |
+| **BUILD** | *Personal Stakes* | Kể câu chuyện CỦA HỌ — quyết định, hậu quả, cảm xúc. Nếu nhân chứng: dùng LỜI TRỰC TIẾP hoặc phản ứng ghi chép. Nếu lũ chinh phạt: "giỏi nhất thời đại" vẫn thất bại |
+| **CLIMAX** | *Zoom Out* | "Nhưng [tên] không phải người duy nhất" → reveal pattern → câu hỏi civilizational-scale |
+| **CLOSE** | Theo `closing_type` | Quay lại 1 chi tiết cá nhân ban đầu → nâng lên tầm vĩ mô |
+
+**POV**: Ngôi 2 cho immersive opening → ngôi 3 cho zoom out
+**Yêu cầu**: `[EVIDENCE]` only
+
+---
+
+### 5. `structure_conflicting_accounts.txt` — Đối Chất
+
+**Kỹ thuật chính**: Dramatic Irony + Jury Frame
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *"Hai câu chuyện, chỉ một sự thật"* | Mở bằng 2 quotes/claims MÂU THUẪN TRỰC TIẾP — cùng sự kiện, khác kết luận hoàn toàn |
+| **BUILD** | *Side A → Side B* | Trình bày Side A đầy đủ, có weight. Rồi trình bày Side B, cũng có weight. Khán giả phải TỰ chọn bên |
+| **CLIMAX** | *Evidence as Judge* | Bằng chứng hiện đại / khảo cổ phân xử → kết quả: 1 bên sai, HOẶC CẢ HAI sai → synthesis mới |
+| **CLOSE** | Theo `closing_type` | Implication: nếu cả hai phiên bản đều sai, thì điều gì THẬT SỰ xảy ra? |
+
+**POV**: Ngôi 3 neutral → để khán giả tự suy luận
+**Yêu cầu**: `[MAINSTREAM]` + `[COUNTER]` bắt buộc
+
+---
+
+### 6. `structure_ticking_clock.txt` — Đồng Hồ Diệt Vong
+
+**Kỹ thuật chính**: In Medias Res + Urgency
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *Open with the End* | Mở bằng KẾT CỤC: thành phố đang cháy / quân đội đang tiến / tàu đang chìm. Nền văn minh BIẾT họ sắp chết |
+| **BUILD** | *Countdown* | Đếm ngược: "3 ngày trước khi thất thủ..." → hành động tuyệt vọng: hủy tài liệu, chôn bí mật, đốt thư viện |
+| **CLIMAX** | *Final Act* | Khoảnh khắc cuối — bí mật bị xóa/chôn/nuốt vĩnh viễn. Urgency → silence |
+| **CLOSE** | Theo `closing_type` | Im lặng vĩnh viễn — kiến thức mất không bao giờ khôi phục |
+
+**POV**: Ngôi 2 cho urgency ("You have three days") → ngôi 3 cho aftermath
+**Yêu cầu**: `[EVIDENCE]` only
+
+---
+
+### 7. `structure_innocent_facade.txt` — Bề Ngoài Vô Hại
+
+**Kỹ thuật chính**: Dramatic Irony (khán giả biết sắp twist, nhân vật không)
+
+| Phase | Kỹ thuật | Mô tả |
+|---|---|---|
+| **HOOK** | *Build Innocence* | Mở bằng vẻ ĐẸP / VÔ HẠI: bông hoa thơm, viên thuốc trắng, ngọn nến sáng, tượng thiêng. Khán giả cảm giác an toàn |
+| **BUILD** | *Layer Peeling* | Lớp 1: đồ trang trí → Lớp 2: liên quan tôn giáo → Lớp 3: thực ra dùng trong... → mỗi lớp bóc = 1 bước gần hơn sự thật |
+| **CLIMAX** | *Full Reveal* | Sự thật chết người phơi bày → shock = khoảng cách giữa innocence và lethality |
+| **CLOSE** | Theo `closing_type` | "Nó vẫn ở đó" — vật vẫn tồn tại, vẫn vô hại với mắt thường |
+
+**POV**: Ngôi 2 cho sensory ("You hold it in your hand") → ngôi 3 cho reveal
+**Yêu cầu**: `[EVIDENCE]` only
+
+---
+
+## File Structure
+
+```
+prompts/
+├── base_mystery_writer.txt          (rules chung ~1,000w)
+├── system_mystery_outline.txt       (giữ nguyên)
+├── system_write_review_mystery.txt  (deprecated → backup)
+└── mystery_structures/
+    ├── structure_mythbuster.txt
+    ├── structure_detective_trail.txt
+    ├── structure_bureaucratic_anomaly.txt
+    ├── structure_human_anchor.txt
+    ├── structure_conflicting_accounts.txt
+    ├── structure_ticking_clock.txt
+    └── structure_innocent_facade.txt
+```
+
+## Code Changes
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Sửa `write_review_chapter()` (L2812-2833):
+
+```python
+# Thay vì:
+system_template = _load_prompt("system_write_review_mystery.txt")
+
+# Thành:
+base_prompt = _load_prompt("base_mystery_writer.txt")
+ch_structure = chapter_outline.get("chapter_structure", "mythbuster")
+struct_file = f"mystery_structures/structure_{ch_structure}.txt"
+struct_prompt = _load_prompt(struct_file)
+system_template = base_prompt + "\n\n" + struct_prompt
+```
+
+## Verification
+
+1. Tạo 7 structure files + 1 base file
+2. Sửa code load prompt
+3. Chạy thử 1 chapter với từng structure → verify output khác biệt
+4. So sánh token count trước/sau

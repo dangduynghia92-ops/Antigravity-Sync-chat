@@ -1,0 +1,23 @@
+# Google Search Grounding Integration
+
+Thêm tham số `google_search` vào [call_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#84-226) để proxy forward đến Gemini API.
+
+## Cách tiếp cận
+
+Vì không có Gemini API key trực tiếp, chiến lược đơn giản nhất:
+- Thêm `tools: [{"googleSearch": {}}]` vào JSON payload gửi qua proxy
+- Proxy (localhost:8317) nếu forward đúng → Gemini sẽ tự tìm Google
+- Nếu proxy không hỗ trợ → lỗi sẽ trả về rõ ràng, không ảnh hưởng gì
+
+## Proposed Changes
+
+### [MODIFY] [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py)
+
+1. Thêm `google_search: bool = False` vào signature [call_api()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/api_client.py#84-226)
+2. Khi `True` → chèn `"tools": [{"googleSearch": {}}]` vào payload
+3. Parse `groundingMetadata` từ response nếu có (kèm theo trường mới trong return dict)
+4. **100% backward compatible** — mọi call hiện tại không bị ảnh hưởng
+
+## Verification Plan
+
+Tạo script test gửi 1 câu hỏi với `google_search=True` qua proxy để kiểm tra.

@@ -1,0 +1,19 @@
+# Unused Chapters Feature
+
+## A. UI Changes
+- [x] Split output row: `Output` + `Unused chapters` + Browse buttons
+- [x] Add Delete button (red `#e74c3c`) with state-dependent popup
+- [x] Save/restore `_txt_unused_dir` in config
+
+## B. Blueprint Prompt
+- [x] Add `source_parts` field to [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+
+## C. Pipeline Logic
+- [x] Strip `source_parts` before sending to outline AI
+- [x] After outline: identify unused products + map to source chapters
+- [x] Copy unused chapter files to `_txt_unused_dir`
+- [x] Save `_source_mapping.json` in output
+
+## D. Merge Validation
+- [x] Block merge if output path empty
+- [x] After outline: check multi-folder usage, stop if only 1 folder

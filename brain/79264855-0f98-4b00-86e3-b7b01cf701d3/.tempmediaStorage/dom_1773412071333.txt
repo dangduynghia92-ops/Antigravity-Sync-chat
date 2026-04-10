@@ -1,0 +1,115 @@
+Scrape Creators Documentation
+Documentation
+Search...
+[0] (500,500)<div  />
+[1] (828,500)<div class='h-full overflow-y-auto' scrollable='true' />
+	[2] (696,44)<a class='flex items-center' href='/' />
+		[3] (696,44)<img  />
+	[4] (949,44)<button class='p-2 -mr-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'>Close menu />
+		Close menu
+	[5] (820,119)<a class='block py-2 text-base font-medium text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary-light' href='/introduction'>Introduction />
+	TikTok
+	[6] (820,224)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/profile' />
+		[7] (833,224)<div  />
+			[8] (721,224)<span >GET />
+			[9] (768,224)<span >Profile />
+	[10] (820,280)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/user/audience' />
+		[11] (833,280)<div  />
+			[12] (721,280)<span >GET />
+			[13] (851,280)<span >User's Audience Demographics />
+	[14] (820,337)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v3/tiktok/profile/videos' />
+		[15] (833,337)<div  />
+			[16] (721,337)<span >GET />
+			[17] (796,337)<span >Profile Videos />
+	[18] (820,381)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v2/tiktok/video' />
+		[19] (833,381)<div  />
+			[20] (721,381)<span >GET />
+			[21] (783,381)<span >Video Info />
+	[22] (820,424)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/video/transcript' />
+		[23] (833,424)<div  />
+			[24] (721,424)<span >GET />
+			[25] (780,424)<span >Transcript />
+	[26] (820,468)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/user/live' />
+		[27] (833,468)<div  />
+			[28] (721,468)<span >GET />
+			[29] (784,468)<span >TikTok Live />
+	[30] (820,511)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/video/comments' />
+		[31] (833,511)<div  />
+			[32] (721,511)<span >GET />
+			[33] (785,511)<span >Comments />
+	[34] (820,555)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/user/following' />
+		[35] (833,555)<div  />
+			[36] (721,555)<span >GET />
+			[37] (780,555)<span >Following />
+	[38] (820,599)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/user/followers' />
+		[39] (833,599)<div  />
+			[40] (721,599)<span >GET />
+			[41] (779,599)<span >Followers />
+	[42] (820,642)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/search/users' />
+		[43] (833,642)<div  />
+			[44] (721,642)<span >GET />
+			[45] (792,642)<span >Search Users />
+	[46] (820,686)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/search/hashtag' />
+		[47] (833,686)<div  />
+			[48] (721,686)<span >GET />
+			[49] (814,686)<span >Search by Hashtag />
+	[50] (820,730)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/search/keyword' />
+		[51] (833,730)<div  />
+			[52] (721,730)<span >GET />
+			[53] (816,730)<span >Search by Keyword />
+	[54] (820,773)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/search/top' />
+		[55] (833,773)<div  />
+			[56] (721,773)<span >GET />
+			[57] (785,773)<span >Top Search />
+	[58] (820,817)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/songs/popular' />
+		[59] (833,817)<div  />
+			[60] (721,817)<span >GET />
+			[61] (813,817)<span >Get popular songs />
+	[62] (820,860)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/creators/popular' />
+		[63] (833,860)<div  />
+			[64] (721,860)<span >GET />
+			[65] (821,860)<span >Get popular creators />
+	[66] (820,904)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/videos/popular' />
+		[67] (833,904)<div  />
+			[68] (721,904)<span >GET />
+			[69] (815,904)<span >Get popular videos />
+	[70] (820,948)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/hashtags/popular' />
+		[71] (833,948)<div  />
+			[72] (721,948)<span >GET />
+			[73] (825,948)<span >Get popular hashtags />
+	[74] (820,991)<a class='block py-2 pl-6 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300' href='/v1/tiktok/song' />
+		[75] (833,991)<div  />
+			[76] (721,991)<span >GET />
+			[77] (807,991)<span >Get Song Details />
+API Documentation
+Introduction
+Welcome to the
+Scrape Creators API documentation
+. Our comprehensive REST API provides powerful endpoints to extract
+public data
+from
+27
++ social media platforms including
+TikTok, TikTok Shop, Instagram, YouTube, LinkedIn
+, and more
+.
+🚀 Quick Start Guide
+Get started in minutes with our
+free API key
+. Extract profile data, posts, videos, and more from any public social media account.
+Supported Platforms
+TikTok
+TikTok Shop
+Instagram
+YouTube
+LinkedIn
+Facebook
+Facebook Ad Library
+Google Ad Library
+LinkedIn Ad Library
+Twitter
+Reddit
+Truth Social
+Threads
+Bluesky
+Pinterest

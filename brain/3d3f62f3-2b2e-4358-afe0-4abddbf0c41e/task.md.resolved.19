@@ -1,0 +1,11 @@
+# Style Analyzer → Rewrite Integration
+
+- [x] Restructure synthesis output to JSON
+- [x] Refactor 3-step flow (analyze → cache → generate prompt)
+- [x] Add Step 4: Quality review
+- [x] Rewrite tab UI restructure (2 rows, niche names)
+- [x] Word count controls by section (Open/Body/End)
+- [x] Save Style button in Style Analyzer
+- [x] Wire style guide into rewrite flow
+- [x] Fix _STYLE_GUIDE.json save location
+- [/] Audit Style Analyzer + Rewrite code

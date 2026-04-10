@@ -1,0 +1,81 @@
+# Rewrite Tab — Analyze → Rewrite → Verify Pipeline
+
+Thêm tab **"✍️ Rewrite"** vào tool để viết lại kịch bản YouTube từ group folder (output của Regroup).
+
+## Pipeline 3 bước
+
+```
+Group folder → [Analyze] → [Rewrite] → [Verify] → Kịch bản hoàn chỉnh
+```
+
+---
+
+## Proposed Changes
+
+### Prompts
+
+#### [NEW] [system_analyze.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_analyze.txt)
+Prompt cho bước Analyze: đọc chapter gốc → chọn storytelling method (Inquiry Arc / Cognitive Arc / Relic Anchor) + hook + counter-argument. Output JSON ngắn.
+
+#### [NEW] [system_rewrite.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_rewrite.txt)
+Prompt cho bước Rewrite: viết lại chapter dùng method đã chọn + prompt yêu cầu (tone, clarity, vocabulary, flow rules từ prompt mẫu user cung cấp).
+
+#### [NEW] [system_review.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review.txt)
+Prompt cho bước Verify: kiểm tra chất lượng (độ dài, câu <25 words, có hook + counter-argument, atmosphere).
+
+---
+
+### Core Logic
+
+#### [NEW] [rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+Logic xử lý pipeline 3 bước:
+- `analyze_chapter(chapter_text, api_client)` → `{method, hook, counter_arg, reasoning}`
+- `rewrite_chapter(chapter_text, analysis, api_client)` → rewritten text
+- [verify_chapter(original, rewritten, api_client)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/chapter_splitter.py#630-678) → `{score, issues[], passed}`
+- `load_group_folder(path)` → list chapters từ group folder
+- `save_rewritten(output_dir, chapter_name, text)` → lưu file kết quả
+
+---
+
+### UI
+
+#### [NEW] [rewrite_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py)
+Tab mới với layout:
+
+```
+┌─────────────────────────────────────────────────┐
+│ Input Group: [___browse___]  Output: [___browse] │
+│ Tier: [Flash ▼]                                  │
+│                                                  │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ Tên Chapter    │ Method  │ Trạng thái│Tiến tr│ │
+│ │ Chapter 1 - ..│Inquiry  │ ✓ Analyzed│       │ │
+│ │ Chapter 2 - ..│Cognitive│ Writing.. │ 2/3   │ │
+│ │ Chapter 4 - ..│Relic    │ ⏳ Pending│       │ │
+│ └──────────────────────────────────────────────┘ │
+│                                                  │
+│ [1.Analyze All] [2.Rewrite All] [3.Verify All]  │
+│ Chọn tất cả | Bỏ chọn | Open Output             │
+└─────────────────────────────────────────────────┘
+```
+
+Signals: `log_message`, `status_changed` (giống pattern RegroupTab)
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+Thêm tab Rewrite vào [_build_ui()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/log_section.py#19-72) và connect signals trong [_connect_signals()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py#373-379).
+
+---
+
+## Verification Plan
+
+### Automated Tests
+```bash
+python -c "from ui.main_window import MainWindow; print('OK')"
+```
+
+### Manual Verification
+1. Mở app → tab "✍️ Rewrite" hiện
+2. Browse group folder → hiện list chapters
+3. Bấm Analyze → log hiện method + lý do cho mỗi chapter
+4. Bấm Rewrite → kịch bản mới lưu vào output folder
+5. Bấm Verify → hiện score + issues

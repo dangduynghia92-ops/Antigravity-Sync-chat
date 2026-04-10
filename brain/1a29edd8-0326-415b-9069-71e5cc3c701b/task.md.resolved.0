@@ -1,0 +1,8 @@
+# Build Military Equipment Review Style Guide
+
+- [/] Enrich user's style analysis JSON to match full system schema
+  - [/] Expand frameworks with detailed sub-fields (structure, hook, pov_strategy, pacing, language, outline_rules, steps as objects, tension_curve, cliffhanger_types, technique_emphasis, opening_closing_fit, counter_argument, anti_patterns)
+  - [ ] Add diversity_rules section
+  - [ ] Add core_rules extra fields (anti_framework_leak, step_names_are_internal)
+  - [ ] Save as `styles/Review_trang thiết bị quân sự.json`
+- [ ] Verify compatibility with [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt)

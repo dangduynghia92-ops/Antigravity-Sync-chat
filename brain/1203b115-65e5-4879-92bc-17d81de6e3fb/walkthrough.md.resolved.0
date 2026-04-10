@@ -1,0 +1,71 @@
+# Walkthrough — Historical Verification Pipeline
+
+## Changes Made
+
+### 1. Character Sheet Style Injection
+**Problem:** `character_group_prompt.txt` was hard-coded for "OverSimplified Cartoon" stick figures.
+**Fix:** Replaced with `{STYLE_KEYWORDS}` placeholder. Code now injects the actual style's Mandatory Style keywords at runtime.
+
+| File | Change |
+|---|---|
+| [character_group_prompt.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) | `{STYLE_KEYWORDS}` placeholder instead of hard-coded style |
+| [narrative_review.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) | `generate_group_bible()` + `run_character_pipeline()` accept `style_content` param |
+| [process_controller.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | Pass `style_content` to both Independent and Narrative mode pipelines |
+
+---
+
+### 2. Banner Attribute for MILITARY Characters
+**Added:** 5th attribute "Banner" for MILITARY characters — describes faction flag/standard.
+
+- Sheet prompt includes "A vertical faction banner planted beside the soldier"
+- Separate output format: PROTAGONIST/NAMED (4 attrs) vs MILITARY (5 attrs)
+- Banner descriptions are **era-specific** (ancient standards ≠ medieval heraldic ≠ national flags)
+
+---
+
+### 3. Historical Era Accuracy Enforcement
+**Added:** Strict era-matching rules with concrete examples in `character_group_prompt.txt`:
+- `Roman galea ≠ medieval great helm ≠ 18th-century tricorne ≠ WW2 stahlhelm`
+- `Roman lorica segmentata ≠ medieval chainmail ≠ Napoleonic tunic`
+- `Ancient armies used standards/signa (NOT cloth flags)`
+
+---
+
+### 4. Google Check — Historical Verification Pipeline (NEW)
+
+**6 files created/modified:**
+
+| File | Type | Purpose |
+|---|---|---|
+| [gemini_keys.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/gemini_keys.json) | NEW | 7 Gemini API keys for Google Search Grounding |
+| [api_client.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/api_client.py) | MODIFY | Added `call_gemini_native()` + `load_gemini_keys()` |
+| [verify_bible_prompt.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/verify_bible_prompt.txt) | NEW | System prompt for Gemini fact-checker |
+| [historical_verifier.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/historical_verifier.py) | NEW | Core verification module |
+| [process_controller.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | MODIFY | Insert verification step after bible generation |
+| [config_section.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py) | MODIFY | Added 🔍 Google Check checkbox |
+| [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py) | MODIFY | Inject `google_check` flag into constraints |
+
+**Pipeline flow:**
+```
+Character Pipeline → Visual Bible → 🔍 Google Check → Generate Prompts
+                                         │
+                                    Extract facts (code)
+                                         │
+                                    Gemini + Google Search
+                                         │
+                                    Parse corrections
+                                         │
+                                    Auto-apply fixes (AI)
+                                         │
+                                    Save corrected bibles
+```
+
+## What Was Tested
+- Import chain verification: `ProcessController`, `ConfigSection`, `historical_verifier` all import successfully
+- `load_gemini_keys()` correctly loads 7 keys from `gemini_keys.json`
+- No syntax errors in any modified files
+
+## What Needs Manual Testing
+- Run full pipeline with Google Check enabled on a historical SRT file
+- Verify that corrections are factually accurate
+- Check that corrected bible text maintains correct formatting for downstream parsing

@@ -1,0 +1,8 @@
+# Tách Processing Log riêng cho mỗi Tab
+
+- [/] Lên kế hoạch
+- [ ] Sửa [chapter_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py) — nhúng LogSection riêng
+- [ ] Sửa [regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py) — nhúng LogSection riêng
+- [ ] Sửa [rewrite_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_tab.py) — nhúng LogSection riêng
+- [ ] Sửa [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) — bỏ LogSection chung & signal connections
+- [ ] Chạy test thủ công

@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Comprehensive review of the firearms (súng đạn) niche prompt architecture in Top/List Review mode. Covers all 8 prompt files in the pipeline (extract blueprint, reality check, check blueprint, enrich blueprint, review outline, audit outline, write review, cross-chapter review) plus the style guide and niche config. Identifies critical issues including POV contradictions between the style guide and writer prompt, missing niche-specific files, inconsistent checklist rules, and structural improvements needed.",
+  "updatedAt":  "2026-04-03T00:33:16.655005500Z",
+  "requestFeedback":  true
+}

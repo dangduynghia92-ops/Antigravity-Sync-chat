@@ -1,0 +1,139 @@
+# Self-Audit: Prompt & Logic Consistency Check
+
+## Files Audited
+- `system_narrative_outline_biography.txt` (236 lines)
+- `system_narrative_write_biography.txt` (341 lines)  
+- `system_narrative_audit_biography.txt` (65 lines)
+- `core/rewriter.py` — `_extract_style_for_framework()`
+
+---
+
+## ❌ Issue 1: CRITICAL RULES #14 mâu thuẫn với MYTH section mới
+
+**File**: `system_narrative_outline_biography.txt`, line 234
+
+```
+14. **MYTHS DISTRIBUTION**: Spread myths_vs_reality across chapters, biggest at plot twist.
+```
+
+**Vấn đề**: Rule #14 nói "spread across chapters" — nhưng MYTH section (line 94-112) đã nói conditional theo framework:
+- use_heavily = 2-3
+- use_moderately = 1-2
+- use_sparingly = 0-1
+
+Rule #14 vẫn nói "spread" bất kể framework. **MÂU THUẪN.**
+
+**Fix**: Sửa rule #14 thành: `"Follow data_priority and technique_emphasis for myth count and placement."`
+
+---
+
+## ❌ Issue 2: CRITICAL RULES vẫn nói "Hai Mặt, Bản Án, Kẻ Xét Lại" cứng
+
+**File**: `system_narrative_outline_biography.txt`, lines 97, 101, 105
+
+```
+IF framework says `use_heavily` (Hai Mặt, Bản Án, Kẻ Xét Lại):
+IF framework says `use_moderately` (Sử Thi):
+IF framework says `use_sparingly` (Bước Ngoặt):
+```
+
+**Vấn đề**: Hardcode tên framework trong prompt. Nếu thêm framework mới, phải sửa prompt.
+Giờ compact style đã có `data_priority` nói rõ myth level → prompt không cần hardcode.
+
+**Fix**: Thay bằng: `"Check data_priority field: the myth level is stated explicitly."`
+
+---
+
+## ❌ Issue 3: Hook section KHÔNG conditional theo framework
+
+**File**: `system_narrative_write_biography.txt`, lines 177-216
+
+HOOK CHAPTER section có 5 hook types (PARADOX, IN MEDIA RES, etc.) chung cho tất cả.
+Nhưng mỗi framework có `hook.method` riêng:
+- Sử Thi → Legacy Hook
+- Bước Ngoặt → In Media Res
+- Hai Mặt → Contradiction Drop
+
+**Vấn đề**: AI nhận cả 5 hook types + framework's `hook` → không rõ follow cái nào.
+
+**Fix**: Thêm dòng: `"The framework's hook field in the style guide tells you which hook type to use. Prioritize it."`
+(ĐÃ CÓ ở outline prompt line 131 nhưng THIẾU ở writer prompt)
+
+---
+
+## ❌ Issue 4: Outline prompt line 130 tham chiếu "openings list" — KHÔNG TỒN TẠI trong compact style
+
+**File**: `system_narrative_outline_biography.txt`, line 130
+
+```
+- Choose ONE opening from the style guide's `openings` list
+```
+
+**Vấn đề**: Compact style chỉ có: `core_rules`, `framework`, `chapter_structures`, `closing_types`, `data_priority`.
+KHÔNG có `openings` list (đã bị lọc bỏ khi extract).
+
+**Fix**: Sửa thành: `"Use the framework's hook field to determine the opening approach."`
+Hoặc: thêm `openings` vào compact style.
+
+---
+
+## ❌ Issue 5: Audit prompt #14 & #15 vẫn bắt buộc toàn bộ relationships & sources
+
+**File**: `system_narrative_audit_biography.txt`, lines 27-28
+
+```
+14. **RELATIONSHIP COVERAGE**: Are ALL major relationships from blueprint featured in at least one chapter?
+15. **SOURCE COVERAGE**: Are named historians/biographers from blueprint featured appropriately?
+```
+
+**Vấn đề**: "ALL major relationships" mâu thuẫn với "blueprint is a menu". Nếu blueprint có 10 relationships nhưng framework chỉ cần 3, audit sẽ flag false positive.
+
+**Fix**: Sửa thành conditional: `"Flag only if a CENTRAL relationship (directly related to primary_data_field) is missing."`
+
+---
+
+## ❌ Issue 6: Writer prompt myth section (line 281-290) lặp lại outline prompt
+
+**File**: `system_narrative_write_biography.txt`, lines 281-290
+
+```
+MYTH VS REALITY
+If `myths_debunked` is not null, integrate myth-busting INTO the chapter's flow
+```
+
+**Vấn đề**: Section này OK (viết cách xử lý myth trong chapter). Nhưng nó không nhắc myth level.
+Nếu outline gán myth cho chapter, writer sẽ luôn thực hiện → OK, vì outline ĐÃ lọc myth count.
+
+**Status**: ✅ KHÔNG CÓ VẤN ĐỀ — writer chỉ nhận myth đã được outline lọc.
+
+---
+
+## ✅ Các phần KHÔNG CÓ VẤN ĐỀ
+
+| Component | Status | Lý do |
+|---|---|---|
+| `_extract_style_for_framework()` | ✅ OK | Extract đúng 1 fw, có data_priority |
+| VOICE section (writer) | ✅ OK | Generic, áp dụng cho mọi fw |
+| SCENE HIERARCHY (writer) | ✅ OK | Generic |
+| TIMELINE RULE (writer) | ✅ OK | Generic |
+| SPOKEN RHYTHM (writer) | ✅ OK | Generic |
+| CHAPTER FLOW (writer) | ✅ OK | Generic |
+| BODY CHAPTER STRUCTURES (writer) | ✅ OK | 8 structures, generic |
+| END CHAPTER (writer) | ✅ OK | Generic |
+| GOLDEN SAMPLE (writer) | ✅ OK | Tone reference |
+| PRIORITY ORDER (writer) | ✅ OK | Generic |
+| OPEN LOOP PROTOCOL (outline) | ✅ OK | Generic |
+| FRAMEWORK-DRIVEN ARC (outline) | ✅ OK | References framework correctly |
+| DATA PRIORITY section (outline) | ✅ OK | New, references compact style |
+
+---
+
+## Summary: 5 issues cần fix
+
+| # | File | Severity | Fix |
+|---|---|---|---|
+| 1 | Outline #14 | 🔴 Mâu thuẫn | Sửa myth rule |
+| 2 | Outline myth section | 🟡 Hardcode | Dùng data_priority thay vì hardcode |
+| 3 | Writer hook | 🟡 Missing guidance | Thêm fw hook priority |
+| 4 | Outline "openings list" | 🔴 Reference broken | Fix reference hoặc add to compact |
+| 5 | Audit #14-15 | 🟡 Mâu thuẫn menu | Conditional relationship check |

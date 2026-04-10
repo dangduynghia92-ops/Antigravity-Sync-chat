@@ -1,0 +1,140 @@
+# Prompt Cross-Audit — Biography Pipeline (6 files)
+
+## Phạm vi kiểm tra
+| Prompt | File | Lines |
+|---|---|---|
+| Extract blueprint | `system_extract_blueprint_biography.txt` | 301 |
+| Research blueprint | `system_research_blueprint_biography.txt` | 372 |
+| Outline | `system_narrative_outline_biography.txt` | 243 |
+| Audit | `system_narrative_audit_biography.txt` | 65 |
+| Writer | `system_narrative_write_biography.txt` | 376 |
+| Review | `system_narrative_review_biography.txt` | 55 |
+
+---
+
+## ✅ PASS — Không xung đột
+
+### 1. Blueprint = Menu (nhất quán)
+- **Outline L149**: "The blueprint is a MENU — pick the most compelling facts"
+- **Outline L233 (Rule 6)**: "BLUEPRINT IS A MENU — select the most compelling data"
+- **Audit L13**: "the blueprint is a menu, not a checklist"
+- **Writer L62**: "The blueprint is a MENU, not a checklist"
+→ ✅ Nhất quán 4/4 prompts
+
+### 2. Framework drives arc (nhất quán)
+- **Outline L22-31**: "FRAMEWORK defines the ENTIRE ARC"
+- **Outline L232 (Rule 5)**: "FRAMEWORK DRIVES THE ARC"
+- **Audit L12**: "Does the chapter sequence follow the framework's steps?"
+- **Writer L9**: "Follow this framework's specific rules"
+→ ✅ Nhất quán
+
+### 3. No framework terminology leak (nhất quán)
+- **Outline L242 (Rule 15)**: "NO FRAMEWORK LEAK"
+- **Audit L26**: "FRAMEWORK TERMINOLOGY LEAK"
+- **Writer L373**: "Do NOT use any framework terminology in the text"
+- **Review L10**: "FRAMEWORK TERMINOLOGY LEAK" + detailed banned words
+→ ✅ Nhất quán 4/4 prompts
+
+### 4. Myth distribution via data_priority (nhất quán)
+- **Outline L95-107**: Uses `heavily / moderately / sparingly` from `data_priority`
+- **Outline L241 (Rule 14)**: "Follow data_priority for myth count"
+- **Audit L15**: "Check myth count matches technique_emphasis"
+→ ✅ Nhất quán
+
+### 5. Dual nature BOTH sides (nhất quán)
+- **Outline L152**: "BOTH light and dark sides must be represented"
+- **Outline L240 (Rule 13)**: "Both light and dark sides MUST be represented"
+- **Audit L14**: "BOTH light_side AND dark_side"
+- **Writer L331-335**: "NEVER be fully one-sided"
+- **Review L7**: "DUAL NATURE BALANCE"
+→ ✅ Nhất quán 5/5
+
+### 6. Open loop chain (nhất quán)
+- **Outline L118-123**: Full loop protocol with rules
+- **Outline L238 (Rule 11)**: "Every loop planted MUST be resolved"
+- **Audit L19-22**: Full loop chain integrity check
+- **Writer L150**: "If open_loop_plant is set: plant it"
+- **Review L6**: "OPEN LOOP CHAIN"
+→ ✅ Nhất quán
+
+### 7. Structure variety rules (nhất quán)
+- **Outline L51**: "Two consecutive MUST NOT share same structure"
+- **Outline L235 (Rule 8)**: Same
+- **Audit L16**: Same check
+→ ✅ Nhất quán
+
+### 8. Closing variety rules (nhất quán)
+- **Outline L69**: "Three consecutive MUST NOT share same closing_type"
+- **Outline L236 (Rule 9)**: Same
+- **Audit L17**: Same check
+- **Review L12**: Same check
+→ ✅ Nhất quán
+
+### 9. Hook scope rule (nhất quán)
+- **Outline L135-141**: "HOOK key_data MUST be TENSION, not technical facts" + "MUST NOT overlap Ch2"
+- **Writer L248-251**: "SCOPE RULE: Write ONLY about key_data listed... Do NOT drift into next chapter's content"
+→ ✅ Nhất quán
+
+### 10. No transition/bridge (nhất quán)
+- **Writer L144-145**: "Do NOT add bridge sentences"
+- **Review L18**: "TRANSITION DUPLICATION" check
+→ ✅ Nhất quán
+
+### 11. Personal profile in blueprint (nhất quán)
+- **Extract L43-65**: Full personal_profile section with 6 sub-fields
+- **Research L53-62**: Same structure
+- **Extract JSON L190-197**: personal_profile in output format
+- **Research JSON L221-228**: Same
+→ ✅ Nhất quán
+
+### 12. AUDIENCE CONNECTION TECHNIQUES (mới)
+- **Writer L102-130**: Cost of Achievement + Before/After Contrast + POV Shift
+- **Writer L277**: ACHIEVEMENT_SHOWCASE structure also mentions "cost"
+→ ✅ Tương thích, không xung đột
+
+---
+
+## ⚠️ ISSUES — Cần xem xét
+
+### Issue 1: Plot twist position — AUDIT nói 30%, OUTLINE nói "theo framework"
+- **Outline L237 (Rule 10)**: "Place the framework's `plot_twist` at the step the framework defines. Do NOT hardcode a specific chapter number."
+- **Audit L23**: "Is the framework's `plot_twist` placed at approximately 30%? If after 50%, flag as too late."
+
+> **Xung đột**: Outline nói "theo framework step", Audit nói "khoảng 30%".
+> Nếu framework Sử Thi có plot_twist ở step 4/6 (= 67%), audit sẽ WRONGLY flag nó.
+>
+> **Recommendation**: Audit nên kiểm tra plot twist nằm ĐÚNG step framework chỉ định, KHÔNG kiểm tra % cố định.
+
+### Issue 2: Audit không biết về personal_profile
+- **Audit L13**: Kiểm tra "Major life phases and key turning points" nhưng KHÔNG nhắc `personal_profile`
+- Blueprint giờ có `personal_profile` nhưng audit không validate nó
+
+> **Mức độ**: 🟡 Thấp. personal_profile là secondary data, không cần audit validate.
+> Outline sẽ DÙNG nó tự nhiên thông qua `secondary_fields` trong `data_priority`.
+
+### Issue 3: Review prompt không biết về POV shift
+- **Writer L121-130**: POV shift rules (max 1-2 per chapter, chỉ cho lived experience)
+- **Review L1-55**: Không kiểm tra POV shift violations
+
+> **Mức độ**: 🟡 Thấp. POV shift violations khó detect bằng review prompt.
+> AI writer tự tuân thủ rules. Review chỉ cần catch framework leak + fact consistency.
+
+---
+
+## 🔴 ACTION REQUIRED
+
+### Fix Issue 1: Audit plot twist rule
+**File**: `system_narrative_audit_biography.txt` line 23
+**From**: `"placed at approximately 30%? If after 50%, flag as too late"`
+**To**: `"placed at the step the framework defines? Check the framework's plot_twist step, NOT a fixed percentage."`
+
+---
+
+## Tổng kết
+
+| Category | Count |
+|---|---|
+| ✅ PASS (nhất quán) | 12/12 |
+| ⚠️ Xung đột nhẹ | 1 (plot twist %) |
+| ⚠️ Thiếu nhưng OK | 2 (personal_profile audit, POV review) |
+| 🔴 Cần fix | 1 |

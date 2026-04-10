@@ -1,0 +1,55 @@
+# Tối ưu hóa Kiến trúc Outline (Chống Overload và Sập Filter)
+
+Dựa trên sự phân tích về giới hạn tải trọng nhận thức của AI và lỗi Fallback Filter ở Ch01, bản vẽ kỹ thuật (Implementation Plan) này đề xuất 2 giải pháp can thiệp trực tiếp vào Prompt để giải quyết tận gốc vấn đề mà không tốn thêm chi phí tạo Agent phụ.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Việc sửa đổi cấu trúc JSON Output của bước Outline sẽ ảnh hưởng đến luồng chạy toàn hệ thống. Hãy kiểm tra kỹ cấu trúc JSON (được thêm `pacing_evaluation`) xem có tương thích với logic parse JSON ở code Python hiện tại của bạn không. Nếu code Python đang đọc `.get("chapters")` và `.get("phase_chapter_plan")` linh hoạt thì thay đổi này hoàn toàn an toàn.
+
+## Proposed Changes
+
+---
+
+### Cập nhật hệ thống Prompt
+
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+Tôi sẽ thực hiện 2 thay đổi chính trên tệp này:
+
+1. **Thêm khối Chain of Thought (CoT) vào mảng `phase_chapter_plan`**:
+Thay vì để AI tự động cấp phát `chapters` một cách máy móc theo Step, tôi bắt nó chạy bài toán phân tích dung lượng trước khi gán chương.
+```json
+  "phase_chapter_plan": [
+    {
+      "phase": "Framework step name",
+      "pacing_evaluation": {
+         "mapped_blueprint_nodes": "Quick list of items (events/conflicts) mapped here",
+         "node_count": "Count of items",
+         "cinematic_capacity_check": "1 chapter (1500 words) safely fits 2-3 nodes. Too many = superficial summary.",
+         "action": "SPLIT_REQUIRED (if node_count > 3) or KEEP_AS_ONE"
+      },
+      "chapters": [1],
+      ...
+    }
+  ]
+```
+2. **Siết chặt luật EXACT MATCH cho `key_data`**:
+Thêm đoạn cảnh báo chữ IN HOA vào mô tả của mảng `key_data` để AI không được phép paraphrase (chém gió lại lời văn), cứu bộ lọc Python khỏi cái chết hụt (bị đẩy 55KB vào fallback).
+Thêm Rule thứ 16 vào phần CRITICAL RULES: `"KEY_DATA EXACT MATCH: When quoting from the blueprint for 'key_data', you MUST copy the exact phrase. NO PARAPHRASING."`
+
+## Lợi ích Kỹ thuật
+
+- **Triệt tiêu Chapters Hời hợt**: Nhờ khối `pacing_evaluation`, AI tự nhận thức được giới hạn Token và tự động "nở" số chương nếu cuộc đời nhân vật chứa quá nhiều Node lịch sử.
+- **Tiết kiệm Token (Giảm 80% rác dữ liệu)**: Khắc phục lỗi Fallback tải full 55KB Master Blueprint xuống cho các chương Hook/End chỉ vì lỗi ghi trượt chuỗi (substring mismatch).
+
+## Open Questions
+
+> [!WARNING]
+> Có một vấn đề nhỏ phát sinh. Nếu code parse (đọc chuẩn JSON) của bạn sử dụng đối tượng Class/Pydantic Model gò bó (ví dụ ép kiểu `phase_chapter_plan` chỉ được chứa đúng 4 fields), thì việc thêm `pacing_evaluation` có thể gây lỗi Parse JSON. Code của bạn hiện tại dùng `json.loads` bình thường để parse đúng không?
+
+## Verification Plan
+
+### Manual Verification
+- Sau khi tôi Apply mã nguồn, bạn hãy bấm chạy thử lệnh Auto Pipeline cho một nhân vật nặng dữ kiện (Ví dụ: Napoleon hoặc Einstein).
+- Mở file `_renew_outline_audited.json` để kiểm tra trực tiếp khối `pacing_evaluation` xem con AI đếm node có chuẩn không, và file `ch01_blueprint.json` đã giảm dung lượng xuống mức an toàn (10-15KB) chưa.

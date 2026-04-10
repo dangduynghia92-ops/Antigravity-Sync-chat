@@ -1,0 +1,171 @@
+# Redesign Style Analysis Pipeline
+
+## Problem
+The current pipeline extracts **WHAT** the writer wrote (quotes, technique names) but not **HOW** they think. This produces style prompts that cause AI to copy patterns instead of creating new content with the same methodology.
+
+## Current Pipeline (3 Steps)
+
+```
+Step 1: Overview → catalog structure, arc, engagement hooks (with quotes)
+Step 2: Detail → per-chapter technique list (with quotes)
+Step 3: Synthesis → combine into style JSON
+```
+
+**Core flaw:** All steps collect CONTENT evidence (quotes) → synthesis sees content → produces content-dependent rules → AI copies instead of creating.
+
+---
+
+## Proposed Pipeline (4 Steps)
+
+### Step 1: Voice DNA (replaces `system_style_overview.txt`)
+
+**Goal:** Extract the writer's PERSONALITY — how they sound, not what they say.
+
+**Analyzes:**
+- Tone register (formal/casual/mixed + when each is used)
+- Sentence rhythm patterns (short-long ratios, paragraph structure)
+- Vocabulary strategy (word register, specialized vs accessible)
+- Narrative perspective (which POVs, when/why each is used)
+- Emotional strategy (how emotions are evoked — through detail? through structure? through word choice?)
+
+**Key change:** NO quotes from source. Output describes **patterns** in abstract terms.
+
+**Output format:**
+```json
+{
+  "tone": {"register": "...", "shifts": "..."},
+  "rhythm": {"pattern": "...", "paragraph_structure": "..."},
+  "vocabulary": {"register": "...", "strategy": "..."},
+  "perspective": {"default": "...", "shifts": [{"to": "...", "when": "...", "purpose": "..."}]},
+  "emotional_strategy": "..."
+}
+```
+
+#### [MODIFY] [system_style_overview.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_overview.txt)
+- Remove all "provide EXACT quotes" requirements
+- Replace engagement hook counting with emotional strategy analysis
+- Focus on patterns and methods, not content
+
+---
+
+### Step 2: Chapter Method Analysis (replaces `system_style_detail.txt`)
+
+**Goal:** For each chapter, extract the writer's **decision-making process** — WHY they chose each technique at each position.
+
+**Analyzes:**
+- Opening method: what PRINCIPLE is used? (create urgency? build mystery? establish stakes?)
+- Technique deployment: each technique → POSITION (opening/body/climax/ending) + PURPOSE (what emotional effect?) + COUNT per chapter
+- Closing method: what PRINCIPLE drives the ending?
+- Transitions: how does this chapter connect to before/after — what's the LOGIC?
+
+**Key change:** For each technique, record **principle + purpose + position** instead of **name + quote**.
+
+**Output format:**
+```json
+{
+  "chapter_name": "...",
+  "opening": {
+    "principle": "Create immediate stakes by placing audience in a decision moment",
+    "method": "Direct audience address with sensory immersion",
+    "position_purpose": "Forces personal investment before context is given"
+  },
+  "techniques": [
+    {
+      "method": "Contrast",
+      "position": "body",
+      "purpose": "Highlight power disparity to build tension",
+      "count_in_chapter": 3
+    }
+  ],
+  "closing": {
+    "principle": "Create forward momentum",
+    "method": "Unanswered question that next chapter resolves"
+  },
+  "pov_shifts": {
+    "count": 1,
+    "positions": ["opening"],
+    "purpose": "Immersion at hook only"
+  }
+}
+```
+
+#### [MODIFY] [system_style_detail.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_detail.txt)
+- Remove "provide EXACT QUOTE" for every observation
+- Add position, purpose, and count fields
+- Add pov_shifts tracking
+- Focus on WHY each technique is used at that position
+
+---
+
+### Step 3: Cross-Chapter Pattern Analysis (NEW)
+
+**Goal:** Compare across ALL chapters to find **what varies vs what stays consistent**. This is the missing step that prevents repetition.
+
+**Analyzes:**
+- Opening diversity: how many DIFFERENT opening methods across N chapters?
+- Technique distribution: which techniques appear everywhere vs only in specific positions?
+- Variation strategy: does the author consciously alternate methods chapter to chapter?
+- Consistency baseline: what stays the SAME across all chapters? (this is the true "style DNA")
+
+**Output format:**
+```json
+{
+  "consistent_patterns": ["Things that are the SAME across all chapters"],
+  "varying_patterns": {
+    "openings_used": [{"method": "...", "chapters": [1,4,7]}, {"method": "...", "chapters": [2,3,5,6]}],
+    "closing_used": [{"method": "...", "chapters": [...]}]
+  },
+  "technique_placement_map": {
+    "contrast": {"avg_per_chapter": 2.3, "typical_positions": ["body", "climax"]},
+    "pov_shift": {"avg_per_chapter": 0.8, "typical_positions": ["opening"]}
+  },
+  "diversity_rules": [
+    "Author alternates opening methods — never uses same method 2 chapters in a row",
+    "POV shift used only at chapter opening, average 1 per chapter"
+  ]
+}
+```
+
+**Implementation:** This step runs in Python code, NOT by AI. It's a statistical aggregation of Step 2 outputs.
+
+#### [NEW] `cross_chapter_analysis()` function in `style_analyzer.py`
+- Input: list of chapter detail dicts from Step 2
+- Output: cross-chapter pattern dict
+- Pure Python — no API call needed
+
+---
+
+### Step 4: Synthesis (replaces `system_style_synthesis.txt`)
+
+**Goal:** Combine Voice DNA + Chapter Methods + Cross-Chapter Patterns into a style prompt that teaches the METHODOLOGY.
+
+**Key changes:**
+- Receives cross-chapter statistics → can write accurate frequency rules ("max 1 per chapter, opening only")
+- No source content flows through → outputs are content-free principles
+- Openings/closings are described as METHODS with purposes, not as patterns to copy
+- `example_hint` describes a GENERIC scenario anyone can adapt
+
+#### [MODIFY] [system_style_synthesis.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_style_synthesis.txt)
+- Add cross-chapter analysis as input
+- Update pov_rules to use actual statistics from Step 3
+- Update frequency fields to use actual per-chapter counts from Step 3
+
+#### [MODIFY] [style_analyzer.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/style_analyzer.py)
+- Add `cross_chapter_analysis()` function (Step 3 — pure Python)
+- Update `synthesize_style_guide()` to include cross-chapter data as input
+
+---
+
+## Summary of Changes
+
+| File | Action | Description |
+|------|--------|-------------|
+| `system_style_overview.txt` | MODIFY | Remove quotes, focus on abstract voice patterns |
+| `system_style_detail.txt` | MODIFY | Add position/purpose/count, remove quotes, add pov_shifts |
+| `system_style_synthesis.txt` | MODIFY | Add cross-chapter input, fix frequency/pov format |
+| `style_analyzer.py` | MODIFY | Add `cross_chapter_analysis()`, update synthesis call |
+
+## Verification
+- Run Style Analyzer on existing scripts
+- Check output JSON: no quotes, no character names, has frequency/placement constraints
+- Compare with previous output to confirm methodology focus

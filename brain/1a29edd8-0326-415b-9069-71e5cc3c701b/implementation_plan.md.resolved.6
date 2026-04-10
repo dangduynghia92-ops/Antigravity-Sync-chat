@@ -1,0 +1,79 @@
+# Fix Plan — Live Test Feedback
+
+## Issue → Root Cause → Fix
+
+---
+
+### 1. HALLUCINATION (Ruger American + Magpul)
+**Problem**: Writer invented "Magpul collaboration + 27 grip combos" for Ruger American Pistol. Magpul works with Ruger American **Rifle**, not Pistol.
+**Root cause**: Blueprint had wrong data from extraction, AND reality check didn't catch it, AND writer used it.
+**Fix**:
+- [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — strengthen rule: "If a claim sounds like cross-product confusion (e.g., feature from rifle version attributed to pistol), DO NOT include it."
+- [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt) — add check: "Verify product-specific features are not confused with same-brand different-product features"
+
+---
+
+### 2. REPETITIVE PACING (every chapter identical formula)
+**Problem**: All 4 body chapters follow exact same structure: Chê Glock → Capacity → Torture test → Trigger → Price → Glock humiliated. Audience tunes out by chapter 3.
+**Root cause**: `chapter_template` in Budget Warrior is a rigid 5-step formula applied identically to every chapter.
+**Fix**:
+- [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — add rule: "Each body chapter must LEAD WITH A DIFFERENT primary_criterion. If chapter 2 leads with capacity, chapter 3 must lead with trigger or ergonomics or accuracy. The chapter_template is a MENU of elements, not a fixed sequence — vary the ORDER and EMPHASIS per chapter."
+- [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — add rule: "The chapter_template provides the ELEMENTS to include, but you must VARY the order and emphasis. The primary_criterion should get the most depth and be the LEAD. Do NOT follow the template in the same sequence for every chapter."
+
+---
+
+### 3. MISSING/DUPLICATE CHAPTERS (structural bugs)
+**Problems**: Chapter 5 missing, Chapter 4 duplicated, Top 1 missing, two conclusions, products in conclusion not in body.
+**Root cause**: Likely writer/merge bugs. Need to check:
+- Does the pipeline check for duplicate chapter text?
+- Does the merge step verify all chapters are present?
+**Fix**:
+- [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py) — after writing all chapters, add validation: check for duplicate texts, check chapter count matches outline, check all countdown numbers present
+- [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) — add checks: "products mentioned in conclusion must exist in body chapters", "verify no duplicate chapter content", "verify countdown is complete (N→1, no gaps)"
+
+---
+
+### 4. CULTURAL CONTEXT MISSING
+**Problems**:
+- No mention of optics-ready (critical 2026 CCW trend)
+- No state law awareness (10-round cap in CA, NY, WA, IL)
+- No aftermarket ecosystem (Shield Arms S15 for Glock 43X)
+**Root cause**: Writer prompt has no cultural awareness rules for target_country.
+**Fix**:
+- [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — add section:
+```
+CULTURAL AWARENESS ({target_country}):
+- US: Acknowledge state-specific magazine capacity restrictions (10-round states: CA, NY, WA, IL, etc.). Use phrasing like "If you're in a free state, you get X rounds..."
+- US: For CCW/carry guns in 2026+, ALWAYS mention optics-ready capability (red dot cut)
+- US: When comparing against a benchmark, acknowledge its aftermarket ecosystem (e.g., Shield Arms S15 for Glock 43X). Ignoring it destroys credibility.
+- US: Be aware of brand perception (Turkish imports have QC stigma, European brands carry prestige)
+```
+- [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) — add field: "aftermarket_ecosystem" per product
+
+---
+
+### 5. RANKING ORDER (Turkish brand first = bad)
+**Problem**: Starting countdown at #7 with SAR 9 (Turkish) makes US audience close video immediately.
+**Root cause**: Outline ranks purely by technical merit via `evaluation_focus.angle`, ignoring audience perception.
+**Fix**:
+- [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) — add rule: "For target_country=US: consider brand perception when ranking. Established US/European brands should anchor the list early to build credibility. Lesser-known imports should be positioned as 'hidden gems' in the middle, not as the opener."
+- This should be a TIEBREAKER, not the primary ranking — technical merit first, then adjust ties by audience perception.
+
+---
+
+### 6. TONE BALANCE (too anti-benchmark)
+**Problem**: Excessive Glock-bashing ("humillación", "ladrillo") makes the script sound like a hater, not an expert.
+**Root cause**: Budget Warrior framework angle is "every chapter must answer: why pay more for the benchmark when this exists?" — this encourages one-directional negativity.
+**Fix**:
+- [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) — add rule: "TONE BALANCE: Respect the benchmark. Acknowledge its strengths (reliability, track record, aftermarket) before showing where challengers win. The goal is 'data shows better alternatives exist' NOT 'the benchmark is garbage'. Expert tone = fair, not hostile."
+- Budget Warrior framework in JSON — revise `hook.tone` from "Confrontational, insider authority" to "Confident, data-driven, fair-minded authority"
+
+---
+
+## Execution Order
+1. Update [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) (pacing variety, cultural awareness, tone balance, anti-hallucination)
+2. Update [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) (pacing variety, brand perception ranking)
+3. Update [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt) (structural validation)
+4. Update [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt) (aftermarket field)
+5. Add post-write validation in pipeline (duplicate/missing check)
+6. Update Budget Warrior framework tone

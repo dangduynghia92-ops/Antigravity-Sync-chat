@@ -1,0 +1,55 @@
+# Redesign 3 Frameworks For Listicle Format
+
+## Problem
+
+Format Top/List = mỗi chapter là 1 mystery độc lập. Hiện tại 3 framework (Kinh Ngạc, Luận Đề, Câu Chuyện Nhỏ) được thiết kế cho **script-level structure**, không phải per-chapter → AI không bao giờ chọn chúng cho listicle.
+
+## Solution
+
+Redesign cả 3 thành **per-chapter storytelling lens** — mỗi framework là 1 cách kể khác nhau cho từng mystery item:
+
+| Framework | Lens | Phù hợp khi |
+|---|---|---|
+| 🗂️ Hồ Sơ Bí Ẩn (giữ) | Dialectic sâu | Listicle tiêu chuẩn, cần phản biện chi tiết |
+| 📚 Tổng Hợp Bí Ẩn (giữ) | Catalogue nhanh | Nhiều mystery, cần pace nhanh |
+| 😲 **Kinh Ngạc → Thất Vọng → Hoài Nghi** | **Emotion-driven** | Mystery có yếu tố visual/awe mạnh (kiến trúc, artifact) |
+| ⚖️ **Luận Đề → Phản Đề → Tổng Hợp** | **Debate-driven** | Mystery có tranh luận học thuật rõ ràng |
+| 🔬 **Câu Chuyện Nhỏ → Pattern Lớn** | **Story-driven** | Mystery gắn với nhân vật/sự kiện cụ thể |
+
+## Proposed Changes
+
+### [MODIFY] [Review_bí_ẩn_lịch_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_bí_ẩn_lịch_sử.json)
+
+#### Framework 2: Kinh Ngạc → Thất Vọng → Hoài Nghi
+
+**Trước** (script-level): 3 act — build awe toàn script → anticlimax → rebuild mystery
+
+**Sau** (per-chapter): Mỗi body chapter follow cùng 3 bước:
+1. **Khám Phá & Kinh Ngạc** — Trình bày mystery item ở scale ấn tượng nhất (kích thước, tuổi, precision). Dùng sensory details + modern comparisons
+2. **Giải Thích Chính Thống (Anticlimax)** — Đưa ra official explanation — cố tình cho nó CẢM THẤY không thỏa mãn
+3. **Tái Xây Dựng Bí Ẩn** — Counter-evidence, paradoxes → chứng minh bí ẩn sâu hơn → câu hỏi mở
+
+#### Framework 3: Luận Đề → Phản Đề → Tổng Hợp
+
+**Trước** (script-level): Debate trừu tượng toàn script
+
+**Sau** (per-chapter): Mỗi body chapter là 1 cuộc tranh luận:
+1. **Luận Đề** — Trình bày claim phi thường hoặc phiên bản huyền thoại/alternative
+2. **Phản Đề** — Phản bác bằng giải thích skeptical/mainstream có trọng lượng thật
+3. **Tổng Hợp** — Data mới undermine cả 2 → kết luận elevated hơn, không thuộc bên nào
+
+#### Framework 4: Câu Chuyện Nhỏ → Pattern Lớn
+
+**Trước** (script-level): Zoom-out từ 1 câu chuyện → thesis toàn video
+
+**Sau** (per-chapter): Mỗi body chapter mở bằng 1 con người/sự kiện cụ thể rồi zoom out:
+1. **Micro-Narrative** — Mở bằng câu chuyện cá nhân dramatic (nhà khảo cổ, nhân chứng, nạn nhân)
+2. **Kết Nối Pattern** — Reveal mystery item này KHÔNG phải trường hợp duy nhất → pattern lớn
+3. **Hệ Quả Văn Minh** — Scale implication lên level civilization: cái này có nghĩa gì cho nhân loại?
+
+## Verification
+
+- Mỗi framework phải có `use_when` rõ ràng phân biệt với nhau
+- Mỗi framework phải hoạt động per-chapter (steps apply lặp lại cho mỗi body chapter)
+- Outline prompt không cần thay đổi (đã generic đủ)
+- Writer prompt không cần thay đổi (đã follow framework steps)

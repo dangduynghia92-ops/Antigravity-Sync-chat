@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Plan to improve narrative chapter splitting: update prompt with CTA merge rules + min size, add post-split validation (re-split if violations), and popup + CSV report if still failing.",
+  "updatedAt":  "2026-03-10T05:31:22.088390600Z",
+  "version":  "2"
+}

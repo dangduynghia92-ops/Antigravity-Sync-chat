@@ -1,0 +1,12 @@
+# Product Tab Redesign
+
+- [ ] Create `core/file_reader.py` (read .txt, Google Docs public link)
+- [ ] Create `prompts/extract_objects.txt` (system prompt for extraction)
+- [ ] Rewrite [ui/product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py):
+  - [ ] Remove Generated Prompts panel ([_build_results_panel](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#262-273), [_show_placeholder](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py#248-260), `result_text`)
+  - [ ] Add File Import panel (left): Add Files, Add URL, Extract tree, Export CSV, Send to Objects
+  - [ ] Modify Objects panel (right): tree format with grouping
+  - [ ] Separate Generate buttons per panel
+  - [ ] Redesign action buttons layout
+  - [ ] Wire up extraction logic (API call per file)
+- [ ] Test app launches without errors

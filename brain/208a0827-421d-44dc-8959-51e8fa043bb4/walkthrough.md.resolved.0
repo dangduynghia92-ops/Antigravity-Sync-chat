@@ -1,0 +1,58 @@
+# SRT Prompt Generator — Walkthrough
+
+## What Was Built
+
+Dashboard-style Python application converting SRT subtitle files into AI-generated image/video prompts with batch processing.
+
+## Project Structure
+
+```
+1.Prompt_Image/
+├── main.py                      # Entry point
+├── config.json                  # App settings
+├── api_keys.json                # API keys (separate)
+├── requirements.txt             # Dependencies
+├── styles/
+│   ├── Cinematic.txt            # Film-style preset
+│   └── Documentary.txt          # Documentary preset
+├── core/
+│   ├── srt_parser.py            # Parse SRT + group by interval
+│   ├── api_client.py            # Multi-endpoint API + fallback
+│   ├── prompt_generator.py      # Generate prompts via API
+│   └── process_controller.py    # Batch queue + Start/Pause/Stop
+└── ui/
+    ├── main_window.py           # Main dashboard layout
+    ├── settings_dialog.py       # API Settings popup
+    ├── config_section.py        # Style, Output, Tier, Threads
+    ├── projects_section.py      # Batch projects table
+    ├── srt_preview.py           # SRT file preview
+    ├── actions_section.py       # Process / Stop / Retry buttons
+    └── log_section.py           # Processing log + status bar
+```
+
+## Verification Results
+
+| Test | Status | Details |
+|------|--------|---------|
+| SRT Parser | ✅ Pass | Parsed 3 segments, grouped into 2 groups (5s interval) |
+| API Client Config | ✅ Pass | Loads primary + 1 fallback endpoint from [api_keys.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/api_keys.json) |
+| Style Scanner | ✅ Pass | Detects `['Cinematic', 'Documentary']` from `/styles` folder |
+| App Launch | ✅ Pass | GUI runs without errors (dark mode, all sections visible) |
+
+## How to Run
+
+```bash
+cd "F:\1. Edit Videos\8.AntiCode\1.Prompt_Image\1.Prompt_Image"
+pip install -r requirements.txt
+python main.py
+```
+
+## Key Features
+
+- **Batch processing** — Scan Folder to import all `.srt` files at once, Process ALL
+- **Multi-endpoint API** — Auto-fallback when rate limited (429)
+- **Style presets** — Drop [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/requirements.txt) files in `/styles`, auto-detected in dropdown
+- **Process control** — Start / Pause / Stop / Retry Failed
+- **Output** — Auto-saves [.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/requirements.txt) + `.csv` per project to output folder
+- **Restart Tool** — One-click app restart for code updates
+- **Settings popup** — API config, theme, dependencies (separate from main UI)

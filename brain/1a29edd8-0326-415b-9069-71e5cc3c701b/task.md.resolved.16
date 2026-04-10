@@ -1,0 +1,17 @@
+# Rewrite Pipeline Improvements
+
+## Task 1: Fix Status/Score/Progress Columns ✅
+- [x] Add real-time status updates per chapter during both pipelines
+- [x] Show progress per chapter
+- [x] Added processing/writing states
+
+## Task 2: Concurrent Rewrite Support ✅
+- [x] Removed dead Score column
+- [x] Added Job table (left 50%) + Chapter table (right 50%) with QSplitter
+- [x] Added per-job stop flags (threading.Event per job)
+- [x] Replaced threading.Thread with ThreadPoolExecutor(max_workers=3)
+- [x] Updated _do_rewrite to create job entries
+- [x] Updated both pipelines to accept job param and use per-job stop_event
+- [x] Updated Stop button for multi-job support (menu when >1 job)
+- [x] Added log prefix with folder name
+- [x] Syntax verified ✅

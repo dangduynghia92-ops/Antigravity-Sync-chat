@@ -1,0 +1,80 @@
+# 🔴 Root Cause Analysis: Writer IGNORED Alternative Rhetoric
+
+> [!CAUTION]
+> Transform Rhetoric **đã chạy thành công** (10 products transformed).
+> Writer **ĐÃ BỎ QUA** alternative rhetoric và **DÙNG THẲNG** original rhetoric.
+
+---
+
+## Bằng chứng: So sánh Transform Output vs Writer Output
+
+### 1. Beretta A300 — "Bird gun → Tactical"
+
+| Layer | Content |
+|-------|---------|
+| **Transform `narrative_angle.alternative`** | "**Nacida en Tennessee, representa la adaptación de la ingeniería italiana al pragmatismo** del mercado de defensa estadounidense" |
+| **Writer output (ch_06)** | "Beretta tomó el concepto de su probada **escopeta de caza** A300 y lo rediseñó desde cero... esta arma **nace en Estados Unidos**" |
+
+⚠️ Writer dùng **MIX**: một phần từ alternative ("Tennessee"), nhưng vẫn dùng "escopeta de caza → tactical" pattern LÀ **author_rhetoric gốc**.
+
+### 2. IWI TS12 — "Lazy Hands"
+
+| Layer | Content |
+|-------|---------|
+| **Transform `original_insight`** | "su ventaja táctica depende enteramente de que el **usuario no cometa errores bajo estrés**" |
+| **Transform `data_source`** (⚠️ LEAKED) | "La rotación del tubo puede fallar si se hace con **'manos perezosas'**" |
+| **Writer output (ch_05)** | "una pulsación incompleta o con **\"manos perezosas\"** significa que el tubo no se alineará" |
+
+🔴 Writer dùng **"manos perezosas" TRỰC TIẾP** — phrase này xuất hiện trong `data_source` field của transform output! Tức là:
+- `author_rhetoric` gốc chứa "lazy hands" 
+- Transform **đúng** đã tạo alternative ("usuario no cometa errores bajo estrés")
+- Nhưng `data_source` **vẫn chứa** phrase gốc → Writer đọc data_source → dùng nó
+
+### 3. Benelli M4 — "Endurance > Speed"
+
+| Layer | Content |
+|-------|---------|
+| **Transform `comparison_benchmark.alternative`** | "Supera en longevidad operativa a la **Mossberg 590A1**, manteniendo la fiabilidad semiautomática" |
+| **Transform `original_insight`** | "centro de gravedad está tan optimizado que **mitiga el retroceso vertical**" |
+| **Writer output (ch_09)** | "el sistema A.R.G.O. es tan fiable que **la ventaja de velocidad del 36% de la 1301 se vuelve irrelevante**" |
+
+🔴 Writer **BỎ QUA** alternative (Mossberg 590A1 comparison) và **TỰ TẠO** argument giống hệt gốc: "1301 speed irrelevant vs M4 endurance".
+
+### 4. DP-12 — Writer dùng alternative ĐÚNG! ✅
+
+| Layer | Content |
+|-------|---------|
+| **Transform `comparison_benchmark.alternative`** | "**Proporciona el doble de capacidad que una Kel-Tec KSG** en un paquete casi igual de compacto" |
+| **Writer output (ch_04)** | "ofrece **el doble de capacidad que una Kel-Tec KSG** en un paquete de 29.5 pulgadas que es casi igual de compacto" |
+
+✅ Proof that **the mechanism CAN work** — writer DID use alternative here.
+
+---
+
+## Root Cause: 3 Failure Modes Identified
+
+### Failure 1: `data_source` field LEAKS original rhetoric
+Transform output includes `data_source` with original phrases like "manos perezosas". Writer reads this field and uses the original phrase instead of the alternative.
+
+**Fix needed**: Strip `author_rhetoric` phrases from `data_source` field, or don't include `data_source` in writer input.
+
+### Failure 2: Writer partially complies — MIX of alternative + original
+For A300, writer used SOME alternative ("Tennessee") but also injected original angle ("escopeta de caza → tactical"). This suggests `author_rhetoric` is STILL flowing to the writer via `detailed_facts` or blueprint data.
+
+**Check needed**: Is `author_rhetoric` being sent to the writer in the blueprint? If yes, writer sees both and picks the more "interesting" original.
+
+### Failure 3: Writer IGNORES alternative for some products
+For M4, writer completely ignored the alternative comparison (Mossberg 590A1) and rebuilt the original argument instead. This means:
+- The `alternative_rhetoric` data may not be reaching the writer prompt
+- Or it reaches but Writer Rule #12 is not strong enough
+
+**Check needed**: Verify how `alternative_rhetoric` is injected into the writer's user message.
+
+---
+
+## Investigation Plan
+
+1. **Check blueprint data sent to writer** — does it contain `author_rhetoric`?
+2. **Check `_extract_chapter_blueprint()`** — does it include `alternative_rhetoric` in per-chapter data?
+3. **Check writer user message construction** — how are alternatives formatted and injected?
+4. **Check Rule #12 strength** — is it clear enough that writer MUST use alternatives?

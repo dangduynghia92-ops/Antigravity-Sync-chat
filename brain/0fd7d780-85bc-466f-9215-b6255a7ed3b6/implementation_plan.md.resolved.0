@@ -1,0 +1,156 @@
+# Niche-Based TTS Cleanup with Interactive Popups
+
+Thêm hệ thống phân loại niche cho TTS Cleanup, với 2 loại rule: base (chung) + niche-specific. Khi không xác định được niche hoặc có từ chưa rõ cách đọc → popup cho user, **dừng hẳn** không tự chuyển đổi tiếp.
+
+## Proposed Changes
+
+### Prompt Files
+
+#### [MODIFY] [system_tts_cleanup.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_cleanup.txt)
+
+Thêm các rule gap vào phần base (áp dụng mọi niche):
+- Rule 9: **Em dash** `—` → `,`
+- Rule 10: **Semicolons** `;` → `,`
+- Rule 11: **Quotation marks** `""` `«»` → xóa, giữ nội dung
+- Rule 12: **Parentheses** [()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1478-2093) → xóa, giữ nội dung
+- Rule 13: **Thousands separator** — nhận diện `,` trong số lớn (`1,239` → `one thousand two hundred thirty nine`)
+
+Thêm output section mới `---UNCERTAIN---`:
+```
+---UNCERTAIN---
+term|context_sentence|suggested_reading|confidence
+```
+AI phải liệt kê bất kỳ từ/cụm từ nào **không chắc chắn** cách đọc cho TTS. Confidence: `high` / `medium` / `low`.
+
+> [!IMPORTANT]
+> Phần `{NICHE_RULES}` sẽ được inject động vào cuối prompt bởi code Python, ngay trước phần OUTPUT FORMAT.
+
+---
+
+#### [NEW] [system_tts_detect_niche.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_tts_detect_niche.txt)
+
+Prompt nhẹ cho Flash model, đọc ~1500 ký tự đầu của script → trả về JSON:
+```json
+{"niche": "military", "confidence": "high", "reasoning": "..."}
+```
+Giá trị niche hợp lệ: `military`, `history`, `general`. Confidence: `high` / `medium` / `low`.
+
+---
+
+#### [NEW] [military.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/military.txt)
+
+Pattern-based rules cho niche vũ khí/súng đạn:
+- Caliber notation: `.30-30` → `thirty thirty`, `5.56` → `five five six`
+- Model codes: `AR-15` → `a r fifteen`, `AK-47` → `a k forty seven`
+- Technical terms: `M-LOK` → `m lok`, `MSRP` → `m s r p`
+- Brand combos: `S&W` → `s and w`
+
+---
+
+#### [NEW] [history.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/tts_niche_rules/history.txt)
+
+Pattern-based rules cho niche lịch sử:
+- Dynasty/era names: giữ nguyên phát âm gốc
+- Ancient dates: `1200 BC` → `twelve hundred b c`
+- Historical titles: `Emperor` / `King` + Roman numerals
+- Geographic names: cổ đại vs hiện đại
+
+---
+
+### Core Module
+
+#### [MODIFY] [tts_cleanup.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+
+**Thêm 3 hàm mới:**
+
+1. `detect_niche(text, api_client, log_callback)` → `{"niche", "confidence", "reasoning"}`
+   - Dùng Flash model, gửi ~1500 ký tự đầu
+   - Load prompt `system_tts_detect_niche.txt`
+
+2. `load_niche_rules(niche)` → `str`
+   - Đọc file `prompts/tts_niche_rules/{niche}.txt`
+   - Trả về `""` nếu niche = `general` hoặc file không tồn tại
+
+3. `export_uncertain_csv(data, path)` → `str`
+   - Ghi CSV: `Script | Term | Context | Suggested | Confidence`
+   - Cùng pattern locked-file retry như [export_acronym_csv](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#176-210)
+
+**Sửa [cleanup_for_tts()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py#58-117):**
+- Thêm param `niche_rules: str = ""`
+- Inject niche_rules vào cuối system prompt
+- Parse thêm section `---UNCERTAIN---` từ response
+- Return mới: [(cleaned_text, acronyms, uncertain_terms)](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1478-2093)
+
+---
+
+### UI Tab
+
+#### [MODIFY] [tts_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+
+**Thêm signals + events** (theo pattern của [chapter_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/chapter_tab.py)):
+
+```python
+_niche_confirm_signal = pyqtSignal(dict)   # detect result
+_uncertain_signal = pyqtSignal(list, str)  # uncertain terms, filename
+
+self._niche_event = threading.Event()
+self._niche_result = None  # user's confirmed niche or None (cancel)
+
+self._uncertain_event = threading.Event()
+self._uncertain_result = None  # "proceed" or "stop"
+```
+
+**Thêm 2 popup dialogs:**
+
+1. `_show_niche_popup(detect_result)`:
+   - Hiển thị niche detected + confidence + reasoning
+   - Nếu confidence = `high` → pre-select, user xác nhận
+   - Nếu confidence != `high` → yêu cầu user chọn niche từ dropdown
+   - Buttons: **Confirm** (lưu niche) / **Cancel** (dừng toàn bộ)
+   - Set `_niche_result` → `_niche_event.set()`
+
+2. `_show_uncertain_popup(terms, filename)`:
+   - Hiển thị bảng: Term | Context | Suggested | Confidence
+   - Buttons: **Approve & Continue** (chấp nhận gợi ý AI, tiếp tục) / **Stop** (dừng để kiểm tra)
+   - Luôn export CSV bất kể user chọn gì
+   - Set `_uncertain_result` → `_uncertain_event.set()`
+
+**Sửa [_run_cleanup()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py#480-705) flow:**
+
+```
+1. Detect niche (1 lần cho batch, sample file đầu tiên)
+2. If confidence != "high" OR niche unknown:
+   → emit _niche_confirm_signal → wait _niche_event
+   → User cancel → stop all
+3. Load niche rules
+4. Process files TUẦN TỰ (không parallel) vì cần popup per-file:
+   a. cleanup_for_tts() với niche_rules
+   b. If uncertain_terms not empty:
+      → emit _uncertain_signal → wait _uncertain_event
+      → User "stop" → stop all, không ghi file
+      → User "approve" → ghi file, tiếp tục file kế
+   c. Write output file
+5. Acronym CSV + Verify phase (giữ nguyên)
+```
+
+> [!WARNING]
+> Chuyển từ parallel (ThreadPoolExecutor) sang sequential cho phần cleanup vì mỗi file có thể cần popup. Verify phase vẫn giữ sequential như hiện tại.
+
+---
+
+## Verification Plan
+
+### Manual Testing (by user)
+
+1. **Test với script mẫu quân sự** (file gốc user đã cung cấp):
+   - Chạy app → TTS tab → Scan folder chứa file mẫu
+   - Nhấn Process → kiểm tra niche popup hiện ra với `military` + `high confidence`
+   - Confirm → kiểm tra cleanup chạy, nếu có uncertain terms → popup hiện
+   - Kiểm tra output file có chuyển đổi đúng caliber, model, brand
+
+2. **Test niche không xác định**:
+   - Dùng file text ngẫu nhiên (không thuộc military/history)
+   - Kiểm tra popup yêu cầu user chọn niche
+
+3. **Test Stop khi popup đang hiện**:
+   - Nhấn Stop khi đang hiển thị popup → kiểm tra process dừng hoàn toàn

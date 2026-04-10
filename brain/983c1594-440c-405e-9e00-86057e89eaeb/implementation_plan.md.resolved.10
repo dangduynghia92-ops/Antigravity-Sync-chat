@@ -1,0 +1,254 @@
+# Implementation Plan: Pre-compute Framework Scoring (Hướng C)
+
+## Mục tiêu
+
+Tách phần **deterministic** (tra tier → score) ra khỏi AI, chỉ giao AI phần **subjective** (topic_fit, narrative_potential). Kết quả phải nhất quán giữa các lần chạy.
+
+## Phạm vi thay đổi
+
+| File | Thay đổi | Rủi ro |
+|---|---|---|
+| `core/rewriter.py` | Thêm `_pre_score_frameworks()` function + gọi trước `recommend_framework` | Thấp — thêm mới, không sửa logic cũ |
+| `prompts/system_recommend_framework.txt` | Thêm block nhận pre-computed scores | Thấp — thêm section |
+| `prompts/system_extract_blueprint_biography.txt` | Tăng cường enforcement cho enum values | Trung bình — blueprint mới sẽ đúng, cũ không ảnh hưởng |
+
+---
+
+## Phần A: Sửa extraction prompt
+
+### Thêm rule mới vào CRITICAL RULES (cuối file):
+
+```
+10. TIER TAGS MUST USE EXACT ENUM VALUES — do NOT paraphrase or describe:
+    - dark_side_severity: ONLY "Personal_Flaws" | "Professional_Unethical" | "Crimes_Against_Humanity"
+    - trajectory_shift_degree: ONLY "Catalyst" | "Radical_Pivot" | "Point_of_No_Return"
+    - opposition_severity: ONLY "Censorship_Reputation" | "Exile_Imprisonment" | "Lethal_Eradication"
+    - historical_distortion_level: ONLY "None" | "Oversimplification" | "Erasure_Stolen_Legacy" | "Demonization_Framing"
+    - impact_radius: ONLY "Domain_Level" | "Societal_Level" | "Civilizational_Level"
+    - severity (downfall): ONLY "Poor_Judgment" | "Systematic_Corruption" | "Megalomaniac_Collapse"
+    - self_destruction_type: ONLY "Overreach" | "Betrayal_of_Allies" | "Paranoia" | "Addiction" | "Ideological_Blindness"
+    DO NOT use words like "high", "extreme", "moderate", "global" — they will cause scoring errors.
+```
+
+> [!IMPORTANT]
+> Blueprint cũ vẫn dùng free-text → cần fuzzy mapping (Phần B) làm safety net.
+
+---
+
+## Phần B: Python function `_pre_score_frameworks()`
+
+### Vị trí: `core/rewriter.py`, trước `recommend_framework()`
+
+### Logic:
+
+```python
+def _pre_score_frameworks(blueprint: dict, style_guide: dict, log_callback=None) -> list[dict]:
+    """
+    Pre-compute data_richness scores for each framework.
+    Returns list of {name, data_richness, highest_tier, tier_values_found, warnings}
+    """
+```
+
+### 3 data structure handlers:
+
+#### Handler 1: List (Sử Thi, Bản Án, Sự Lụi Tàn)
+```python
+# paradigm_shift = [{..., "impact_radius": "Domain_Level"}, ...]
+data = blueprint.get(primary_data_field, [])  # → list
+for item in data:
+    if isinstance(item, dict) and tier_field in item:
+        tier_values.append(item[tier_field])
+```
+
+#### Handler 2: Nested dict (Hai Mặt)
+```python
+# dual_nature = {"light_side": [...], "dark_side": [{..., "dark_side_severity": "..."}, ...]}
+data = blueprint.get("dual_nature", {})
+# Search ALL sub-lists for tier_field
+for sub_key, sub_val in data.items():
+    if isinstance(sub_val, list):
+        for item in sub_val:
+            if isinstance(item, dict) and tier_field in item:
+                tier_values.append(item[tier_field])
+```
+
+#### Handler 3: Flat dict (Kẻ Xét Lại)
+```python
+# historiography = {"historical_distortion_level": "Demonization_Framing", ...}
+data = blueprint.get("historiography", {})
+if tier_field in data:
+    tier_values.append(data[tier_field])
+```
+
+### Fuzzy tier mapping table:
+
+```python
+_TIER_FUZZY_MAP = {
+    # --- Hai Mặt: dark_side_severity ---
+    "Personal_Flaws": ["personal", "flaws", "toxic", "addiction", "affair"],
+    "Professional_Unethical": ["professional", "unethical", "fraud", "plagiarism", "sabotage"],
+    "Crimes_Against_Humanity": ["crimes", "genocide", "mass death", "eugenics", "war crimes"],
+    
+    # --- Sử Thi: impact_radius ---
+    "Domain_Level": ["domain", "field", "regional", "professional", "discipline"],
+    "Societal_Level": ["societal", "national", "continental", "cultural", "economy"],
+    "Civilizational_Level": ["civilizational", "global", "humanity", "world", "universal", "intercontinental"],
+    
+    # --- Bản Án: opposition_severity ---
+    "Censorship_Reputation": ["censorship", "reputation", "smear", "banned", "fired", "low", "moderate", "medium"],
+    "Exile_Imprisonment": ["exile", "imprisonment", "prison", "seized", "arrested", "high"],
+    "Lethal_Eradication": ["lethal", "death", "assassination", "suicide", "execution", "extreme"],
+    
+    # --- Kẻ Xét Lại: historical_distortion_level ---
+    "None": [],  # exact match only
+    "Oversimplification": ["oversimplification", "simplified", "one-dimensional", "moderate", "low"],
+    "Erasure_Stolen_Legacy": ["erasure", "stolen", "erased", "credited to others"],
+    "Demonization_Framing": ["demonization", "framing", "fabricated", "villain", "propaganda", "high"],
+    
+    # --- Sự Lụi Tàn: severity ---
+    "Poor_Judgment": ["poor judgment", "bad decision", "mismanagement"],
+    "Systematic_Corruption": ["systematic", "corruption", "illegal", "unethical system"],
+    "Megalomaniac_Collapse": ["megalomaniac", "invincible", "divine", "god complex", "extreme"],
+}
+```
+
+### Score resolution logic:
+
+```python
+def _resolve_tier(raw_value: str, tier_scoring: dict) -> tuple[str, int, str]:
+    """
+    Returns: (matched_tier, score, match_type)
+    match_type: "exact" | "fuzzy" | "none"
+    """
+    # 1. Exact match
+    if raw_value in tier_scoring:
+        return raw_value, tier_scoring[raw_value], "exact"
+    
+    # 2. Case-insensitive exact match
+    for tier_name, score in tier_scoring.items():
+        if raw_value.lower().strip() == tier_name.lower():
+            return tier_name, score, "exact"
+    
+    # 3. Fuzzy match
+    raw_lower = raw_value.lower()
+    best_tier = None
+    best_score = 0
+    for tier_name, keywords in _TIER_FUZZY_MAP.items():
+        if tier_name not in tier_scoring:
+            continue
+        for kw in keywords:
+            if kw in raw_lower:
+                if tier_scoring[tier_name] > best_score:
+                    best_tier = tier_name
+                    best_score = tier_scoring[tier_name]
+                    break
+    
+    if best_tier:
+        return best_tier, best_score, "fuzzy"
+    
+    return None, 0, "none"
+```
+
+### Logging format (in ra cho mỗi framework):
+
+```
+📊 Pre-scoring frameworks...
+  ┌─ Hai Mặt ─────────────────────────
+  │ Field: dual_nature (dict)
+  │ Tier field: dark_side_severity
+  │ Values found: ["Personal_Flaws"]
+  │ Match: EXACT "Personal_Flaws" → 4
+  │ data_richness = 4
+  └────────────────────────────────────
+  ┌─ Sử Thi ──────────────────────────
+  │ Field: paradigm_shift (list, 3 items)
+  │ Tier field: impact_radius
+  │ Values found: ["global", "global", "global"]
+  │ Match: FUZZY "global" → Civilizational_Level → 10
+  │ ⚠️ FUZZY MATCH — blueprint may need re-extraction
+  │ data_richness = 10
+  └────────────────────────────────────
+  ┌─ Kẻ Xét Lại ──────────────────────
+  │ Field: historiography (dict)
+  │ Tier field: historical_distortion_level
+  │ Values found: ["moderate"]
+  │ Match: FUZZY "moderate" → Oversimplification → 5
+  │ ⚠️ FUZZY MATCH — blueprint may need re-extraction
+  │ data_richness = 5
+  └────────────────────────────────────
+  ┌─ Sự Lụi Tàn ──────────────────────
+  │ Field: downfall_pattern (MISSING)
+  │ data_richness = 0 (field empty → max 4 applied later)
+  └────────────────────────────────────
+```
+
+---
+
+## Phần C: Inject pre-computed scores vào recommend_framework
+
+### Thay đổi trong `recommend_framework()`:
+
+```python
+# TRƯỚC khi gọi API:
+pre_scores = _pre_score_frameworks(blueprint, style_guide, log_callback)
+pre_scores_str = json.dumps(pre_scores, ensure_ascii=False, indent=2)
+
+# Thêm vào user message:
+user_content = (
+    f"BLUEPRINT TO ANALYZE:\n\n{blueprint_json}\n\n"
+    f"PRE-COMPUTED DATA RICHNESS (use these scores, do NOT recalculate):\n"
+    f"{pre_scores_str}"
+)
+```
+
+### Thay đổi trong prompt `system_recommend_framework.txt`:
+
+```
+SCORING METHOD — HYBRID SYSTEM:
+
+1. **data_richness** (PRE-COMPUTED): You will receive pre-calculated data_richness 
+   scores for each framework. USE THESE DIRECTLY — do NOT recalculate.
+   If a pre-computed score looks clearly wrong based on the blueprint content, 
+   you may adjust by ±1 and explain why in the "reason" field.
+
+2. **topic_fit** (YOUR JUDGMENT): Score 1-10 based on use_when match.
+3. **secondary_data** (YOUR JUDGMENT): Score 1-10 based on secondary_fields.
+4. **narrative_potential** (YOUR JUDGMENT): Score 1-10 based on engagement potential.
+```
+
+> [!NOTE]
+> AI vẫn có quyền adjust ±1 nếu pre-computed score có vẻ sai (safety valve).
+> Nhưng nó KHÔNG TỰ TÍNH LẠI từ đầu → giảm variance ~80%.
+
+---
+
+## Verification Plan
+
+### Test 1: Dry-run trên blueprint cũ (không gọi API)
+```
+python _tmp_test_prescore.py
+→ In pre-scores cho Einstein, Van Gogh, Barbarossa
+→ Verify bằng mắt: "fuzzy match này có hợp lý không?"
+```
+
+### Test 2: So sánh trước/sau
+```
+1. Chạy recommend_framework 3 lần TRƯỚC (ghi lại scores)
+2. Chạy recommend_framework 3 lần SAU (ghi lại scores)
+3. So sánh variance → kỳ vọng: data_richness giống nhau 3/3 lần
+```
+
+### Test 3: Edge cases
+- Blueprint THIẾU field → `data_richness = 0` (code áp max 4 rule sau)
+- Blueprint có field RỖNG `[]` → `data_richness = 0`
+- Tier value không match exact NÀ fuzzy → `data_richness = 0` + WARNING log
+- Blueprint mới (đã sửa prompt) → expect EXACT match 100%
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. Bảng fuzzy mapping ở trên có đủ cover các trường hợp bạn từng thấy không? Hay cần bổ sung thêm keywords?
+> 2. Cho phép AI adjust ±1 hay lock cứng pre-computed score (0 variance nhưng không có safety valve)?
+> 3. Nên apply `max 4` rule ở Python hay vẫn để prompt nói?

@@ -1,0 +1,89 @@
+# Redesign Review Blueprint Schema
+
+Replace the rigid 7-criteria gun-specific schema with a flexible `key_specs` + `detailed_facts` structure that works for any review topic.
+
+## Problem
+
+Current schema hardcodes gun-specific fields (`trigger`, `ergonomics.grip_angle`, `accuracy.group_size`). When reviewing military vehicles, drones, or other topics, important data gets lost because it doesn't fit any field.
+
+**Example loss**: "In 2018, Russian army acquired 132 T-14 tanks — not yet in service" → no field for this.
+
+## Proposed Changes
+
+### Extraction Prompt
+
+#### [MODIFY] [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt)
+
+Replace 7 rigid criteria with flexible structure per product:
+
+```json
+{
+  "product_name": "T-14 Armata",
+  "category": "Main Battle Tank",
+  "key_specs": {
+    "auto-detected fields": "e.g. caliber, engine, weight, speed, price..."
+  },
+  "detailed_facts": [
+    {"fact": "125mm smoothbore cannon", "source": "transcript"},
+    {"fact": "Afganit APS with mm-wave radar", "source": "transcript"},
+    {"fact": "In 2018, 132 tanks acquired", "source": "transcript"},
+    {"fact": "Not yet entered active service", "source": "transcript"}
+  ],
+  "comparisons": ["..."],
+  "source_parts": ["PART 10"],
+  "source_units": "metric"
+}
+```
+
+- `key_specs`: AI auto-detects relevant spec fields based on content
+- `detailed_facts`: Every factual data point as individual items with source tagging
+- No information can be lost — every data point goes into `detailed_facts`
+
+---
+
+### Downstream Prompts
+
+#### [MODIFY] [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt)
+
+Replace "check 7 criteria" with:
+- Check if `key_specs` has basic identification data
+- Check if `detailed_facts` count is sufficient per product
+- Check data vs framework's `evaluation_focus` needs
+
+---
+
+#### [MODIFY] [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt)
+
+- Replace `evaluation_criteria: ["specs_core", "trigger"]` → `evaluation_focus: ["firepower", "protection"]` (AI derives from content)
+- Replace `criteria_covered` in products_coverage_map → `facts_used_count`
+- `depth_focus` already works (references blueprint data points directly)
+
+---
+
+#### [MODIFY] [system_verify_facts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_verify_facts.txt)
+
+- Replace "7 criteria" completeness check → count `detailed_facts` used vs available
+- Fact verification logic stays the same (compare script claims vs blueprint data)
+
+---
+
+### Narrative Blueprint (NO CHANGE)
+
+#### [system_extract_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint.txt)
+
+> [!NOTE]
+> The narrative blueprint prompt has `product_evaluation` as an OPTIONAL section (line 26: "If the script is NOT a product review, return `[]`"). It shares the same 7-criteria format but only triggers for narrative scripts that contain product reviews. We can update it to match the new schema for consistency, but it's lower priority since most narratives don't have product evaluations.
+
+### Python Code (NO CHANGE)
+
+No Python code references `specs_core` or the 7 criteria directly. The code only reads:
+- `product_evaluation[].product_name` — still exists ✅
+- `product_evaluation[].source_parts` — still exists ✅
+- Blueprint is passed as-is to downstream prompts
+
+## Verification Plan
+
+1. Syntax check all modified prompt files
+2. Run a test extraction on the Russian armored vehicles transcript
+3. Verify `detailed_facts` captures the "132 tanks" data point
+4. Verify outline generation works with the new schema

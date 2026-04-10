@@ -1,0 +1,14 @@
+# Split Writer Prompt Into Base + 7 Structures
+
+- [x] Read current writer prompt to identify base vs structure content
+- [x] Create [base_mystery_writer.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/base_mystery_writer.txt) (shared rules)
+- [x] Create `mystery_structures/` directory with 7 files:
+  - [x] [structure_mythbuster.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_mythbuster.txt)
+  - [x] [structure_detective_trail.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_detective_trail.txt)
+  - [x] [structure_bureaucratic_anomaly.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_bureaucratic_anomaly.txt)
+  - [x] [structure_human_anchor.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_human_anchor.txt)
+  - [x] [structure_conflicting_accounts.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_conflicting_accounts.txt)
+  - [x] [structure_ticking_clock.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_ticking_clock.txt)
+  - [x] [structure_innocent_facade.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/mystery_structures/structure_innocent_facade.txt)
+- [x] Modify [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) to load base + structure dynamically
+- [/] Verify prompt loading + placeholder injection

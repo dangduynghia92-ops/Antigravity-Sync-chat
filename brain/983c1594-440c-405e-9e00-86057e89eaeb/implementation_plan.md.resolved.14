@@ -1,0 +1,103 @@
+# Phase Plan: Main/Sub Event Classification
+
+## Vấn đề
+Phase plan đếm TẤT CẢ key_events như nodes → quá nhiều chapters → lan man ở events không cần scene riêng.
+
+## Giải pháp
+Phân loại events thành `main_key_data` (cần scene) và `sub_key_data` (dệt vào scene khác). Split decision dựa trên `len(main_key_data)`.
+
+---
+
+## Proposed Changes
+
+### 1. Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+
+**A) Line 11-24 — Xóa toàn bộ `STEPS ≠ CHAPTERS` + `NODE COUNTING RULE`, thay bằng:**
+
+```
+EVENT CLASSIFICATION RULE (CINEMATIC PACING):
+You are plotting a MOVIE, not writing a textbook.
+
+For each life_phase mapped to this framework step, classify every event into:
+
+main_key_data — audience can VISUALIZE it happening on a SPECIFIC DAY:
+  ✓ turning_points and conflicts (always main)
+  ✓ key_events with a SPECIFIC ACTION/DATE
+    (e.g., "Killed X in combat", "Arrested on Easter Sunday", "Handed over as hostage")
+
+sub_key_data — background texture, woven into scenes by the writer:
+  ✗ GRADUAL PROCESSES over months/years
+    (e.g., "Educated in Turkish", "Developed a deep hatred", "Spent years waiting")
+  ✗ DIRECT CONSEQUENCES of a previous main event
+    (e.g., "Forced to flee" is the ending of "Seized throne" — same beat)
+  ✗ achievements, relationships, quotes, myths
+
+SPLIT DECISION: based on len(main_key_data) only.
+  >3 main events in a phase → SPLIT into 2+ chapters.
+```
+
+**B) Line 33-44 — Output format, thay `pacing_evaluation` bằng main/sub:**
+
+```json
+{
+  "phase": "Framework step name",
+  "main_key_data": ["scene-worthy events from blueprint"],
+  "sub_key_data": ["texture events for the writer to weave in"],
+  "node_count": 4,
+  "capacity_check": "4 main > 3 → SPLIT into 2 chapters",
+  "chapters": [3, 4],
+  "reason_for_split": "null if 1 chapter, otherwise explain"
+}
+```
+
+**C) Line 54 (rule 7) — Đổi:**
+
+```
+7. main_key_data and sub_key_data must reference ACTUAL data from the blueprint — do NOT make up events
+```
+
+**D) Line 63-65 (rule 9) — Giữ nguyên** — lens field chính là cơ sở để AI quyết event nào là main vs sub cho framework đó.
+
+---
+
+### 2. Outline Prompt
+
+#### [MODIFY] [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+> [!IMPORTANT]
+> Outline prompt có NODE COUNTING RULE riêng (line 11-27) trùng lặp với bản cũ.
+> Nếu không xóa → outline sẽ dùng rule cũ, mâu thuẫn với phase plan mới.
+
+**A) Xóa line 11-27** (đoạn `IMPORTANT — STEPS ≠ CHAPTERS` + `NODE COUNTING RULE`).
+
+**B) Thay bằng:**
+
+```
+PHASE → CHAPTER MAPPING:
+  If a PRE-PLANNED PHASE → CHAPTER MAPPING is provided, FOLLOW IT EXACTLY.
+  The phase plan provides:
+    - main_key_data: events that need SCENE-LEVEL development → use as key_data for chapters
+    - sub_key_data: background texture → writer decides how to weave in
+  Do NOT re-count or re-classify events. Trust the phase plan.
+
+  If NO pre-planned mapping is provided, split based on blueprint data density
+  and the CHAPTER COUNT REQUIREMENT.
+```
+
+---
+
+### 3. Code
+
+Không cần sửa. Phase plan JSON (chứa main/sub fields) tự truyền vào outline qua line 2891-2900 của `rewriter.py`.
+
+---
+
+## Không thay đổi
+- Không hard cap
+- Không sửa writer/audit prompt
+- Không sửa code logic
+
+## Verification
+Chạy lại Vlad + Sử Thi, kiểm tra phase plan output có main/sub, outline follow đúng.

@@ -1,0 +1,99 @@
+# Add Queue Feature to Auto Pipeline Tab
+
+## Mô tả
+Thêm hàng chờ (queue) vào tab Auto Pipeline. Thay vì paste nhiều URL rồi ấn Run 1 lần, người dùng có thể:
+- Paste URL → ấn **Add to Queue** → URL được thêm vào list
+- Tiếp tục paste URL khác → Add to Queue → thêm vào list
+- List hiển thị các video đang chờ, có thể xoá từng item
+- Ấn **▶ Run Queue** → chạy lần lượt từng URL trong queue
+- **Có thể thêm URL mới vào queue ngay cả khi pipeline đang chạy** (đây là tính năng chính)
+
+## Thiết kế UI
+
+### Thay đổi layout
+
+```
+┌─ YouTube URL ──────────────────────────────────────┐
+│ [__URL input (1 dòng)__]  [+ Add to Queue] [Paste] │
+├────────────────────────────────────────────────────┤
+│ Queue (3 items):                                    │
+│  ⏳ 1. https://youtu.be/abc123  [×]                │
+│  ⏳ 2. https://youtu.be/def456  [×]                │
+│  ⏳ 3. https://youtu.be/ghi789  [×]                │
+│                            [Clear Queue]            │
+├────────────────────────────────────────────────────┤
+│ [Config: Mode, Style, Lang, Tier, ...]             │
+│ [▶ Run Queue]  [⏹ Stop]  [Save Config] [📂 Open]  │
+└────────────────────────────────────────────────────┘
+```
+
+### Chi tiết UI thay đổi
+
+1. **URL input**: Đổi từ `QPlainTextEdit` (multi-line) → `QLineEdit` (1 dòng) + nút **"+ Add to Queue"**
+2. **Queue list**: Thêm `QListWidget` hiển thị queue items với trạng thái:
+   - ⏳ Pending (chờ)
+   - 🔄 Running (đang chạy)
+   - ✅ Done
+   - ❌ Error
+3. **Nút Clear Queue**: Xoá toàn bộ queue (chỉ xoá items chưa chạy)
+4. **Run Queue**: Đổi "▶ Run Pipeline" → "▶ Run Queue", chạy lần lượt từng item
+5. **Add while running**: Cho phép thêm URL mới vào queue ngay cả khi đang chạy
+
+### Hành vi
+
+- Ấn **"+ Add to Queue"** hoặc **Enter** trên URL input → validate URL → thêm vào queue list
+- **"📋 Paste"** → paste clipboard vào input, nếu có nhiều dòng → thêm tất cả vào queue
+- Ấn **"▶ Run Queue"** → lock config, chạy từng item lần lượt
+- Trong khi đang chạy: URL input + Add to Queue vẫn enabled → thêm item mới vào cuối queue
+- Pipeline loop kiểm tra queue sau mỗi video xong → nếu có item mới → tiếp tục chạy
+- **"⏹ Stop"** → dừng video hiện tại, không chạy tiếp các video sau
+- Xoá item: chỉ xoá được items ⏳ Pending (không xoá đang chạy hoặc đã xong)
+
+## Proposed Changes
+
+### [MODIFY] [auto_pipeline_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+#### UI Changes
+- Replace `_txt_urls` (QPlainTextEdit) → `_txt_url_input` (QLineEdit, 1 dòng)
+- Add `_btn_add_queue` (QPushButton, "+ Add to Queue")
+- Add `_queue_list` (QListWidget) hiển thị queue items
+- Add `_btn_clear_queue` (QPushButton, "Clear Queue")
+- Add `_lbl_queue_count` (QLabel, "Queue: N items")
+- Rename `_btn_run` text → "▶ Run Queue"
+
+#### Data Structure
+```python
+self._queue = []  # list of {"url": str, "status": "pending"|"running"|"done"|"error", "title": str}
+self._queue_lock = threading.Lock()  # thread-safe access
+```
+
+#### Behavior Changes
+- `_on_run()`: thay vì read URLs từ text area, lọc queue items có `status == "pending"` → chạy lần lượt
+- `_run_queue_loop()`: new method — loop qua queue, chạy từng item, check cho items mới sau mỗi video
+- Add URL vẫn hoạt động khi pipeline đang chạy (URL input không bị lock)
+- `_on_stop()`: set `_stop_flag`, pipeline dừng sau video hiện tại
+
+> [!IMPORTANT]  
+> Tính năng gốc **multi-URL paste (independent/merge)** sẽ được thay thế bằng queue.
+> - **Independent mode**: tự động — mỗi item trong queue = 1 video riêng
+> - **Merge mode**: bỏ (hiếm dùng, phức tạp). Nếu cần merge, paste nhiều URL rồi chọn merge riêng.
+
+> [!WARNING]
+> Cần giữ backward compatibility với saved config. Queue items **không** persist — chỉ config (mode, style, lang...) persist.
+
+## Open Questions
+
+1. **Merge mode**: Bạn có dùng merge (gộp nhiều video thành 1 kịch bản) không? Nếu có thì tôi giữ lại như nút riêng. Nếu không thì bỏ luôn cho giao diện gọn.
+2. **Queue persist**: Bạn có muốn queue items lưu lại khi đóng app không? Hay chỉ cần trong session?
+
+## Verification Plan
+
+### Automated Tests
+- `py_compile` — no syntax errors
+- Module imports OK
+
+### Manual Verification
+- Thêm 3 URL vào queue → Run → kiểm tra chạy lần lượt
+- Thêm URL mới khi pipeline đang chạy → kiểm tra chạy tiếp
+- Ấn Stop → kiểm tra dừng đúng
+- Xoá item pending → kiểm tra không bị chạy

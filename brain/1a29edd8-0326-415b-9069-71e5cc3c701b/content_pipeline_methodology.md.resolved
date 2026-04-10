@@ -1,0 +1,170 @@
+# Phương Pháp Phân Tích Kịch Bản Gốc → Pipeline Viết Nội Dung
+
+## Tổng Quan
+
+Hệ thống hiện tại biến kịch bản gốc thành nội dung mới qua **3 pha** và **12 bước**:
+
+```mermaid
+graph LR
+    A[Kịch bản gốc] --> B[Pha 1: Phân tích]
+    B --> C[Pha 2: Thiết kế]
+    C --> D[Pha 3: Viết & Kiểm tra]
+    D --> E[Script mới]
+```
+
+---
+
+## Pha 1: Phân Tích (Analysis) — Tách "WHAT" khỏi "HOW"
+
+> **Mục đích**: Tách DATA (sự kiện, số liệu, bằng chứng) ra khỏi STYLE (cách kể chuyện, giọng văn).
+
+### Step 1 — Style Analysis (chạy riêng, 1 lần/channel)
+- **Input**: 15-20 video scripts từ cùng 1 channel
+- **Output**: `style_guide.json` chứa:
+  - Giọng văn, cách mở/đóng chapter
+  - Cấu trúc mở/thân/kết
+  - Frameworks (countdown, deep-dive, comparison…)
+  - Tonal arc patterns, transition styles
+- **Prompt chain**: `overview → detail → synthesis`
+
+### Step 2 — Framework Detection
+- **Input**: Full text script gốc
+- **Output**: Tên framework gốc + confidence score
+- **Prompt**: [system_detect_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_detect_framework.txt)
+
+### Step 3 — Blueprint Extraction
+- **Input**: Full text + niche info
+- **Output**: Structured JSON chứa:
+  - `product_evaluation[]` — từng mục/chủ đề với data cụ thể
+  - Facts, dates, measurements, sources (giữ nguyên)
+  - Narrative moments (vivid descriptions)
+- **Prompts**:
+  - Firearms: [system_extract_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_review.txt)
+  - Mystery: [system_extract_blueprint_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_mystery.txt)
+
+> [!IMPORTANT]
+> Blueprint chỉ TRÍCH data — không thêm, không bịa. AI writer sau này chỉ được dùng data từ blueprint.
+
+---
+
+## Pha 2: Thiết Kế (Design) — Validate & Plan
+
+### Step 4 — Framework Recommendation
+- **Input**: Blueprint + style guide (all frameworks)
+- **Output**: Rankings: framework phù hợp nhất cho data này
+- **Prompt**: [system_recommend_framework.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_recommend_framework.txt)
+
+### Step 5 — Reality Check
+- **Input**: Blueprint
+- **Output**: Blueprint đã sửa sai + enriched fields
+- **Mục đích**: Kiểm tra facts, sửa inconsistencies
+- **Prompt**: [system_reality_check.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check.txt)
+
+### Step 6 — Completeness Check
+- **Input**: Blueprint + selected framework
+- **Output**: `SUFFICIENT` / `NEEDS_DATA` / `INSUFFICIENT`
+- **Prompt**: [system_check_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint.txt)
+
+### Step 7 — Outline Creation
+- **Input**: Blueprint + framework + style guide + ch range + word count rules
+- **Output**: Chapter-by-chapter outline JSON
+- **Prompts**:
+  - Review: [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt)
+  - Mystery: [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt)
+
+### Step 8 — Outline Audit
+- **Input**: Outline + blueprint
+- **Output**: Sửa lỗi outline (trùng, thiếu, sai thứ tự)
+- **Prompt**: [system_audit_outline_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_review.txt)
+
+---
+
+## Pha 3: Viết & Kiểm Tra (Write & Verify)
+
+### Step 9-10 — Sequential Chapter Writing
+- **Input per chapter**: Blueprint + style guide + outline + previous chapters (context)
+- **Output**: Full text chapter
+- **Key**: Viết **tuần tự** — mỗi chapter nhận context từ chapters trước
+- **Prompts**:
+  - Mystery: [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt)
+  - Firearms: [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt)
+
+### Step 11 — Cross-Chapter Review
+- **Input**: All chapters + outline
+- **Output**: List issues (repetition, contradiction, missing transitions)
+- **Prompt**: [system_review_cross_chapter.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter.txt)
+
+### Step 12 — Merge
+- **Output**: [FULL_SCRIPT.txt](file:///F:/1.%20Edit%20Videos/7.Youtube/6/@TheUnchartedMysteries/002_%5BNJbdG1qjXzw%5D_7%20MASSIVE%20Ancient%20Megaliths%20We%20Cannot%20Explain_S/style_rewrite/FULL_SCRIPT.txt) — full script hoàn chỉnh
+
+---
+
+## Quy Trình Rút Prompt/Pipeline Từ Kịch Bản Gốc
+
+Nếu bạn muốn tạo pipeline cho **niche mới**, đây là methodology:
+
+### Bước 1: Thu thập mẫu (15-20 scripts)
+Xác định **patterns lặp lại**:
+- Cách mở video (hook types)
+- Cấu trúc thân (body patterns)
+- Cách đóng (CTA patterns)
+- Transitions giữa chapters
+- Giọng điệu (formal/casual/dramatic)
+
+### Bước 2: Trích frameworks
+Từ mẫu, phân loại **cấu trúc kể chuyện**:
+
+| Framework | Mô tả | Ví dụ |
+|-----------|--------|-------|
+| Countdown | Đếm ngược top N | "10 best...", "Top 5..." |
+| Deep-Dive | Phân tích sâu 1 chủ đề | "Why X changed everything" |
+| Comparison | So sánh A vs B | "X vs Y — which is better?" |
+| Chronological | Theo timeline | "The history of..." |
+| Problem-Solution | Vấn đề → giải pháp | "Why X fails and how to fix" |
+
+### Bước 3: Xây blueprint schema
+Xác định **data points** cần trích cho niche:
+
+```
+Firearms → specs, caliber, price, pros/cons, use cases
+Mystery → dates, civilizations, evidence, theories, unknowns
+Cooking → ingredients, steps, timing, techniques, tips
+Tech → specs, benchmarks, price, compatibility, alternatives
+```
+
+### Bước 4: Thiết kế prompt chain
+
+```mermaid
+graph TD
+    A[extract_blueprint] -->|structured data| B[reality_check]
+    B -->|verified data| C[recommend_framework]
+    C -->|best framework| D[create_outline]
+    D -->|chapter plan| E[write_chapters]
+    E -->|draft| F[cross_review]
+    F -->|final| G[merge]
+```
+
+Mỗi prompt cần:
+1. **Role**: "You are a professional [niche] writer"
+2. **Style guide injection**: `{style_json}`
+3. **Blueprint injection**: `{blueprint}`
+4. **Constraints**: Word count, language, format rules
+5. **Anti-hallucination**: "Use ONLY data from the blueprint"
+
+### Bước 5: Calibrate & iterate
+- Chạy pipeline trên 3-5 scripts mẫu
+- So sánh output vs kịch bản gốc
+- Adjust prompts cho đến khi chất lượng ổn định
+
+---
+
+## Nguyên Tắc Cốt Lõi
+
+> [!TIP]
+> **Tách DATA và STYLE** là nguyên tắc quan trọng nhất. Blueprint chứa WHAT (dữ kiện), Style guide chứa HOW (cách kể). Writer ghép hai thứ lại.
+
+1. **Never copy, always reconstruct** — Blueprint cung cấp raw data, writer viết lại hoàn toàn
+2. **Sequential context** — Chapters viết tuần tự, mỗi chapter biết chapters trước
+3. **Dual verification** — Outline audit (trước viết) + Cross-review (sau viết)
+4. **Framework-driven** — Cấu trúc quyết định flow, không phải nội dung
+5. **Anti-hallucination** — Writer chỉ dùng data trong blueprint, không tự bịa facts

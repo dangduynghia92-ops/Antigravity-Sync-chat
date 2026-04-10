@@ -1,0 +1,10 @@
+# TTS Cleanup Tab
+
+- [x] Core module [core/tts_cleanup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/tts_cleanup.py)
+- [x] Prompt EN/ES
+- [x] UI tab [ui/tts_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/tts_tab.py)
+- [x] Register in [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- [/] Fix content truncation (max_tokens + chunking)
+- [/] Fix paragraph-start capitalization
+- [/] Add progress percentage
+- [/] Fix button visibility

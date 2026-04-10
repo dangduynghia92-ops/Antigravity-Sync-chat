@@ -1,0 +1,88 @@
+# Auto Pipeline Tab — Final Plan (v3)
+
+YouTube Download → SRT Chapter Split → Style Rewrite trong 1 thẻ duy nhất.
+
+---
+
+## Architecture — 3-Phase Parallel Pipeline
+
+```mermaid
+flowchart TD
+    INFO["get_video_info()"] --> P1
+
+    subgraph P1["Phase 1 — PARALLEL"]
+        DL_VID["⬇ Video (.mp4)"]
+        DL_THUMB["🖼 Thumbnail"]
+        DL_TRANS["📝 Transcript"]
+    end
+
+    DL_TRANS --> CLASSIFY["AI classify_script_type()"]
+    CLASSIFY --> MISMATCH{"Mismatch?"}
+    MISMATCH -->|yes| POPUP["⚠ Popup with video title"]
+    MISMATCH -->|no| SPLIT
+    POPUP --> SPLIT["split → verify → punctuate → save"]
+
+    SPLIT --> P3
+    DL_VID --> P3
+
+    subgraph P3["Phase 3 — PARALLEL"]
+        CUT["✂ Cut Video"]
+        REWRITE["✍ Rewrite"]
+    end
+
+    style P1 fill:#1a3a1a,stroke:#4CAF50
+    style P3 fill:#1a3a1a,stroke:#4CAF50
+```
+
+### Multi-URL Threading
+
+| Mode | Phase 1 | Phase 2 | Phase 3 |
+|------|---------|---------|---------|
+| Single | 3 parallel tasks | Sequential | 2 parallel tasks |
+| Independent (N URLs) | N×3 tasks | N parallel splits | N×2 tasks |
+| Merge (N URLs, top/list only) | N×3 tasks | N parallel splits | 1 rewrite job |
+
+UI: `Threads: [spinbox 1-5]` cho số video song song
+
+---
+
+## Output Structure
+
+```
+{output_root}/{video_title}_[{videoID}]/
+├── 01_download/           ← video, thumb, transcript
+├── 02_chapters/           ← split chapter files + MERGED.txt
+└── 03_rewrite/            ← rewritten chapters + FULL_SCRIPT.txt + _pipeline/
+```
+
+---
+
+## Proposed Changes
+
+### [NEW] [auto_pipeline.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py)
+
+Backend orchestrator. Reuses 100% functions from existing modules.
+
+**Key methods:**
+- `run_single(url, config, callbacks)` — 1 URL end-to-end
+- `run_batch_independent(urls, config, callbacks)` — N URLs parallel
+- `run_batch_merged(urls, config, callbacks)` — N URLs → merge chapters → 1 rewrite
+
+### [NEW] [auto_pipeline_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+UI tab with:
+- YouTube URL text area (multi-line paste)
+- Full config matching Style Rewrite: Mode, Style, Framework, Lang, Tier, Country, Ch/WC ranges
+- Checkboxes: Download Video, Download Thumbnail, Transitions, Cut Video, Price Check
+- Pipeline progress stepper (3 phases)
+- Thread spinner, Run/Stop buttons, Log panel
+
+### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+Add `AutoPipelineTab` as first tab.
+
+---
+
+## Verification
+
+Manual testing: single URL, multi-URL independent, multi-URL merge, mismatch popup, stop mid-pipeline, invalid URL error handling.

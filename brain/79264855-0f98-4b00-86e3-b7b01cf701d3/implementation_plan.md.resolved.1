@@ -1,0 +1,77 @@
+# YouTube Downloader & Scanner Tab
+
+Thêm tab mới "📥 YouTube" vào ứng dụng PyQt6 hiện có, cho phép:
+1. **Scanner**: Scan playlist/channel YouTube → lấy danh sách video (title, duration, views, URL)
+2. **Download**: Download video/thumbnail/subtitle (transcript) từ link YouTube
+
+### Tools sử dụng:
+- **yt-dlp** (Python package) → download video + thumbnail
+- **ScrapeCreators API** → scan channel/playlist + lấy transcript
+
+## Proposed Changes
+
+### Core Backend
+
+#### [NEW] [yt_downloader.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/yt_downloader.py)
+
+**A. ScrapeCreators API wrapper** (base: `https://api.scrapecreators.com`):
+- `scan_channel_videos(channel_id, api_key, continuation_token=None)` → `GET /v1/youtube/channel-videos`
+- `scan_playlist(url, api_key)` → `GET /v1/youtube/playlist`
+- `get_video_details(url, api_key)` → `GET /v1/youtube/video`
+- `get_transcript(url, api_key, language=None)` → `GET /v1/youtube/video/transcript`
+  - Returns `transcript` array + `transcript_only_text`
+
+**B. yt-dlp wrapper** (Python library):
+- `download_video(url, save_dir, options, progress_callback)` → download video via yt-dlp
+  - Options: `download_thumbnail`, `audio_only`, `format`
+- `get_ytdlp_version()` → trả version
+- `update_ytdlp()` → chạy `pip install -U yt-dlp`
+
+---
+
+### UI Tab
+
+#### [NEW] [youtube_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/youtube_tab.py)
+
+Tab chứa 2 sub-tab (QTabWidget lồng):
+
+**Sub-tab 1: 📥 Download**
+- Ô nhập URL (QLineEdit) + "➕ Add" + "📋 Paste"
+- "Bulk Add (from TXT)" + "Add from Scanner"
+- Options:
+  - Save to (QLineEdit + Browse)
+  - Checkboxes: Download Thumbnail, Download Transcript, Audio Only (MP3)
+- Download Queue (QTreeWidget): URL, Title, Progress, Status
+- Action buttons: ▶ Start Download, ⏹ Stop, 🗑 Clear Queue, 📂 Open Folder
+
+**Sub-tab 2: 🔍 Playlist/Channel Scanner**
+- Ô nhập URL playlist/channel + "🔍 Scan"
+- Scanned Results (QTreeWidget): ✓, Title, Duration, Views, URL
+- Bottom buttons: Export Excel, Export TXT (URLs), Export TXT (Details), Copy Selected URLs
+- "Add Selected to Download" → chuyển sang sub-tab Download
+- Checkbox All / None
+
+**Shared**: LogSection (reuse), hiển thị yt-dlp version + nút Update
+
+---
+
+### Integration
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+
+- Import `YouTubeTab`, thêm `self._tabs.addTab(self._youtube_tab, "📥 YouTube")`
+
+#### [MODIFY] [requirements.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt)
+
+- Thêm `yt-dlp>=2024.0.0`, `openpyxl>=3.1.0`
+
+> [!IMPORTANT]
+> ScrapeCreators API key sẽ được nhập trực tiếp trên UI (ô text riêng), lưu vào `youtube_config_config.json`. Không dùng [api_keys.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/api_keys.json) của Gemini.
+
+## Verification Plan
+
+### Manual Verification
+1. Chạy `python main.py` → xác nhận tab "📥 YouTube" hiển thị
+2. Scanner: paste URL channel → Scan → bảng hiện video
+3. Download: add URL → Start Download → video/thumbnail/transcript tải về
+4. Export: test Export Excel + TXT

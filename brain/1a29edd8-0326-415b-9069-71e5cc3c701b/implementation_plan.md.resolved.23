@@ -1,0 +1,173 @@
+# Pipeline Mystery History — Thiết kế chi tiết
+
+## Field Mapping: Review → Mystery
+
+Tất cả fields trong outline và writer prompt, map 1-1:
+
+| Review Field | Mystery Equivalent | Ý nghĩa |
+|---|---|---|
+| `products_covered` | `mystery_subjects` | Bí ẩn/sự kiện/di vật trong chapter |
+| `evaluation_criteria` | `investigation_angles` | Góc điều tra: archaeological, linguistic, military... |
+| `primary_criterion` | `primary_angle` | Góc điều tra chính (đào sâu nhất) |
+| `unique_selling_point` | `core_impossibility` | Điểm "impossible" cốt lõi |
+| `depth_focus` | `key_evidence` | 2-3 data points cụ thể từ blueprint |
+| `ranking_reason` | `mystery_escalation` | Tại sao bí ẩn này ở vị trí này (escalation) |
+| `target_user` | `unresolved_questions` | Câu hỏi tu từ chính — bí ẩn chưa giải |
+| `cons_to_mention` | `mainstream_theory` | Lý thuyết chính thống (để debunk) |
+| `countdown_position` | `mystery_position` | Vị trí trong list (escalation order) |
+| `tone_category` | `tone_category` | Giữ nguyên — gán từ style guide |
+| `chapter_type` | `chapter_type` | Giữ nguyên — hook/body/end |
+| `products_count` | `mysteries_count` | Số bí ẩn trong body |
+
+---
+
+## Outline JSON cho Mystery History
+
+```json
+{
+  "framework_used": "The Investigative Case File",
+  "total_chapters": 12,
+  "thesis": "Ancient civilizations possessed knowledge systems that mainstream history cannot explain",
+  "chapters": [
+    {
+      "chapter_number": 1,
+      "chapter_type": "hook",
+      "title": "The Dagger Beside the Sleeping General",
+      "mystery_subjects": ["Hashashin initial encounter"],
+      "investigation_angles": ["psychological warfare", "operational security"],
+      "primary_angle": "psychological warfare",
+      "core_impossibility": "A fortress network of 100 outposts controlled without contiguous territory",
+      "key_evidence": "100 fortresses, no connected territory, 35 years without defection",
+      "framework_step": "Immersive Hook",
+      "summary": "Open with the dagger scene, set up the pattern of invisible organizations",
+      "tone_category": "investigative_awe",
+      "emotional_beat": "Visceral tension → intellectual curiosity",
+      "mystery_escalation": null,
+      "mystery_position": null,
+      "unresolved_questions": null,
+      "mainstream_theory": null,
+      "opening_method": "Immersive Narrative Hook",
+      "closing_method": null,
+      "techniques_to_use": ["Immersive Direct Address", "Authority Citation"],
+      "ends_with": "Transition from initial mystery to the first case file",
+      "word_count_target": 500
+    },
+    {
+      "chapter_number": 2,
+      "chapter_type": "body",
+      "title": "The Brotherhood That Hid for Six Centuries",
+      "mystery_subjects": ["The Thuggee"],
+      "investigation_angles": ["operational consistency", "linguistic analysis", "cross-religious cohesion"],
+      "primary_angle": "operational consistency",
+      "core_impossibility": "600 years of standardized methods across 1,500km with no central authority",
+      "key_evidence": "Same signal word, same cloth, same burial depth across Bengal and Punjab",
+      "framework_step": "Investigative Case File",
+      "summary": "Investigate how the Thuggee maintained perfect operational uniformity without written doctrine",
+      "tone_category": "deepening_mystery",
+      "emotional_beat": "Fascination → growing unease",
+      "mystery_escalation": "Operational scale — individual cult to continent-spanning network",
+      "mystery_position": 10,
+      "unresolved_questions": "How does an operational language survive 600 years of oral transmission without fragmenting?",
+      "mainstream_theory": "Hereditary criminal cult with oral tradition explaining regional consistency",
+      "opening_method": null,
+      "closing_method": null,
+      "techniques_to_use": ["Myth Debunking & Contrast", "Rhetorical Question Barrage", "Authority Citation"],
+      "ends_with": "Bridge to next organization via geographic transition",
+      "word_count_target": 600
+    }
+  ]
+}
+```
+
+---
+
+## Writer Prompt Elements (Body)
+
+```
+REQUIRED ELEMENTS (must ALL appear, order flexible):
+
+  [SCENE] Historical immersion — specific time, place, sensory detail
+    - BAD: "An ancient cult existed" ← abstract = boring
+    - GOOD: "A crusader knight wakes in his tent. Beside his sleeping head: 
+      a dagger driven into the ground, a note pinned to the blade"
+
+  [EVIDENCE] Core data with authority citations
+    - Use `primary_angle` from outline as lead
+    - Use `key_evidence` data points to expand
+    - Every claim anchored to named source, date, or publication
+    - BAD: "They were very organized"
+    - GOOD: "Bernard Lewis documented a network of approximately 100 fortresses
+      in The Assassins, published 1967"
+
+  [MAINSTREAM] Official/conventional explanation, presented fairly
+    - From `mainstream_theory` in outline
+    - BAD: "Mainstream historians are wrong"
+    - GOOD: "Historians classify them as a hereditary criminal cult.
+      Sons learning from fathers in a closed system"
+
+  [COUNTER] Pivot + counter-evidence that exposes gaps
+    - From `core_impossibility` in outline
+    - SHARP PIVOT required ("But...", "And yet...", "However...")
+    - BAD: "But some disagree" ← vague
+    - GOOD: "But hereditary criminal organizations across six centuries 
+      with no written doctrine do not produce this level of 
+      operational standardization"
+
+  [MYSTERY] 3-5 rhetorical questions — NEVER answer them
+    - From `unresolved_questions` in outline
+    - BAD: "This is mysterious" ← telling not showing
+    - GOOD: "How did Ramasee survive 600 years of oral transmission
+      without fragmenting into dialects — the way every other
+      language always does?"
+```
+
+---
+
+## Pattern Selection (choose by tone_category)
+
+| Pattern | Best for | Order |
+|---|---|---|
+| **A — SCENE FIRST** | investigative_awe, deepening_mystery | SCENE → EVIDENCE → MAINSTREAM → COUNTER → MYSTERY |
+| **B — EVIDENCE FIRST** | analytical_wonder, data_overwhelm | EVIDENCE → SCENE → MAINSTREAM → COUNTER → MYSTERY |
+| **C — MAINSTREAM FIRST** | debunk_focused, myth_shattering | MAINSTREAM → SCENE → EVIDENCE → COUNTER → MYSTERY |
+| **D — MYSTERY FIRST** | revelation_shock, ominous_discovery | MYSTERY → SCENE → EVIDENCE → MAINSTREAM → COUNTER |
+
+---
+
+## Hook/End Rules
+
+**Hook**: Immersive 2nd-person cold open or paradox statement. NO investigation yet. Set up the pattern.
+
+**End**: Cumulative callback (rapid-fire all mysteries) → grand thesis → empower audience → CTA.
+
+---
+
+## Universal Rules (mystery-specific)
+
+1. ALL data from blueprint — do NOT invent dates, names, publications
+2. POV: 3rd-person analyst default. 2nd-person ONLY for SCENE immersion
+3. Citation density: minimum 2-3 authority citations per body chapter
+4. Rhetorical question quota: 3-5 per body chapter, NEVER answer them
+5. Mainstream respect: present official theory FAIRLY before deconstructing
+6. Never resolve: no definitive answers — always end on open questions
+7. Sensory immersion: SCENE must include time, place, and physical details
+8. Structural variety: no two consecutive chapters open same way
+9. Continuity: reference established pattern across chapters
+10. Geographic transitions: "From X, we cross to Y" between chapters
+
+---
+
+## Cần tạo / sửa
+
+### [NEW] [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt)
+Outline prompt cho mystery (dựa trên [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt), thay product fields)
+
+### [NEW] [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt)
+Writer prompt với SCENE/EVIDENCE/MAINSTREAM/COUNTER/MYSTERY elements
+
+### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- Line ~2130: Thêm `"mystery": "system_write_review_mystery.txt"` vào `_niche_prompt_map`
+- Thêm function `create_mystery_outline()` (dựa trên [create_review_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1973-2105), thay product logic)
+
+### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+- Wire `create_mystery_outline()` khi niche là mystery

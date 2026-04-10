@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Analysis of chapter_rhythm hard hints and steps count across all 5 biography frameworks. All 5 have chapter_rhythm with explicit Ch1-Ch8 references AND 7 steps each, creating a double hint that locks AI into producing exactly 7-8 chapters regardless of chapter_range setting.",
+  "updatedAt":  "2026-04-01T01:14:30.598966400Z",
+  "version":  "2",
+  "requestFeedback":  true
+}

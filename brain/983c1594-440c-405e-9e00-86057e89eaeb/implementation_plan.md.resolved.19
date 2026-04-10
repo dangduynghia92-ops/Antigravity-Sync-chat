@@ -1,0 +1,179 @@
+# Resume & Retry — Narrative Pipeline
+
+## Goal
+1. **Retry**: Validate step gets 3 retries (10s delay) per phase
+2. **Resume**: Pipeline can resume from last completed checkpoint, skipping finished steps
+3. **Dual-version aware**: Only re-run the version that failed
+4. **Narrative mode only** — no changes to top/list
+
+## Current Checkpoint Files (already saved)
+
+Each step already saves a file. These become natural resume markers:
+
+```
+output_dir/
+├── _pipeline/
+│   ├── _blueprint.json              ← Step 1: Research ✅
+│   └── _rankings.json               ← Step 2: Framework selection ✅
+├── v1_Sử_Thi/
+│   ├── _pipeline/
+│   │   ├── _phase_plan.json          ← Step A1: Phase plan
+│   │   ├── _phase_plan_validated.json ← Step A2: Validate sub_key
+│   │   ├── _validation_reasoning.json
+│   │   ├── _phase_plan_final.json    ← Step A3: Chapter splits
+│   │   ├── _renew_outline.json       ← Step B: Outline
+│   │   ├── _renew_outline_audited.json ← Step C: Audit
+│   │   ├── _chapter_data/            ← Step D: Write (per chapter)
+│   │   └── _review.json             ← Step E: Review
+│   ├── ch_01_Intro.txt              ← Written chapters
+│   ├── ch_02_*.txt
+│   └── FULL_SCRIPT.txt              ← Step F: Merge
+└── v2_Kẻ_Xét_Lại/
+    └── (same structure)
+```
+
+## Proposed Changes
+
+### 1. Retry for Validate (simple, in `rewriter.py`)
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+In `_validate_single_phase()`, wrap the API call with retry:
+
+```python
+def _validate_single_phase(idx, phase_data):
+    MAX_RETRIES = 3
+    RETRY_DELAY = 10
+    
+    for attempt in range(MAX_RETRIES + 1):
+        if stop_check and stop_check():
+            return idx, [], []
+        
+        result = api.call_api(messages, temperature=0.1, timeout=120)
+        
+        if result["success"]:
+            # parse and return
+            ...
+            return idx, promotions, evaluations
+        
+        if attempt < MAX_RETRIES:
+            log_callback(f"  ⚠ Validate {phase_name} failed (attempt {attempt+1}/{MAX_RETRIES}), retry in {RETRY_DELAY}s...")
+            interruptible_sleep(RETRY_DELAY, stop_check)
+        else:
+            log_callback(f"  ❌ Validate {phase_name} failed after {MAX_RETRIES} retries")
+            return idx, [], []
+```
+
+---
+
+### 2. Resume Logic (in `script_creation_tab.py`)
+
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
+
+**A. Detect resume state**: When user clicks "New Content" and output dir already exists:
+
+```python
+# In _do_new_content(), after building output_dir:
+resume_mode = os.path.isdir(output_dir) and os.path.exists(bp_path)
+if resume_mode:
+    # Ask user: "Resume previous run?" 
+    reply = QMessageBox.question(self, "Resume?", 
+        f"Found existing output:\n{output_dir}\n\nResume from last checkpoint?")
+    if reply != Yes:
+        resume_mode = False
+```
+
+**B. Skip completed shared steps**:
+
+| Check | File exists? | Action |
+|---|---|---|
+| `_blueprint.json` | Yes → load, skip research | Already implemented (`skip_research`) |
+| `_rankings.json` | Yes → load rankings, skip AI ranking | **New** |
+
+**C. Per-framework resume** — add to `_run_shared_fw_pipeline()`:
+
+```python
+def _run_shared_fw_pipeline(self, ..., resume=False):
+    
+    # Step A1: Phase Plan
+    phase_plan_path = os.path.join(fw_pipeline_dir, "_phase_plan.json")
+    if resume and os.path.exists(phase_plan_path):
+        fw_log("✓ [Resume] Phase plan loaded from checkpoint")
+        phase_plan = json.load(open(phase_plan_path))
+    else:
+        # ... existing code ...
+    
+    # Step A2: Validate
+    validated_path = os.path.join(fw_pipeline_dir, "_phase_plan_validated.json")
+    if resume and os.path.exists(validated_path):
+        fw_log("✓ [Resume] Validated plan loaded from checkpoint")
+        phase_plan = json.load(open(validated_path))
+    else:
+        # ... existing code (with retry) ...
+    
+    # Step A3: Splits
+    split_path = os.path.join(fw_pipeline_dir, "_phase_plan_final.json")
+    if resume and os.path.exists(split_path):
+        fw_log("✓ [Resume] Chapter splits loaded from checkpoint")
+        phase_plan = json.load(open(split_path))
+    else:
+        # ... existing code ...
+    
+    # Step B: Outline
+    outline_path = os.path.join(fw_pipeline_dir, "_renew_outline.json")
+    audited_path = os.path.join(fw_pipeline_dir, "_renew_outline_audited.json")
+    if resume and os.path.exists(audited_path):
+        fw_log("✓ [Resume] Audited outline loaded from checkpoint")
+        outline = json.load(open(audited_path))
+    elif resume and os.path.exists(outline_path):
+        fw_log("✓ [Resume] Outline loaded (needs re-audit)")
+        outline = json.load(open(outline_path))
+        # Run audit only
+    else:
+        # ... existing code ...
+    
+    # Step D: Write chapters (per-chapter resume)
+    for i, ch_outline in enumerate(out_chapters):
+        out_fname = f"ch_{i+1:02d}_{safe_title}.txt"
+        out_path = os.path.join(fw_output_dir, out_fname)
+        if resume and os.path.exists(out_path):
+            # Load existing chapter text for context
+            with open(out_path, "r", encoding="utf-8") as f:
+                rewritten_texts.append(f.read())
+            fw_log(f"✓ [Resume] Ch.{i+1}/{total}: loaded from checkpoint")
+            continue
+        # ... write new chapter ...
+    
+    # Step E: Review — always re-run (cheap, ensures quality)
+```
+
+**D. Dual-version resume**:
+
+```python
+# In _new_content_worker(), for parallel execution:
+for idx, name in enumerate(selected_fws, 1):
+    fw_output_dir = os.path.join(output_dir, f"v{idx}_{safe_name}")
+    # Check if this version is already complete
+    full_script = os.path.join(fw_output_dir, "FULL_SCRIPT.txt")
+    if resume_mode and os.path.exists(full_script):
+        log(f"✓ [Resume] v{idx} '{name}' already complete — skipping")
+        continue
+    # Otherwise, run with resume=True to pick up from last checkpoint
+    _run_single_fw(idx, name)  # passes resume=True
+```
+
+## Notes
+
+> [!IMPORTANT]
+> Resume luôn dùng checkpoint files đã có. Không bao giờ tạo lại outline/phase plan nếu file đã tồn tại.
+
+> [!WARNING]
+> **Review step**: Nếu resume từ giữa write → review cần chạy lại full (vì cross-chapter). Không skip review.
+
+## Verification Plan
+
+### Manual Testing
+1. Chạy Newton pipeline → để fail ở step D (write) bằng cách Stop giữa chừng
+2. Click "New Content" lại với cùng topic → confirm resume popup
+3. Verify: Research, ranking, outline skipped → chỉ write chapters còn thiếu
+4. Chạy dual (Sử Thi + Kẻ Xét Lại) → Stop 1 version → resume → chỉ chạy version lỗi

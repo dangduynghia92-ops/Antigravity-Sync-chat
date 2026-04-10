@@ -1,0 +1,15 @@
+# Mystery History Pipeline v2
+
+## Đã hoàn thành (v1)
+- [x] 7 prompt files cho niche routing
+- [x] Code routing trong rewriter.py + rewrite_style_tab.py
+- [x] Style guide + topic_keywords
+- [x] Niche check fix
+
+## Nâng cấp v2 — Prompt Quality
+- [ ] Cập nhật [system_mystery_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_mystery_outline.txt) — Macro Tone Arc + assign structure/closing
+- [ ] Cập nhật [system_write_review_mystery.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_mystery.txt) — 7 Structures + 4 Closings + POV hooks + anti-repetition
+- [ ] Cập nhật `Review_bí_ẩn_lịch_sử.json` — thêm macro_tone_arc, structures, closings, hooks
+- [ ] Cập nhật [create_mystery_outline()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1988-2123) — truyền data mới vào prompt
+- [ ] Compile check
+- [ ] Test thủ công

@@ -1,0 +1,25 @@
+# Character Pipeline Implementation
+
+## Prompt Files
+- [ ] Create `prompts/character_scan_prompt.txt` (Step 2)
+- [ ] Create `prompts/character_group_prompt.txt` (Step 3)
+- [ ] Create `prompts/location_prompt.txt` (Step 4)
+
+## Core Logic — [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+- [ ] Add `scan_characters()` — Step 2 (1 API call)
+- [ ] Add `generate_group_bible()` — Step 3 (per-group call)
+- [ ] Add `generate_locations()` — Step 4 (1 API call)
+- [ ] Add `build_character_bible_csv()` — parse output → CSV
+- [ ] Update [generate_master_visual_bible()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py#288-374) → orchestrate multi-pass
+
+## Integration — [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- [ ] Replace old single-pass Bible with new multi-pass flow
+- [ ] Save `_character_bible.csv` + `_locations.txt` outputs
+
+## Scene Prompts — [prompt_generator.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py)
+- [ ] Update [_build_user_message()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/prompt_generator.py#202-278) to use labels (not visual descriptions)
+- [ ] Pass character labels to scene prompt generation
+
+## Verification
+- [ ] Import check
+- [ ] Test with sample data

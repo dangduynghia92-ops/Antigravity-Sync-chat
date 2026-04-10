@@ -1,0 +1,8 @@
+# Blueprint Google Enrichment — Tasks
+
+- [ ] Create `prompts/system_enrich_blueprint_battle.txt`
+- [ ] Create `enrich_blueprint_google()` in [core/rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+- [ ] Add "🔍 Enrich Data" checkbox to UI
+- [ ] Insert Step 3.5 in [_do_renew_style()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#2063-2606) pipeline
+- [ ] Update [_on_mode_changed](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py#1309-1383) defaults
+- [ ] Git backup

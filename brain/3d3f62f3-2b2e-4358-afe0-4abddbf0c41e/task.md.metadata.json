@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_TASK",
+  "summary": "Checklist for fixing 3 style analyzer data collection bugs: chapter ordering in parallel processing, technique name normalization in cross-chapter analysis, and token limit handling for overview requests.",
+  "updatedAt": "2026-03-19T00:08:23.119741600Z",
+  "version": "29"
+}

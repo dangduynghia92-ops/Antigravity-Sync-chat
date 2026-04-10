@@ -1,0 +1,20 @@
+# Auto Pipeline Tab — Task Checklist
+
+## Planning
+- [x] Analyze existing tab architecture (main_window, process_controller, config_manager)
+- [x] Review all 3 pipelines (YouTube, Chapter, Rewrite) for reusable functions
+- [x] Write implementation plan
+- [ ] Get user approval on plan + answer 4 questions
+
+## Implementation
+- [ ] Create `core/auto_pipeline.py` — backend orchestrator
+- [ ] Create `ui/auto_pipeline_tab.py` — UI tab
+- [ ] Modify [ui/main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py) — register new tab
+- [ ] Test single URL mode
+- [ ] Test multi-URL independent mode
+- [ ] Test multi-URL merge mode
+- [ ] Test stop/pause/resume
+
+## Verification
+- [ ] Manual testing all 3 modes
+- [ ] Error handling edge cases

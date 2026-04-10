@@ -1,0 +1,144 @@
+# Đánh giá đề xuất: Tối ưu Outline bằng CoT + EXACT_MATCH
+
+## Tóm tắt đánh giá
+
+| Đề xuất | Verdict | Rủi ro | Ưu tiên |
+|---|:---:|:---:|:---:|
+| A. CoT `pacing_evaluation` (đếm node → split) | ✅ Nên làm | Thấp | **Cao** |
+| B. Rule `KEY_DATA EXACT MATCH` | ⚠️ Cần điều chỉnh | Trung bình | Trung bình |
+| Process flow 2 bước (tách riêng phase → chapters) | ❌ Không nên | Cao | — |
+
+---
+
+## A. CoT `pacing_evaluation` — ĐỒ ĐỒNG Ý, CÓ ĐIỀU CHỈNH
+
+### Ý tưởng gốc
+
+Bắt AI print `node_count` + `action` (SPLIT/KEEP) TRƯỚC KHI cấp `chapters[]`. Đúng về mặt kỹ thuật token generation — khi AI đã in `SPLIT_REQUIRED`, nó tự ép buộc phải sinh >1 chapter ở bước tiếp.
+
+### Bằng chứng thực tế (data Einstein)
+
+Xem outline hiện tại:
+
+```
+Sử Thi framework: 7 phases → 8 chapters
+  [3] Hình Thành: 4 items → 1 chapter (Ch3)  ← QUÁ ĐÔNG
+  [5] Đỉnh Cao: 4 items → 1 chapter (Ch5)    ← QUÁ ĐÔNG  
+  [6,7] Sụp Đổ: 5 items → 2 chapters          ← ĐÃ SPLIT (đúng)
+
+Bản Án framework: 7 phases → 7 chapters (1:1 mapping!)
+  Không phase nào được split → MỌI phase 1 chapter
+```
+
+**Bản Án 1:1 mapping** = đúng cái lỗi bạn mô tả. AI lười split, nhất là khi framework có đúng 7 steps → AI tạo đúng 7 chapters thay vì 8-9.
+
+### Điều chỉnh đề xuất
+
+Thay vì chỉ thêm `pacing_evaluation` vào `phase_chapter_plan`, tôi đề xuất:
+
+```json
+{
+  "phase": "Framework step name",
+  "pacing_evaluation": {
+    "mapped_nodes": ["event1", "event2", "event3", "event4"],
+    "node_count": 4,
+    "capacity_check": "4 nodes > 3 threshold → SPLIT_REQUIRED"
+  },
+  "chapters": [3, 4],
+  "blueprint_data": ["exact data from blueprint"],
+  "reason_for_split": "4 events spanning 15 years — too dense for 1 chapter"
+}
+```
+
+**Thay đổi so với bản gốc:**
+- `mapped_nodes` nên là **array** (không phải string) — dễ đếm, dễ audit
+- `capacity_check` gộp logic vào 1 dòng (thay vì tách `action` riêng)
+- Giữ `blueprint_data` nhưng **đổi tên** thành `mapped_nodes` vì nó mô tả chính xác hơn
+
+### Tại sao KHÔNG cần tách thành 2 API calls
+
+> [!IMPORTANT]
+> Đề xuất Process flow tách bước 2 thành 2 sub-calls (2.1 Phase mapping → 2.2 Chapter details) **KHÔNG NÊN LÀM** vì:
+
+1. **Token waste**: Bước 2.1 cần đọc toàn bộ blueprint (60K chars input). Bước 2.2 cũng cần đọc lại blueprint + output bước 2.1. Tổng = **120K+ chars input** thay vì 60K.
+
+2. **Context loss**: Khi AI sinh outline trong 1 call, nó giữ toàn bộ context trong working memory. Tách thành 2 calls = mất internal reasoning state.
+
+3. **CoT THAY THẾ HOÀN TOÀN**: Việc thêm `pacing_evaluation` vào JSON schema **BUỘC** AI phải "think aloud" TRONG cùng 1 call. Nó phải in `node_count: 4, capacity_check: SPLIT_REQUIRED` trước khi sinh `chapters: [3,4]`. Hiệu quả tương đương 2 bước, chi phí chỉ 1 call.
+
+4. **Pipeline stability**: Hiện tại pipeline là 1 call outline → 1 call audit. Thêm 1 call ở giữa = thêm 1 failure point, thêm retry logic, phức tạp hóa error handling.
+
+### Tác động đến code
+
+- **Python code**: `generate_renew_outline_v2()` ** KHÔNG cần sửa** — nó chỉ parse JSON output. Key `pacing_evaluation` sẽ nằm trong output nhưng **được bỏ qua tự nhiên** (code chỉ đọc `chapters[]`).
+- **Audit prompt**: Cần update `system_narrative_audit_biography.txt` để audit check `pacing_evaluation` consistency (ví dụ: nếu ai nói SPLIT_REQUIRED mà chỉ gán 1 chapter → flag).
+
+---
+
+## B. KEY_DATA EXACT MATCH Rule — CẦN ĐIỀU CHỈNH
+
+### Vấn đề gốc
+
+Bug report đúng: `key_data` AI paraphrase → Python fuzzy search không match → fallback full 56K blueprint.
+
+### Nhưng vừa fix xong!
+
+Bạn xem lại: **chúng ta vừa fix `_extract_chapter_blueprint` ở session trước!** Code mới dùng **fuzzy substring search** — nó search `key_data` text across ALL blueprint sections. Nên:
+
+- `"Job at the Swiss Patent Office"` → tìm thấy trong `life_phases[].key_events`
+- `"The birth of his illegitimate daughter, Lieserl"` → tìm thấy trong `life_phases[].key_events` hoặc `conflicts[]`
+
+**Fallback vẫn còn xảy ra** khi key_data quá khác biệt so với blueprint text. Nhưng mức độ đã giảm đáng kể.
+
+### Đánh giá rule EXACT MATCH
+
+| Ưu điểm | Rủi ro |
+|---|---|
+| Loại bỏ paraphrase → match chính xác | AI BỊ ÉP copy nguyên văn → output cứng nhắc |
+| Hook chapter không bị fallback 56K | AI có thể copy cả JSON key names thay vì human-readable text |
+| | Rule quá nghiêm ngặt → AI có thể ERROR khi blueprint text quá dài |
+
+### Đề xuất thay thế
+
+Thay vì EXACT_MATCH (quá cứng), dùng **hướng dẫn mềm**:
+
+```
+16. **KEY_DATA FORMAT:** When filling the `key_data` array, QUOTE the most 
+    distinctive keyword or phrase from the blueprint that UNIQUELY identifies 
+    this data point. Include enough context for substring matching.
+    ✗ BAD: "His early career difficulties" (too vague, matches nothing)
+    ✓ GOOD: "Dismissal from Goupil & Cie" (exact name from blueprint)
+    ✓ GOOD: "Annus Mirabilis papers of 1905" (contains searchable keywords)
+```
+
+Lý do: AI không cần copy nguyên câu — chỉ cần giữ lại **từ khóa đặc trưng** (tên riêng, năm, thuật ngữ) để fuzzy search match được.
+
+---
+
+## Tổng hợp: Đề xuất triển khai
+
+### Thay đổi cần làm (chỉ 1 file prompt)
+
+#### [system_narrative_outline_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_biography.txt)
+
+1. **Update `phase_chapter_plan` schema** (line 175-182):
+   - Thêm `pacing_evaluation` block với `mapped_nodes`, `node_count`, `capacity_check`
+
+2. **Thêm density rule** vào IMPORTANT section (line 11-16):
+   - Explicit threshold: "1 chapter (1200-1500 words) can develop 2-3 events cinematically. >3 events = MUST SPLIT"
+
+3. **Thêm Rule 16** — KEY_DATA substring-friendly (không phải exact match)
+
+### Thay đổi KHÔNG cần làm
+
+- ❌ Tách outline thành 2 API calls (CoT thay thế đủ)
+- ❌ Sửa Python code (JSON parser tự bỏ qua key mới)
+- ❌ Sửa audit prompt (nhưng NÊN LÀM sau để audit check pacing_evaluation)
+
+## Open Questions
+
+1. **Threshold 3 nodes** có phù hợp cho TẤT CẢ frameworks không? Sử Thi (dramatic, cần detail) có thể cần 2 nodes/chapter, trong khi Bản Án (analytical) có thể handle 4 nodes/chapter. Bạn muốn threshold cứng hay per-framework?
+
+2. **Hook chapter** key_data — hiện AI gán key_data dạng tension ("His signature killed 200,000") rất tốt nhưng blueprint KHÔNG chứa exact text đó. Bạn có muốn hook chapter KHÔNG filter blueprint (luôn nhận full) hay vẫn filter?
+
+3. Bạn muốn tôi **thực hiện ngay** chỉ sửa prompt, hay muốn review thêm trước?

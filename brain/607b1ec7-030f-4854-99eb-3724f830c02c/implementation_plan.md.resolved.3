@@ -1,0 +1,180 @@
+# Pipeline: Historical Stick Figure Prompt Generation
+
+Nghiên cứu và đề xuất quy trình tạo prompt cho kịch bản lịch sử dạng stick figure (OverSimplified).
+
+---
+
+## Flow hiện tại (có vấn đề)
+
+```
+SRT files → [Mode Verify] → [Visual Bible] → [Group by interval] → [AI: Generate prompt] → CSV
+                                  ↑ 
+                          Chỉ mô tả chung,
+                          không chuẩn hoá nhân vật
+```
+
+**Vấn đề:** Visual Bible hiện tại mô tả nhân vật kiểu "Physical: age, build, face, hair..." — quá chi tiết cho style stick figure. Cần chuẩn hoá theo 4 thuộc tính.
+
+---
+
+## Flow đề xuất (6 bước)
+
+```
+                ┌─────────────────────────────────────────────────┐
+                │                  INPUT: SRT files               │
+                └───────────────────┬─────────────────────────────┘
+                                    ▼
+              ┌─ STEP 1: Mode Detection ──────────────────────────┐
+              │  AI verify: Independent / Narrative               │
+              └───────────────────┬───────────────────────────────┘
+                                  ▼
+              ┌─ STEP 2: Character Bible ─────────────────────────┐
+              │  AI phân tích toàn bộ SRT                         │
+              │  → Liệt kê nhân vật + 4 thuộc tính visual        │
+              │  → Phân loại: Protagonist / Named / Archetype     │
+              │  → Liệt kê locations + props theo chapter         │
+              │  Output: character_bible.txt                      │
+              └───────────────────┬───────────────────────────────┘
+                                  ▼
+              ┌─ STEP 3: Character Sheet Prompts (optional) ──────┐
+              │  Với mỗi Protagonist + Named character:           │
+              │  → Tạo prompt cho character reference sheet        │
+              │  Output: character_sheets.txt                     │
+              │  (User dùng prompts này gen ảnh reference riêng)  │
+              └───────────────────┬───────────────────────────────┘
+                                  ▼
+              ┌─ STEP 4: Group SRT by interval ───────────────────┐
+              │  SRT → Groups (6s, 8s, 10s...)                    │
+              └───────────────────┬───────────────────────────────┘
+                                  ▼
+              ┌─ STEP 5: Scene Prompt Generation ─────────────────┐
+              │  Với mỗi group:                                   │
+              │  → System prompt = Style (OverSimplified.txt)     │
+              │  → User message = SRT text + Character Bible      │
+              │  → Context trước/sau                              │
+              │  → AI output: scene prompt (mô tả cảnh)          │
+              └───────────────────┬───────────────────────────────┘
+                                  ▼
+              ┌─ STEP 6: Output ──────────────────────────────────┐
+              │  CSV: [#, Time, Original, Prompt, Status]         │
+              │  + character_bible.txt                            │
+              │  + character_sheets.txt (optional)                │
+              └───────────────────────────────────────────────────┘
+```
+
+---
+
+## STEP 2: Character Bible — Cấu trúc mới
+
+> [!IMPORTANT]
+> Đây là thay đổi lớn nhất — chuẩn hoá Visual Bible theo **4 thuộc tính** thay vì mô tả tự do.
+
+### Prompt cần hướng dẫn AI output theo format sau:
+
+```
+## HISTORICAL CONTEXT
+- Time Period: [era + years]
+- Geography: [regions]
+- Key Events: [summary]
+
+## CHARACTERS
+
+### 🌟 PROTAGONISTS
+[Name] | Chapters: [1-12]
+- Headwear: black bicorne hat
+- Hair/Face: clean-shaven, stern expression line
+- Outfit: dark navy blue military coat, gold button dots, white pants, black boots
+- Weapon: ornate officer saber at waist
+
+### 🎭 NAMED SUPPORTING
+[Name] | Chapters: [2,3,5]
+- Headwear: tall black papakha fur hat
+- Hair/Face: long white beard, bushy eyebrows drawn as thick lines
+- Outfit: dark green Russian general uniform with red sash
+- Weapon: curved cavalry saber
+
+### ⚔️ MILITARY ARCHETYPES
+French Infantry | Chapters: [1-12]
+- Headwear: black cocked hat
+- Hair/Face: (generic—no distinguishing features)
+- Outfit: blue coat, white crossbelts
+- Weapon: brown musket with bayonet
+
+British Infantry | Chapters: [3-8]
+- Headwear: tall black bearskin hat
+- Hair/Face: (generic)
+- Outfit: red coat, white crossbelts
+- Weapon: brown musket
+
+### 👥 CIVILIAN ARCHETYPES
+French Peasant | Chapters: [1,6,9]
+- Headwear: simple brown cap or none
+- Hair/Face: (generic)
+- Outfit: brown rough tunic, patched pants
+- Weapon: none (may hold pitchfork, basket, or bread)
+
+Noble/Courtier | Chapters: [3,7]
+- Headwear: none
+- Hair/Face: white powdered wig
+- Outfit: ornate coat with gold embroidery, knee breeches
+- Weapon: none (may hold fan, cane, or wine glass)
+
+## KEY LOCATIONS
+### [Location Name]
+- Architecture: [period-accurate details]
+- Key Elements: [specific details for background]
+- Atmosphere: [weather, lighting, time of day]
+```
+
+---
+
+## STEP 3: Character Sheet Prompts
+
+Tự động tạo prompt cho Protagonist + Named characters:
+
+```
+Character reference sheet in [STYLE] style.
+Stick figure with round white circle head, black dot eyes.
+[Name]: [Headwear] + [Hair/Face] + [Outfit] + [Weapon]
+4 views on clean white background: front, 3/4 angle, side profile, action pose.
+Flat 2D shading, clean black outlines, muted earthy colors.
+```
+
+Với Archetype chỉ cần **1 view** (front) vì chúng generic.
+
+---
+
+## STEP 5: Scene Prompt — AI nhận Character Bible
+
+Khi generate scene prompt, AI nhận:
+
+```
+=== CHARACTER BIBLE (REFERENCE) ===
+[...danh sách nhân vật với 4 thuộc tính...]
+=== END CHARACTER BIBLE ===
+
+=== CURRENT SEGMENT ===
+Time: 00:01:23 - 00:01:29
+Text: "Napoleon marched his army across the Alps"
+
+Generate a detailed visual prompt for this scene.
+Reference the Character Bible for consistent character descriptions.
+Only include characters relevant to this segment.
+```
+
+---
+
+## Thay đổi cần làm
+
+### Files ảnh hưởng
+
+| File | Thay đổi |
+|------|----------|
+| [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) | Cập nhật format output theo 4 thuộc tính + 4 nhóm nhân vật |
+| [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py) | Thêm `generate_character_sheet_prompts()` — parse bible → tạo sheet prompts |
+| [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) | Thêm step character sheet generation sau Visual Bible |
+
+### Lưu ý quan trọng
+
+> [!WARNING]
+> [narrative_review_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/narrative_review_prompt.txt) cần cập nhật **format chuẩn** nhưng **không hardcode style** (OverSimplified). Prompt mô tả 4 thuộc tính là **universal** — dùng được cho bất kỳ style nào (Charcoal Noir, Victorian, v.v.). Style-specific details do AI tự suy ra từ historical context.

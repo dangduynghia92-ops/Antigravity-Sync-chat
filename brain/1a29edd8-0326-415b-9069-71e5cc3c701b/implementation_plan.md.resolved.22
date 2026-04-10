@@ -1,0 +1,106 @@
+# Xây dựng Pipeline Mystery History
+
+## Phân tích hiện trạng
+
+### Pipeline hiện tại trong Style Rewrite tab:
+
+```mermaid
+graph TD
+    A[Script gốc] --> B[Extract Blueprint]
+    B --> C{Mode?}
+    C -->|Top/List Review| D[write_review_chapter]
+    C -->|Narrative| E[write_from_blueprint]
+    D --> F[Niche-specific prompt]
+    F -->|firearms| G[system_write_review_firearms.txt]
+    F -->|military| H[system_write_review_military.txt]
+    F -->|mystery?| I[❌ CHƯA CÓ → crash]
+    E --> J[system_write_from_blueprint.txt]
+    J --> K[Generic prompt - HOẠT ĐỘNG]
+```
+
+### Vấn đề cốt lõi:
+
+Mystery history là **nội dung điều tra/kể chuyện**, KHÔNG phải product review:
+
+| Firearms/Military | Mystery History |
+|---|---|
+| Có sản phẩm cụ thể | Không có sản phẩm |
+| Specs, giá, thông số | Evidence, dates, sources |
+| So sánh A vs B | Mainstream vs Hidden Truth |
+| "Ai nên mua?" | "Câu hỏi chưa có lời giải" |
+| Rankings, tiers | Escalation of mystery |
+| USP = điểm bán | USP = điểm "impossible" |
+
+→ **KHÔNG THỂ copy kiến trúc firearms/military** (Required Elements, Pattern A/B/C/D, chapter_type body/hook/end)
+
+---
+
+## 3 Phương án
+
+### Phương án 1: Dùng Narrative mode (nhanh nhất)
+
+**Làm gì**: Dùng mode "Narrative" trong Style Rewrite tab → [write_from_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1313-1395) + [system_write_from_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint.txt)
+
+**Ưu điểm**: Hoạt động ngay, không cần code mới
+**Nhược điểm**: Prompt generic, không có rules riêng cho mystery history (citation density, rhetorical questions, never resolve...)
+
+**Công việc**: Chỉ cần load style guide @AncientAlexx và chạy
+
+---
+
+### Phương án 2: Tạo niche-specific prompt cho mystery (trung bình)
+
+**Làm gì**: Tạo `system_write_review_mystery.txt` + đăng ký trong `_niche_prompt_map`
+
+**Thiết kế elements riêng cho mystery (KHÔNG copy từ firearms)**:
+
+| Element | Mô tả |
+|---|---|
+| **[SCENE]** | 2nd-person immersion — đặt người xem vào hiện trường lịch sử |
+| **[EVIDENCE]** | Data dump with authority citations — dates, names, sources, measurements |
+| **[THESIS]** | Mainstream/official explanation — trình bày công bằng |
+| **[ANTITHESIS]** | Counter-evidence, anomalies, gaps in mainstream theory |
+| **[QUESTIONS]** | 3-5 rhetorical questions — leave mystery unresolved |
+
+Patterns:
+- **Pattern A — SCENE FIRST**: cho bí ẩn có bối cảnh visual mạnh
+- **Pattern B — EVIDENCE FIRST**: cho chủ đề nặng data (khảo cổ, OOParts)
+- **Pattern C — THESIS FIRST**: cho chủ đề debunk trực tiếp
+- **Pattern D — QUESTIONS FIRST**: cho revelation-first (mở bằng câu hỏi sốc)
+
+**Ưu điểm**: Rules chuyên biệt cho mystery history
+**Nhược điểm**: Cần thiết kế outline prompt riêng (mystery không có `products_covered`, `evaluation_criteria`, `ranking_reason`...)
+
+> [!WARNING]
+> Outline hiện tại ([create_review_outline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1973-2105)) được thiết kế cho product review — có fields `products_covered`, `evaluation_criteria`, `primary_criterion`, `depth_focus`, `ranking_reason`, `target_user`, `cons_to_mention`. Mystery history không có fields này. Cần tạo outline prompt mới hoặc adapt.
+
+---
+
+### Phương án 3: Tạo investigative path riêng (tốt nhất, tốn nhất)
+
+**Làm gì**: Tạo pipeline riêng cho investigative content, không ép vào review framework
+
+Tạo mới:
+1. `system_create_mystery_outline.txt` — outline chuyên cho mystery (thay `products_covered` bằng `mystery_subject`, `mainstream_theory`, `counter_evidence`, `sources`...)
+2. `system_write_mystery_chapter.txt` — writer prompt riêng
+3. `write_mystery_chapter()` function mới trong [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+4. Thêm mode mới trong Style Rewrite tab (ví dụ: "Mystery Investigation")
+
+**Ưu điểm**: Pipeline hoàn hảo cho mystery, không bị giới hạn bởi review framework
+**Nhược điểm**: Tốn thời gian nhất, cần code nhiều
+
+---
+
+## So sánh
+
+| Tiêu chí | P1: Narrative | P2: Niche prompt | P3: Pipeline riêng |
+|---|---|---|---|
+| **Thời gian** | 0 (có sẵn) | 1-2 ngày | 3-5 ngày |
+| **Chất lượng** | Trung bình | Tốt | Tốt nhất |
+| **Rủi ro** | Thấp | Trung bình (outline mismatch) | Thấp |
+| **Maintain** | Dễ | Trung bình | Phức tạp hơn |
+
+## Đề xuất lộ trình
+
+1. **Bây giờ**: Thử Phương án 1 — test ngay với Narrative mode + @AncientAlexx style guide
+2. **Nếu kết quả chưa đủ tốt**: Chuyển sang Phương án 2 hoặc 3 dựa trên kết quả test

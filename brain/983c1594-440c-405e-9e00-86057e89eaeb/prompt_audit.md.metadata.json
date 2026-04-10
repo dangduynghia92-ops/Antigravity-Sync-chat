@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Evaluates 3 issues:\n\nA) Auto-Patch toggle is hardcoded to True in New Content pipeline, ignoring the UI checkbox.\n\nB) Blueprint filter (_extract_chapter_blueprint) has confirmed data loss: key_data items are plain English descriptions that don't match any blueprint JSON keys; life_phase_covered gets comma-concatenated by AI so substring matching fails. Result: chapters lose 84-88% of available data (life_phases, achievements, conflicts, turning_points).\n\nC) Four proposed schema additions are evaluated: financial_arc (approved, in core_identity), final_words+who_was_present (approved, in death), vices_and_obsessions (approved as highest priority, in personal_profile), documented_close_calls (approved with caution due to hallucination risk, in turning_points).",
+  "updatedAt":  "2026-04-04T13:54:21.447941Z",
+  "version":  "3",
+  "requestFeedback":  true
+}

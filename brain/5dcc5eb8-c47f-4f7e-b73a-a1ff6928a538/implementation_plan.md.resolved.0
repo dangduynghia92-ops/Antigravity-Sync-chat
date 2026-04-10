@@ -1,0 +1,115 @@
+# Fix: Cho phép Auto Pipeline và Style Rewrite chạy song song
+
+## Bối cảnh
+Auto Pipeline "mượn" trực tiếp instance `RewriteStyleTab` để chạy rewrite, gây ra race condition khi cả 2 tab chạy đồng thời. Cần tách biệt state để 2 pipeline có thể chạy song song an toàn.
+
+## Nguyên tắc sửa
+**Chỉ sửa `auto_pipeline_tab.py` — không sửa `rewrite_style_tab.py`**, vì Style Rewrite tab khi chạy độc lập (không qua Auto Pipeline) vẫn hoạt động đúng. Vấn đề nằm ở cách Auto Pipeline mutates shared state.
+
+## Proposed Changes
+
+### Auto Pipeline Tab
+
+#### [MODIFY] [auto_pipeline_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/auto_pipeline_tab.py)
+
+**Thay đổi 1: Xoá `_sync_config_to_rewrite_tab` — Không đồng bộ config sang widget của Style Rewrite nữa**
+- Xoá hoàn toàn: `_sig_sync_config`, `_do_sync_config_on_main_thread`, `_sync_config_to_rewrite_tab`
+- Auto Pipeline đã cache tất cả config vào `job` dict rồi, không cần sync sang widget
+
+**Thay đổi 2: Xoá mutations lên `rw_tab`**
+- **Xoá**: `rw_tab._group_path = task.chapters_dir` (dòng 1051)
+- **Xoá**: `rw_tab._chapters = chapter_dicts` (dòng 1052)
+- **Xoá**: `rw_tab._group_path = original_group_path` (dòng 1101)
+- **Xoá**: `rw_tab._task_counter += 1` (dòng 1002) → dùng `self._task_counter` riêng cho Auto Pipeline
+- Giữ: `rw_tab._jobs[job["id"]] = job` (vô hại, key khác nhau)
+
+**Thay đổi 3: Tự load style JSON thay vì dùng `rw_tab._load_style_json_raw()`**
+- Load trực tiếp từ file JSON dựa trên `cfg.style_file` (đã có sẵn)
+- Truyền vào job dict qua `_cached_style_raw` và `_cached_style_info`
+
+**Thay đổi 4: Truyền `_cached_output_dir` và `_cached_google_check` vào job dict**
+- Đảm bảo pipeline methods dùng giá trị từ job, không đọc widget
+
+**Thay đổi 5: Thêm `self._task_counter` riêng cho Auto Pipeline**
+
+---
+
+### Rewrite Style Tab (sửa nhỏ, cần thiết)
+
+#### [MODIFY] [rewrite_style_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/rewrite_style_tab.py)
+
+**Thay đổi 1: `_do_renew_style` — dùng `job["_cached_style_raw"]` khi có job** (dòng ~2171)
+```python
+# Trước:
+style_json_raw, style_info = self._load_style_json_raw()
+
+# Sau:
+if job and job.get("_cached_style_raw"):
+    style_json_raw = job["_cached_style_raw"]
+    style_info = job.get("_cached_style_info", "auto")
+else:
+    style_json_raw, style_info = self._load_style_json_raw()
+```
+
+**Thay đổi 2: `_do_renew_style` — dùng `job["_cached_output_dir"]`** (dòng ~2167)
+```python
+# Trước:
+output_dir = self._resolve_output_dir(checked[0]["filepath"])
+
+# Sau:
+output_dir = (job.get("_cached_output_dir") if job else None) or self._resolve_output_dir(checked[0]["filepath"])
+```
+
+**Thay đổi 3: `_do_renew_review` — dùng `job["_cached_style_raw"]` khi có job** (dòng ~2832)
+```python
+# Trước:
+style_json_raw, style_info = self._load_style_json_raw()
+
+# Sau:
+if job and job.get("_cached_style_raw"):
+    style_json_raw = job["_cached_style_raw"]
+    style_info = job.get("_cached_style_info", "auto")
+else:
+    style_json_raw, style_info = self._load_style_json_raw()
+```
+
+**Thay đổi 4: `_do_renew_style` — dùng cached `_google_check` thay vì widget** (dòng ~2336)
+```python
+# Trước:
+_google_check_on = self._chk_google_check.isChecked()
+
+# Sau:
+_google_check_on = job.get("_cached_google_check", self._chk_google_check.isChecked()) if job else self._chk_google_check.isChecked()
+```
+
+**Thay đổi 5: `self._running` — không set khi có job** (dòng 2193, 2770, 2858, 4008)
+```python
+# Trước:
+self._running = True  / self._running = False
+
+# Sau:
+if not job:
+    self._running = True  / self._running = False
+```
+
+**Thay đổi 6: `self._stop_flag` — không reset khi có job** (dòng 2246, 2920)
+```python
+# Trước:
+self._stop_flag = False
+
+# Sau:
+if not job:
+    self._stop_flag = False
+```
+
+## Verification Plan
+
+### Automated Tests
+1. Chạy app, mở Style Rewrite tab, load 1 folder chapters
+2. Chạy rewrite trên Style Rewrite
+3. Trong khi đang chạy, chuyển sang Auto Pipeline tab, paste URL, chạy pipeline
+4. Verify: cả 2 log panel đều output bình thường, không crash, không sai thư mục output
+
+### Manual Verification
+- Config trên Style Rewrite tab không bị thay đổi khi Auto Pipeline chạy
+- Output files ghi đúng thư mục

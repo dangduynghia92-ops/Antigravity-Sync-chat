@@ -1,0 +1,64 @@
+# UI Overhaul Phase 2
+
+Fix tab lag, SearchableCombo flash, missing Save Config, and layout balance. Inspired by AZ-Labs reference design.
+
+## Root Cause Analysis
+
+| Problem | Root Cause | Fix |
+|---|---|---|
+| Tab switch lag/flicker | `CTkTabview` redraws on switch | Replace with manual frame show/hide |
+| SearchableCombo flash | `CTkToplevel` creates new window each time | Reuse window, defer show |
+| Product tab no Save Config | Simply missing | Add Save/Load config |
+| Layout unbalanced | Rigid grid weights | Rebalance with LabelFrame sections |
+
+## Proposed Changes
+
+### Fix 1: Tab Switch Lag
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+Replace `CTkTabview` with simple button-based tab bar + frame show/hide:
+- Build both tab frames at startup, pack them into same container
+- Only one visible at a time (`pack_forget` / `pack`)
+- Custom tab bar with `CTkSegmentedButton` for instant switching
+- No animation = no flicker
+
+---
+
+### Fix 2: SearchableCombo Flash
+
+#### [MODIFY] [searchable_combo.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/searchable_combo.py)
+
+- **Withdraw** dropdown window instead of destroying it
+- Only create `CTkToplevel` once, reuse it
+- Use `withdraw()`/`deiconify()` to hide/show
+
+---
+
+### Fix 3: Product Tab Save Config
+
+#### [MODIFY] [product_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/product_tab.py)
+
+- Add [_save_config()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py#154-167) / [_load_config()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py#232-254) methods (mirror config_section.py)
+- Save: style, output_dir, tier, count, threads, constraints
+- Load on init
+- Add "Save Config" button in config bar
+
+---
+
+### Fix 4: Layout — Bordered Sections (like AZ-Labs)
+
+#### [MODIFY] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+
+- Wrap config content in a subtle bordered frame (`border_width=1, border_color="#334155"`)
+
+#### [MODIFY] [main_window.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/main_window.py)
+
+- Rebalance grid weights for better proportions
+
+## Verification
+
+- Tab switch should be instant (no flicker)
+- SearchableCombo dropdown should not flash
+- Product tab config persists after restart
+- Layout sections have visible separation

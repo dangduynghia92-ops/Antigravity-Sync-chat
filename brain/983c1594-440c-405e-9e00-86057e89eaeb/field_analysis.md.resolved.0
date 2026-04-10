@@ -1,0 +1,49 @@
+# Phân tích: Field CHUNG vs Field RIÊNG trong blueprint biography
+
+## Blueprint Fields (15 total)
+
+### 🟢 FIELD CHUNG — Mọi framework đều dùng
+Đây là "baseline data" mà bất kỳ tiểu sử nào cũng phải có,
+KHÔNG nên dùng để phân biệt frameworks:
+
+| # | Field | Items (Einstein) | Lý do chung |
+|---|---|---|---|
+| 1 | core_topic | 1 | Ai cũng cần biết nhân vật là ai |
+| 2 | core_identity | 8 keys | Tên, sinh, tử, vai trò — luôn có |
+| 3 | **life_phases** | **7** | **MỌI tiểu sử đều có** — luôn dày |
+| 4 | **achievements** | **4** | **MỌI nhân vật nổi tiếng đều có** |
+| 5 | **conflicts** | **5** | Xung đột luôn có |
+| 6 | **key_relationships** | **6** | Quan hệ luôn có |
+| 7 | historical_context | 4 keys | Bối cảnh luôn có |
+| 8 | **legacy** | **4 keys** | Di sản luôn có |
+| 9 | key_quotes | 9 | Trích dẫn luôn có |
+| 10 | named_sources | 53 | Nguồn luôn có |
+
+→ 10/15 fields là CHUNG
+
+### 🔵 FIELD RIÊNG — Chỉ đặc biệt quan trọng cho 1 framework
+Đây là data TẠO RA SỰ KHÁC BIỆT giữa frameworks:
+
+| # | Field | Items | Framework chính | Tại sao riêng? |
+|---|---|---|---|---|
+| 11 | **dual_nature** | light:5, dark:4 | **Hai Mặt** | Cần CẢ HAI mặt sáng/tối dày |
+| 12 | **myths_vs_reality** | 3 | **Hai Mặt + Kẻ Xét Lại** | Cần myths để debunk |
+| 13 | **turning_points** | 4 | **Bước Ngoặt** | Cần moments thay đổi cuộc đời |
+| 14 | **systemic_opposition** | 3 | **Bản Án** | Cần tổ chức/hệ thống đàn áp |
+| 15 | **historiography** | 5 keys | **Kẻ Xét Lại** | Cần biết ai viết lịch sử + bias |
+
+→ 5/15 fields là RIÊNG
+
+## VẤN ĐỀ: SỬ THI KHÔNG CÓ FIELD RIÊNG
+
+| Framework | primary_data_field | Loại field | Kết quả |
+|---|---|---|---|
+| Hai Mặt | dual_nature | 🔵 RIÊNG | Fair scoring ✅ |
+| Bước Ngoặt | turning_points | 🔵 RIÊNG | Fair scoring ✅ |
+| **Sử Thi** | **life_phases** | **🟢 CHUNG** | **LUÔN CAO** ⚠️ |
+| Bản Án | systemic_opposition | 🔵 RIÊNG | Fair scoring ✅ |
+| Kẻ Xét Lại | historiography | 🔵 RIÊNG | Fair scoring ✅ |
+
+→ Sử Thi dùng `life_phases` (field CHUNG) → score data_richness LUÔN cao
+→ Các framework khác dùng field RIÊNG → score phụ thuộc vào nội dung cụ thể
+→ Bias hệ thống: Sử Thi luôn #1 hoặc #2

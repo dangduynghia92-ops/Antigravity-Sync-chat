@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Danh sách đầy đủ tất cả yêu cầu chức năng đã được yêu cầu và triển khai trong ứng dụng SRT Prompt Generator. Bao gồm 12 nhóm: kiến trúc, giao diện, API multi-endpoint, quản lý tiến trình, cấu hình, đa ngôn ngữ, quản lý project, style management, xử lý lỗi/recovery, xuất kết quả, tab Product Prompt, và kỹ thuật UI/UX. Mỗi mục có mô tả chi tiết.",
+  "updatedAt": "2026-02-26T11:01:23.372171800Z",
+  "version": "1"
+}

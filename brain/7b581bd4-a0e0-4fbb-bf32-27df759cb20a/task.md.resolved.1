@@ -1,0 +1,16 @@
+# Folder Mode Implementation
+
+- [x] Update niche file `trang_thiết_bị_quân_sự.txt` with 12 optimized niches
+- [x] Core logic [core/regroup.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py):
+  - [x] Add [FolderEntry](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#36-49) dataclass
+  - [x] Add [scan_output_folder_as_folders()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#731-830)
+  - [x] Add [classify_folders()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#851-1001)
+  - [x] Add [move_folder_to_group()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/regroup.py#1005-1105)
+- [x] AI prompt [prompts/system_regroup_folder.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_regroup_folder.txt)
+- [x] UI [ui/regroup_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/regroup_tab.py):
+  - [x] Add mode toggle (Chapter / Folder)
+  - [x] Wire scan/classify/copy to use folder functions when in folder mode
+  - [x] Folder-level tree display
+  - [x] Save/load mode in config
+- [x] Verify imports — no syntax errors
+- [ ] Manual test: chạy app và test folder mode

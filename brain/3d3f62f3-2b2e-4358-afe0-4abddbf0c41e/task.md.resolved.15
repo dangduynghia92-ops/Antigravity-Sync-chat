@@ -1,0 +1,18 @@
+# Style Analyzer Tab
+
+## Lessons from past bugs (MUST follow)
+- [x] All imports at TOP of file (no inline `import re`, `import shutil`, etc.)
+- [x] Import QMessageBox in UI file from the start
+- [x] Use `setMinimumWidth` not `setFixedWidth` for combos/labels
+- [x] Use `setSizePolicy(Fixed, Fixed)` for combos that need to be compact
+- [x] All variables must be defined before use — no `group_path` mistakes
+- [x] Add try-except with log output in all action handlers
+- [x] All buttons must have tooltips
+
+## Build Steps
+- [/] Create prompt files (overview, detail, synthesis)
+- [ ] Create core/style_analyzer.py
+- [ ] Create ui/style_tab.py
+- [ ] Register tab in main_window.py
+- [ ] Syntax check all files
+- [ ] Verify UI renders correctly

@@ -1,0 +1,74 @@
+# Review Pipeline Overhaul — Revised Plan
+
+## Core Problem
+Prompts hardcode universal rules (escalation, countdown numbers, pros/cons, etc.) but **each framework has different logic**. The prompt should DELEGATE to the framework's own data fields.
+
+## Key Insight
+Budget Warrior already has rich structure data:
+- `chapter_template` — 5-step template per product
+- `transitions` — "Hard-cut, no narrative bridges"  
+- `hook.must_include` — what the opening needs
+- `end.method` — how to close
+- `evaluation_focus.angle` — ranking criterion
+
+**10 other frameworks are missing these fields.** So the fix is TWO things:
+
+---
+
+## Plan
+
+### Step 1: Simplify Outline Prompt (framework-driven)
+Make [system_review_outline.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline.txt) DELEGATE to framework fields:
+
+```
+Before: "You MUST rank from weakest to strongest"  (hardcoded)
+After:  "Follow the framework's structure.direction for ordering"  (framework-driven)
+
+Before: "Include countdown number"  (hardcoded — only for countdown)
+After:  "If structure.type is 'countdown', include the number"  (conditional)
+
+Before: "Escalation required"  (hardcoded)
+After:  "If framework defines escalation rules, follow them"  (conditional)
+```
+
+Updated BODY rules:
+- **RANKING**: Follow `evaluation_focus.angle` to rank. Follow `structure.direction` for order.
+- **TRANSITIONS**: Follow `structure.body.transitions`. If not defined, use contrast-based bridges.
+- **CHAPTER STRUCTURE**: Follow `structure.body.chapter_template` if defined. If not, cover criteria from `evaluation_focus`.
+- **PACING**: Follow `structure.body.pacing` if defined.
+
+### Step 2: Simplify Writer Prompt (framework-driven)
+Make [system_write_from_blueprint_review.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_from_blueprint_review.txt) reference framework fields:
+
+- Follow `chapter_template` steps if provided
+- Follow `transitions` rule for `ends_with`
+- Follow `pacing` rule
+- Don't invent specs not in blueprint
+- If `structure.type` is "countdown", state the number explicitly
+
+### Step 3: Enrich Missing Frameworks
+Add `chapter_template`, `transitions`, `pacing` to frameworks that lack them:
+
+| Framework | Needs |
+|---|---|
+| The Contrarian Takedown | `chapter_template` (challenger vs leader per round), `transitions` |
+| The Underdog Champion | `chapter_template` (myth → data → surprise), `transitions` |
+| The High-Stakes Scenario | `chapter_template` (scenario → test → verdict), `transitions` |
+| The Legacy Justification | `chapter_template` (history → modern test → endurance), `transitions` |
+| The Tier List | `chapter_template` (tier placement → evidence → verdict), `transitions` |
+| The Myth Buster | `chapter_template` (myth → evidence → truth), `transitions` |
+| The Evolution Timeline | `chapter_template` (gen N → gen N+1 → delta), `transitions` |
+| The Head-to-Head Duel | `chapter_template` (round → product A → product B → winner), `transitions` |
+| The Golden Age Legacy | `chapter_template` (nostalgia → modern test → relevance), `transitions` |
+| The Industry Shakeup | `chapter_template` (announcement → analysis → disruption), `transitions` |
+
+> [!IMPORTANT]
+> Each framework's `chapter_template` and `transitions` should be generated from analyzing actual scripts of that type, not invented. We can use the style synthesis pipeline to generate these from sample scripts, OR define them manually based on the framework's established angle.
+
+---
+
+## What This Changes
+- **Prompts become simpler** — just "follow the framework's fields"
+- **Frameworks become the source of truth** — all style/structure decisions live in JSON
+- **Adding a new framework** = adding JSON, no prompt changes needed
+- **Each framework controls its own flow**, ranking logic, transitions, templates

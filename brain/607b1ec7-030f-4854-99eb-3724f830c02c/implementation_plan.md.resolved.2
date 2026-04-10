@@ -1,0 +1,72 @@
+# Script Mode Feature — Mode Selector + AI Verification
+
+Thêm tùy chọn **Script Mode** để tool phân biệt kịch bản dạng Top/List (chapters độc lập) và Narrative (chapters liên kết). Kèm bước AI verification tự động xác nhận mode user chọn.
+
+## Flow tổng thể
+
+```
+User chọn Mode → Start Processing
+  → [AI Verification] Gửi 3-4 chapters đầu → AI nhận diện → So khớp với Mode user chọn
+    → Khớp → Tiếp tục
+    → Không khớp → Log warning, vẫn tiếp tục theo mode user chọn
+  → [Visual Bible] Tạo theo mode:
+    → Independent: Bible riêng mỗi chapter (như hiện tại)
+    → Narrative: Gộp tất cả SRT → 1 Master Bible chung
+  → [Generate Prompts] Dùng Bible tương ứng
+```
+
+## Proposed Changes
+
+### UI
+
+#### [MODIFY] [config_section.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py)
+- Thêm **Mode combo** (2 options: `Independent`, `Narrative`) cạnh Constraints row
+- Thêm vào [get_config()](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/config_section.py#344-361) → `config["script_mode"]`
+- Save/load mode trong config persistence
+
+---
+
+### Processing Logic
+
+#### [MODIFY] [narrative_review.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+- Thêm `verify_script_mode()` — gửi 3-4 chapters đầu cho AI nhận diện mode
+- Thêm `generate_master_visual_bible()` — gộp nhiều SRT → 1 Master Bible
+- Thêm prompt template `prompts/mode_verify_prompt.txt`
+
+#### [NEW] [mode_verify_prompt.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/mode_verify_prompt.txt)
+- Prompt cho AI nhận diện: chapters có liên kết nhau hay độc lập?
+- Output: `INDEPENDENT` hoặc `NARRATIVE` + lý do ngắn
+
+#### [MODIFY] [process_controller.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+- Nhận `script_mode` từ config
+- Trước khi process batch:
+  - Chạy `verify_script_mode()` với 3-4 chapters đầu
+  - Log kết quả AI verification  
+  - Nếu mode = `Narrative` + Historical enabled: tạo Master Bible từ tất cả SRTs
+  - Nếu mode = `Independent`: giữ logic hiện tại (Bible per chapter)
+
+## Chi tiết AI Verification
+
+```
+Input cho AI:
+  Chapter 1 title + 5-10 câu đầu
+  Chapter 2 title + 5-10 câu đầu  
+  Chapter 3 title + 5-10 câu đầu
+
+AI trả lời:
+  MODE: NARRATIVE
+  REASON: All chapters follow Napoleon's story chronologically.
+  Common characters: Napoleon, Josephine, Kutuzov
+```
+
+So khớp với mode user chọn → log warning nếu khác.
+
+## Verification Plan
+
+### Automated Tests
+- `python -c "from core.narrative_review import verify_script_mode, generate_master_visual_bible"` — import check
+
+### Manual Verification
+- Test Independent mode: scan folder với chapters độc lập → mỗi file có Bible riêng
+- Test Narrative mode: scan folder với connected chapters → 1 Master Bible chung
+- Test AI verification: đặt sai mode → kiểm tra warning log
