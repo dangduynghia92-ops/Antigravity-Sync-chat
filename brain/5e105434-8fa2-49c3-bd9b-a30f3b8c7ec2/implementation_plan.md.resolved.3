@@ -1,0 +1,145 @@
+# Bản Thiết Kế Chi Tiết: Thống Nhất Kiến Trúc Phase Plan & Blueprint Battle 2.0
+
+Bản kế hoạch chi tiết từng dòng code và cấu trúc JSON chuẩn bị được can thiệp vào hệ thống.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Đây là bản triển khai thực địa (kỹ thuật). Các hàm Python và khung cấu trúc JSON dưới đây sẽ được tiêm trực tiếp vào hệ thống. Mời bạn duyệt qua cấu trúc biến nhé!
+
+---
+
+## Proposed Changes
+
+### 1. Đại Tu Schema Data: Battle Blueprint 2.0 (Khâu Tiền Kỳ)
+
+#### [MODIFY] `prompts/system_extract_blueprint_battle.txt`
+Sẽ thay toàn bộ hướng dẫn JSON cũ bằng khung 6 khối như sau:
+```json
+{
+  "origins_and_context": {
+    "casus_belli": "Nguyên nhân kích nổ",
+    "factions": [{"name": "...", "strategic_interests": "...", "doctrines": "..."}],
+    "commanders": [{"name": "...", "faction": "...", "background": "...", "key_decisions": "..."}]
+  },
+  "the_buildup_and_march": {
+    "logistics_and_intelligence": "Hậu cần và Tình báo",
+    "the_march_and_deployment": "Chuẩn bị địa hình, Lộ trình di chuyển trước khi nổ súng"
+  },
+  "chronological_campaign_phases": [
+    {
+      "phase_label": "Tên giai đoạn (VD: Mùa Đông, Hoặc Ngày 1)",
+      "duration_and_dates": "Thời lượng",
+      "weather_and_conditions": "Thời tiết nội khu",
+      "status": "active_combat | stalemate | siege | retreat",
+      "engagements": [
+        {"front": "Cánh báo cáo", "tactical_moves": "Hành động chiến thuật", "technology_asymmetry": "Vũ khí chênh lệch", "outcome": "..."}
+      ],
+      "shifts_in_momentum": "Phe nào có lợi sau phase này"
+    }
+  ],
+  "climactic_turning_points": [
+    {"moment": "Sự kiện xoay chuyển", "cause_of_turn": "Nguyên nhân (Sai sót/Tự nhiên)", "impact": "..."}
+  ],
+  "resolution_and_aftermath": {
+    "immediate_resolution": "Thương vong, rút lui đầu hàng",
+    "geopolitical_aftermath": "Đổi thay biên giới thế giới",
+    "military_lessons": "..."
+  },
+  "texture_and_visuals": {
+    "narrative_moments": [{"scene": "...", "visual_details": "..."]
+  }
+}
+```
+
+#### [MODIFY] `core/rewriter.py` (Khai báo mảng Research Mới)
+Thêm biến `_RESEARCH_SECTIONS_BATTLE` với 3 nhát cắt chạy song song:
+```python
+_RESEARCH_SECTION_A_BATTLE = {"fields": ["origins_and_context", "the_buildup_and_march"], ...}
+_RESEARCH_SECTION_B_BATTLE = {"fields": ["chronological_campaign_phases"], ...}
+_RESEARCH_SECTION_C_BATTLE = {"fields": ["climactic_turning_points", "resolution_and_aftermath", "texture_and_visuals"], ...}
+
+_NICHE_RESEARCH_MAP = {
+    # Mới:
+    "battle": _RESEARCH_SECTIONS_BATTLE,
+    "chiến": _RESEARCH_SECTIONS_BATTLE,
+    ...
+}
+```
+
+---
+
+### 2. Tự Động Hóa Auto-Fallback Lõi Python (Gỡ Hardcode)
+
+#### [MODIFY] `ui/script_creation_tab.py`
+Xóa khối code `_is_biography` tĩnh (Từ dòng 1621), thay bằng thuật toán Động:
+```python
+# CŨ: _is_biography = any(kw in (niche or "").lower() for kw in _BIO_KW)
+
+# MỚI: 
+_has_phase_plan = False
+try:
+    from core.rewriter import _get_niche_prompt
+    _get_niche_prompt("narrative_phase_plan", niche)
+    _has_phase_plan = True
+except ValueError:
+    pass
+
+if _has_phase_plan:
+    # -> Auto kích hoạt luồng 3 bước (Generate Phase -> Validate Sub -> Apply Split)
+else:
+    # -> Fallback an toàn, gọi 1 cục Outline duy nhất (Single-shot)
+```
+
+#### [MODIFY] `core/rewriter.py` - Hàm `validate_phase_plan_sub_keys`
+Hàm Validate của A2 đang gọi chết Prompt của Biography, sẽ chích thuốc động hóa:
+```python
+# Sửa cách Load Prompt
+prompt_file = _require_niche_prompt("validate_sub_key", niche, log_callback)
+system_prompt = _load_prompt(prompt_file)
+
+# Mở rộng Context cho AI đối chiếu thông minh hơn:
+def _build_excerpt(phase_data):
+    excerpt = {}
+    keys_to_pull = ["life_phases", "turning_points", "conflicts", "chronological_campaign_phases", "climactic_turning_points"]
+    for k in keys_to_pull:
+        if k in blueprint and blueprint[k]:
+            excerpt[k] = blueprint[k]
+    return excerpt
+```
+Cập nhật `_NICHE_PROMPT_MAP` bổ sung từ khóa trận đánh vào `narrative_phase_plan` và `validate_sub_key`.
+
+---
+
+### 3. Cấy Bộ Prompts 3 Bước Phân Rã Cho Trận Đánh
+
+#### [NEW] `prompts/system_narrative_phase_plan_battle.txt`
+Chỉ đạo ngặt nghèo về Timeline Quân sự (Không dùng khái niệm Tuổi thơ/Trưởng thành)
+```json
+{
+  "phase_chapter_plan": [
+    {
+      "phase": "Fog of War",
+      "main_key_data": ["Rút ra từ engagements và climactic_turning_points"],
+      "sub_key_data": ["Rút ra từ weather_conditions, logistics, narrative_moments"],
+      "node_count": 4
+    }
+  ]
+}
+```
+
+#### [NEW] `prompts/system_validate_sub_key_battle.txt`
+Lập 3 Test Quân sự:
+1. **Momentum Test:** Tiểu tiết này có là nguyên nhân làm Gãy Momentum không? 
+2. **Casualty Test:** Nó có thay đổi trực tiếp thiệt hại quân số (thay vì chỉ hù dọa xuông)?
+3. **Stand-alone Test:** Tiểu tiết này đứng một mình có làm nên 1 chương lật kèo không?
+*Thỏa mãn 1 trong 3 -> `PROMOTE` sang `main_key_data`.*
+
+#### [MODIFY] `prompts/system_narrative_outline_battle.txt`
+Gọt bỏ logic CoT tự bắt AI ép Phase. Cấu trúc lại để nó tiếp nhận `phase_chapter_plan` nguyên đai kiện từ Code và chỉ việc rọi tâm điểm vào Khung `chapters[]`.
+
+---
+
+## Verification Plan
+1. **Kháng Lỗi (Unit Testing):** Chạy lệnh giả lập sinh Outline chế độ Mystery. Do không có `narrative_phase_plan_mystery`, hệ thống phải báo tín hiệu rơi vào cờ `_has_phase_plan = False` để chứng minh cơ chế Auto-Fallback an toàn tuyệt đối.
+2. **Mạch Kịch Bản (Integration):** Sinh Blueprint trận Sekigahara, đánh vào chế độ Narrative Rewrite để Test Log xem 3 hàm (`generate`, `validate`, `split`) xuất xưởng đủ quân số Chapter. Cấu trúc Output Outline Battle sẽ không thiếu Casus Belli mở đầu, và Geopolitical kết thúc!
