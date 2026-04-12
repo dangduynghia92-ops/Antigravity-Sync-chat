@@ -1,6 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Plan to unify the Narrative Pipeline architecture by making the 3-step Phase Planning process data-driven instead of hardcoded to the biography niche. Creates necessary prompt files for the Battle niche to utilize this robust workflow.",
-  "updatedAt": "2026-04-12T17:02:19.111691700Z",
+  "summary": "Bản kế hoạch mở rộng bọc lót cả Bước 'Research Blueprint' (Dành cho New Content) và Cập nhật tư duy Phase Plan theo đúng dòng thời gian chiến thuật.",
+  "updatedAt": "2026-04-12T17:23:15.415647400Z",
+  "version": "1",
   "requestFeedback": true
 }
