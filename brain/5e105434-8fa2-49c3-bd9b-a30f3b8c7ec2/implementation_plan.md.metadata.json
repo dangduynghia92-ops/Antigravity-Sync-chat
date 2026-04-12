@@ -1,7 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Bản kế hoạch mở rộng bọc lót cả Bước 'Research Blueprint' (Dành cho New Content) và Cập nhật tư duy Phase Plan theo đúng dòng thời gian chiến thuật.",
-  "updatedAt": "2026-04-12T17:23:15.415647400Z",
-  "version": "1",
+  "summary": "Bản kế hoạch Refactor 2.0 hoàn chỉnh: Bao gồm thiết kế Blueprint Mảng Lồng Kép (giải quyết chiến dịch nhiều ngày), tích hợp Research New Content, và Tự động hóa Pipeline 3 bước cho Battle Niche.",
+  "updatedAt": "2026-04-12T17:30:53.166784200Z",
+  "version": "2",
   "requestFeedback": true
 }

@@ -1,54 +1,40 @@
-# Thống Nhất Kiến Trúc 3 Bước & Bổ Sung Module "New Content" Cho Trận Đánh
+# Thống Nhất Kiến Trúc Pipeline & Đại Tu Blueprint 2.0 Cho Niche Trận Đánh
 
-Mục tiêu: Đáp ứng chính xác yêu cầu bao quát toàn bộ tiến trình của một trận đánh (từ nguyên nhân, dàn quân, leo thang, đến hậu quả). Kế hoạch này được mở rộng bao gồm 2 mảng lớn:
-1. **Module Research (Sinh Content từ số 0):** Định nghĩa lại các field cần AI tự động cào dữ liệu cho Niche Trận Đánh khi người dùng chạy chế độ New Content.
-2. **Module Refactor Pipeline:** Phá bỏ rẽ nhánh code cũ, cấu trúc hóa việc nạp dữ liệu vào Phase Plan sao cho chuẩn xác với dòng chảy lịch sử.
+Mục tiêu cốt lõi: 
+1. **Mở rộng Data:** Nâng cấp Schema của "Battle Blueprint" từ một mảng phẳng lỳ thành Cấu trúc Mảng Lồng Kép (Nested Timeline) để xử lý triệt để các chiến dịch kéo dài nhiều ngày, nhiều phase đứt quãng.
+2. **Khơi thông Research:** Thêm Module `_RESEARCH_SECTIONS_BATTLE` vào Python để hỗ trợ lấy Data theo cấu trúc mới khi dùng tính năng "New Content".
+3. **Thống nhất Pipeline:** Phá bỏ hàm hardcode `_is_biography`, biến cơ chế chẻ chương (Phase Plan -> Validate -> Split) thành tự động kích hoạt dựa trên việc đăng ký file Prompt. Áp dụng luôn cơ chế đỉnh cao này cho Trận đánh.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - Module Research đòi hỏi phải khai báo thẳng vào lõi Code Python (`_RESEARCH_SECTION_A_BATTLE`, v.v) thay vì đọc file ngoài, do cơ chế gọi Multicall song song của file đính kèm. 
-> - Bạn vui lòng kiểm tra xem bộ 3 Section Research tôi vạch ra dưới đây đã đủ "sâu" theo kỳ vọng của bạn về một trận đánh chưa?
+> Đây là bản nâng cấp toàn diện nhất can thiệp cả vào logic trích xuất Data (Extract/Research), Tiền kỳ (Phase Plan) lẫn Chẻ chương (Outline). Mời bạn duyệt cấu trúc Mảng đa cấp ở Bước 1. Nếu duyệt ok, tôi sẽ tiến hành viết Code và Prompts.
 
 ## Proposed Changes
 
-### 1. Bổ Xung Module "Research Blueprint" (Sinh Data Tự Động)
+### Bước 1: Đại Tu Schema "Battle Blueprint 2.0" (The Backbone)
 
-Khi chạy chế độ New Content (Ví dụ bạn gõ "Trận Waterloo"), Code hiện tại chỉ hỗ trợ gọi AI cho Tiểu sử. Ta sẽ bổ sung vào `core/rewriter.py`:
+Để AI hiểu được nguyên nhân, diễn biến đứt quãng, và hậu quả, Blueprint của Trận đánh sẽ được cấu trúc lại thành 6 khối:
 
-#### [MODIFY] `core/rewriter.py` (Khai báo biến Research)
-Thêm cụm `_RESEARCH_SECTIONS_BATTLE` chạy đa luồng bóc tách 3 mảng:
+1. `origins_and_context`: Gồm Casus Belli, Mâu thuẫn ngầm, và Dữ liệu tướng lĩnh.
+2. `the_buildup_and_march`: Quá trình hậu cần, hành quân, và bố trí địa hình.
+3. `chronological_campaign_phases`: Mảng đa cấp (Nested Array) xử lý diễn biến thời gian. Mỗi Item (Ví dụ "Ngày 1", "Mùa Đông") sẽ độc lập chứa `weather_conditions`, `status` (active/stalemate), mảng `engagements` (các đòn đánh cụ thể trong khung giờ này), và `shifts_in_momentum` (ai đang nắm lợi thế).
+4. `climactic_turning_points`: Cắt riêng nhát kiếm xoay chuyển cục diện ra đây để dồn tâm điểm cảm xúc.
+5. `resolution_and_aftermath`: Thương vong, Lệnh Rút lui/Đầu hàng, Tác động địa chính trị.
+6. `texture_and_visuals`: Các cảnh máu me, thống kê độ hoành tráng, vũ khí (tách biệt khỏi hành động diễn biến).
 
-*   **Section A: Tiền Kiếp & Tham Chiến (Context & Buildup)**
-    *   `core_topic`: Tóm tắt 3 câu.
-    *   `political_context`: Quá trình hình thành liên minh, mâu thuẫn cốt lõi, Casus Belli (nguyên nhân trực tiếp bùng nổ xung đột), bài toán tài chính/hậu cần.
-    *   `commanders`: TẤT CẢ tướng lĩnh (Phe/chức vụ/điểm yếu tâm lý/vai trò lịch sử).
-    *   `geography_and_weather`: Yếu tố tự nhiên cản bước quân thù (Núi non, mưa lầy, sương).
+#### [MODIFY] `prompts/system_extract_blueprint_battle.txt`
+Viết lại hệ thống Data Fields chuẩn Output JSON khớp với 6 khối ở trên. Ép AI không được bỏ sót giai đoạn đứt quãng.
 
-*   **Section B: Diễn Biến Thực Tế (Execution & Tactics)**
-    *   `battle_phases`: Timeline chia cắt thành các phase (Dàn trận -> Tiếp xúc -> Khởi hấn -> Hỗn loạn -> Rút lui/Truy kích). Bắt buộc phân theo Front (Cánh trái, Nhánh phải, Trung tâm). Chứa `turning_point`.
-    *   `technology_and_weapons`: Vũ khí mang tính cách mạng được đem ra thử lửa.
-    *   `weapon_asymmetry`: Sự chênh lệch trang bị giữa 2 phe và cách lấp liếm sự chênh lệch đó.
-
-*   **Section C: Máu, Nước Mắt & Di Sản (Chaos, Cost & Legacy)**
-    *   `narrative_moments`: Cảnh thị giác kinh hoàng hoặc hào hùng (máu, tiếng súng, cảnh hỗn loạn).
-    *   `emotional_drivers`: Các cơn hoảng loạn cục bộ, sự dũng cảm cá nhân do hận thù.
-    *   `cost_accounting`: Thiệt hại sinh mạng, tài sản, vùng đất bị sáp nhập.
-    *   `arguments_and_legacy`: Dư âm thực tế trong lịch sử, những tranh cãi về năng lực chỉ huy chưa có hồi kết.
-
-Đồng thời map cụm này vào biến `_NICHE_RESEARCH_MAP` cho các từ khóa ("battle", "war", "trận", "chiến"...)
-
-#### [NEW] `prompts/system_research_blueprint_battle.txt`
-File Prompt dùng cho chế độ fallback (Gọi 1 cục thay vì đa luồng) của hệ thống Research.
+#### [MODIFY] `core/rewriter.py` (Khai báo Research Sections)
+Bổ sung mảng `_RESEARCH_SECTIONS_BATTLE` với 3 khúc (chia nhỏ 6 khối trên cho AI dễ call API, tránh timeout) và map vào `_NICHE_RESEARCH_MAP`. Cập nhật `system_research_blueprint_battle.txt` cho chế độ Fallback 1-call.
 
 ---
 
-### 2. Thiết Kế Lại Lõi Lọc Phase (Phase Planning Pipeline)
-
-Gỡ bỏ Hardcode, cho phép Hệ thống tự check cấu hình.
+### Bước 2: Tự Động Hóa Pipeline 3 Bước (Gỡ Bỏ Hardcode)
 
 #### [MODIFY] `ui/script_creation_tab.py`
-Thay thế biến chặn tĩnh `_is_biography` bằng phân giải linh hoạt:
+Xóa bỏ biến ưu tiên `_is_biography`. Triển khai cơ chế Auto-Fallback an toàn:
 ```python
 try:
     _get_niche_prompt("narrative_phase_plan", niche)
@@ -56,27 +42,27 @@ try:
 except ValueError:
     _has_phase_plan = False
 
-if _has_phase_plan:
-    # CHẠY 3 BƯỚC SPLIT
-else:
-    # CHẠY SINGLE-SHOT
+# Niche nào có bài thi, Niche đó được cấp quyền chẻ chương hạng nặng (Cả Tiểu Sử và Trận Đánh đều gánh được)
 ```
 
 #### [MODIFY] `core/rewriter.py`
-Sửa hàm `validate_phase_plan_sub_keys` để dùng `_require_niche_prompt`. Đặc biệt, mở rộng logic Gom Excerpt: Lấy linh hoạt cả `life_phases` lẫn `battle_phases`, `turning_points`, `political_context` nạp vào Context cho AI tự đối chiếu.
+Sửa hàm `validate_phase_plan_sub_keys` để dùng tham số `niche` gọi linh hoạt các prompt validation khác nhau. Thu thập tổng hợp (Build Excerpt) từ cả `life_phases` và `chronological_campaign_phases` để đưa bối cảnh cho AI soi xét.
 
-#### [NEW] Cặp Prompts Phase Plan Trận Đánh
-**1. `prompts/system_narrative_phase_plan_battle.txt`:** 
-Map các dữ liệu từ 3 mặt cắt Blueprint ở trên vào Framework (Châu Âu, Binh Pháp, v.v).
-*   `main_key_data`: Casus Belli, Lệnh dàn quân, Hành động Khai hỏa, Sai lầm chí mạng, Thay đổi phe phái, Nút thắt sinh tử, Lệnh Rút lui.
-*   `sub_key_data`: Lịch sử thù hằn, Cấu tạo vũ khí, Thông số địa hình, Cảnh quan thời tiết, Thương vong con số.
+---
 
-**2. `prompts/system_validate_sub_key_battle.txt`:** 
-Thiết kế bộ Test "Thăng hạng sự kiện" dành riêng cho Quân sự. Nếu một cái bẫy (`sub_key`) chính là nguyên nhân làm sập hạm đội (Causality Test), nó sẽ bị AI đẩy lên thành `main_key`.
+### Bước 3: Khớp Nối Phase Plan cho Trận Đánh
+
+#### [NEW] `prompts/system_narrative_phase_plan_battle.txt`
+Dùng làm bài tập cho AI chia 6 Khối Blueprint vào các Bước của Framework Quân sự.
+- `main_key_data`: Casus Belli, Nước cờ điều quân, Giao tranh, Turning point.
+- `sub_key_data`: Thời tiết, Thông số địa hình, Cấu tạo vũ khí, Thương vong.
+
+#### [NEW] `prompts/system_validate_sub_key_battle.txt`
+Prompt "Hội đồng Thẩm định": Test xem một cái Hố Nước (`sub_key`) có vô tình làm sập Kỵ Binh Thiết Giáp không? Nếu CÓ -> Thăng hạng (`PROMOTE`) nó thành Biến Cố Chính (`main_key_data`) để chắc chắn nó thành chương riêng.
 
 #### [MODIFY] `prompts/system_narrative_outline_battle.txt`
-Gọt bỏ khối lệnh bắt xuất ra JSON phase_chapter_plan. Chỉ chừa lại khối chờ tiếp nhận Data từ Step A3 nhồi sang.
+Gọt bỏ toàn bộ lệnh bắt xuất ra JSON `phase_chapter_plan` (Vì Bước A3 của Toán Học Code đã lo xong). Chỉ nhận mảng kế hoạch được mớm sẵn và sinh ra Chương.
 
 ## Verification Plan
-1. Test thử tính năng "Rewrite / Generate Outline" với nguồn Blueprint Battle có sẵn, check hệ thống log báo vượt qua 3 trạm kiểm soát A1-A2-A3.
-2. Test thử tính năng "New Content" gõ 1 chữ "Battle of Midway", check xem hệ thống có spam 3 cụm luồng (đa luồng) bóc thông tin Section A, B, C thay vì báo lỗi không.
+1. **Kiểm tra Blueprint 2.0:** Gõ 1 keyword "Battle of Stalingrad" (Trận chiến kéo dài ròng rã 5 tháng). Dò file Output Blueprint xem biến `chronological_campaign_phases` có sinh ra được các phase đứt quãng (Mùa đông đến, Đức chiếm đóng, Liên Xô phản công) kèm `engagements` bên trong hay không.
+2. **Kiểm tra Pipeline:** Xem ở Output Console, Niche Trận Đánh có trải qua các dòng Log "Planning phases...", "Validating sub_key...", "Apply chapter splits..." mượt mà thay thế hoàn toàn cho luồng cũ không.
