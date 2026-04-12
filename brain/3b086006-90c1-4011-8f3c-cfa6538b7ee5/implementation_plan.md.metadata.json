@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Implementation plan for unifying the narrative pipeline by transitioning from hardcoded biography-only phase planning to a data-driven, config-based architecture. Covers 5 components: Style JSON v2 with pipeline_features flags, Battle Phase Plan + Validate Sub-key prompts, Code wiring in rewriter.py (dispatch maps, research sections, blueprint extraction), Engine config detection replacing _is_biography hardcode in script_creation_tab.py, and Niche Config v2 with appropriate word counts. Includes detailed gap analysis, backward compatibility safeguards, and verification plan.",
+  "updatedAt": "2026-04-12T23:48:39.302588600Z",
+  "requestFeedback": true
+}
