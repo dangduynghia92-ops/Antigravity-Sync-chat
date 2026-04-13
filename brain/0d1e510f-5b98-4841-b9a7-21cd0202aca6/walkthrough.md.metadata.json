@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Walkthrough of the Pirate History niche implementation. Covers 8 new files (1 style JSON + 7 prompts), 7 code wiring changes in rewriter.py, verification results, and next steps for smoke testing with a real topic.",
+  "updatedAt": "2026-04-13T17:43:28.996240200Z"
+}
