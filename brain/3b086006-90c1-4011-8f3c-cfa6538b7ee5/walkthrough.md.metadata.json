@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Complete walkthrough of the Battle Niche v2 pipeline unification. Covers style JSON refactoring, 5 new prompt files, engine code changes for niche-aware routing, and verification results.",
+  "updatedAt": "2026-04-13T04:13:52.660847900Z"
+}

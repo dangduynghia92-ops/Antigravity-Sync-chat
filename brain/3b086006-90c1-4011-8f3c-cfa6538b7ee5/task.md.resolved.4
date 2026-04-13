@@ -1,0 +1,30 @@
+# Battle Niche v2 — Pipeline Unification
+
+## Phase 0: Style JSON
+- [x] Create `styles/narrative_phân_tích_trận_đánh_v2.json`
+- [x] Single framework "Giải Mã Chiến Trường" (HEAD + HEART combined)
+- [x] Deep-Dive techniques: question engine, info withholding, climax revisited
+- [x] Phase-based system (no chapter_structure layer)
+- [x] Hook: Deep-Dive in-medias-res
+- [x] Niche field includes "phân tích trận đánh" for v2 routing
+
+## Phase 1: Prompts
+- [x] `system_narrative_phase_plan_battle.txt` — map blueprint → 6 steps, classify main/sub keys
+- [x] `system_validate_sub_key_battle.txt` — 3 tests with battle-specific criteria
+- [x] `system_research_blueprint_battle.txt` — AI research for New Content mode
+- [x] `system_narrative_outline_battle_v2.txt` — phase-based outline + question engine
+- [x] `system_narrative_write_battle_v2.txt` — Deep-Dive techniques + scene hierarchy
+
+## Phase 2: Engine Refactoring
+- [x] `_NICHE_PROMPT_MAP` — battle entries for `narrative_phase_plan`, new `narrative_validate_sub_key`
+- [x] `_NICHE_PROMPT_MAP` — `phân tích trận đánh` entries for `narrative_outline` + `narrative_writer` → v2 prompts
+- [x] `_get_niche_prompt` — longest-match-first logic (prevents "trận" matching before "phân tích trận đánh")
+- [x] `validate_phase_plan_sub_keys` — niche param + niche-aware prompt loading + niche-aware excerpt builder
+- [x] `_run_shared_fw_pipeline` — `pipeline_features.phase_plan` check (replaces `_is_biography` hardcode)
+- [x] `niche` field in v2 JSON includes "phân tích trận đánh" for routing
+
+## Phase 3: Verification
+- [x] JSON validation pass
+- [x] Python syntax check pass (rewriter.py + script_creation_tab.py)
+- [x] Niche routing test (v2→v2, v1→v1, bio→bio)
+- [ ] E2E test with sample battle topic
