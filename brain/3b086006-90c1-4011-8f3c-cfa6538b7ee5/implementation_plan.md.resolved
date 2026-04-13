@@ -1,77 +1,209 @@
-# Thống Nhất Pipeline: Battle Niche v2 — Error-First Architecture
+# Thống Nhất Pipeline: Battle Niche v2 — Final Plan
 
 ## Triết lý thiết kế
 
 > [!CAUTION]
-> ### NO FALLBACK — ERROR FIRST
-> Pipeline nội dung yêu cầu sự liên kết chặt chẽ giữa: **Tìm Data → Dựng Outline → Viết Nội Dung**.
-> Nếu component niche A được áp cho niche B → output là rác, tốn token vô ích.
+> ### NO FALLBACK — ERROR FIRST (Áp dụng TẤT CẢ niches)
+> Pipeline nội dung yêu cầu liên kết chặt: **Tìm Data → Dựng Outline → Viết Nội Dung**.
+> Nếu component niche A áp cho niche B → output rác, tốn token.
 > 
-> **Nguyên tắc:**
 > - Thiếu prompt? → `RuntimeError` + log rõ ràng → STOP
 > - Thiếu field mapping? → `RuntimeError` + hướng dẫn fix → STOP
 > - Blueprint schema sai niche? → `RuntimeError` → STOP
-> - **KHÔNG BAO GIỜ** fallback sang biography hoặc trả full blueprint "cho chắc"
+> - key_data mismatch blueprint? → `RuntimeError` → STOP (kể cả biography)
+> - **KHÔNG BAO GIỜ** fallback sang niche khác hoặc trả full blueprint
 
 ---
 
 ## Mục tiêu
-Mở rộng pipeline "3-Step Holy Trinity" (Phase Plan → Validate Sub-keys → Apply Splits) từ biography-only sang architecture data-driven, bắt đầu bằng bản thử nghiệm `phân_tích_trận_đánh_v2`.
+Mở rộng pipeline "3-Step Holy Trinity" (Phase Plan → Validate Sub-keys → Apply Splits) từ biography-only sang data-driven, bắt đầu bằng `phân_tích_trận_đánh_v2`.
 
-## Bối cảnh & Vấn đề hiện tại
+---
 
-### Hardcoded biography-only gating
-```python
-# script_creation_tab.py line 1620-1622
-_BIO_KW = ("biography", "tiểu sử", "nhân vật", "chân dung", "cuộc đời")
-_is_biography = any(kw in (niche or "").lower() for kw in _BIO_KW)
+## PHẦN A: THIẾT KẾ NỘI DUNG — Main/Sub Classification
+
+> [!IMPORTANT]
+> ### Niche là "PHÂN TÍCH trận đánh" — không phải "mô tả diễn biến"
+> Kịch bản bao phủ: **Nguồn gốc → Bối cảnh → Diễn biến → Tác động**.
+> main_key_data phải bao phủ CẢ 5 Pacing Slots, không chỉ chiến trường.
+
+### A1. Nguyên tắc phân loại
+
 ```
-Nếu `_is_biography = False` → toàn bộ Step A bị bỏ qua → outline AI tự do chia chương không kiểm soát.
+main = Bỏ nó → lập luận PHÂN TÍCH bị đứt gãy
+       (tại sao đánh, sai lầm gì, ai quyết định gì, hậu quả gì)
 
-### Missing components cho battle
-| Pipeline Step | Biography | Battle | Action |
-|---|---|---|---|
-| Phase Plan prompt | ✅ | ❌ | TẠO MỚI |
-| Validate Sub-key prompt | ✅ | ❌ | TẠO MỚI |
-| Research Blueprint prompt | ✅ | ❌ | TẠO MỚI |
-| Research Sections config | ✅ | ❌ | TẠO MỚI |
-| `_NICHE_PROMPT_MAP["narrative_phase_plan"]` | ✅ | ❌ | THÊM ENTRIES |
-| `_build_excerpt()` field mapping | ✅ hardcode | ❌ | REFACTOR → dispatch |
-| `_extract_chapter_blueprint()` always-keys | ✅ hardcode | ❌ | REFACTOR → dispatch |
-| `validate_phase_plan_sub_keys()` niche param | ❌ hardcode | ❌ | REFACTOR → param |
-| `apply_chapter_splits()` threshold | ✅ hardcode | ⚠ chung | CÂN NHẮC config |
+sub  = Bỏ nó → phân tích vẫn đứng vững, nhưng MẤT SINH ĐỘNG
+       (dệt vào cảnh chính để tăng tính điện ảnh)
+```
+
+### A2. main_key_data — "Nút thắt phân tích" theo Pacing Slot
+
+| Pacing Slot | Loại main_key_data | Ví dụ | Tại sao là main |
+|-------------|-------------------|-------|-----------------|
+| **BUILDUP** | Quyết định chiến lược gốc | "Tướng A chọn phòng ngự dù quân đông hơn — vì từng thua trận X" | Giải thích WHY → bỏ = mất logic phân tích |
+| **BUILDUP** | Thất bại ngoại giao / trigger | "Đặc sứ bị trục xuất — cánh cửa hòa bình đóng sập" | Casus belli → bỏ = không giải thích được tại sao đánh |
+| **BUILDUP** | Sụp đổ liên minh / phản bội | "Venice rút khỏi liên minh vì tranh giành thương mại" | Thay đổi cán cân lực lượng → ảnh hưởng kết cục |
+| **DEPLOYMENT** | Quyết định bố trí quyết định | "Đặt pháo trên đồi cao, hy sinh tầm bắn để đổi tầm nhìn" | Quyết định này quyết định diễn biến |
+| **DEPLOYMENT** | Thất bại / thành công tình báo | "Tình báo không phát hiện quân phục kích" | Giải thích surprise → causal chain |
+| **ESCALATION** | Engagement thay đổi cục diện | "Cánh trái sụp đổ khi kỵ binh xuyên phòng tuyến" | Momentum shift toàn trận |
+| **CHAOS** | Turning point quyết định | "Tướng B bị giết → toàn quân mất chỉ huy → tan rã" | Xoay chuyển kết cục vĩnh viễn |
+| **CHAOS** | Sai lầm chí mạng | "Kỵ binh xung phong vào pháo thay vì bọc hậu" | Phân tích sai lầm = linh hồn kịch bản |
+| **AFTERMATH** | Hiệp ước / tái thiết bản đồ | "Hiệp ước X chia lại châu Âu cho 200 năm" | Tác động dài hạn → bỏ = mất ý nghĩa trận đánh |
+| **AFTERMATH** | Bài học / thay đổi paradigm | "Trận này chứng minh kỵ binh lỗi thời → chiến tranh hiện đại" | Paradigm shift — bài học phân tích cốt lõi |
+| **AFTERMATH** | Tranh cãi sử học | "Nếu tướng A không chọn phòng ngự?" | "What-if" analysis — trọng tâm phân tích |
+
+### A3. sub_key_data — "Kết cấu nền" theo Pacing Slot
+
+| Pacing Slot | Loại sub_key_data | Ví dụ | Tại sao là sub |
+|-------------|------------------|-------|---------------|
+| **BUILDUP** | Bối cảnh chung / thù hằn xa xưa | "Hai gia tộc thù nhau 100 năm" | Background, không trigger cụ thể |
+| **BUILDUP** | Hành quân routine | "Đội quân hành quân 3 tuần qua đầm lầy" | Mô tả, không phải quyết định |
+| **BUILDUP** | Hồ sơ vũ khí / logistics | "Pháo đồng nặng 2 tấn, cần 8 ngựa kéo" | Data kỹ thuật tĩnh |
+| **DEPLOYMENT** | Thời tiết / địa hình (chưa gây hậu quả) | "Sương mù dày, nhiệt độ -10°C" | Điều kiện, chưa gây impact |
+| **DEPLOYMENT** | So sánh vũ khí tĩnh | "Longbow bắn xa 200m, crossbow chỉ 80m" | Textbook fact, dệt vào engagement |
+| **ESCALATION** | Đụng độ thăm dò không thay đổi cục diện | "Đội tiên phong giao tranh 30 phút rồi rút" | Skirmish inconclusive → texture |
+| **CHAOS** | Sensory / narrative moments | "Tiếng la hét, mùi thuốc súng, xác ngổn ngang" | Dệt vào scene chính |
+| **CHAOS** | Cảm xúc / tâm lý | "Binh sĩ hoảng loạn bỏ chạy" | Emotional driver, weave into main |
+| **AFTERMATH** | Số liệu thương vong tĩnh | "40,000 chết, 15,000 bị bắt" | Minh họa, không phải kết luận |
+| **AFTERMATH** | Hậu quả phụ / minor consequences | "Thành phố bị cướp phá 3 ngày" | Chi tiết bổ sung, không thay đổi geopolitics |
+
+### A4. Engagement Severity — Bộ lọc bổ sung cho diễn biến
+
+Không phải mọi engagement đều là main. Phân cấp:
+
+```
+STRATEGIC engagement → main_key_data
+  = Thay đổi momentum TOÀN TRẬN (phá vỡ formation, bao vây hoàn tất, cánh quân sụp đổ)
+
+TACTICAL skirmish → sub_key_data
+  = Chỉ impact CỤC BỘ, không thay đổi cục diện chung
+  (đụng độ thăm dò, xung phong thất bại trên mặt trận phụ)
+```
 
 ---
 
-## User Review Required
+## PHẦN B: HỆ THỐNG 2 BỘ LỌC (2-Tier Filter)
 
-> [!IMPORTANT]
-> ### Thay đổi kiến trúc: Config-Driven + Strict Validation
-> Style JSON có `"pipeline_features"` → engine tự bật/tắt Step A.
-> Mỗi pipeline step có **validation gate** — nếu niche chưa đăng ký → crash sớm với log rõ ràng.
+Kế thừa từ biography, battle sẽ có 2 tầng lọc:
 
-> [!IMPORTANT]
-> ### Bản v2 thử nghiệm — KHÔNG sửa file gốc
-> Tất cả file mới (`_v2` suffix, prompt mới). File production hiện tại giữ nguyên 100%.
+### Bộ lọc 1: Phase Plan Prompt (Bước A1) — PHÂN LOẠI BAN ĐẦU
 
-> [!WARNING]
-> ### Thay đổi code production (backward-compatible)
-> - `script_creation_tab.py`: thay `_is_biography` → config lookup
-> - `rewriter.py`: refactor 3 function (`validate_phase_plan_sub_keys`, `_build_excerpt`, `_extract_chapter_blueprint`) từ hardcode → niche-aware dispatch với error gates
+AI phân loại ngay trong Phase Plan prompt. Tiêu chí tích hợp vào prompt:
+
+**main_key_data — auto-assign nếu thuộc 1 trong:**
+1. ✓ Quyết định chiến lược thay đổi hướng đi trận đánh (doctrine choice, deployment decision)
+2. ✓ Thất bại ngoại giao / casus belli / phản bội liên minh (trigger events)
+3. ✓ Strategic engagement thay đổi momentum toàn trận
+4. ✓ `climactic_turning_points` (luôn luôn main)
+5. ✓ Cái chết tướng lĩnh / ký đầu hàng / bao vây hoàn tất
+6. ✓ Hiệp ước tái thiết bản đồ / paradigm shift quân sự
+7. ✓ Tranh cãi sử học "what-if" có impact phân tích
+
+**sub_key_data — assign nếu thuộc 1 trong:**
+- ✗ Bối cảnh chung / lịch sử thù hằn (không trigger cụ thể)
+- ✗ Mô tả hành quân / logistics routine
+- ✗ So sánh vũ khí tĩnh (`weapon_asymmetry` — textbook data)
+- ✗ Thời tiết / địa hình (chưa gây impact trực tiếp)
+- ✗ Tactical skirmish không thay đổi cục diện
+- ✗ Narrative moments / sensory texture
+- ✗ Emotional drivers / tâm lý
+- ✗ Số liệu thương vong tĩnh
+
+**Scene Test inline** (giống biography): "Nếu sub_key_data item này là NGUYÊN NHÂN TRỰC TIẾP gây turning point → giữ main"
+
+### Bộ lọc 2: Validate Sub-key Prompt (Bước A2) — KIỂM TRA + PROMOTE
+
+3 Tests, adapted cho battle PHÂN TÍCH:
+
+| Test | Battle Version |
+|------|---------------|
+| **Scene Test** | Event có thể phát triển thành SCENE riêng? (setting cụ thể + tension + resolution) — **giữ nguyên** |
+| **Turning Point Test** | Event thay đổi **cục diện trận đánh** HOẶC thay đổi **lập luận phân tích**? Bao gồm: momentum shift, phá vỡ formation, eliminate commander, thất bại ngoại giao đóng cửa hòa bình, paradigm shift quân sự |
+| **Causal Independence Test** | Event có hậu quả RIÊNG? Hậu quả có thể là: hành động quân sự, bài học chiến thuật, thay đổi cán cân chính trị, treaty terms — không chỉ hành động vật lý |
+
+**Decision: Pass ≥2 tests → PROMOTE. Pass 0-1 → KEEP.**
+
+**Anti-patterns mới cho battle:**
+
+```
+✗ Troop descriptions WITHOUT action:
+  "Quân đội có 50,000 bộ binh" → KEEP (số liệu tĩnh)
+  UNLESS: con số chính nó gây quyết định
+  ("Nhìn 50,000 quân, tướng chọn rút lui" → PROMOTE)
+
+✗ Weapon comparisons WITHOUT specific battle moment:
+  "Longbow bắn xa hơn crossbow 120m" → KEEP (textbook)
+  UNLESS: lợi thế này trực tiếp gây sụp đổ
+  ("Longbow tiêu diệt kỵ binh Pháp trước khi chạm phòng tuyến" → PROMOTE)
+
+✗ Political context WITHOUT direct trigger:
+  "Hai vương quốc tranh giành 100 năm" → KEEP (background)
+  UNLESS: sự kiện chính trị cụ thể trigger trận đánh
+
+✗ Logistics/supply WITHOUT tactical consequence:
+  "Quân lương còn ít" → KEEP (điều kiện)
+  UNLESS: buộc quyết định quân sự
+  ("Đói buộc đồn trú đầu hàng" → PROMOTE)
+
+✗ Weather/terrain WITHOUT tactical impact:
+  "Mưa lớn" → KEEP (condition)
+  UNLESS: trực tiếp gây impact
+  ("Bùn khiến kỵ binh charge thành impossible" → PROMOTE)
+
+✗ Tactical skirmish WITHOUT strategic impact:
+  "Đội tiên phong giao tranh 30 phút rồi rút" → KEEP (inconclusive)
+  UNLESS: kết quả skirmish thay đổi deployment plan
+
+✗ Aftermath details WITHOUT geopolitical weight:
+  "Thành phố bị cướp phá 3 ngày" → KEEP (detail)
+  UNLESS: cướp phá gây thay đổi chính trị dài hạn
+```
+
+**Calibration examples cho battle:**
+
+```
+"Hiệp ước Westphalia chia lại bản đồ châu Âu" →
+  Scene: ✅ (signing, specific)  Turning: ✅ (geopolitics changed)  Causal: ✅ (200 years impact)
+  → PROMOTE (3 tests) — aftermath node that IS the analytical conclusion
+
+"Quân hành quân 3 tuần qua đầm lầy, nhiều lính chết vì dịch bệnh" →
+  Scene: ⚠️ (vivid, but gradual)  Turning: ❌ (no single moment)  Causal: ❌ (no decision caused)
+  → KEEP (0-1 tests) — weave as texture into buildup chapter
+
+"Tướng bất tuân lệnh, tự ý xung phong" →
+  Scene: ✅ (confrontation, disobedience)  Turning: ✅ (changed battle flow)  Causal: ✅ (caused rout)
+  → PROMOTE (3 tests) — decision node with dramatic consequences
+
+"Pháo Ottoman nặng 17 tấn, cần 60 bò kéo, bắn 7 phát/ngày" →
+  Scene: ❌ (specs, no tension)  Turning: ❌ (no single moment)  Causal: ❌ (just description)
+  → KEEP (0 tests) — technical texture, weave into engagement scene
+```
 
 ---
 
-## Proposed Changes
+## PHẦN C: SPLIT THRESHOLD
+
+Giữ default `[3, 6]` (1-3=1ch, 4-6=2ch, 7+=3ch) nhưng configurable qua `pipeline_features.split_threshold`.
+
+Lý do giữ `[3, 6]` cho battle: với classification mới (main = nút thắt PHÂN TÍCH, không chỉ engagement), số lượng main_key_data/phase sẽ tự nhiên không quá cao vì:
+- BUILDUP có 2-3 main (trigger + strategy choice + alliance collapse)
+- ESCALATION+CHAOS có 2-4 main (strategic engagements + turning points)
+- AFTERMATH có 1-2 main (treaty + paradigm shift)
+
+→ Phù hợp threshold 3/phase. Nếu thực tế chạy thấy cần điều chỉnh → sửa config, không sửa code.
+
+---
+
+## PHẦN D: PROPOSED CHANGES
 
 ### Component 1: Style JSON v2
 
 #### [NEW] [narrative_phân_tích_trận_đánh_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_phân_tích_trận_đánh_v2.json)
 
-Style JSON v2 mới, thêm:
+Kế thừa style gốc, thêm:
 ```json
 {
-  "niche": "battle military trận chiến war combat siege",
-  "pipeline": "narrative",
   "pipeline_features": {
     "phase_plan": true,
     "validate_sub_keys": true,
@@ -80,258 +212,119 @@ Style JSON v2 mới, thêm:
     "always_include_keys": ["core_topic", "political_context", "key_facts"],
     "excerpt_fields": ["battle_phases", "commanders", "chronological_campaign_phases",
                        "climactic_turning_points", "weapon_asymmetry"]
-  },
-  "frameworks": [...],
-  "core_rules": {...},
-  "chapter_structures": [...],
-  "closing_types": [...]
+  }
 }
 ```
-
-Mỗi field trong `pipeline_features` có mục đích:
-- `phase_plan` + `validate_sub_keys`: bật/tắt Step A1 + A2
-- `research_blueprint`: cho phép New Content mode  
-- `split_threshold: [3, 6]`: 1-3=1ch, 4-6=2ch, 7+=3ch (configurable per niche)
-- `always_include_keys`: fields gửi cho MỌI chapter (thay hardcode `core_identity`/`personal_profile`)
-- `excerpt_fields`: fields dùng cho validate sub-key excerpt (thay hardcode `life_phases`)
+Frameworks, core_rules, techniques giữ nguyên từ style gốc.
 
 ---
 
-### Component 2: Prompts (3 files mới)
+### Component 2: Prompts (3 files)
 
 #### [NEW] [system_narrative_phase_plan_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_battle.txt)
 
-Step A1 — Phase Planning cho battle. Khác biography ở:
-- Mapping: `chronological_campaign_phases` → framework Pacing Slots (Buildup/Deployment/Escalation/Chaos/Aftermath)
-- `main_key_data`: engagements, turning_points, casus_belli, surrender, commander deaths
-- `sub_key_data`: weapon_asymmetry, logistics, weather, emotional_drivers, narrative_moments
-- Hook: ANCHOR (trận đánh nổi tiếng) + TWIST (nghịch lý)
-- End: `main_key_data = []` (callbacks + aftermath)
-- Chronological rule: theo `chronological_campaign_phases` order, KHÔNG phải `life_phases`
+Bộ lọc 1 — Phase Planning. Nội dung theo PHẦN A2/A3/A4:
+- Tiêu chí main/sub bao phủ cả 5 Pacing Slots (không chỉ combat)
+- Engagement Severity filter
+- Scene Test inline
+- Chronological mapping: Buildup → Deployment → Escalation → Chaos → Aftermath
+- Hook: ANCHOR (trận đánh nổi tiếng) + TWIST (nghịch lý/bí mật)
+- End: `main_key_data = []` (callbacks + legacy reflection)
+- Anti-merge rule (1 event = 1 array item)
+- Output field: `"battle_subject"` thay vì `"biography_subject"`
 
 #### [NEW] [system_validate_sub_key_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_battle.txt)
 
-Step A2 — Validate Sub-keys cho battle. 3 tests giữ nguyên, anti-patterns mới:
-- ✗ Logistics without drama: "Supply chain was weak" → KEEP
-- ✗ Weather without tactical impact: "It was cold" → KEEP
-- ✗ Troop movements without stakes: "Army marched to X" → KEEP
-- ✓ PROMOTE: "Fog caused friendly fire destroying the left flank"
-- ✓ PROMOTE: "Supply shortage forced premature surrender"
+Bộ lọc 2 — Validate + Promote. Nội dung theo PHẦN B:
+- 3 Tests (adapted cho battle phân tích)
+- Anti-patterns mới (7 loại)
+- Calibration examples (4 ví dụ)
+- Cross-reference blueprint excerpt (battle-specific fields)
 
 #### [NEW] [system_research_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_battle.txt)
 
-New Content mode — AI tự nghiên cứu trận đánh. Output schema = Blueprint 2.0 (6-Block).
+New Content mode — AI tự nghiên cứu trận đánh. Output = Blueprint 2.0 (6-Block).
 
 ---
 
-### Component 3: Refactor `rewriter.py` — Error-First Dispatch
+### Component 3: Refactor `rewriter.py` — Error-First
 
 #### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-**3A. `_NICHE_PROMPT_MAP["narrative_phase_plan"]` — Thêm battle keywords**
+**3A. Dispatch maps — thêm battle keywords:**
+- `_NICHE_PROMPT_MAP["narrative_phase_plan"]` — 7 keywords battle
+- `_RESEARCH_PROMPT_MAP` — 7 keywords battle
+- `_NICHE_RESEARCH_MAP` — thêm `_RESEARCH_SECTIONS_BATTLE`
+
+**3B. `validate_phase_plan_sub_keys()` — 3 thay đổi:**
+
+1. Thêm param `niche=""` + `excerpt_fields=None`
+2. Prompt dispatch: `_VALIDATE_SUB_KEY_MAP` (biography + battle), **RuntimeError nếu không match**
+3. `_build_excerpt()`: dùng `excerpt_fields` param, **RuntimeError nếu excerpt trống**
 
 ```python
-"narrative_phase_plan": {
-    # Biography (existing)
-    "biography":    "system_narrative_phase_plan_biography.txt",
-    "tiểu sử":     "system_narrative_phase_plan_biography.txt",
-    "nhân vật":     "system_narrative_phase_plan_biography.txt",
-    "chân dung":    "system_narrative_phase_plan_biography.txt",
-    "cuộc đời":     "system_narrative_phase_plan_biography.txt",
-    # Battle (NEW)
-    "battle":   "system_narrative_phase_plan_battle.txt",
-    "war":      "system_narrative_phase_plan_battle.txt",
-    "military": "system_narrative_phase_plan_battle.txt",
-    "trận":     "system_narrative_phase_plan_battle.txt",
-    "chiến":    "system_narrative_phase_plan_battle.txt",
-    "combat":   "system_narrative_phase_plan_battle.txt",
-    "siege":    "system_narrative_phase_plan_battle.txt",
-},
-```
-
----
-
-**3B. `validate_phase_plan_sub_keys()` — Thêm param `niche`, KHÔNG fallback**
-
-```python
-# OLD signature:
-def validate_phase_plan_sub_keys(phase_plan, blueprint, api_endpoints, 
-                                  log_callback=None, stop_check=None):
-
-# NEW signature:
-def validate_phase_plan_sub_keys(phase_plan, blueprint, api_endpoints, 
-                                  niche="", log_callback=None, stop_check=None):
-```
-
-Bên trong — prompt dispatch (ERROR nếu không match):
-```python
-# OLD (line 2966):
-system_prompt = _load_prompt("system_validate_sub_key_biography.txt")
-
-# NEW:
-_VALIDATE_SUB_KEY_MAP = {
-    "biography": "system_validate_sub_key_biography.txt",
-    "tiểu sử":  "system_validate_sub_key_biography.txt",
-    "nhân vật":  "system_validate_sub_key_biography.txt",
-    "chân dung": "system_validate_sub_key_biography.txt",
-    "cuộc đời":  "system_validate_sub_key_biography.txt",
-    "battle":    "system_validate_sub_key_battle.txt",
-    "war":       "system_validate_sub_key_battle.txt",
-    "trận":      "system_validate_sub_key_battle.txt",
-    "chiến":     "system_validate_sub_key_battle.txt",
-    "combat":    "system_validate_sub_key_battle.txt",
-    "siege":     "system_validate_sub_key_battle.txt",
-}
-niche_lower = (niche or "").lower()
+# Prompt dispatch — ERROR nếu không match
 prompt_file = None
 for kw, pf in _VALIDATE_SUB_KEY_MAP.items():
     if kw in niche_lower:
         prompt_file = pf
         break
 if not prompt_file:
-    raise RuntimeError(
-        f"No validate_sub_key prompt for niche '{niche}'. "
-        f"Create prompts/system_validate_sub_key_<niche>.txt and add to "
-        f"_VALIDATE_SUB_KEY_MAP in rewriter.py."
-    )
-system_prompt = _load_prompt(prompt_file)
-```
+    raise RuntimeError(f"No validate_sub_key prompt for niche '{niche}'.")
 
----
-
-**3C. `_build_excerpt()` — Niche-aware dispatch, ERROR nếu không match**
-
-```python
-# OLD (line 2968-2985) — hardcode biography fields:
-bp_life_phases = blueprint.get("life_phases", [])
-bp_turning_points = blueprint.get("turning_points", [])
-bp_conflicts = blueprint.get("conflicts", [])
-
-# NEW — niche-aware từ pipeline_features.excerpt_fields:
+# Build excerpt — ERROR nếu trống
 def _build_excerpt(blueprint, excerpt_fields):
-    """Build relevant blueprint excerpt using configured fields."""
     if not excerpt_fields:
-        raise RuntimeError(
-            "pipeline_features.excerpt_fields not configured. "
-            "Cannot build validation excerpt without knowing which "
-            "blueprint sections are relevant for this niche."
-        )
-    excerpt = {}
-    for field in excerpt_fields:
-        val = blueprint.get(field)
-        if val:
-            excerpt[field] = val
+        raise RuntimeError("pipeline_features.excerpt_fields not configured.")
+    excerpt = {f: blueprint.get(f, []) for f in excerpt_fields if blueprint.get(f)}
     if not excerpt:
-        raise RuntimeError(
-            f"Blueprint has NONE of the configured excerpt_fields: {excerpt_fields}. "
-            f"Blueprint keys: {list(blueprint.keys())}. "
-            f"Check that extract/research prompt output matches excerpt_fields."
-        )
+        raise RuntimeError(f"Blueprint has NONE of excerpt_fields: {excerpt_fields}")
     return excerpt
 ```
 
-`excerpt_fields` đọc từ `pipeline_features` — truyền vào khi gọi validate.
-
----
-
-**3D. `_extract_chapter_blueprint()` — Niche-aware always-keys, ERROR nếu không match**
+**3C. `_extract_chapter_blueprint()` — Error thay fallback (TẤT CẢ niches):**
 
 ```python
-# OLD (line 309-315, 411-413):
-if "core_identity" in blueprint:
-    result["core_identity"] = blueprint["core_identity"]
-if "personal_profile" in blueprint:
-    result["personal_profile"] = blueprint["personal_profile"]
-...
-_always_keys = {"core_identity", "personal_profile"}
-
-# NEW — đọc từ pipeline_features.always_include_keys:
+# Thêm param always_include_keys
 def _extract_chapter_blueprint(blueprint, chapter_outline, always_include_keys=None):
-    result = {}
+    _aik = always_include_keys or ["core_identity", "personal_profile"]
     
-    _aik = always_include_keys or ["core_identity", "personal_profile"]  # backward compat
+    # Always-include → ERROR nếu không tìm thấy
+    result = {}
     for key in _aik:
         if key in blueprint:
             result[key] = blueprint[key]
-    
-    # Nếu KHÔNG tìm được bất kỳ always_key nào → báo lỗi schema mismatch
     if not result:
-        raise RuntimeError(
-            f"Blueprint has NONE of the always_include_keys: {_aik}. "
-            f"Blueprint keys: {list(blueprint.keys())}. "
-            f"Check pipeline_features.always_include_keys in style JSON "
-            f"matches your extract/research blueprint prompt output."
-        )
+        raise RuntimeError(f"Blueprint missing ALL always_include_keys: {_aik}")
     
-    # ... rest of extraction logic (key_data fuzzy search — UNCHANGED)
+    # ... fuzzy search key_data (UNCHANGED)
     
-    # Fallback check — nếu chỉ có always-keys → KHÔNG gửi full blueprint
-    # Thay vào đó: báo lỗi rõ ràng
+    # Fallback → ERROR thay vì trả full blueprint
     if set(result.keys()) <= set(_aik):
         raise RuntimeError(
-            f"Chapter blueprint extraction found ONLY always-include keys. "
-            f"No key_data/sub_key_data matched any blueprint section. "
-            f"Outline chapter: {chapter_outline.get('title', '?')}. "
-            f"key_data: {chapter_outline.get('main_key_data', chapter_outline.get('key_data', []))}. "
-            f"This usually means the outline prompt generates key_data text that "
-            f"doesn't match blueprint content. Check outline prompt rules."
+            f"No key_data matched blueprint. "
+            f"Chapter: {chapter_outline.get('title', '?')}. "
+            f"key_data: {chapter_outline.get('main_key_data', [])}. "
+            f"Fix outline prompt to generate matchable key_data text."
         )
 ```
 
-> [!CAUTION]
-> **OLD behavior**: fallback trả FULL blueprint → chạy tiếp, tốn token, output sai.
-> **NEW behavior**: `RuntimeError` + log rõ nguyên nhân → pipeline STOP ngay, user biết fix gì.
-
----
-
-**3E. `research_blueprint()` — Thêm battle entries vào `_RESEARCH_PROMPT_MAP`**
+**3D. `apply_chapter_splits()` — Config threshold:**
 
 ```python
-# OLD (line 1508-1514) — chỉ biography:
-_RESEARCH_PROMPT_MAP = {
-    "biography": "system_research_blueprint_biography.txt",
-    ...
-}
-
-# NEW — thêm battle:
-_RESEARCH_PROMPT_MAP = {
-    "biography": "system_research_blueprint_biography.txt",
-    "tiểu sử":  "system_research_blueprint_biography.txt",
-    "nhân vật":  "system_research_blueprint_biography.txt",
-    "chân dung": "system_research_blueprint_biography.txt",
-    "cuộc đời":  "system_research_blueprint_biography.txt",
-    "battle":    "system_research_blueprint_battle.txt",
-    "war":       "system_research_blueprint_battle.txt",
-    "trận":      "system_research_blueprint_battle.txt",
-    "chiến":     "system_research_blueprint_battle.txt",
-    "combat":    "system_research_blueprint_battle.txt",
-    "siege":     "system_research_blueprint_battle.txt",
-}
+def apply_chapter_splits(phase_plan, log_callback=None, split_threshold=None):
+    t1, t2 = split_threshold or (3, 6)
+    # ... thay node_count <= 3 → node_count <= t1, etc.
 ```
 
-Và thêm `_RESEARCH_SECTIONS_BATTLE` + entries vào `_NICHE_RESEARCH_MAP`.
+**3E. `write_from_blueprint()` — truyền `always_include_keys`:**
 
----
+Thêm param → truyền xuống `_extract_chapter_blueprint()`.
 
-**3F. `apply_chapter_splits()` — Config-driven threshold**
-
-```python
-# OLD (line 3140):
-def apply_chapter_splits(phase_plan: dict, log_callback=None) -> dict:
-
-# NEW — thêm configurable threshold:
-def apply_chapter_splits(phase_plan: dict, log_callback=None, 
-                          split_threshold=None) -> dict:
-    t1, t2 = split_threshold or (3, 6)  # default = biography behavior
-    
-    # Body phase logic:
-    if node_count <= t1:
-        num_chapters = 1
-    elif node_count <= t2:
-        num_chapters = 2
-    else:
-        num_chapters = 3
-```
+**3F. `_RESEARCH_SECTIONS_BATTLE` — 3 sections:**
+- Section A: origins_and_context + commanders + political_context
+- Section B: chronological_campaign_phases + battle_phases + engagements
+- Section C: climactic_turning_points + resolution_and_aftermath + texture_and_hooks
 
 ---
 
@@ -339,69 +332,30 @@ def apply_chapter_splits(phase_plan: dict, log_callback=None,
 
 #### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-**4A. Config-driven phase plan detection + pass pipeline_features downstream**
-
+**4A. Config-driven phase plan detection:**
 ```python
-# OLD (line 1620-1622):
-_BIO_KW = ("biography", "tiểu sử", "nhân vật", "chân dung", "cuộc đời")
-_is_biography = any(kw in (niche or "").lower() for kw in _BIO_KW)
-
-# NEW:
-# Parse style_data từ style_json_raw (đã có sẵn trong params)
+# Parse pipeline_features từ style_json_raw
 _style_data = json.loads(style_json_raw)
 _pipeline_features = _style_data.get("pipeline_features", {})
 _has_phase_plan = _pipeline_features.get("phase_plan", False)
 
-# Backward compat CHỈ cho biography (styles cũ chưa có pipeline_features)
+# Backward compat CHỈ cho biography styles cũ (chưa có pipeline_features)
 if not _has_phase_plan:
     _BIO_KW = ("biography", "tiểu sử", "nhân vật", "chân dung", "cuộc đời")
     _has_phase_plan = any(kw in (niche or "").lower() for kw in _BIO_KW)
     if _has_phase_plan:
-        # Inject default biography pipeline_features
         _pipeline_features = {
-            "phase_plan": True,
-            "validate_sub_keys": True,
+            "phase_plan": True, "validate_sub_keys": True,
             "split_threshold": [3, 6],
             "always_include_keys": ["core_identity", "personal_profile"],
             "excerpt_fields": ["life_phases", "turning_points", "conflicts"],
         }
 ```
 
-**4B. Truyền `_pipeline_features` xuống các function calls**
-
-```python
-# Validate call (line 1650, 1685) — thêm niche + excerpt_fields:
-phase_plan = validate_phase_plan_sub_keys(
-    phase_plan, blueprint, endpoints,
-    niche=niche,  # ← NEW
-    log_callback=..., stop_check=...,
-    excerpt_fields=_pipeline_features.get("excerpt_fields"),  # ← NEW
-)
-
-# Apply splits (line 1642, 1663, 1704) — thêm threshold:
-phase_plan = apply_chapter_splits(
-    phase_plan, 
-    log_callback=...,
-    split_threshold=_pipeline_features.get("split_threshold"),  # ← NEW
-)
-```
-
-**4C. `write_from_blueprint` call — truyền `always_include_keys`**
-
-`_extract_chapter_blueprint` được gọi bên trong `write_from_blueprint` (line 3605).
-Cần truyền `always_include_keys` từ `pipeline_features` → qua `write_from_blueprint` → xuống `_extract_chapter_blueprint`.
-
-```python
-# write_from_blueprint (line 3574) — thêm param:
-def write_from_blueprint(
-    ..., always_include_keys=None, ...
-):
-    ...
-    chapter_bp = _extract_chapter_blueprint(
-        blueprint, chapter_outline, 
-        always_include_keys=always_include_keys  # ← NEW
-    )
-```
+**4B. Truyền params xuống function calls (6 chỗ):**
+- `validate_phase_plan_sub_keys()` × 2: thêm `niche=niche, excerpt_fields=...`
+- `apply_chapter_splits()` × 3: thêm `split_threshold=...`
+- `write_from_blueprint()`: thêm `always_include_keys=...`
 
 ---
 
@@ -439,28 +393,28 @@ graph TD
     B -->|Yes| D[Step A1: Phase Plan]
     
     D --> D1{phase_plan prompt exists for niche?}
-    D1 -->|No| ERR1[❌ RuntimeError: No phase_plan prompt for niche]
-    D1 -->|Yes| D2[Generate phase plan]
+    D1 -->|No| ERR1["❌ RuntimeError: No phase_plan prompt"]
+    D1 -->|Yes| D2[AI classifies main/sub via 2-tier filter]
     
     D2 --> E[Step A2: Validate Sub-keys]
-    E --> E1{validate_sub_key prompt exists for niche?}
-    E1 -->|No| ERR2[❌ RuntimeError: No validate prompt for niche]
+    E --> E1{validate_sub_key prompt exists?}
+    E1 -->|No| ERR2["❌ RuntimeError: No validate prompt"]
     E1 -->|Yes| E2{excerpt_fields configured?}
-    E2 -->|No| ERR3[❌ RuntimeError: excerpt_fields not configured]
-    E2 -->|Yes| E3{blueprint has any excerpt_fields?}
-    E3 -->|No| ERR4[❌ RuntimeError: Blueprint schema mismatch]
-    E3 -->|Yes| E4[Validate + Promote]
+    E2 -->|No| ERR3["❌ RuntimeError: excerpt_fields missing"]
+    E2 -->|Yes| E3{blueprint has excerpt_fields?}
+    E3 -->|No| ERR4["❌ RuntimeError: Blueprint schema mismatch"]
+    E3 -->|Yes| E4[3-Test Promote — adapted per niche]
     
-    E4 --> F[Step A3: Apply Splits]
+    E4 --> F[Step A3: Apply Splits — configurable threshold]
     F --> G[Step B: Outline]
     G --> H[Step C: Audit]
     H --> I[Step D: Write Chapters]
     
-    I --> I1{always_include_keys found in blueprint?}
-    I1 -->|No| ERR5[❌ RuntimeError: Blueprint missing always-keys]
-    I1 -->|Yes| I2{key_data matched any blueprint section?}
-    I2 -->|No| ERR6[❌ RuntimeError: key_data mismatch — check outline prompt]
-    I2 -->|Yes| I3[Write chapter with filtered blueprint]
+    I --> I1{always_include_keys in blueprint?}
+    I1 -->|No| ERR5["❌ RuntimeError: Missing always-keys"]
+    I1 -->|Yes| I2{key_data matched blueprint?}
+    I2 -->|No| ERR6["❌ RuntimeError: key_data mismatch"]
+    I2 -->|Yes| I3[Write with filtered blueprint]
     
     style ERR1 fill:#ff4444,color:#fff
     style ERR2 fill:#ff4444,color:#fff
@@ -472,54 +426,35 @@ graph TD
 
 ---
 
-## Checklist Thực Thi (Thứ Tự)
+## Checklist Thực Thi
 
 ### Phase 1: Foundation (files mới — zero risk)
-- [ ] Tạo `styles/narrative_phân_tích_trận_đánh_v2.json` với `pipeline_features`
-- [ ] Tạo `prompts/system_narrative_phase_plan_battle.txt`
-- [ ] Tạo `prompts/system_validate_sub_key_battle.txt`
+- [ ] Tạo `styles/narrative_phân_tích_trận_đánh_v2.json`
+- [ ] Tạo `prompts/system_narrative_phase_plan_battle.txt` (bao gồm tiêu chí PHẦN A)
+- [ ] Tạo `prompts/system_validate_sub_key_battle.txt` (bao gồm tiêu chí PHẦN B)
 - [ ] Tạo `prompts/system_research_blueprint_battle.txt`
 - [ ] Tạo `niche_configs/narrative_phân_tích_trận_đánh_v2.json`
 
-### Phase 2: Code wiring (backward-compatible changes)
-- [ ] `rewriter.py`: Thêm battle entries vào `_NICHE_PROMPT_MAP["narrative_phase_plan"]`
-- [ ] `rewriter.py`: Thêm battle entries vào `_RESEARCH_PROMPT_MAP` + `_NICHE_RESEARCH_MAP`
-- [ ] `rewriter.py`: Refactor `validate_phase_plan_sub_keys()` — thêm `niche` + `excerpt_fields` params, dispatch prompt, error gate
-- [ ] `rewriter.py`: Refactor `_build_excerpt()` — dùng `excerpt_fields` param, error nếu trống
-- [ ] `rewriter.py`: Refactor `_extract_chapter_blueprint()` — thêm `always_include_keys` param, error thay fallback
-- [ ] `rewriter.py`: Refactor `apply_chapter_splits()` — thêm `split_threshold` param
-- [ ] `rewriter.py`: Update `write_from_blueprint()` — truyền `always_include_keys` xuống
-- [ ] `rewriter.py`: Thêm `_RESEARCH_SECTIONS_BATTLE` (3 sections)
+### Phase 2: Code wiring — rewriter.py
+- [ ] Thêm battle entries vào `_NICHE_PROMPT_MAP["narrative_phase_plan"]`
+- [ ] Thêm battle entries vào `_RESEARCH_PROMPT_MAP` + `_NICHE_RESEARCH_MAP`
+- [ ] Thêm `_RESEARCH_SECTIONS_BATTLE` (3 sections)
+- [ ] Refactor `validate_phase_plan_sub_keys()` — thêm `niche` + `excerpt_fields`, dispatch prompt, error gate
+- [ ] Refactor `_build_excerpt()` — dùng `excerpt_fields`, error nếu trống
+- [ ] Refactor `_extract_chapter_blueprint()` — thêm `always_include_keys`, error thay fallback (ALL niches)
+- [ ] Refactor `apply_chapter_splits()` — thêm `split_threshold` param
+- [ ] Update `write_from_blueprint()` — truyền `always_include_keys`
 
-### Phase 3: Engine detection
-- [ ] `script_creation_tab.py`: Thay `_is_biography` → `pipeline_features` detection
-- [ ] `script_creation_tab.py`: Truyền `niche`, `excerpt_fields`, `split_threshold`, `always_include_keys` xuống function calls
-- [ ] `script_creation_tab.py`: Cập nhật 2 `validate_phase_plan_sub_keys` call sites (line 1650, 1685)
-- [ ] `script_creation_tab.py`: Cập nhật 3 `apply_chapter_splits` call sites (line 1642, 1663, 1704)
+### Phase 3: Engine detection — script_creation_tab.py
+- [ ] Thay `_is_biography` → `pipeline_features` config detection (+ biography backward compat)
+- [ ] Cập nhật 2 `validate_phase_plan_sub_keys()` call sites — thêm `niche`, `excerpt_fields`
+- [ ] Cập nhật 3 `apply_chapter_splits()` call sites — thêm `split_threshold`
+- [ ] Cập nhật `write_from_blueprint()` call — thêm `always_include_keys`
 
 ### Phase 4: Verification
 - [ ] `py_compile.compile()` cả 2 file
-- [ ] Chạy biography pipeline → KHÔNG thay đổi behavior
-- [ ] Chọn style v2 → chạy battle topic → verify phase plan + validate + split
-- [ ] Test error cases: chọn style có `phase_plan: true` nhưng thiếu prompt → phải crash sớm
-
----
-
-## Verification Plan
-
-### Automated Tests
-1. JSON validity: Load tất cả JSON files mới
-2. Prompt dispatch: `_get_niche_prompt("narrative_phase_plan", "trận đánh")` → returns battle file
-3. Config detection: `pipeline_features.get("phase_plan")` → `True`
-4. Python syntax: `py_compile.compile()` → pass
-5. **Error gate tests**: Gọi `validate_phase_plan_sub_keys(niche="unknown")` → `RuntimeError`
-6. **Error gate tests**: Gọi `_extract_chapter_blueprint(blueprint={}, outline, always_include_keys=["missing"])` → `RuntimeError`
-
-### Manual Verification
-1. Biography regression: Full pipeline → output không đổi
-2. Battle v2: Chạy "Trận Thermopylae" → kiểm tra:
-   - Phase plan JSON có 5 Pacing Slots
-   - Validate sub-keys chạy với battle prompt (KHÔNG biography prompt)
-   - Chapter splits dùng configured threshold
-   - Writer nhận filtered blueprint (KHÔNG full blueprint)
-   - Error log rõ ràng khi thiếu component
+- [ ] JSON validity: load tất cả JSON mới
+- [ ] Biography regression: full pipeline → output KHÔNG thay đổi behavior
+- [ ] Battle v2 test: chọn style v2 → chạy battle topic
+- [ ] Error gate test: style có `phase_plan: true` nhưng thiếu prompt → phải crash sớm
+- [ ] Error gate test: `_extract_chapter_blueprint` key_data mismatch → phải crash (kể cả biography)
