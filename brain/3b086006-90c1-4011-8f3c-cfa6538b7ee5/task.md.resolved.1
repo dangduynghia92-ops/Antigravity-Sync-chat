@@ -1,0 +1,29 @@
+# Battle Niche v2 — Task Tracker
+
+## Phase 1: Foundation (files mới — zero risk)
+- [x] Tạo `styles/narrative_phân_tích_trận_đánh_v2.json` — 2 frameworks + pipeline_features
+- [ ] Tạo `prompts/system_narrative_phase_plan_battle.txt`
+- [ ] Tạo `prompts/system_validate_sub_key_battle.txt`
+- [ ] Tạo `prompts/system_research_blueprint_battle.txt`
+- [ ] Tạo `niche_configs/narrative_phân_tích_trận_đánh_v2.json`
+
+## Phase 2: Code wiring — rewriter.py
+- [ ] Thêm battle entries vào `_NICHE_PROMPT_MAP["narrative_phase_plan"]`
+- [ ] Thêm battle entries vào `_RESEARCH_PROMPT_MAP` + `_NICHE_RESEARCH_MAP`
+- [ ] Thêm `_RESEARCH_SECTIONS_BATTLE`
+- [ ] Refactor `validate_phase_plan_sub_keys()` — niche + excerpt_fields, error gate
+- [ ] Refactor `_build_excerpt()` — excerpt_fields, error gate
+- [ ] Refactor `_extract_chapter_blueprint()` — always_include_keys, error gate
+- [ ] Refactor `apply_chapter_splits()` — split_threshold param
+- [ ] Update `write_from_blueprint()` — always_include_keys param
+
+## Phase 3: Engine detection — script_creation_tab.py
+- [ ] Thay `_is_biography` → `pipeline_features` config detection
+- [ ] Cập nhật `validate_phase_plan_sub_keys()` call sites
+- [ ] Cập nhật `apply_chapter_splits()` call sites
+- [ ] Cập nhật `write_from_blueprint()` call
+
+## Phase 4: Verification
+- [ ] `py_compile.compile()` cả 2 file Python
+- [ ] JSON validity check
+- [ ] Biography regression test
