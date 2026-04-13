@@ -1,0 +1,12 @@
+{
+  "title": "Biography Pipeline Protection Rule",
+  "summary": "MANDATORY: Before modifying ANY shared code or prompt in the narrative pipeline, MUST verify it does NOT break the biography (tiểu sử nhân vật) pipeline. This includes rewriter.py, system prompts, style JSONs, and script_creation_tab.py. If a change touches shared functions (_extract_chapter_blueprint, write_from_blueprint, research_blueprint_multicall, _extract_style_for_framework, etc.), MUST confirm biography still works correctly before applying. Never remove fallbacks, change matching logic, or alter data flow in shared code without explicit niche branching (if _is_battle / elif _is_biography / else raise).",
+  "created": "2026-04-13T23:08:00+07:00",
+  "lastAccessed": "2026-04-13T23:08:00+07:00",
+  "references": [
+    {
+      "conversationId": "3b086006-90c1-4011-8f3c-cfa6538b7ee5",
+      "description": "Conversation where battle v2 changes broke biography pipeline — root cause analysis and fix"
+    }
+  ]
+}
