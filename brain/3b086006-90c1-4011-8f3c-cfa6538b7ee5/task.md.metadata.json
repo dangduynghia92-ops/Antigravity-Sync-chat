@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_TASK",
+  "summary": "Task tracking for Battle Niche v2 pipeline implementation. Covers 4 phases: Foundation (style JSON, prompts, niche config), Code wiring (rewriter.py), Engine detection (script_creation_tab.py), and Verification.",
+  "updatedAt": "2026-04-13T02:59:41.948079800Z"
+}
