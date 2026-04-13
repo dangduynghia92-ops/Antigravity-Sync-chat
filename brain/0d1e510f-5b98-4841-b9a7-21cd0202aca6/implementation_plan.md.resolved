@@ -1,297 +1,330 @@
-# Niche Mới: Lịch Sử Hải Tặc (Pirate History)
-
-Xây dựng pipeline narrative hoàn chỉnh cho niche **Hải Tặc** — bao gồm con tàu huyền thoại, sào huyệt vô luật pháp, và những nhân vật máu mặt nhất đại dương.
+# Niche Mới: Lịch Sử Hải Tặc (Pirate History) — v2
 
 ---
 
-## User Review Required
+## Giải đáp trước khi đi vào plan
+
+### "Haven" nghĩa là gì?
+
+**"Haven"** = **Sào huyệt / Cảng / Thành trì hải tặc** — những địa điểm ngoài vòng pháp luật phục vụ cướp biển. Ví dụ cụ thể:
+- **Nassau** (Bahamas) — "Cộng hoà cướp biển" tự xưng, thủ đô của Golden Age of Piracy
+- **Tortuga** (Haiti) — sào huyệt buccaneers, được mô tả "Vegas meets medieval warlords"
+- **Port Royal** (Jamaica) — "thành phố tội lỗi nhất Trái Đất" trước khi bị động đất 1692
+- **Libertatia** (Madagascar) — "quốc gia không tưởng" của cướp biển (có thể là huyền thoại)
+- **Salé** (Morocco) — căn cứ của Barbary corsairs
+
+Tôi sẽ dùng thuật ngữ **"Sào Huyệt"** thay cho "Haven" trong framework tiếng Việt.
+
+---
+
+## Quyết định thiết kế đã xác nhận
 
 > [!IMPORTANT]
-> **Quyết định thiết kế quan trọng #1: Dual-Mode Framework**
-> Niche này có 2 loại chủ đề khác biệt: **Tàu (Ship)** và **Địa điểm (Haven)**. Tôi sẽ thiết kế **1 framework duy nhất** gọi là **"Giải Phẫu Huyền Thoại"** với logic phân nhánh bên trong (giống như Battle v2 có HEAD/HEART phases), thay vì 2 framework riêng. Lý do: cả 2 đều follow cùng 6-phase arc (Hook → Context → Anatomy → Characters → Dark Reality → Fall & Legacy), chỉ khác nhau ở Phase 3 (Tech Specs vs Social Specs).
+> **2 Framework riêng biệt** (theo yêu cầu user):
+> 1. **"Chiến Hạm Huyền Thoại"** — cho tàu / chiến hạm
+> 2. **"Thành Trì Vô Luật"** — cho sào huyệt / địa điểm hải tặc
+>
+> Mặc dù hiện tại cả 2 chia sẻ 6-phase arc tương tự, tách riêng để dễ bổ sung/thay đổi độc lập sau này.
 
 > [!IMPORTANT]
-> **Quyết định thiết kế #2: Hook Strategy = Filtered (Lean)**
-> Giống Battle v2, hook chapter chỉ cần scene-building data (sensory, scale, shock facts) — KHÔNG cần toàn bộ blueprint. Khác Biography vốn cần cross-section data cho paradox/contrast.
+> **Unique Key**: `pirate_phases` — detect niche via `_is_pirate = "pirate_phases" in blueprint`
+
+> [!IMPORTANT]
+> **Subject type**: `subject_type: "ship" | "location"` — AI auto-detect từ topic input, quyết định framework nào được chọn
+
+---
+
+## Review #1: Key_data — Đã đầy đủ và phù hợp chưa?
+
+### Blueprint Schema (13 sections)
+
+Bảng so sánh key_data giữa 2 framework, đánh giá bằng hệ thống ✅ (cần thiết), ⚡ (quan trọng cao), ⚠️ (cần điều chỉnh):
+
+| # | Blueprint Section | Ship Framework | Location Framework | Ghi chú |
+|---|------------------|----------------|-------------------|---------|
+| 1 | `core_topic` | ✅ Tên tàu, era, kết cục | ✅ Tên địa điểm, era, kết cục | Chung |
+| 2 | `key_facts` | ✅ Số đại bác, tonnage, vận tốc | ✅ Dân số, diện tích, thời gian tồn tại | Chung |
+| 3 | `era_context` | ✅ Bối cảnh hàng hải, đế quốc | ✅ Bối cảnh chính trị, thương mại | Chung |
+| 4 | `key_figures` | ⚡ Thuyền trưởng, thủy thủ đoàn | ⚡ Thủ lĩnh, thương nhân, gái điếm nổi tiếng | **Khác nhau** về role types |
+| 5 | `pirate_phases` ⭐ | ⚡ Đóng tàu → Cướp → Nổi danh → Kết thúc | ⚡ Thành lập → Hoàng kim → Suy tàn → Kết thúc | **UNIQUE KEY** |
+| 6 | `origin_story` | ⚡ **MỚI** — Tàu được đóng/cướp từ đâu? Ai đặt tên? | ⚡ **MỚI** — Ai phát hiện/thành lập? Tại sao ở đây? | **Thêm mới** — Plan v1 thiếu |
+| 7 | `anatomy_specs` | ⚡ Vũ khí, tốc độ, buồm, cargo | ⚡ Luật lệ ngầm, kinh tế ngầm, phòng thủ | **Khác hoàn toàn** |
+| 8 | `climactic_events` | ⚡ Trận hải chiến, vụ cướp đỉnh cao | ⚡ Cuộc càn quét, cuộc nổi dậy, thử thách lớn | Tương tự structure |
+| 9 | `dark_reality` | ⚡ Y khoa trên tàu, thức ăn thiu, bệnh tật | ⚡ Nạn mại dâm, bạo lực, dịch bệnh trên đảo | **Khác chi tiết** |
+| 10 | `economic_data` | ⚡ Giá trị hàng hóa, loot, USD hiện đại | ⚡ Doanh thu bảo kê, kinh tế ngầm, USD hiện đại | Chung format |
+| 11 | `myths_vs_reality` | ✅ Phim ảnh vs thực tế về tàu | ✅ Phim ảnh vs thực tế về đảo | Chung format |
+| 12 | `fall_and_legacy` | ✅ Đắm tàu? Bắt giữ? Phát hiện xác tàu? | ✅ San phẳng? Hiệp ước? Di tích còn lại? | Tương tự |
+| 13 | `narrative_moments` | ✅ Sensory scenes trên biển | ✅ Sensory scenes trên bờ | Chung format |
+| 14 | `texture_and_hooks` | ✅ Quotes, ironies, human moments | ✅ Quotes, ironies, human moments | Chung |
+
+### Bổ sung so với Plan v1
 
 > [!WARNING]
-> **Unique Key cho blueprint**: `pirate_phases` — key này sẽ được dùng để detect niche trong code (`_is_pirate = "pirate_phases" in blueprint`). Cần xác nhận key name này.
+> Plan v1 **thiếu `origin_story`** — đây là section quan trọng cho Phase 2 (Bối Cảnh & Nguồn Gốc). Cần thêm:
+> ```json
+> "origin_story": {
+>   "creator_or_founder": "Ai đóng tàu / ai thành lập sào huyệt",
+>   "original_purpose": "Mục đích ban đầu (tàu chiến? tàu buôn? đảo không người?)",
+>   "how_became_pirate": "Bị cướp? Được cải tiến? Được chọn vì địa hình?",
+>   "naming_story": "Câu chuyện đặt tên (ví dụ: Queen Anne's Revenge)",
+>   "source": "ai_knowledge"
+> }
+> ```
 
-> [!IMPORTANT]
-> **Quyết định thiết kế #3: 4 Kỹ thuật nâng cấp**
-> User yêu cầu 4 techniques đặc biệt sẽ được nhúng vào core_rules và framework:
-> 1. **Money Angle** — quy đổi tài sản sang USD hiện đại (core_rules.economic_translation)
-> 2. **Pirate Medicine** — y khoa rùng rợn, chi tiết visceral (core_rules.macabre_detail_rule)  
-> 3. **Anti-Hero Framing** — luôn thiết lập "kẻ phản diện thật" là hệ thống (framework.anti_hero_engine)
-> 4. **Micro-Hooks** — câu hỏi mở / hé lộ gây sốc ở cuối EVERY phase (framework.micro_hook_mandate)
+### `anatomy_specs` — Chi tiết cho từng framework
 
----
-
-## Proposed Changes
-
-### Phase A: Files to Create (9 files)
-
----
-
-#### [NEW] [narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_lịch_sử_hải_tặc.json)
-
-Style JSON chính — clone structure từ `narrative_phân_tích_trận_đánh_v2.json` (battle v2)
-
-**Schema chính:**
-
+**Ship (`anatomy_specs` cho Chiến Hạm):**
 ```json
 {
-  "pipeline": "narrative",
-  "niche": "pirate hải tặc cướp biển tàu huyền thoại sào huyệt",
-  "topic_keywords": ["pirate", "hải tặc", "cướp biển", "tàu", "huyền thoại",
-                     "sào huyệt", "buccaneer", "corsair", "privateer",
-                     "đảo", "cảng", "rum", "kho báu", "treasure"],
-  "pipeline_features": {
-    "phase_plan": true,
-    "validate_sub_keys": true,
-    "research_blueprint": true,
-    "split_threshold": [3, 6],
-    "always_include_keys": ["core_topic", "key_facts", "era_context"],
-    "excerpt_fields": ["pirate_phases", "key_figures", "anatomy_specs",
-                       "economic_data", "dark_reality"]
+  "armament": {
+    "cannon_count": 40,
+    "cannon_types": "18-pounder long guns + 9-pounder swivels",
+    "broadside_weight": "Total weight of one broadside in pounds",
+    "range_effective": "Tầm bắn hiệu quả",
+    "damage_description": "Sức công phá lên gỗ và thịt người"
+  },
+  "hull_and_rigging": {
+    "ship_type": "Frigate / Sloop / Galleon...",
+    "tonnage": "300 tons",
+    "length": "30 meters",
+    "mast_count": 3,
+    "sail_system": "Mô tả hệ thống buồm",
+    "speed_advantage": "So sánh với tàu cùng thời",
+    "hull_material": "Oak with copper sheathing"
+  },
+  "crew_capacity": {
+    "standard_crew": 150,
+    "max_capacity": 300,
+    "roles": ["gunner", "navigator", "carpenter/surgeon", "powder monkey"]
+  },
+  "cargo_economics": {
+    "cargo_type": "Vàng, bạc, gia vị, nô lệ?",
+    "trade_value": "Giá trị hàng hóa thời đó",
+    "strategic_importance": "Tầm quan trọng với kinh tế toàn cầu"
   }
 }
 ```
 
-**core_rules** (adapted từ battle v2, thêm 4 techniques mới):
-- `identity`: "Cinematic maritime historian — part storyteller, part treasure hunter"
-- `tone`: Dramatic, visceral khi mô tả chiến đấu/y khoa; analytical khi phân tích cơ chế/kinh tế; conspiratorial khi nói về Anti-Hero
-- `economic_translation`: **"Money Angle"** — LUÔN quy đổi tiền cướp sang USD hiện đại, so sánh với GDP/siêu xe/lương CEO
-- `macabre_detail_rule`: **"Pirate Medicine"** — khi mô tả thương tích, bệnh tật → chi tiết visceral (cưa chân, nung sắt cầm máu, thuốc mê = rượu rum)
-- `anti_hero_engine`: **"Anti-Hero Framing"** — mỗi video PHẢI thiết lập 1 "kẻ phản diện thật" (Hải quân, Công ty Đông Ấn, chế độ nô lệ)
-- `micro_hook_mandate`: **"Micro-Hooks"** — cuối EVERY phase (trừ phase cuối), phải có câu hỏi mở hoặc hé lộ gây sốc kéo sang phase tiếp
-- `analogy_strategy`: Modern equivalents (flagship = aircraft carrier, Tortuga = Vegas meets Mad Max)
-- `technical_depth`: Vũ khí hải quân HOW IT WORKS (đại bác, buồm, thủy chiến)
-
-**1 Framework: "Giải Phẫu Huyền Thoại"**
-
-| Phase | Tên | Purpose | Lens |
-|-------|-----|---------|------|
-| 1 | Mồi Nhử Huyền Thoại | Hook | Visual cue → Tối hậu thư (kỷ lục/shock) → Phá vỡ lầm tưởng (phim vs thật) → Title card |
-| 2 | Bối Cảnh & Nguồn Gốc | Context | Thế giới lúc đó → Lỗ hổng/cơ hội (TÀU: công nghệ / ĐỊA ĐIỂM: địa hình) → Người đặt nền móng |
-| 3 | Giải Phẫu Cơ Chế | Anatomy | **TÀU**: Vũ khí + Tốc độ & Cấu tạo + Kinh tế / **ĐỊA ĐIỂM**: Luật lệ ngầm + Kinh tế ngầm + Phòng thủ |
-| 4 | Nhân Vật & Cao Trào | Climax | "Trùm cuối" + Vụ áp phe lớn nhất + Chiến thuật tâm lý |
-| 5 | Góc Khuất Tàn Khốc | Dark Reality | Địa ngục trần gian (Pirate Medicine!) + Cái giá của tự do (nô lệ, bóc lột) |
-| 6 | Sụp Đổ & Di Sản | Fall & Legacy | Cái chết kỷ nguyên + Số phận người ở lại + Di sản triết học + Outro |
-
-**evaluation_focus:**
+**Location (`anatomy_specs` cho Sào Huyệt):**
 ```json
 {
-  "primary_data_field": "legendary_status",
-  "tier_field": "infamy_scale",
-  "tier_scoring": {
-    "Regional_Notoriety": 5,
-    "Empire_Level_Threat": 8,
-    "Civilizational_Legend": 10
+  "governance_system": {
+    "pirate_code": "Bộ luật cướp biển áp dụng",
+    "leadership_election": "Bầu cử dân chủ? Ai bầu? Cách phế truất?",
+    "dispute_resolution": "Xử tranh chấp thế nào khi không có tòa án?",
+    "compensation_system": "Chia tiền: tỷ lệ nào? Bảo hiểm thương tật?"
   },
-  "richness_check": "Score by HIGHEST infamy_scale. Regional = moderate. Empire_Level+ = strong.",
-  "best_when": "Subject has Empire_Level_Threat or higher — feared by entire navies/empires"
+  "underground_economy": {
+    "revenue_sources": "Cướp, bảo kê, buôn lậu, ransom",
+    "spending": "Tavern, gái điếm, sửa tàu, vũ khí",
+    "merchants": "Thương nhân hợp pháp nào giao dịch với cướp biển?",
+    "money_laundering": "Rửa tiền thế nào trong thế kỷ 17?"
+  },
+  "defense_network": {
+    "natural_defenses": "Ám tiêu, vịnh hẹp, rừng ngập mặn",
+    "fortifications": "Pháo đài, tường thành, vọng gác",
+    "early_warning": "Hệ thống cảnh báo sớm (thuyền trinh sát?)",
+    "anti_navy_tactics": "Làm sao chống lại quân đội chính quy?"
+  }
 }
 ```
 
 ---
 
-#### [NEW] [system_research_blueprint_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_pirate.txt)
+## Review #2: Validate Sub-Key — Có phù hợp cho Pirate không?
 
-Clone từ `system_research_blueprint_battle.txt`, adapted:
+### Phân tích 3 tests hiện tại
 
-**Blueprint sections cho pirate:**
+Framework hiện tại (Battle + Biography) dùng **3 tests giống nhau**:
+1. **Scene Test** — Có thể build thành SCENE riêng? (setting, tension, resolution)
+2. **Turning Point Test** — Thay đổi đáng kể trajectory?
+3. **Causal Independence Test** — Có hậu quả riêng? (không chỉ là transition)
 
-| # | Section | Key fields |
-|---|---------|------------|
-| 1 | `core_topic` | Subject (tàu/đảo), era, region, key_association |
-| 2 | `key_facts` | Dates, numbers, records, shocking stats |
-| 3 | `era_context` | `world_state`, `power_vacuum`, `naval_powers`, `trade_routes`, `catalyst` |
-| 4 | `key_figures` | `name`, `nickname`, `role`, `background`, `key_actions`, `fate`, `connection_to_subject` |
-| 5 | `pirate_phases` | **UNIQUE KEY** — các giai đoạn lịch sử: `phase_name`, `date_range`, `key_events`, `significance` |
-| 6 | `anatomy_specs` | **Dual-mode**: Nếu TÀU → `armament`, `hull_design`, `speed_capability`, `cargo_economics` / Nếu ĐỊA ĐIỂM → `governance_system`, `underground_economy`, `defense_network` |
-| 7 | `climactic_events` | Vụ cướp/trận đánh đỉnh cao: `event_name`, `before_state`, `during_action`, `after_state`, `tactics_used` |
-| 8 | `dark_reality` | `daily_horrors`, `medical_practices`, `slavery_exploitation`, `mortality_stats` |
-| 9 | `economic_data` | `loot_value_original`, `loot_value_modern_usd`, `comparison_to_modern`, `trade_impact` |
-| 10 | `myths_vs_reality` | `popular_belief`, `actual_evidence`, `why_myth_persists` |
-| 11 | `fall_and_legacy` | `cause_of_end`, `final_fates`, `lasting_impact`, `archaeological_evidence` |
-| 12 | `narrative_moments` | Sensory scenes: `scene`, `physical_details`, `scale_indicator` |
-| 13 | `texture_and_hooks` | `memorable_quotes`, `dramatic_ironies`, `human_moments`, `scale_comparisons` |
+**Đánh giá cho Pirate:**
 
-**Tier enums** (MUST match style JSON):
+| Test | Phù hợp? | Lý do | Adaptation cần thiết |
+|------|----------|-------|---------------------|
+| Scene Test | ✅ Hoàn toàn phù hợp | Pirate niche cần scenes vivid tương tự battle | Thay ví dụ: "Trận đánh trên boong tàu", "Thủy thủ đoàn nổi loạn" |
+| Turning Point Test | ✅ Phù hợp nhưng cần adapt | Pirate có turning points khác: cướp tàu, phát hiện đảo, bị phản bội | Thay criteria: thay "battle trajectory" thành "subject's history trajectory" |
+| Causal Independence Test | ✅ Phù hợp | Logic cause→effect giống nhau | Thay ví dụ: "Bị bão" vs "Bão phá hủy 3/5 tàu trong hạm đội" |
+
+### Anti-patterns cho Pirate (MỚI — không có trong battle/biography)
+
 ```
-For infamy_scale, use EXACTLY ONE of: "Regional_Notoriety", "Empire_Level_Threat", "Civilizational_Legend"
+✗ Mô tả thông số tàu KHÔNG có kịch tính:
+  "Tàu có 40 khẩu đại bác", "Tốc độ 12 knots", "Thủy thủ đoàn 150 người"
+  → KEEP. Thông số kỹ thuật là texture, không phải scene.
+  UNLESS: thông số tạo ra khoảnh khắc kịch tính
+    (ví dụ: "Phát hiện tàu địch chỉ có 12 khẩu đại bác — thuyền trưởng ra lệnh áp sát" → PROMOTE)
+
+✗ Cuộc sống hàng ngày KHÔNG có crisis:
+  "Ăn bánh mì khô", "Uống rượu rum", "Sửa buồm"
+  → KEEP. Background texture cho Phase 5 (Dark Reality).
+  UNLESS: có crisis cụ thể
+    (ví dụ: "Thức ăn hết sau 3 tuần — thủy thủ đoàn ăn da giày và chuột" → PROMOTE)
+
+✗ Giao dịch thương mại KHÔNG có confrontation:
+  "Bán hàng cướp được ở Tortuga", "Mua thuốc súng từ thương nhân Hà Lan"
+  → KEEP. Kinh tế ngầm là texture.
+  UNLESS: giao dịch có kịch tính
+    (ví dụ: "Thương nhân phản bội, báo Hải quân Anh vị trí sào huyệt" → PROMOTE)
+
+✗ Luật lệ / quy tắc KHÔNG có enforcement:
+  "Bộ luật quy định chia đều chiến lợi phẩm", "Cấm đánh bạc trên tàu"
+  → KEEP. Cơ chế vận hành là context.
+  UNLESS: có vụ vi phạm/xử phạt cụ thể
+    (ví dụ: "Một thủy thủ bị 'marooning' — bỏ trên đảo hoang chỉ với 1 súng 1 viên đạn" → PROMOTE)
+```
+
+### Calibration examples cho Pirate
+
+```
+"Tàu Queen Anne's Revenge có 40 khẩu đại bác" →
+  Scene: ❌ (số liệu)  Turning: ❌  Causal: ❌
+  → KEEP (0 tests) — thông số kỹ thuật, texture cho Anatomy phase
+
+"Blackbeard cắm ngòi nổ chậm vào râu, châm lửa trước khi lên boong tàu địch" →
+  Scene: ✅ (vivid, iconic)  Turning: ✅ (chiến thuật tâm lý quyết định)  Causal: ✅ (đối phương đầu hàng)
+  → PROMOTE (3 tests) — khoảnh khắc iconic với hậu quả trực tiếp
+
+"Nassau có khoảng 500-1000 dân" →
+  Scene: ❌  Turning: ❌  Causal: ❌
+  → KEEP (0 tests) — số liệu dân số
+
+"Woodes Rogers đổ bộ Nassau với 3 tàu chiến và lệnh ân xá hoàng gia" →
+  Scene: ✅ (confrontation)  Turning: ✅ (kết thúc kỷ nguyên)  Causal: ✅ (cướp biển tan rã hoặc chấp nhận)
+  → PROMOTE (3 tests) — sự kiện quyết định kết thúc sào huyệt
+```
+
+**Kết luận:** 3 tests hoàn toàn phù hợp cho Pirate. Chỉ cần thay examples và anti-patterns cho domain cướp biển.
+
+---
+
+## Review #3: Phase Plan — Pirate phases mapping
+
+### Framework "Chiến Hạm Huyền Thoại" (Ship)
+
+| Phase | Tên | main_key_data examples | sub_key_data examples |
+|-------|-----|----------------------|---------------------|
+| Mồi Nhử | Hook | `shocking_fact` (kỷ lục), `myth_busted` (phim vs thật), `title_card_tease` | ∅ |
+| Bối Cảnh | Context | Cơ hội/lỗ hổng khiến tàu ra đời, người đóng tàu, vụ cướp tàu đầu tiên | Bối cảnh đế quốc, tuyến thương mại |
+| Giải Phẫu | Anatomy | Vũ khí + damage demo, hệ buồm + speed advantage, economic cargo | Thông số cụ thể (tonnage, crew size) |
+| Nhân Vật | Climax | "Trùm cuối" + vụ áp phe lớn nhất + chiến thuật điên rồ | Các nhân vật phụ, phi hành đoàn |
+| Góc Khuất | Dark | Y khoa rùng rợn (Pirate Medicine), nô lệ, bệnh tật cụ thể | Cuộc sống hàng ngày, thức ăn |
+| Sụp Đổ | Legacy | Cái chết của tàu (đắm/nổ/bắt), số phận crew, di sản + phát hiện xác tàu | Hậu quả lịch sử, hiệp ước |
+
+### Framework "Thành Trì Vô Luật" (Location)
+
+| Phase | Tên | main_key_data examples | sub_key_data examples |
+|-------|-----|----------------------|---------------------|
+| Mồi Nhử | Hook | `shocking_fact`, `myth_busted`, `title_card_tease` | ∅ |
+| Bối Cảnh | Context | Tại sao chọn nơi này? Ai thành lập? Lỗ hổng chính trị | Bối cảnh hải quân, bản đồ thương mại |
+| Giải Phẫu | Anatomy | Bộ luật hải tặc + enforcement, kinh tế ngầm + money flow, phòng thủ chống navy | Dân số, cấu trúc xã hội |
+| Nhân Vật | Climax | "Trùm cuối" + sự kiện giật gân nhất + mưu mẹo | Các nhân vật phụ |
+| Góc Khuất | Dark | Bạo lực, mại dâm, dịch bệnh, nô lệ buôn bán | Cuộc sống hàng ngày |
+| Sụp Đổ | Legacy | Ai kết liễu? (Navy/hiệp ước), số phận dân cư, di sản triết học | Khảo cổ, du lịch hiện đại |
+
+### Hook Phase — Chi tiết 3 items
+
+Khác với Battle (3 items: shocking_outcome, central_question, pivot_tease) và Biography (2 items: anchor, twist), **Pirate Hook có 3 items đặc biệt**:
+
+```
+  main_key_data = [
+    shocking_fact,     ← Kỷ lục/sự thật gây sốc nhất (Tối hậu thư / The Claim)
+                        Ví dụ: "Con tàu này mang theo 40 khẩu đại bác và số vàng 
+                        tương đương 130 triệu đô la ngày nay"
+    myth_busted,       ← Phá vỡ lầm tưởng (The Twist) — phim ảnh lừa dối gì?
+                        Ví dụ: "Phim Pirates of the Caribbean cho bạn thấy cướp biển 
+                        lãng mạn. Thực tế, 1/3 thủy thủ đoàn chết vì bệnh hoại huyết 
+                        trước khi ngửi thấy mùi vàng"
+    title_card_tease   ← "Đây là câu chuyện thật về..." — kéo vào body
+  ]
+  sub_key_data = [] (hook có no background texture)
 ```
 
 ---
 
-#### [NEW] [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
+## Review #4: Hook Strategy — So sánh 3 niches
 
-Clone từ `system_narrative_phase_plan_battle.txt`, adapt phase names:
-- Mồi Nhử Huyền Thoại → Bối Cảnh & Nguồn Gốc → Giải Phẫu Cơ Chế → Nhân Vật & Cao Trào → Góc Khuất Tàn Khốc → Sụp Đổ & Di Sản
+| Aspect | Biography | Battle v2 | **Pirate (đề xuất)** |
+|--------|-----------|-----------|---------------------|
+| **Blueprint gửi cho hook** | FULL blueprint (cần cross-section data cho paradox/contrast) | Filtered (lean scene-building) | **Filtered (lean)** — giống Battle |
+| **Hook items** | 2: Anchor + Twist | 3: Shocking outcome + Central question + Pivot tease | **3: Shocking fact + Myth busted + Title card tease** |
+| **POV** | 3rd person + full name mandatory | 2nd person immersive ("you stand in the ruins...") | **Mixed: Visual cue (2nd person: "Imagine...") → 3rd person kỷ lục → Myth bust** |
+| **Tone shift** | Provocative → flip legend | Visceral → calm analytical | **Cinematic → Shock → "Phim đã lừa bạn" → analytical** |
+| **Data source** | Toàn bộ `core_identity`, `achievements`, `conflicts`, `myths` | `key_facts`, `resolution_and_aftermath`, `narrative_moments` | **`key_facts`, `myths_vs_reality`, `economic_data`, `narrative_moments`** |
 
-Output: `main_key_data`, `sub_key_data`, `node_count` per phase
+**Tại sao Filtered (Lean) chứ không Full?**
 
----
-
-#### [NEW] [system_validate_sub_key_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pirate.txt)
-
-Clone từ `system_validate_sub_key_battle.txt`:
-- 3 tests: Scene Test, Turning Point Test, Causal Independence Test
-- Examples adapted to pirate domain (sea battles, betrayals, disease)
-
----
-
-#### [NEW] [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
-
-Clone từ `system_narrative_outline_battle_v2.txt`:
-- CoT `pacing_evaluation` block
-- Outline fields include: `pirate_phase`, `subject_type` (ship/haven), `figures_featured`, `anatomy_focus`, `economic_angle`
-- key_data uses distinctive keywords from blueprint (Rule 16/17)
+- Pirate hook KHÔNG cần cross-section paradox như Biography ("vừa thiên tài vừa quái vật")
+- Pirate hook cần: (1) 1 fact gây sốc, (2) 1 myth bị phá, (3) 1 câu kéo vào câu chuyện
+- Toàn bộ data này nằm trong `key_facts` + `myths_vs_reality` + `narrative_moments` — đã có trong filtered blueprint
+- Gửi FULL blueprint sẽ khiến AI bị overwhelm bởi `anatomy_specs` 60+ lines không cần cho hook
 
 ---
 
-#### [NEW] [system_narrative_audit_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pirate.txt)
+## Review #5: Tác động lên Niche hiện tại — ZERO IMPACT
 
-Clone từ `system_narrative_audit_battle.txt`:
-- Validate: key_data coverage, hook uniqueness, pacing, 6-phase arc
-- Special checks: Money Angle present? Anti-Hero established? Micro-hooks at phase transitions?
+### Phân tích code-level
 
----
+**1. `_NICHE_PROMPT_MAP` (line 49-216):** Pirate keywords (`hải tặc`, `cướp biển`, `pirate`) là **hoàn toàn mới**, KHÔNG trùng với bất kỳ keyword nào hiện có:
 
-#### [NEW] [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt)
+| Keyword mới | Có trùng với Battle? | Có trùng với Biography? | Có trùng với Mystery? |
+|-------------|---------------------|------------------------|-----------------------|
+| `hải tặc` | ❌ | ❌ | ❌ |
+| `cướp biển` | ❌ | ❌ | ❌ |
+| `pirate` | ❌ | ❌ | ❌ |
+| `buccaneer` | ❌ | ❌ | ❌ |
+| `corsair` | ❌ | ❌ | ❌ |
+| `lịch sử hải tặc` | ❌ | ❌ | ❌ |
 
-Clone từ `system_narrative_write_battle_v2.txt` (latest template). **MUST include ALL sections**:
+**2. `_extract_chapter_blueprint()` (line 327-508):** Thêm `_is_pirate = "pirate_phases" in blueprint`:
+- `"pirate_phases"` là key **mới**, KHÔNG tồn tại trong blueprint của Battle hay Biography
+- Code existing: `_is_battle = "battle_phases" in blueprint` → **không bị ảnh hưởng**
+- Niche detection dựa trên blueprint KEY PRESENCE, không phải niche string → **zero collision**
 
-| Section | Adaptation |
-|---------|-----------|
-| SCENE HIERARCHY | main_key_data → FULL SCENES, sub_key_data → FAST BRIDGE |
-| TRANSITIONS + CHAPTER OPENING DISCIPLINE | Conjunction Ban, No Blind Pronouns — same rules |
-| ENDS_WITH ENFORCEMENT | Hard cut after ends_with |
-| TIMELINE FLOW | Cause before Effect, Micro-Callback |
-| QUESTION ENGINE | Question answered + Question opened |
-| **PIRATE-SPECIFIC PHASE WRITING STYLE** | 6 phases instead of battle's HEAD/HEART. Mồi Nhử = visceral + myth-busting. Bối Cảnh = analytical. Giải Phẫu = technical/mechanical. Nhân Vật = character-driven + action. Góc Khuất = macabre + cold facts. Sụp Đổ = reflective + grand |
-| **MONEY ANGLE RULE** | Every economic fact MUST have modern USD equivalent |
-| **PIRATE MEDICINE RULE** | Medical/wound descriptions must be visceral, step-by-step |
-| **ANTI-HERO ENGINE** | Establish the "real villain" (empire/company) before showing pirate cruelty |
-| **MICRO-HOOK MANDATE** | End of every phase: shocking question or reveal |
-| HOOK CHAPTER RULES | Visual Cue → Tối hậu thư → Phá vỡ lầm tưởng → Title card |
-| END CHAPTER RULES | Cause of end → Final fates → Di sản triết học → CTA |
-| SPOKEN RHYTHM | Wave pattern, breath points, one idea per sentence |
-| FOREIGN LANGUAGE RULE | TTS Safety |
-| PRIORITY ORDER | Word count > Spoken rhythm > Scene hierarchy > Structure > Detail |
-| OUTPUT | Chapter text only, no headers |
-
-All examples pirate-specific — NOT copy-paste from battle/biography.
-
----
-
-#### [NEW] [system_narrative_review_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_pirate.txt)
-
-Clone từ `system_narrative_review_battle.txt`:
-- Review criteria adapted: Money Angle check, Anti-Hero presence, Micro-Hook compliance
-- Scoring rubric for pirate-specific quality
-
----
-
-### Phase B: Code Wiring
-
----
-
-#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
-
-**B1. Dispatch Maps** — Add pirate keywords to ALL 7 maps in `_NICHE_PROMPT_MAP`:
-
+**3. `write_from_blueprint()` (line 3778-3821):** Thêm `elif _is_pirate:` branch:
 ```python
-# ── Pirate / Hải tặc (MUST match before generic keywords) ──
-"hải tặc":      "system_narrative_<step>_pirate.txt",
-"cướp biển":    "system_narrative_<step>_pirate.txt",
-"pirate":       "system_narrative_<step>_pirate.txt",
-"buccaneer":    "system_narrative_<step>_pirate.txt",
-"corsair":      "system_narrative_<step>_pirate.txt",
-"lịch sử hải tặc": "system_narrative_<step>_pirate.txt",  # longest match first
-```
-
-Maps to update:
-- `narrative_outline`
-- `narrative_phase_plan`
-- `narrative_validate_sub_key`
-- `narrative_audit`
-- `narrative_writer`
-- `narrative_review`
-
-**B2. Research Sections** — Define 3 new research section constants:
-
-```python
-_PIRATE_RESEARCH_SECTION_A = {
-    "name": "Core Topic, Era Context, Key Figures & Geography",
-    "fields": ["core_topic", "key_facts", "era_context", "key_figures", "geography"],
-    ...
-}
-_PIRATE_RESEARCH_SECTION_B = {
-    "name": "Pirate Phases, Anatomy Specs, Climactic Events, Economic Data",
-    "fields": ["pirate_phases", "anatomy_specs", "climactic_events", "economic_data", ...],
-    ...
-}
-_PIRATE_RESEARCH_SECTION_C = {
-    "name": "Dark Reality, Myths vs Reality, Fall & Legacy, Texture",
-    "fields": ["dark_reality", "myths_vs_reality", "fall_and_legacy", ...],
-    ...
-}
-_RESEARCH_SECTIONS_PIRATE = [_PIRATE_RESEARCH_SECTION_A, _PIRATE_RESEARCH_SECTION_B, _PIRATE_RESEARCH_SECTION_C]
-```
-
-Add to `_NICHE_RESEARCH_MAP`:
-```python
-"lịch sử hải tặc": _RESEARCH_SECTIONS_PIRATE,
-"hải tặc":         _RESEARCH_SECTIONS_PIRATE,
-"cướp biển":       _RESEARCH_SECTIONS_PIRATE,
-"pirate":          _RESEARCH_SECTIONS_PIRATE,
-"buccaneer":       _RESEARCH_SECTIONS_PIRATE,
-"corsair":         _RESEARCH_SECTIONS_PIRATE,
-```
-
-Also update `_RESEARCH_PROMPT_MAP` in `research_blueprint()`:
-```python
-"hải tặc": "system_research_blueprint_pirate.txt",
-"cướp biển": "system_research_blueprint_pirate.txt",
-"pirate": "system_research_blueprint_pirate.txt",
-"lịch sử hải tặc": "system_research_blueprint_pirate.txt",
-```
-
-**B3. Niche Detection** — Add `_is_pirate` branching:
-
-In `_extract_chapter_blueprint()`:
-```python
-_is_battle = "battle_phases" in blueprint
-_is_pirate = "pirate_phases" in blueprint
-
-if _is_pirate:
-    for key in ("core_topic", "key_facts", "era_context"):
-        if key in blueprint:
-            result[key] = blueprint[key]
-elif _is_battle:
-    ...
-```
-
-In `write_from_blueprint()`:
-```python
-_is_pirate = "pirate_phases" in blueprint
-
 if _is_hook:
-    if _is_battle:
-        chapter_bp = _extract_chapter_blueprint(blueprint, chapter_outline)
-    elif _is_biography:
+    if _is_battle:          # ← UNCHANGED
+        chapter_bp = _extract_chapter_blueprint(...)
+    elif _is_biography:     # ← UNCHANGED  
         chapter_bp = blueprint
-    elif _is_pirate:
-        # Pirate hooks: filtered (lean) — like battle
-        chapter_bp = _extract_chapter_blueprint(blueprint, chapter_outline)
+    elif _is_pirate:        # ← NEW BRANCH (additive only)
+        chapter_bp = _extract_chapter_blueprint(...)
     else:
-        raise RuntimeError(...)
+        raise RuntimeError(...)  # ← UNCHANGED
+```
+- Chỉ thêm `elif`, KHÔNG sửa logic của battle hoặc biography
+- `else: raise` vẫn giữ nguyên → đảm bảo niche chưa config sẽ fail rõ ràng
+
+**4. `validate_phase_plan_sub_keys()` (line 3110-3230):** Hiện tại dùng `_is_battle` boolean:
+```python
+_is_battle = any(kw in niche.lower() for kw in _BATTLE_KW)
+if _is_battle:
+    bp_battle_phases = blueprint.get("battle_phases", [])
+    ...
+else:  # falls to biography
+    bp_life_phases = blueprint.get("life_phases", [])
+    ...
 ```
 
-**B4. Outline Fields** — Add pirate-specific placeholders to `_NICHE_OUTLINE_FIELDS`:
+> [!WARNING]
+> **Đây là điểm DUY NHẤT cần chú ý**: Hiện tại code dùng binary `if _is_battle / else` → pirate sẽ rơi vào `else` (biography branch) và lấy sai excerpt fields. **FIX**: Thêm `elif _is_pirate:` branch với excerpt fields riêng:
+> ```python
+> _is_pirate = any(kw in niche.lower() for kw in _PIRATE_KW)
+> 
+> if _is_battle:
+>     bp_battle_phases = ...
+> elif _is_pirate:
+>     bp_pirate_phases = blueprint.get("pirate_phases", [])
+>     bp_key_figures = blueprint.get("key_figures", [])
+>     bp_climactic = blueprint.get("climactic_events", [])
+> else:
+>     bp_life_phases = ...
+> ```
 
+**5. `_NICHE_OUTLINE_FIELDS` (line 511-548):** Chỉ thêm pirate-specific placeholders:
 ```python
 # ── Pirate ──
 "{pirate_phase}": "pirate_phase",
@@ -302,76 +335,77 @@ if _is_hook:
 "{anti_hero_target}": "anti_hero_target",
 "{myth_busted}": "myth_busted",
 ```
+- **Additive only** — không xóa/sửa field nào hiện có
 
-**B5. Key Normalization** — Add to `_KEY_NORMALIZE`:
-
+**6. `_KEY_NORMALIZE` (line 1885-1894):** Chỉ thêm pirate key variants:
 ```python
 "key_figures_and_associates": "key_figures",
 "climactic_events_and_battles": "climactic_events",
 "dark_reality_and_horrors": "dark_reality",
 "economic_data_and_loot": "economic_data",
-"myths_and_reality": "myths_vs_reality",
 ```
+- Key mới, KHÔNG trùng với key chuẩn hóa hiện có
 
-**B6. Research blueprint log** — Update `research_blueprint()` log to detect pirate fields:
+### Kết luận tác động
 
-```python
-pirate_phases = len(blueprint.get("pirate_phases", []))
-figures = len(blueprint.get("key_figures", []))
-# etc.
-```
+| Component | Thay đổi | Ảnh hưởng Battle? | Ảnh hưởng Biography? |
+|-----------|----------|-------------------|---------------------|
+| `_NICHE_PROMPT_MAP` | Thêm entries mới | ❌ Zero | ❌ Zero |
+| `_extract_chapter_blueprint` | Thêm `elif _is_pirate` | ❌ Zero | ❌ Zero |
+| `write_from_blueprint` | Thêm `elif _is_pirate` | ❌ Zero | ❌ Zero |
+| `validate_phase_plan_sub_keys` | Thêm `elif _is_pirate` | ❌ Zero | ❌ Zero |
+| `_NICHE_OUTLINE_FIELDS` | Thêm placeholder mới | ❌ Zero | ❌ Zero |
+| `_KEY_NORMALIZE` | Thêm key variants mới | ❌ Zero | ❌ Zero |
+| `_NICHE_RESEARCH_MAP` | Thêm pirate entries | ❌ Zero | ❌ Zero |
+| `_RESEARCH_PROMPT_MAP` | Thêm pirate entries | ❌ Zero | ❌ Zero |
+
+**Total: ZERO impact trên tất cả niches hiện tại.** Tất cả thay đổi là additive (`elif`, thêm dict entries, thêm constants). KHÔNG sửa, xóa, hoặc thay đổi bất kỳ logic hiện có nào.
 
 ---
+
+## Proposed Changes (Updated)
+
+### Phase A: Files to Create (9 files)
+
+#### [NEW] [narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_lịch_sử_hải_tặc.json)
+
+Style JSON với **2 frameworks**:
+1. **"Chiến Hạm Huyền Thoại"** — `use_when`: Chủ đề là một con tàu / chiến hạm cụ thể
+2. **"Thành Trì Vô Luật"** — `use_when`: Chủ đề là một địa điểm / sào huyệt / cảng hải tặc
+
+`evaluation_focus` riêng cho mỗi framework:
+- Ship: `primary_data_field: "armament_and_design"`, `tier_field: "infamy_scale"`
+- Location: `primary_data_field: "governance_and_economy"`, `tier_field: "infamy_scale"`
+
+#### [NEW] Prompt files (7 files)
+
+| File | Clone từ | Adaptation |
+|------|----------|-----------|
+| `system_research_blueprint_pirate.txt` | battle research | 13 pirate sections, dual-mode `anatomy_specs`, `origin_story` mới |
+| `system_narrative_phase_plan_pirate.txt` | battle phase plan | 6 pirate phases, hook = 3 items (shock + myth + tease) |
+| `system_validate_sub_key_pirate.txt` | battle validate | 3 tests giữ nguyên, anti-patterns + examples đổi sang pirate domain |
+| `system_narrative_outline_pirate.txt` | battle outline v2 | Pirate-specific outline fields, CoT pacing evaluation |
+| `system_narrative_audit_pirate.txt` | battle audit | Money Angle check, Anti-Hero check, Micro-Hook compliance |
+| `system_narrative_write_pirate.txt` | battle write v2 | 6-phase writing style, 4 kỹ thuật nâng cấp, pirate examples |
+| `system_narrative_review_pirate.txt` | battle review | Pirate-specific scoring rubric |
+
+### Phase B: Code Wiring
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+Tất cả changes là **additive** (thêm `elif`, thêm dict entries). Không sửa code hiện có.
+
+Xem chi tiết ở Review #5 ở trên.
 
 ### Phase C: Verification
 
----
-
-#### C1. Pre-flight Check
-- [ ] Style JSON is valid JSON (`python -c "import json; json.load(open(...))"`)
-- [ ] All 7 prompt files exist in `prompts/`
-- [ ] All dispatch map entries point to existing files
-- [ ] `pipeline_features` is set in style JSON
-- [ ] `evaluation_focus.tier_scoring` values match research prompt instructions
-
-#### C2. Existing Niche Regression Test
-- [ ] Verify biography dispatch still maps correctly
-- [ ] Verify battle v2 dispatch still maps correctly
-- [ ] Check: hook chapters still receive correct blueprint data for both niches
-- [ ] Check: no pirate keywords accidentally collide with existing niches
-
-#### C3. New Niche Smoke Test
-- [ ] Run with test topic (e.g., "Tàu Queen Anne's Revenge — Chiến hạm của Râu Đen")
-- [ ] Verify research blueprint populates all expected fields including `pirate_phases`
-- [ ] Verify pre-scoring matches tier values (no FUZZY warnings)
-- [ ] Verify phase plan generates 6 correct phases
-- [ ] Verify outline generates with correct pirate-specific field names
-- [ ] Verify writer prompt injects all placeholders correctly
-- [ ] Verify Money Angle, Anti-Hero, Micro-Hook rules are followed
-
-#### C4. Git Commit
-- [ ] `git add` all new files
-- [ ] Commit with message: `feat: add pirate history narrative pipeline`
+Giữ nguyên — pre-flight check, regression test biography+battle, smoke test pirate.
 
 ---
 
-## Open Questions
+## Open Questions (Updated)
 
 > [!IMPORTANT]
-> 1. **Tên niche tiếng Việt chính xác?** Tôi đề xuất `narrative_lịch_sử_hải_tặc.json`. Bạn muốn tên khác không?
-> 2. **Có muốn thêm framework thứ 2?** Hiện tại tôi thiết kế 1 framework "Giải Phẫu Huyền Thoại" với dual-mode (Ship/Haven). Nếu muốn, có thể thêm framework chuyên cho "Nhân vật hải tặc" (tiểu sử riêng kiểu Blackbeard, Anne Bonny) — nhưng điều này sẽ overlap với niche Biography.
-> 3. **Subject type detection**: Làm sao AI biết đây là **Tàu** hay **Địa điểm**? Tôi đề xuất thêm field `subject_type: "ship" | "haven"` trong blueprint, được AI auto-detect từ topic input.
-
----
-
-## Verification Plan
-
-### Automated Tests
-1. JSON validation: `python -c "import json; json.load(open('styles/narrative_lịch_sử_hải_tặc.json', encoding='utf-8'))"`
-2. Dispatch test: Import `_get_niche_prompt` và test with pirate keywords
-3. Keyword collision test: Đảm bảo "hải tặc" không match vào battle/biography
-
-### Manual Verification
-1. Chạy full pipeline New Content mode với topic test
-2. Review output chapters: kiểm tra Money Angle, Anti-Hero, Micro-hooks, Pirate Medicine
-3. Chạy lại biography + battle v2 pipeline → xác nhận không regression
+> 1. **Tên framework tiếng Việt** — "Chiến Hạm Huyền Thoại" và "Thành Trì Vô Luật" — ok chưa?
+> 2. **Key_data đã review** — bạn có muốn thêm/bớt section nào trong 14 sections không?
+> 3. **`origin_story`** section mới — cần thiết để Phase 2 có đủ data. Đồng ý thêm không?

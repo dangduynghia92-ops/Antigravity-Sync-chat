@@ -1,6 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Comprehensive implementation plan for adding a new 'Lịch Sử Hải Tặc' (Pirate History) niche to the narrative pipeline. Covers all 3 phases from the new-niche workflow: Phase A (9 files to create — Style JSON, 7 prompt files, research sections), Phase B (code wiring — dispatch maps, niche detection, outline fields, key normalization), and Phase C (verification — pre-flight check, regression tests, smoke test). Includes detailed design decisions for the dual-mode framework (Ships vs. Locations), 6-phase narrative structure, pirate-specific blueprint schema, and hook strategy analysis.",
-  "updatedAt": "2026-04-13T17:01:37.325723Z",
+  "summary": "Updated implementation plan cho niche Lịch Sử Hải Tặc. Tách thành 2 framework riêng (Chiến Hạm Huyền Thoại cho tàu, Thành Trì Vô Luật cho địa điểm/sào huyệt). Bổ sung phân tích chi tiết: (1) Giải thích 'haven' = sào huyệt/cảng hải tặc, (2) Review toàn bộ key_data với bảng so sánh Ship vs Location, (3) Đánh giá tính hợp lý của 3 tests validate sub-key cho niche pirate với ví dụ cụ thể, (4) Phân tích chi tiết hook strategy với so sánh 3 niches, (5) Đánh giá tác động lên niche hiện tại (ZERO impact) với bằng chứng code-level.",
+  "updatedAt": "2026-04-13T17:15:19.040349600Z",
+  "version": "1",
   "requestFeedback": true
 }
