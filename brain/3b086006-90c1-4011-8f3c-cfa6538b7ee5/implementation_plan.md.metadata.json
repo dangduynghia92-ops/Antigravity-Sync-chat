@@ -1,6 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Implementation plan for unifying the narrative pipeline by transitioning from hardcoded biography-only phase planning to a data-driven, config-based architecture. Covers 5 components: Style JSON v2 with pipeline_features flags, Battle Phase Plan + Validate Sub-key prompts, Code wiring in rewriter.py (dispatch maps, research sections, blueprint extraction), Engine config detection replacing _is_biography hardcode in script_creation_tab.py, and Niche Config v2 with appropriate word counts. Includes detailed gap analysis, backward compatibility safeguards, and verification plan.",
-  "updatedAt": "2026-04-12T23:48:39.302588600Z",
+  "summary": "Updated implementation plan incorporating strict Error-First philosophy: no fallbacks between niches, early termination with clear error logs when pipeline components don't match. Covers 5 components with explicit niche validation gates at each pipeline step. Key changes from v1: all fallback logic replaced with RuntimeError + descriptive log messages, niche-aware dispatch maps made mandatory (not optional), _extract_chapter_blueprint requires explicit niche field config, _build_excerpt requires explicit niche field registration, validate_phase_plan_sub_keys requires niche param and matching prompt file.",
+  "updatedAt": "2026-04-13T00:02:58.443029800Z",
+  "version": "1",
   "requestFeedback": true
 }
