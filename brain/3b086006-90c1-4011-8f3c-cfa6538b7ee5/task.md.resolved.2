@@ -1,0 +1,24 @@
+# Battle Niche v2 — Pipeline Unification
+
+## Phase 0: Style JSON
+- [x] Create `styles/narrative_phân_tích_trận_đánh_v2.json`
+- [x] Simplify to 1 framework "Giải Mã Chiến Trường" (HEAD + HEART combined)
+- [x] Add Deep-Dive techniques: question engine, info withholding, climax revisited
+- [x] Remove chapter_structure layer — phases define writing approach
+- [x] Fix hook: Deep-Dive in-medias-res (not biography ANCHOR→TWIST)
+
+## Phase 1: Prompts (pipeline = same as biography, content = battle-specific)
+- [x] `system_narrative_phase_plan_battle.txt` — map blueprint → 6 steps, classify main/sub keys
+- [x] `system_validate_sub_key_battle.txt` — 3 tests with battle-specific criteria
+- [ ] `system_research_blueprint_battle.txt` — AI research prompt for New Content mode
+- [ ] `system_narrative_outline_battle.txt` — adapt current battle outline for v2 phases + main/sub keys
+- [ ] `system_narrative_write_battle.txt` — adapt current battle write (Deep-Dive techniques) for v2 phases
+
+## Phase 2: Engine Refactoring
+- [ ] Update `rewriter.py` — niche-aware dispatching for validate_phase_plan_sub_keys
+- [ ] Update `script_creation_tab.py` — _run_shared_fw_pipeline for battle niche v2
+- [ ] Verify pipeline_features are read from style JSON
+
+## Phase 3: Testing
+- [ ] Validate JSON integrity
+- [ ] E2E test with sample battle topic
