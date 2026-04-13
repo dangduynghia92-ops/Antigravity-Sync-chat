@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Complete audit of all rewriter.py changes affecting the biography pipeline. Lists each change, whether it impacts biography, and whether it's a regression or harmless addition.",
+  "updatedAt": "2026-04-13T15:53:37.408790200Z",
+  "requestFeedback": true
+}
