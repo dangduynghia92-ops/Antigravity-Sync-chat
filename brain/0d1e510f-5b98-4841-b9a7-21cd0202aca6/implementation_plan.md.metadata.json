@@ -1,7 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Proposes 7 chapter structures for pirate niche based on YouTube documentary storytelling research:\n1. HEIST_SEQUENCE — raid/capture blow-by-blow\n2. MECHANICAL_AUTOPSY — how the machine/system works\n3. ORIGIN_MUTATION — transformation from X to Y\n4. MYTH_TRIAL — pop culture vs historical reality\n5. POWER_PLAY — scheme from ambition to consequence\n6. SURVIVAL_LENS — immersive horror of daily reality\n7. GHOST_EVIDENCE — archaeological discovery and legacy\nIncludes phase-structure affinity map, variety rules, and comparison with biography/battle niches.",
-  "updatedAt": "2026-04-13T18:47:05.660387700Z",
-  "version": "2",
+  "summary": "Plan to expand pirate niche prompts to properly support both 'Chiến Hạm Huyền Thoại' (ship) and 'Thành Trì Vô Luật' (location) frameworks. Uses dual-branch [SHIP]/[LOCATION] approach within the same prompt files rather than duplicating files. Changes affect outline, writer, and review prompts. No code changes needed since subject_type is already wired.",
+  "updatedAt": "2026-04-14T01:55:46.928624Z",
+  "version": "3",
   "requestFeedback": true
 }

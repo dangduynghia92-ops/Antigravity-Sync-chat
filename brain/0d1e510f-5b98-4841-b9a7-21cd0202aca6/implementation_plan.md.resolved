@@ -1,187 +1,149 @@
-# Pirate Chapter Structures — Research & Design
+# Mở rộng Pirate Prompts: Hỗ trợ cả Ship + Location Framework
 
-## Vấn đề hiện tại
+## Bối cảnh
 
-Pirate niche **KHÔNG CÓ** `chapter_structure` — trong khi Biography có 8, Battle có 7. Kết quả: mọi body chapter đều kể theo cùng 1 kiểu (chronological retelling), gây đều đều và nhàm.
+Pirate niche hiện có **2 frameworks** trong style JSON:
+- **Chiến Hạm Huyền Thoại** → Ship (Queen Anne's Revenge, Whydah Gally...)
+- **Thành Trì Vô Luật** → Location (Nassau, Tortuga, Port Royal...)
 
-## Nguyên tắc thiết kế
+Nhưng tất cả prompt đều **thiên về Ship** — ví dụ, examples, Pirate Medicine scope, hook rules đều mặc định context tàu.
 
-Dựa trên research về YouTube documentary storytelling:
+## Phương án: Dual-Branch trong cùng prompt (KHÔNG tách file)
 
-1. **Mỗi structure = 1 kiểu kể khác nhau** — buộc writer thay đổi góc tiếp cận cho mỗi chapter
-2. **Mỗi structure có tension arc riêng** — tạo curiosity gap tự nhiên: "audience MUỐN biết kết quả"
-3. **Xoay quanh câu hỏi cốt lõi** — structure trả lời 1 CÂU HỎI cụ thể mà audience đang hỏi
-4. **Phase affinity** — mỗi structure phù hợp tự nhiên với 1-2 phases, nhưng vẫn linh hoạt
+**Lý do**: ~80% rules là chung (Money Angle, Anti-Hero, Micro-Hooks, Anti-Repetition, Question Engine, chapter structures...). Chỉ ~20% cần branch `[SHIP]`/`[LOCATION]`. Tách file sẽ dẫn đến code duplication lớn và rủi ro desync.
 
-## Đề xuất: 7 Chapter Structures cho Pirate Niche
+## Proposed Changes
 
----
+### Prompt: Outline (`system_narrative_outline_pirate.txt`)
 
-### 1. `HEIST_SEQUENCE`
+#### [MODIFY] [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
 
-**Câu hỏi audience**: *"Vụ cướp/chiến đấu này xảy ra như thế nào?"*
+**Hiện trạng**: Hầu hết đã OK — L45-46 có `[SHIP]`/`[LOCATION]` branching cho Giải Phẫu phase.
 
-**Flow**: Target identified → Approach/Plan → Execution blow-by-blow → Loot/Aftermath
+**Cần thêm**:
+1. **L55-58 (Góc Khuất phase)**: Thêm `[LOCATION]` pattern
 
-**Tại sao hiệu quả**: Heist là format giữ chân mạnh nhất trên YouTube — audience muốn biết "có thành công không?" Tension tự nhiên từ planning đến execution. Mỗi bước tăng stakes.
+   ```diff
+    Góc Khuất Tàn Khốc = HEART (cold, clinical, unflinching)
+   -  Pattern: Daily horrors → Pirate Medicine scene → Slavery/exploitation → Mortality statistics
+   +  [SHIP] Pattern: Daily horrors on deck → Pirate Medicine scene → Slavery/exploitation → Mortality stats
+   +  [LOCATION] Pattern: Daily violence without law → Exploitation/prostitution → Disease in tropical heat → Slave trade dependency
+   ```
 
-**Phase affinity**: Nhân Vật & Cao Trào (70%), Nguồn Gốc (30% — khi kể vụ capture tàu gốc)
-
-**Ví dụ áp dụng**:
-- Capture of *La Concorde*: Target (sick French ship) → Plan (windward gauge) → Execution (warning shots) → Loot ($750K cargo + ship itself)
-- Charleston Blockade: Target (colonial port) → Siege → Negotiation → Medicine chest extorted
-- *Great Allen* raid: Target → Chase at 12 knots → Surrender → Burn the prize
-
-**Khác biệt với `TURNING_POINT` (Battle)**: Battle turning point tập trung vào MỘT khoảnh khắc đảo chiều. Heist sequence kể TOÀN BỘ vụ việc từ A→Z với chi tiết tactical.
-
----
-
-### 2. `MECHANICAL_AUTOPSY`
-
-**Câu hỏi audience**: *"Cỗ máy/hệ thống này hoạt động như thế nào?"*
-
-**Flow**: What it looks like (impression) → How each part works (mechanics) → What happens when it's used (combat/real-world test) → Why it mattered (strategic impact)
-
-**Tại sao hiệu quả**: "How it works" là format YouTube engagement cao nhất trong history/science. Curiosity gap: "tôi thấy nó rồi nhưng chưa hiểu VÌ SAO nó nguy hiểm." Phase cuối (real-world test) biến kiến thức khô thành cảnh hành động.
-
-**Phase affinity**: Giải Phẫu Cơ Chế (90%)
-
-**Ví dụ áp dụng**:
-- **Ship**: QAR's 40 cannons: Impression (40 gun ports) → Mechanics (18-pound shot, reload time, broadside weight) → Test (what happens when cannonball hits wood AND flesh) → Impact (no ship in the Americas could match this)
-- **Haven**: Nassau's governance: Impression (lawless island) → Mechanics (pirate code, election, dispute resolution) → Test (how they resisted Navy raids) → Impact (first "democratic" society in the Caribbean)
-
-**Khác biệt với `TACTICAL_MAP` (Battle)**: Tactical map shows formations and geography. Mechanical autopsy explains HOW A THING WORKS physically — cause→effect mechanics.
+2. **L61 (Sụp Đổ phase)**: Thêm `[LOCATION]` archaeological context
+   ```diff
+   -  Pattern: Cause of end → Final fates → Archaeological legacy → Philosophical question
+   +  [SHIP] Pattern: Cause of wreck → Final fates → Archaeological discovery → Philosophical question
+   +  [LOCATION] Pattern: What ended it (Navy/Treaty/Disaster) → Fate of inhabitants → Modern ruins/site → Philosophical question
+   ```
 
 ---
 
-### 3. `ORIGIN_MUTATION`
+### Prompt: Writer (`system_narrative_write_pirate.txt`)
 
-**Câu hỏi audience**: *"Làm sao nó biến từ X thành Y?"*
+#### [MODIFY] [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt)
 
-**Flow**: Original identity (what it was) → Catalyst (what changed everything) → Transformation process (physical/structural change) → New identity revealed (first test as new entity)
+**Cần sửa nhiều nhất** — 5 sections:
 
-**Tại sao hiệu quả**: Transformation stories inherently dramatic — audience watches something BECOME something else. The contrast between "before" and "after" creates emotional weight automatically.
+1. **L148-155 — Bối Cảnh phase** (minor): Thay `"this ship/haven"` → `[SHIP]/[LOCATION]` branching
+   ```diff
+   -  Focus on WHY — what systemic forces created this ship/haven
+   +  [SHIP]: Focus on WHY — what forces led to this ship's creation/capture
+   +  [LOCATION]: Focus on WHY — what power vacuum/geography made this place a pirate haven
+   ```
 
-**Phase affinity**: Nguồn Gốc (70%), Bối Cảnh (30% — khi kể hệ thống biến đổi)
+2. **L174-182 — Góc Khuất phase** (major): Add `[LOCATION]` dark reality
+   ```diff
+    Góc Khuất Tàn Khốc (HEART):
+      - Cold, clinical, unflinching
+   -  - PIRATE MEDICINE in FULL DETAIL: the "surgery" process step-by-step
+   -    (who operates = carpenter, restraint = tied to mast, pain management = rum/leather in mouth,
+   -    procedure = saw through bone in 2 minutes, cauterize = hot iron on stump,
+   -    survival odds = 50/50, compensation = 800 gold coins from shared fund)
+   +  - [SHIP]: PIRATE MEDICINE in FULL DETAIL: the "surgery" process step-by-step
+   +    (who operates = carpenter, restraint = tied to mast, pain management = rum/leather in mouth,
+   +    procedure = saw through bone in 2 minutes, cauterize = hot iron on stump,
+   +    survival odds = 50/50, compensation = 800 gold coins from shared fund)
+   +  - [LOCATION]: DARK UNDERBELLY in FULL DETAIL: violence without police (how disputes
+   +    were "settled"), exploitation/prostitution economy, tropical disease without medicine,
+   +    slave trade operations running INSIDE the "free" haven
+   ```
 
-**Ví dụ áp dụng**:
-- La Concorde → QAR: Merchant frigate → Captured → Stripped of slave infrastructure, reinforced for 40 cannons → First test under Blackbeard's command
-- Nassau transformation: Uninhabited island → Pirates arrive after War of Spanish Succession → Self-governing pirate republic
-- Teach's evolution: Royal Navy sailor → Hornigold's protégé → Independent commodore
+3. **L380-410 — HOOK CHAPTER RULES** (major): Add `[LOCATION]` hook examples
+   ```diff
+      1. VISUAL CUE — Start with an atmospheric IMAGE.
+   -     Use SECOND-PERSON POV: "Imagine: sương mù trên Đại Tây Dương.
+   -     Một bóng đen khổng lồ trồi lên phía trước..."
+   +     [SHIP]: "Imagine: sương mù trên Đại Tây Dương. Một bóng đen khổng lồ trồi lên..."
+   +     [LOCATION]: "Imagine: bạn đặt chân lên hòn đảo. Mùi rum, thuốc súng, và máu..."
+   
+      2. SHOCKING FACT
+   -     Make it feel IMPOSSIBLE: "Con tàu này mang 40 khẩu đại bác
+   -     và số vàng tương đương 400 triệu đô la ngày nay."
+   +     [SHIP]: "Con tàu này mang 40 khẩu đại bác và số vàng tương đương 400 triệu đô la."
+   +     [LOCATION]: "Nơi này có hệ thống bầu cử dân chủ trước cả nước Mỹ 100 năm."
+   ```
 
-**Khác biệt với `ORIGIN_STORY` (Biography)**: Biography origin kể childhood→formative experiences. Mutation kể physical/structural transformation of an OBJECT or SYSTEM.
+4. **L416-420 — END CHAPTER RULES** (minor): Add `[LOCATION]` ending
+   ```diff
+   -  **ARCHAEOLOGICAL**: Has the wreck/ruins been found? What treasures remain?
+   +  [SHIP]: **ARCHAEOLOGICAL**: Has the wreck been found? What artifacts recovered?
+   +  [LOCATION]: **MODERN SITE**: What does the location look like today? Tourism? Ruins? Museum?
+   ```
 
----
+5. **L366-370 — REQUIRED ELEMENTS examples** (minor): Add `[LOCATION]` example
+   ```diff
+      [MECHANICS] HOW things worked
+   -    GOOD: "Đại bác 18 pound bắn viên sắt nặng 8 kg..."
+   +    [SHIP] GOOD: "Đại bác 18 pound bắn viên sắt nặng 8 kg..."
+   +    [LOCATION] GOOD: "Khi một cướp biển bị bắt quả tang ăn cắp, hội đồng
+   +      bầu cử sẽ bỏ phiếu: 2/3 đồng ý = bỏ rơi trên đảo hoang với 1 khẩu súng"
+   ```
 
-### 4. `MYTH_TRIAL`
-
-**Câu hỏi audience**: *"Cái tôi biết từ phim ảnh có đúng không?"*
-
-**Flow**: Popular belief presented confidently → Evidence examined → Verdict (reality exposed) → "Reality is better because..." 
-
-**Tại sao hiệu quả**: Audience cảm thấy THÔNG MINH HƠN sau khi xem — "I was lied to, now I know the truth." Tension đến từ cognitive dissonance: "what I believed vs. what actually happened."
-
-**Phase affinity**: Bất kỳ phase nào có `myth_busted` content. Đặc biệt mạnh khi kết hợp với Bối Cảnh hoặc Sụp Đổ.
-
-**Ví dụ áp dụng**:
-- "Pirates buried treasure" → Evidence: only 1 pirate (Kidd) ever buried treasure, rest spent it immediately → Reality: pirate economy was hand-to-mouth, not long-term investment
-- "QAR went down in glorious battle" → Evidence: Teach deliberately grounded it → Reality: cold corporate downsizing is MORE dramatic than Hollywood
-- "Pirate democracy was fair" → Evidence: still used enslaved labor → Reality: pirates replicated the very system they rebelled against
-
-**Khác biệt với `EVIDENCE_REVERSAL` (Biography)**: Evidence reversal examines SOURCE BIAS (who wrote the record and why). Myth trial examines POP CULTURE vs HISTORICAL REALITY — specifically targeting what movies/stories got wrong.
-
----
-
-### 5. `POWER_PLAY`
-
-**Câu hỏi audience**: *"Tại sao hắn làm điều đó? Hắn đang tính toán gì?"*
-
-**Flow**: Ambition/Goal established → Strategy/Manipulation deployed → Collision with reality → Consequence (success, betrayal, or ironic reversal)
-
-**Tại sao hiệu quả**: "Game of Thrones energy" — watching someone scheme and seeing what happens. Audience engages because they're trying to PREDICT whether the scheme will work.
-
-**Phase affinity**: Nhân Vật & Cao Trào (60%), Bối Cảnh (30%), Sụp Đổ (10%)
-
-**Ví dụ áp dụng**:
-- Teach's smoke-and-fire psychological warfare: Goal (surrender without combat) → Strategy (slow-matches in beard, theatrical terror) → Reality (merchants drop swords on sight) → Consequence (extracted millions without shedding pirate blood)
-- Teach strips Bonnet of command: Goal (fleet expansion) → Strategy (board Revenge, assess incompetence) → Manipulation (politely confine Bonnet as "guest") → Consequence (added armed sloop to fleet in one afternoon)
-- Teach's scuttling scheme: Goal (keep all the money) → Strategy (run ship aground, strand crew) → Execution (abandon 25 men on sandbar) → Consequence (5 months later, his head on a bowsprit)
-
-**Khác biệt với `COMMANDER_FOCUS` (Battle)**: Commander focus anchors to ONE decision moment. Power play follows the ENTIRE SCHEME from goal through manipulation to consequence — it's about CUNNING, not just command.
-
----
-
-### 6. `SURVIVAL_LENS`
-
-**Câu hỏi audience**: *"Sống trên tàu/ở đó thực sự như thế nào?"*
-
-**Flow**: Enter the environment (sensory immersion) → Daily reality (escalating horrors) → When things go wrong (medical emergency/crisis) → What it costs to survive (compensation/consequence)
-
-**Tại sao hiệu quả**: Horror giữ attention — audience "cannot look away," đặc biệt khi là horror THẬT. 2nd-person POV ("Imagine you are below deck...") creates visceral empathy. Sensation of "I can almost feel/smell this."
-
-**Phase affinity**: Góc Khuất Tàn Khốc (80%), Giải Phẫu (20% — khi mô tả living conditions)
-
-**Ví dụ áp dụng**:
-- Life below deck: Temperature (100°F) → Rats eating feet → Water turns green → Pirate Medicine (full surgical scene) → Disability compensation (600 pieces of eight)
-- Haven dark side: Tavern economy → Disease epidemic → Enslaved labor → What "freedom" actually cost
-- The Middle Passage: Conditions for 516 enslaved Africans → 61 deaths → The ship as a floating graveyard
-
-**Khác biệt với `DARK_REVELATION` (Biography)**: Biography dark revelation is about contradicting audience expectations about a PERSON. Survival lens immerses the audience physically in a PLACE/ENVIRONMENT — they experience the horror through senses.
-
-**Đây là chapter duy nhất cho full Pirate Medicine scene** (theo scoped rule đã fix).
+6. **L321-328 — PIRATE MEDICINE rule scope**: Expand for `[LOCATION]`
+   ```diff
+    2. PIRATE MEDICINE (Y Khoa Rùng Rợn):
+   -   SCOPE: Góc Khuất (Dark Reality) chapter ONLY.
+   +   [SHIP] SCOPE: Góc Khuất (Dark Reality) chapter ONLY. Full surgery scene.
+   +   [LOCATION] SCOPE: Góc Khuất (Dark Reality) chapter ONLY. Full "dark underbelly" scene
+   +   (violence without law enforcement, exploitation, tropical disease, slave trade).
+   ```
 
 ---
 
-### 7. `GHOST_EVIDENCE`
+### Prompt: Review (`system_narrative_review_pirate.txt`)
 
-**Câu hỏi audience**: *"Chuyện gì xảy ra sau đó? Người ta đã tìm thấy gì?"*
+#### [MODIFY] [system_narrative_review_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_pirate.txt)
 
-**Flow**: What was lost/forgotten → Discovery/archaeological moment → What the evidence reveals → Legacy question (what this changes about our understanding)
+Thêm nhận diện `subject_type` vào review context. **Thay đổi nhỏ**:
 
-**Tại sao hiệu quả**: Mystery + discovery = powerful combination. Audience feels like they're on a TREASURE HUNT — ironic for pirate content. The jump from 1718 to 1996 (finding the wreck) creates a powerful time compression effect.
-
-**Phase affinity**: Sụp Đổ & Di Sản (90%)
-
-**Ví dụ áp dụng**:
-- QAR wreck: Ship disappears 1718 → Phil Masters finds magnetic anomaly 1996 → 300,000+ artifacts (loaded cannons, syringes, dice, shackles) → What artifacts prove about pirate society
-- Port Royal earthquake: Thriving pirate haven → 1692 earthquake swallows the city → Underwater archaeology → What the ruins reveal about daily life
-- Nassau's erasure: British reclaim Nassau → Woodes Rogers dismantles pirate republic → Archaeological/documentary traces → Modern tourist site vs historical reality
-
-**Khác biệt với `VERDICT_SYNTHESIS` (Biography)**: Verdict synthesis classifies evidence tiers (confirmed/probable/unknowable). Ghost evidence tells the story of PHYSICAL DISCOVERY — the moment someone finds the wreck, the dig, the artifacts, connecting past to present.
+- L6 (PIRATE MEDICINE check): Add `[LOCATION]` equivalent
+  ```diff
+  - 6. **PIRATE MEDICINE COMPLIANCE** — Does exactly ONE chapter include a full Pirate Medicine scene?
+  + 6. **DARK REALITY COMPLIANCE** — [SHIP]: Does exactly ONE chapter include a full Pirate Medicine scene?
+  +    [LOCATION]: Does exactly ONE chapter include a full "dark underbelly" scene (violence, exploitation, slavery)?
+  ```
 
 ---
 
-## Phase-Structure Affinity Map
+### Code: rewriter.py (KHÔNG thay đổi)
 
-| Phase | Preferred Structures | Avoid |
-|-------|---------------------|-------|
-| **Bối Cảnh** (Context) | `ORIGIN_MUTATION`, `POWER_PLAY`, `MYTH_TRIAL` | `SURVIVAL_LENS`, `GHOST_EVIDENCE` |
-| **Nguồn Gốc** (Origin) | `ORIGIN_MUTATION`, `HEIST_SEQUENCE` | `GHOST_EVIDENCE` |
-| **Giải Phẫu** (Anatomy) | `MECHANICAL_AUTOPSY` | `GHOST_EVIDENCE`, `POWER_PLAY` |
-| **Nhân Vật & Cao Trào** (Characters) | `HEIST_SEQUENCE`, `POWER_PLAY` | `MECHANICAL_AUTOPSY` |
-| **Góc Khuất** (Dark Reality) | `SURVIVAL_LENS`, `MYTH_TRIAL` | `HEIST_SEQUENCE` |
-| **Sụp Đổ & Di Sản** (Fall/Legacy) | `GHOST_EVIDENCE`, `POWER_PLAY` | `MECHANICAL_AUTOPSY` |
+`subject_type` đã nằm trong `_NICHE_OUTLINE_FIELDS` → tự inject vào prompt. Writer prompt dùng `{subject_type}` ở L22. AI writer sẽ thấy `Subject type: ship` hoặc `Subject type: location` → tự chọn đúng branch `[SHIP]`/`[LOCATION]`.
 
-## Variety Rule
+**Không cần sửa code.**
 
-> **Hai body chapters liên tiếp KHÔNG ĐƯỢC dùng cùng chapter_structure.**
-> 
-> Ví dụ hợp lệ (8 chapters):
-> Hook → `ORIGIN_MUTATION` → `HEIST_SEQUENCE` → `MECHANICAL_AUTOPSY` → `POWER_PLAY` → `HEIST_SEQUENCE` → `SURVIVAL_LENS` → End(`GHOST_EVIDENCE`)
+---
 
-## So sánh với các niche khác
+## Verification Plan
 
-| | Biography (8) | Battle (7) | Pirate (7) |
-|--|---------------|------------|------------|
-| **Câu hỏi trung tâm** | "Cuộc đời này có gì?" | "Trận chiến diễn ra sao?" | "Cỗ máy/thế giới hải tặc vận hành sao?" |
-| **HEAD structures** | context_excavation, source_analysis, evidence_reversal | political_chess, tactical_map, cost_accounting | `MECHANICAL_AUTOPSY`, `MYTH_TRIAL`, `GHOST_EVIDENCE` |
-| **HEART structures** | achievement_showcase, dark_revelation, relationship_crucible | fog_of_war, commander_focus, turning_point | `HEIST_SEQUENCE`, `POWER_PLAY`, `SURVIVAL_LENS` |
-| **Neutral** | origin_story, verdict_synthesis | dual_perspective | `ORIGIN_MUTATION` |
+### Test 1: Pirate Ship (regression)
+- Topic: Queen Anne's Revenge (đã có data)
+- Expected: Prompt giống hệt trước — `[SHIP]` branches active
 
-## Open Questions
+### Test 2: Pirate Location (new)
+- Topic: Nassau
+- Expected: `[LOCATION]` branches active — governance, economy, defense thay vì cannon specs
 
-> [!IMPORTANT]
-> 1. **7 structures đủ chưa?** Hay cần thêm/bớt cái nào?
-> 2. **Tên gọi** có dễ hiểu với AI không? (ví dụ `HEIST_SEQUENCE` vs `RAID_SEQUENCE`?)
-> 3. **MYTH_TRIAL** nên là structure riêng hay nên là technique woven vào bất kỳ structure nào?
-> 4. **SURVIVAL_LENS** có nên giới hạn chỉ 1 chapter/script không? (để tránh lặp horror)
+### Kiểm tra thủ công
+- Mở `ch*_prompt_debug.txt` → xác nhận `Subject type: location` xuất hiện
+- Verify AI follow đúng `[LOCATION]` branch (sociological analysis thay vì ship anatomy)
