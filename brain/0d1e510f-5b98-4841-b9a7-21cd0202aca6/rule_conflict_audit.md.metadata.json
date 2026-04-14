@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive conflict audit of the pirate ship writer prompt (system_narrative_write_pirate.txt). Identifies 5 real conflicts, 3 ambiguities, and 2 redundancies across the 552-line prompt. Each issue includes the conflicting lines, severity, and a fix recommendation.",
+  "updatedAt": "2026-04-14T03:28:27.155721900Z",
+  "requestFeedback": true
+}
