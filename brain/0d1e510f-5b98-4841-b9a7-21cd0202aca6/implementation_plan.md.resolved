@@ -1,149 +1,112 @@
-# Mở rộng Pirate Prompts: Hỗ trợ cả Ship + Location Framework
+# Tách đôi Pirate Prompts: Ship vs Location
 
 ## Bối cảnh
 
-Pirate niche hiện có **2 frameworks** trong style JSON:
-- **Chiến Hạm Huyền Thoại** → Ship (Queen Anne's Revenge, Whydah Gally...)
-- **Thành Trì Vô Luật** → Location (Nassau, Tortuga, Port Royal...)
+Pirate niche có 2 framework khác hoàn toàn:
+- **Chiến Hạm Huyền Thoại** (Ship) → Queen Anne's Revenge, Whydah...
+- **Thành Trì Vô Luật** (Location) → Nassau, Tortuga, Port Royal...
 
-Nhưng tất cả prompt đều **thiên về Ship** — ví dụ, examples, Pirate Medicine scope, hook rules đều mặc định context tàu.
+Cần tách thành 2 bộ prompt riêng biệt để sau dễ bảo trì.
 
-## Phương án: Dual-Branch trong cùng prompt (KHÔNG tách file)
+## Approach
 
-**Lý do**: ~80% rules là chung (Money Angle, Anti-Hero, Micro-Hooks, Anti-Repetition, Question Engine, chapter structures...). Chỉ ~20% cần branch `[SHIP]`/`[LOCATION]`. Tách file sẽ dẫn đến code duplication lớn và rủi ro desync.
+### Naming Convention
+- Ship: giữ nguyên `*_pirate.txt` (đã viết sẵn)
+- Location: tạo mới `*_pirate_haven.txt`
+
+### Shared prompts (KHÔNG tách)
+Các prompt này xử lý cả 2 loại tốt rồi:
+- `system_research_blueprint_pirate.txt` — đã có `[SHIP]`/`[LOCATION]` branching
+- `system_narrative_phase_plan_pirate.txt` — generic
+- `system_validate_sub_key_pirate.txt` — generic
+
+### Prompt cần tách (4 files mới)
+
+| Step | Ship (giữ nguyên) | Location (TẠO MỚI) |
+|------|-------------------|---------------------|
+| outline | `system_narrative_outline_pirate.txt` | `system_narrative_outline_pirate_haven.txt` |
+| writer | `system_narrative_write_pirate.txt` | `system_narrative_write_pirate_haven.txt` |
+| audit | `system_narrative_audit_pirate.txt` | `system_narrative_audit_pirate_haven.txt` |
+| review | `system_narrative_review_pirate.txt` | `system_narrative_review_pirate_haven.txt` |
+
+---
 
 ## Proposed Changes
 
-### Prompt: Outline (`system_narrative_outline_pirate.txt`)
+### 1. Code: Routing (`rewriter.py`)
 
-#### [MODIFY] [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-**Hiện trạng**: Hầu hết đã OK — L45-46 có `[SHIP]`/`[LOCATION]` branching cho Giải Phẫu phase.
+**Thêm framework-aware routing**: Hàm `_require_niche_prompt` hiện chỉ dùng `niche` để chọn prompt. Cần thêm param `framework_name` để phân biệt Ship vs Location.
 
-**Cần thêm**:
-1. **L55-58 (Góc Khuất phase)**: Thêm `[LOCATION]` pattern
+**Cách triển khai**: Thêm `_FRAMEWORK_PROMPT_OVERRIDE` map — nếu `framework_name` match thì dùng prompt riêng, nếu không thì fallback về niche-level (behavior hiện tại).
 
-   ```diff
-    Góc Khuất Tàn Khốc = HEART (cold, clinical, unflinching)
-   -  Pattern: Daily horrors → Pirate Medicine scene → Slavery/exploitation → Mortality statistics
-   +  [SHIP] Pattern: Daily horrors on deck → Pirate Medicine scene → Slavery/exploitation → Mortality stats
-   +  [LOCATION] Pattern: Daily violence without law → Exploitation/prostitution → Disease in tropical heat → Slave trade dependency
-   ```
+```python
+_FRAMEWORK_PROMPT_OVERRIDE = {
+    "Thành Trì Vô Luật": {
+        "narrative_outline": "system_narrative_outline_pirate_haven.txt",
+        "narrative_writer":  "system_narrative_write_pirate_haven.txt",
+        "narrative_audit":   "system_narrative_audit_pirate_haven.txt",
+        "narrative_review":  "system_narrative_review_pirate_haven.txt",
+    },
+}
+```
 
-2. **L61 (Sụp Đổ phase)**: Thêm `[LOCATION]` archaeological context
-   ```diff
-   -  Pattern: Cause of end → Final fates → Archaeological legacy → Philosophical question
-   +  [SHIP] Pattern: Cause of wreck → Final fates → Archaeological discovery → Philosophical question
-   +  [LOCATION] Pattern: What ended it (Navy/Treaty/Disaster) → Fate of inhabitants → Modern ruins/site → Philosophical question
-   ```
+Sửa `_require_niche_prompt` thêm param `framework_name=""`:
+```python
+def _require_niche_prompt(step, niche, log_callback=None, framework_name=""):
+    # Check framework override first
+    map_key = f"narrative_{step}"
+    if framework_name and framework_name in _FRAMEWORK_PROMPT_OVERRIDE:
+        override = _FRAMEWORK_PROMPT_OVERRIDE[framework_name].get(map_key)
+        if override:
+            if log_callback:
+                log_callback(f"[framework={framework_name}] {step} → {override}")
+            return override
+    # Fallback to niche-level
+    ...existing code...
+```
 
----
+Sửa 4 callsite truyền `framework_name`:
+- L3623: `_require_niche_prompt("outline", niche, log_callback, framework_name)`
+- L3709: `_require_niche_prompt("audit", niche, log_callback, framework_name)`
+- L3967: `_require_niche_prompt("writer", niche, log_callback, framework_name)`
+- L4213: `review_narrative_full` — cần thêm param `framework_name` vào function signature
 
-### Prompt: Writer (`system_narrative_write_pirate.txt`)
+### 2. Prompt Files (4 files mới)
 
-#### [MODIFY] [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt)
+> [!IMPORTANT]
+> Nội dung từng file sẽ dựa trên:
+> - Skeleton từ file ship hiện tại (ship = template gốc)
+> - Thay thế mọi ship-specific content bằng location-specific content từ style JSON "Thành Trì Vô Luật"
 
-**Cần sửa nhiều nhất** — 5 sections:
+#### [NEW] `system_narrative_outline_pirate_haven.txt`
+Thay đổi so với ship version:
+- Phases descriptions → sociological thay vì technical
+- Hook: "bạn đặt chân lên hòn đảo..." thay vì "con tàu khổng lồ..."
+- Anatomy: governance/economy/defense thay vì weapon/hull/cargo
+- Dark Reality: violence/exploitation/slave trade thay vì pirate medicine
+- End: modern ruins/site thay vì archaeological wreck discovery
 
-1. **L148-155 — Bối Cảnh phase** (minor): Thay `"this ship/haven"` → `[SHIP]/[LOCATION]` branching
-   ```diff
-   -  Focus on WHY — what systemic forces created this ship/haven
-   +  [SHIP]: Focus on WHY — what forces led to this ship's creation/capture
-   +  [LOCATION]: Focus on WHY — what power vacuum/geography made this place a pirate haven
-   ```
+#### [NEW] `system_narrative_write_pirate_haven.txt`  
+- Phase-based writing: SOCIOLOGICAL lens thay vì TECHNICAL
+- Hook rules: location visual + governance paradox
+- Góc Khuất: dark underbelly thay vì pirate medicine
+- End chapter: modern significance thay vì wreck archaeology
+- Examples: governance mechanics thay vì cannon mechanics
 
-2. **L174-182 — Góc Khuất phase** (major): Add `[LOCATION]` dark reality
-   ```diff
-    Góc Khuất Tàn Khốc (HEART):
-      - Cold, clinical, unflinching
-   -  - PIRATE MEDICINE in FULL DETAIL: the "surgery" process step-by-step
-   -    (who operates = carpenter, restraint = tied to mast, pain management = rum/leather in mouth,
-   -    procedure = saw through bone in 2 minutes, cauterize = hot iron on stump,
-   -    survival odds = 50/50, compensation = 800 gold coins from shared fund)
-   +  - [SHIP]: PIRATE MEDICINE in FULL DETAIL: the "surgery" process step-by-step
-   +    (who operates = carpenter, restraint = tied to mast, pain management = rum/leather in mouth,
-   +    procedure = saw through bone in 2 minutes, cauterize = hot iron on stump,
-   +    survival odds = 50/50, compensation = 800 gold coins from shared fund)
-   +  - [LOCATION]: DARK UNDERBELLY in FULL DETAIL: violence without police (how disputes
-   +    were "settled"), exploitation/prostitution economy, tropical disease without medicine,
-   +    slave trade operations running INSIDE the "free" haven
-   ```
+#### [NEW] `system_narrative_audit_pirate_haven.txt`
+- Audit checks: governance coverage thay vì anatomy specs
+- Economy check: underground economy completeness
 
-3. **L380-410 — HOOK CHAPTER RULES** (major): Add `[LOCATION]` hook examples
-   ```diff
-      1. VISUAL CUE — Start with an atmospheric IMAGE.
-   -     Use SECOND-PERSON POV: "Imagine: sương mù trên Đại Tây Dương.
-   -     Một bóng đen khổng lồ trồi lên phía trước..."
-   +     [SHIP]: "Imagine: sương mù trên Đại Tây Dương. Một bóng đen khổng lồ trồi lên..."
-   +     [LOCATION]: "Imagine: bạn đặt chân lên hòn đảo. Mùi rum, thuốc súng, và máu..."
-   
-      2. SHOCKING FACT
-   -     Make it feel IMPOSSIBLE: "Con tàu này mang 40 khẩu đại bác
-   -     và số vàng tương đương 400 triệu đô la ngày nay."
-   +     [SHIP]: "Con tàu này mang 40 khẩu đại bác và số vàng tương đương 400 triệu đô la."
-   +     [LOCATION]: "Nơi này có hệ thống bầu cử dân chủ trước cả nước Mỹ 100 năm."
-   ```
-
-4. **L416-420 — END CHAPTER RULES** (minor): Add `[LOCATION]` ending
-   ```diff
-   -  **ARCHAEOLOGICAL**: Has the wreck/ruins been found? What treasures remain?
-   +  [SHIP]: **ARCHAEOLOGICAL**: Has the wreck been found? What artifacts recovered?
-   +  [LOCATION]: **MODERN SITE**: What does the location look like today? Tourism? Ruins? Museum?
-   ```
-
-5. **L366-370 — REQUIRED ELEMENTS examples** (minor): Add `[LOCATION]` example
-   ```diff
-      [MECHANICS] HOW things worked
-   -    GOOD: "Đại bác 18 pound bắn viên sắt nặng 8 kg..."
-   +    [SHIP] GOOD: "Đại bác 18 pound bắn viên sắt nặng 8 kg..."
-   +    [LOCATION] GOOD: "Khi một cướp biển bị bắt quả tang ăn cắp, hội đồng
-   +      bầu cử sẽ bỏ phiếu: 2/3 đồng ý = bỏ rơi trên đảo hoang với 1 khẩu súng"
-   ```
-
-6. **L321-328 — PIRATE MEDICINE rule scope**: Expand for `[LOCATION]`
-   ```diff
-    2. PIRATE MEDICINE (Y Khoa Rùng Rợn):
-   -   SCOPE: Góc Khuất (Dark Reality) chapter ONLY.
-   +   [SHIP] SCOPE: Góc Khuất (Dark Reality) chapter ONLY. Full surgery scene.
-   +   [LOCATION] SCOPE: Góc Khuất (Dark Reality) chapter ONLY. Full "dark underbelly" scene
-   +   (violence without law enforcement, exploitation, tropical disease, slave trade).
-   ```
-
----
-
-### Prompt: Review (`system_narrative_review_pirate.txt`)
-
-#### [MODIFY] [system_narrative_review_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_pirate.txt)
-
-Thêm nhận diện `subject_type` vào review context. **Thay đổi nhỏ**:
-
-- L6 (PIRATE MEDICINE check): Add `[LOCATION]` equivalent
-  ```diff
-  - 6. **PIRATE MEDICINE COMPLIANCE** — Does exactly ONE chapter include a full Pirate Medicine scene?
-  + 6. **DARK REALITY COMPLIANCE** — [SHIP]: Does exactly ONE chapter include a full Pirate Medicine scene?
-  +    [LOCATION]: Does exactly ONE chapter include a full "dark underbelly" scene (violence, exploitation, slavery)?
-  ```
-
----
-
-### Code: rewriter.py (KHÔNG thay đổi)
-
-`subject_type` đã nằm trong `_NICHE_OUTLINE_FIELDS` → tự inject vào prompt. Writer prompt dùng `{subject_type}` ở L22. AI writer sẽ thấy `Subject type: ship` hoặc `Subject type: location` → tự chọn đúng branch `[SHIP]`/`[LOCATION]`.
-
-**Không cần sửa code.**
+#### [NEW] `system_narrative_review_pirate_haven.txt`
+- Dark Reality compliance: exploitation scene thay vì surgery scene
+- Subject consistency: location/haven thay vì ship/vessel
 
 ---
 
 ## Verification Plan
 
-### Test 1: Pirate Ship (regression)
-- Topic: Queen Anne's Revenge (đã có data)
-- Expected: Prompt giống hệt trước — `[SHIP]` branches active
-
-### Test 2: Pirate Location (new)
-- Topic: Nassau
-- Expected: `[LOCATION]` branches active — governance, economy, defense thay vì cannon specs
-
-### Kiểm tra thủ công
-- Mở `ch*_prompt_debug.txt` → xác nhận `Subject type: location` xuất hiện
-- Verify AI follow đúng `[LOCATION]` branch (sociological analysis thay vì ship anatomy)
+1. Chạy pipeline với topic ship (Queen Anne's Revenge) → confirm vẫn dùng `*_pirate.txt`
+2. Chạy pipeline với topic location (Nassau) → confirm dùng `*_pirate_haven.txt`
+3. Check log output: `[framework=Thành Trì Vô Luật] writer → system_narrative_write_pirate_haven.txt`

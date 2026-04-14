@@ -1,7 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Plan to expand pirate niche prompts to properly support both 'Chiến Hạm Huyền Thoại' (ship) and 'Thành Trì Vô Luật' (location) frameworks. Uses dual-branch [SHIP]/[LOCATION] approach within the same prompt files rather than duplicating files. Changes affect outline, writer, and review prompts. No code changes needed since subject_type is already wired.",
-  "updatedAt": "2026-04-14T01:55:46.928624Z",
-  "version": "3",
+  "summary": "Plan to split pirate prompts into Ship (pirate) and Location (pirate_haven) with framework-aware routing in rewriter.py. Creates 4 new haven prompt files and modifies the routing function to check framework_name before falling back to niche-level prompts.",
+  "updatedAt": "2026-04-14T02:03:23.520203900Z",
+  "version": "4",
   "requestFeedback": true
 }
