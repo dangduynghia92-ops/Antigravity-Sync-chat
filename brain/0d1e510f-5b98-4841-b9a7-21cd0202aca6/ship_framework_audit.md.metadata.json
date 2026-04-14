@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Self-audit results for the Ship Biography framework rebuild. Found and fixed 6 categories of stale references across 5 files: rewriter.py blueprint excerpt extraction, audit prompt phase names, writer prompt phase styles, writer prompt phase_affinity, JSON chapter_structures phase_affinity, and blueprint header section references.",
+  "updatedAt": "2026-04-14T17:04:06.440722Z"
+}
