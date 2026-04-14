@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Detailed audit of the Queen Anne's Revenge script identifying critical lack of time/location anchors. Found that 5 of 9 chapters have zero specific dates. The climax chapter (Great Allen capture) and Charleston Blockade chapter — both major historical events — contain no dates at all. Root cause analysis traces the issue to: (1) writer prompt lacking anchor enforcement rules, (2) AI preferring atmospheric prose over date pinning, (3) structure definitions not requiring temporal grounding, (4) outline lacking date fields per chapter.",
+  "updatedAt": "2026-04-14T06:19:04.643123500Z",
+  "requestFeedback": true
+}
