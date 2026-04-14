@@ -1,7 +1,7 @@
 {
   "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Plan to split pirate prompts into Ship (pirate) and Location (pirate_haven) with framework-aware routing in rewriter.py. Creates 4 new haven prompt files and modifies the routing function to check framework_name before falling back to niche-level prompts.",
-  "updatedAt": "2026-04-14T02:03:23.520203900Z",
-  "version": "4",
+  "summary": "Detailed implementation plan to rebuild blueprint + key_data + phase_plan for the new Ship Biography framework. Covers 4 files that need changing: (1) JSON framework steps, (2) Blueprint research prompt sections, (3) Phase plan prompt mapping + key_data classification, (4) Outline prompt phases. Shows exact before/after for each file with new phase definitions, new key_data classification rules, and new blueprint sections aligned to the ship lifecycle arc.",
+  "updatedAt": "2026-04-14T16:26:59.547541500Z",
+  "version": "5",
   "requestFeedback": true
 }
