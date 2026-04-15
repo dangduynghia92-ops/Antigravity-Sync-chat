@@ -1,11 +1,8 @@
-# Pirate Prompt Conflict Audit
+# Rename Collapse Seeds → Decline + Fix Definitions
 
-- [/] Read and cross-reference all 6 pirate files
-  - [ ] JSON framework
-  - [ ] Blueprint research prompt
-  - [ ] Phase plan prompt
-  - [ ] Outline prompt
-  - [ ] Write prompt
-  - [ ] Audit prompt
-- [ ] Identify conflicts, redundancies, inconsistencies
-- [ ] Create audit report
+- [ ] Blueprint research: move medical_horrors to Daily Life, rename + redefine Decline section
+- [ ] JSON: rename steps, lens, pacing, outline_rules, transitions
+- [ ] Phase plan: rename + redefine classification + mapping
+- [ ] Outline: rename lenses, chapter mapping, rules 
+- [ ] Write: rename + fix B1 (IMMERSION) + B3 (Pirate Medicine scope) + B4 (Anti-Hero scope) + B8 (outdated terms)
+- [ ] Audit: rename lifecycle + phase coverage

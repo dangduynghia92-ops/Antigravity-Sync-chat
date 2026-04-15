@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Tracks pirate prompt audit for conflicts - reading all 6 files systematically.",
-  "updatedAt":  "2026-04-15T11:01:12.588532100Z",
-  "version":  "11"
+  "summary":  "Tracks rename Collapse Seeds → Decline across all 6 pirate files, fix definitions, move Pirate Medicine to Daily Life, fix structural conflicts.",
+  "updatedAt":  "2026-04-15T11:49:56.174025200Z",
+  "version":  "12"
 }
