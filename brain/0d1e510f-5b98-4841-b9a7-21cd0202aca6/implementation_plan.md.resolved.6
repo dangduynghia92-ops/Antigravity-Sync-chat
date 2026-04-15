@@ -1,0 +1,150 @@
+# Chuyển Pipeline Tàu Từ THEMATIC Sang CHRONOLOGICAL LIFECYCLE
+
+## Bối cảnh
+
+Framework "Chiến Hạm Huyền Thoại" hiện dùng **THEMATIC mapping** — nhóm tất cả sự kiện cùng chủ đề vào 1 phase (tất cả bệnh tật → 1 block, tất cả trận đánh → 1 block). Điều này tạo ra:
+- Ch4-5 (Bánh Răng): Nói bệnh tật, nô lệ, draft sâu
+- Ch6-7 (Thử Lửa): Nhảy sang đánh Scarborough, phong tỏa Charleston
+- Ch8-9 (Cái Chết): Quay lại mắc cạn vì draft sâu
+
+→ **Audience YouTube không theo dõi được** vì nhân-quả bị tách xa: bệnh tật (Ch4) → cướp thuốc (Ch7) cách 3 chapter, draft sâu (Ch5) → mắc cạn (Ch8) cách 3 chapter.
+
+## Giải pháp: CHRONOLOGICAL LIFECYCLE MAPPING
+
+Giữ nguyên 7 phase names (Hook → Origin → Mutation → Human Engine → Apex → Collapse → Archaeology) nhưng **thay đổi cách map data thành CHRONOLOGICAL** thay vì THEMATIC.
+
+**Ví dụ kết quả mong muốn cho Queen Anne's Revenge:**
+| Ch | Nội dung | Flow |
+|----|----------|------|
+| 1 | Hook — Shock stats | — |
+| 2 | Origin — La Concorde slave ship (1710-1717) | Tàu sinh ra từ đâu? |
+| 3 | Mutation — Capture + Retrofit (Nov 1717) | Cướp + biến đổi |
+| 4 | First blood — Great Allen + early raids | Bắt đầu cướp |
+| 5 | Day in the life — Bệnh tật, draft sâu (gieo seeds) | Đời sống thật |
+| 6 | HMS Scarborough — Battle + bệnh nặng hơn | Trận đánh + hậu quả |
+| 7 | Charleston — Cướp THUỐC (nhân-quả từ bệnh) | Bệnh → cướp thuốc |
+| 8 | Collapse — Mắc cạn (nhân-quả từ draft sâu) | Draft sâu → mắc cạn |
+| 9 | Archaeology | Legacy |
+
+→ Audience dễ theo dõi, nhân-quả liền mạch.
+
+> [!IMPORTANT]
+> Thay đổi chỉ ảnh hưởng **niche pirate (ship)**. Không ảnh hưởng biography, battle, hay pirate_haven.
+
+---
+
+## Proposed Changes
+
+### Prompt Changes
+
+#### [MODIFY] [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
+
+**Thay đổi 1: L66** — Đổi "THEMATIC order" → "CHRONOLOGICAL LIFECYCLE order"
+```diff
+-Map blueprint data to the framework's 7 steps in THEMATIC order:
++Map blueprint data to the framework's 7 steps in CHRONOLOGICAL LIFECYCLE order:
+```
+
+**Thay đổi 2: L144-152** — Đổi section THEMATIC MAPPING → CHRONOLOGICAL LIFECYCLE MAPPING, thêm rules cho phép scatter data theo dòng thời gian:
+```diff
+-THEMATIC MAPPING:
+-5. Body phases MUST map to blueprint data in THEMATIC ORDER
+-   - Bản Vẽ → ship_birth, era_context, environment (geography that enabled exploitation)
+-   - Đột Biến → capture_and_mutation, key_figures (captain introduced via ACTION)
+-   - Bánh Răng → ship_life_and_crew, internal_politics, economics, collapse_seeds
+-   - Thử Lửa → combat_events (PEAK only), victim_impact, pyrrhic_elements
+-   - Cái Chết → death_and_collapse, crew_fates
+-   - Bóng Ma → archaeological_legacy, legacy question, modern significance
+-   - NEVER assign a birth event to a combat phase or vice versa
++CHRONOLOGICAL LIFECYCLE MAPPING:
++5. Body phases follow the ship's LIFE CYCLE but events flow in CHRONOLOGICAL ORDER.
++   Phase names guide the DOMINANT LENS (emotion/tone), NOT rigid data silos.
++   - Bản Vẽ → ship_birth, era_context — EARLIEST events only
++   - Đột Biến → capture_and_mutation — the transformation moment
++   - Bánh Răng → FIRST window into daily life — placed at the NATURAL pause
++     before the first major battle. Include collapse_seeds HERE as foreshadowing.
++   - Thử Lửa → combat_events in CHRONOLOGICAL order. If disease/crew issues
++     DIRECTLY CAUSED a battle decision (e.g., sick crew → raid for medicine),
++     weave that cause INTO the battle chapter — do NOT isolate it in Bánh Răng.
++   - Cái Chết → death_and_collapse — harvest collapse_seeds already planted
++   - Bóng Ma → archaeological_legacy, modern significance
++
++   CAUSAL CHAIN RULE: If event A (e.g., disease) DIRECTLY causes event B
++   (e.g., Charleston raid for medicine), they MUST be in the SAME chapter or
++   consecutive chapters. NEVER separate cause and effect by 2+ chapters.
++
++   CHRONOLOGICAL RULE: Within each phase, events flow forward in time.
++   Across phases, the timeline MUST progress — no jumping backwards.
+```
+
+**Thay đổi 3: L177-183** — Update COLLAPSE SEEDS RULE để seeds được "gieo + thu hoạch" gần nhau:
+```diff
+ COLLAPSE SEEDS RULE:
+-9. Phase "Bánh Răng Sinh Học" MUST include at least 1-2 collapse_seeds in main_key_data
+-   that foreshadow the ship's eventual death. These seeds MUST connect to data in
+-   "Cái Chết Vật Lý" phase.
+-   ✓ GOOD: Bánh Răng main: "The ship's 12.5ft draft and 300-ton weight made it a death
+-   trap in shallow coastal waters — the same waters Teach would need to navigate."
++9. Collapse seeds MUST be planted EARLY (Bánh Răng or first Thử Lửa chapter) and
++   HARVESTED in the same or next chapter where the consequence happens.
++   The audience must FEEL the cause → effect without waiting 3+ chapters.
++   ✓ GOOD: Plant draft issue in Bánh Răng → Harvest in Cái Chết (next 1-2 chapters)
++   ✓ GOOD: Plant disease in Bánh Răng → Harvest as motive in Charleston raid (next chapter)
++   ✗ BAD: Plant disease in Ch4 → Harvest as motive in Ch7 (3 chapters apart — audience forgot)
+```
+
+---
+
+#### [MODIFY] [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
+
+**Thay đổi 1: L183** — Đổi THEMATIC ORDER → CHRONOLOGICAL ORDER:
+```diff
+-- **THEMATIC ORDER**: Chapters follow phase order (Context → Anatomy → Characters → Dark Reality)
++- **CHRONOLOGICAL ORDER**: Chapters follow the ship's life timeline. Phase names guide TONE, not rigid event silos.
+```
+
+**Thay đổi 2: L270** — Đổi critical rule:
+```diff
+-5. **THEMATIC ORDER IS MANDATORY** for the main chapter sequence (Context → Anatomy → Characters → Dark → Legacy)
++5. **CHRONOLOGICAL ORDER IS MANDATORY** for the main chapter sequence. Events must progress forward in time. Phase names guide the chapter's TONE and LENS, not which events go where. Cause-and-effect pairs (disease → raid for medicine, deep draft → grounding) MUST stay within 1-2 chapters of each other.
+```
+
+**Thay đổi 3: L146-151** — Update Question Engine examples to chronological flow:
+```diff
+-  - Ch.1 (Hook): Poses "What is the truth?" via shocking fact + myth busted
+-  - Ch.2: Answers "how it began" → Opens "but how did the machine work?"
+-  - Ch.3: Answers "the mechanics" → Opens "but who commanded it?"
+-  - Ch.4: Answers "the captain/boss" → Opens "but what was daily life REALLY like?"
+-  - Ch.5: Answers "the dark reality" → Opens "but how did it all end?"
+-  - Ch.6: Answers "the fall + legacy"
++  - Ch.1 (Hook): Poses "What is the truth?" via shocking fact + myth busted
++  - Ch.2: Answers "how it was born" → Opens "how did it become a weapon?"
++  - Ch.3: Answers "the transformation" → Opens "what was life aboard really like?"
++  - Ch.4: Answers "daily horror" → Opens "what happened when it was unleashed?"
++  - Ch.5+: Answers battles CHRONOLOGICALLY → Each opens the next consequence
++  - Last body: Answers "how did it die?" (cause-effect from seeds planted earlier)
++  - End: Answers "what remains?" → Legacy + CTA
+```
+
+---
+
+### No Code Changes Required
+
+[core/rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) — blueprint filter logic uses `pirate_phase` field matching. Since the outline still assigns `pirate_phase` to each chapter, the filter will work without changes.
+
+[styles/narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_l%E1%BB%8Bch_s%E1%BB%AD_h%E1%BA%A3i_t%E1%BA%B7c.json) — Framework steps stay the same (7 phases, same names). Only the MAPPING RULE changes in the prompts.
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. **Re-run pipeline** trên project "Queen Anne's Revenge" từ đầu (hoặc từ bước phase_plan)
+2. Kiểm tra `phase_plan.json` output: events phải được distribute theo thời gian, không nhóm cứng theo chủ đề
+3. Kiểm tra outline output: chapters phải tiến theo dòng thời gian, cause-effect pairs không bị tách > 2 chapters
+4. Đọc 2-3 chapters liên tiếp (đặc biệt vùng Ch4-Ch7): nội dung phải dễ theo dõi, không jump phi logic
+
+### Regression Check
+- Biography pipeline: **không bị ảnh hưởng** (dùng prompt riêng [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt))
+- Battle pipeline: **không bị ảnh hưởng** (dùng prompt riêng [system_narrative_phase_plan_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_battle.txt))
+- Pirate Haven: cần kiểm tra xem có share [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) không → đã confirm KHÔNG có file riêng cho haven phase plan, nên sẽ bị ảnh hưởng nếu haven dùng chung file này → cần verify

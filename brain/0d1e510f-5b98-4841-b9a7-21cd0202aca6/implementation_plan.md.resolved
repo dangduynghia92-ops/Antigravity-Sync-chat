@@ -1,240 +1,173 @@
-# Implementation Plan: Ship Biography Framework Rebuild
+# Sửa Đứt Gãy Mạch Truyện — Pirate Ship Framework
 
-## Scope
+## Bối cảnh
 
-Rebuild 4 files to align with the new "Tiểu Sử Chiến Hạm" (Ship Biography) framework where **the ship is the protagonist**. Haven (location) is NOT touched.
+Kịch bản YouTube về tàu cướp biển bị **lộn xộn, khó theo dõi** vì:
+- Ch4-5 (Bánh Răng): Bệnh tật, đời sống, draft sâu
+- Ch6 (Thử Lửa): Nhảy sang đánh Scarborough — **không kết nối**
+- Ch7 (Thử Lửa): Charleston cướp thuốc — audience quên bệnh tật từ Ch4
 
-> [!WARNING]
-> This changes the **data pipeline** for `subject_type = "ship"` only. 
-> Location/haven framework (`subject_type = "location"`) and all non-pirate niches remain untouched.
+**Gốc vấn đề KHÔNG phải** Bánh Răng cần timeline (đời sống thường ngày = trạng thái liên tục, không có ngày tháng).
+
+**Gốc vấn đề thực sự:**
+1. Phase Bánh Răng **giữ cứng** cả motivation lẫn event (giữ "bệnh dịch" LẪN "quyết định cướp thuốc")
+2. Khi jump sang Thử Lửa → audience bị mất kết nối
+3. Thiếu câu cầu nối giữa 2 phases
+
+## Giải pháp: 3 lớp sửa
+
+### Lớp 1: Giữ Bánh Răng là FREEZE-FRAME (không ép timeline)
+Bánh Răng = "đóng băng thời gian, bước xuống tàu xem đời sống". Đây là thiết kế đúng cho YouTube — audience cần break giữa action. **Không thay đổi gì.**
+
+### Lớp 2: Phân loại MOTIVATION vs EVENT đúng chỗ
+- "Bệnh dịch hoành hành trên tàu" = **Bánh Răng** (trạng thái liên tục, đúng chỗ)
+- "Quyết định cướp thuốc VÌ bệnh" = **Thử Lửa/Charleston chapter** (event có ngày tháng cụ thể)
+- Rule: Khi Thử Lửa chapter mở, nó phải **tự recall** seed từ Bánh Răng trong 1-2 câu đầu
+
+### Lớp 3: Thêm PHASE BRIDGE rule vào prompt
+Khi chuyển từ freeze-frame phase (Bánh Răng) sang action phase (Thử Lửa), chapter đầu tiên của Thử Lửa phải mở bằng **1 câu cầu nối** nhắc lại consequence từ Bánh Răng.
+
+> [!IMPORTANT]
+> Thay đổi chỉ ảnh hưởng **2 file prompt pirate**. Không sửa code. Không ảnh hưởng biography/battle.
 
 ---
 
-## File 1: Framework JSON — `narrative_lịch_sử_hải_tặc.json`
+## Proposed Changes
 
-### What changes: `steps[]` array for the "Chiến Hạm Huyền Thoại" framework
+### Prompt — Phase Plan
 
+#### [MODIFY] [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
+
+**Thay đổi 1: L66** — Đổi "THEMATIC" → "LIFECYCLE" (giữ phase order, chỉ thêm causal bridge)
 ```diff
-  CURRENT STEPS (6):
-- Mồi Nhử Huyền Thoại (Hook) → generic shocking fact
-- Bối Cảnh & Nguồn Gốc (Context) → era + origin gộp chung
-- Giải Phẫu Cơ Chế (Anatomy) → pure tech dump
-- Nhân Vật & Cao Trào (Climax) → captain-centric
-- Góc Khuất Tàn Khốc (Dark Reality) → standalone horror
-- Sụp Đổ & Di Sản (Legacy) → death + archaeology gộp
-
-  NEW STEPS (7):
-+ Mồi Nhử Huyền Thoại (Hook) → ship SCALE + ship legend
-+ Bản Vẽ & Nguồn Gốc (Blueprint) → era + original design + pre-mutation life
-+ Đột Biến (Mutation) → capture event + naming + retrofit anatomy
-+ Bánh Răng Sinh Học (Human Engine) → crew system + code + economics + dark reality
-+ Thử Lửa (Apex Test) → 1-2 peak combat events
-+ Cái Chết Vật Lý (System Collapse) → decay + death event + crew fates
-+ Bóng Ma Khảo Cổ (Archaeological Ghost) → time-jump + artifacts + legacy
+-Map blueprint data to the framework's 7 steps in THEMATIC order:
++Map blueprint data to the framework's 7 steps in LIFECYCLE order:
 ```
 
-### New `lens` fields (core change — these guide AI throughout pipeline):
-
-| Phase | `lens` |
-|-------|--------|
-| Hook | **SHIP-CENTRIC**: Phô diễn SCALE — hỏa lực, kích thước, tốc độ, giá trị, hoặc huyền thoại/ám ảnh về tàu. Do NOT mention captain name. Focus: "Cỗ máy này có gì kinh khủng?" |
-| Blueprint | **TECHNICAL-ORIGIN**: Ai đặt hàng? Thiết kế gốc phục vụ mục đích gì? Bối cảnh thời đại tạo ra nhu cầu. Đời sống trước đột biến (tàu nô lệ? tàu chiến? tàu hàng?). Nhân vật weave: thợ đóng tàu, chủ sở hữu gốc. |
-| Mutation | **ACTION+TECHNICAL**: Vụ cướp/chuyển giao blow-by-blow. Lễ rửa tội (naming origin). Giải phẫu đột biến: vũ khí thêm, buồm cải tạo, thân tàu biến đổi. Before/After comparison. Nhân vật weave: captain mới — giới thiệu qua HÀNH ĐỘNG cướp tàu. |
-| Human Engine | **IMMERSIVE-DARK**: Cỗ máy cần nhiên liệu = con người. Crew organization (watch system). Pirate Code = hệ thống bôi trơn. Economics = lương + bảo hiểm + phân chia. Dark reality: bệnh, phẫu thuật, nô lệ, chết chóc. |
-| Apex Test | **CINEMATIC-ACTION**: 1-2 sự kiện PEAK — cỗ máy thể hiện FULL power. Cho mỗi sự kiện: setup → chiến thuật → execution → aftermath (Money Angle). Nhân vật = người lái cỗ máy, không phải tâm lý cá nhân. |
-| System Collapse | **TRAGIC-MECHANICAL**: Dấu hiệu suy tàn vật lý (mục, quá nặng, chi phí). Sự kiện chết cụ thể. Twist nếu có (captain tự phá hủy). Số phận thủy thủ đoàn — ngắn gọn. |
-| Archaeological Ghost | **REFLECTIVE-MODERN**: Time-jump 300 năm. Phát hiện xác tàu. Hiện vật = nhân chứng câm. Giá trị hiện đại. Legacy question triết lý. CTA. |
-
----
-
-## File 2: Blueprint Research — `system_research_blueprint_pirate.txt`
-
-### What changes: Sections 5-17 — reorganized to feed directly into new phases
-
-#### Current problems:
-- `anatomy_specs` gộp original + mutated specs → AI không phân biệt
-- `origin_story` thiếu "đời sống trước khi bị cướp" 
-- `key_figures` quá nặng về biography → nên slim down, chỉ cần connection to ship
-- `dark_reality` và `daily_life` tách riêng → nên gộp (cùng phase Human Engine)
-
-#### New blueprint sections (for ship):
-
-```
-5. ERA_CONTEXT (giữ nguyên — feed Phase 1: Blueprint)
-
-6. ORIGIN_STORY → đổi thành SHIP_BIRTH:
-   - commissioner: Ai đặt hàng đóng tàu? (chính phủ/thương nhân/hải quân)
-   - shipyard: Đóng ở đâu? Năm nào?
-   - original_name: Tên gốc
-   - original_specs: tonnage, masts, cannon_count gốc, cargo capacity gốc
-   - original_purpose: Mục đích ban đầu (buôn nô lệ/thương mại/chiến hạm)
-   - pre_mutation_life: Đời sống trước đột biến — bao lâu, tuyến đường nào, 
-     sự kiện gì đáng chú ý khi còn "hợp pháp"
-
-7. CAPTURE_AND_MUTATION (MỚI — feed Phase 2: Mutation):
-   - capture_event: Ai cướp, khi nào, ở đâu, tình trạng tàu lúc bị cướp
-   - naming_story: Tên mới, ý nghĩa, tại sao đặt tên này
-   - mutation_process: Chi tiết về "độ chế"
-     + weapons_added: Loại pháo, số lượng, nguồn gốc (scavenged/bought/captured)
-     + rigging_changes: Thay đổi buồm/dây, ảnh hưởng tốc độ
-     + hull_modifications: Cắt bớt? Gia cố? Thay đổi draft?
-     + crew_capacity_change: Từ bao nhiêu → bao nhiều người
-   - before_after_comparison: So sánh thông số TRƯỚC vs SAU mutation
-
-8. KEY_FIGURES → slim down:
-   - CHỈ CẦN: name, role, key_actions (liên quan đến TÀU), fate
-   - BỎ: psychological_profile dài dòng, moral_evolution
-   - THÊM: connection_to_ship (họ đã thay đổi/sử dụng/phá hủy tàu thế nào?)
-
-9. SHIP_LIFE_AND_CREW (MERGE daily_life + dark_reality — feed Phase 3):
-   - crew_organization: Watch system, roles, hierarchy
-   - pirate_code: Articles, voting, dispute resolution, profit sharing ratios
-   - economics: Revenue, expenses, insurance, compensation system
-   - daily_existence: Food, sleep, entertainment, clothing
-   - medical_horrors: Surgery details, tools, survival rates, specific cases
-   - disease_and_death: Mortality stats, specific diseases, epidemic events
-   - slavery_exploitation: Forced labor, treatment of prisoners
-   - sensory_palette: Sounds, smells, textures aboard
-
-10. COMBAT_EVENTS (feed Phase 4: Apex Test):
-    - Chọn 2-3 sự kiện PEAK (không liệt kê tất cả raids nhỏ)
-    - Cho mỗi event: date, parties, setup, tactics, blow_by_blow, 
-      aftermath, loot_value (original + modern USD)
-
-11. DEATH_AND_COLLAPSE (feed Phase 5):
-    - decay_signs: Chi phí vận hành, hư hỏng vật lý, bệnh tật tàn phá
-    - death_event: Sự kiện cuối — bão/bãi cạn/trận chiến/tự đâm chìm
-    - death_motive: Tại sao chết? (business decision? accident? military?)
-    - crew_fates: Số phận cụ thể từng người chính (1-2 câu/người)
-
-12. ARCHAEOLOGICAL_LEGACY (feed Phase 6):
-    - discovery: Năm phát hiện, ai tìm, ở đâu
-    - key_artifacts: Hiện vật quan trọng + chúng kể điều gì
-    - modern_value: Giá trị khảo cổ
-    - modern_status: Museum? Dive site? Lost?
-    - legacy_question: Câu hỏi triết lý mở
-
-13-17: GIỮA NGUYÊN (pirate_phases, environment, internal_politics, 
-    myths_vs_reality, narrative_moments, texture_hooks)
-```
-
----
-
-## File 3: Phase Plan — `system_narrative_phase_plan_pirate.txt`
-
-### What changes: Phase mapping rules + key_data classification
-
-#### New PHASE MAPPING (for ship):
-
-```
-Hook (Mồi Nhử Huyền Thoại): 
-  main_key_data = [
-    ship_scale_stat,  ← Con số choáng ngợp VỀ TÀU (hỏa lực/kích thước/giá trị)
-    ship_legend,      ← Truyền thuyết/ám ảnh/huyền thoại gắn với TÀU
-    title_card_tease   ← "Đây là câu chuyện thật về con tàu..."
-  ]
-  sub_key_data = []
-  ⚠️ HOOK PHẢI VỀ TÀU — cấm nhắc tên captain
-
-Bản Vẽ & Nguồn Gốc (Blueprint):
-  main_key_data = [events có drama: vụ đóng tàu, chuyến hải trình đầu, 
-                   sự kiện khi còn "hợp pháp" nếu dramatic]
-  sub_key_data = [era_context, trade routes, naval powers, original specs thuần túy]
-
-Đột Biến (Mutation):
-  main_key_data = [vụ cướp tàu (ALWAYS main), lễ đặt tên, 
-                   mỗi thay đổi vũ khí/buồm lớn nếu dramatic]
-  sub_key_data = [thông số kỹ thuật thuần, before/after numbers, crew capacity]
-
-Bánh Răng Sinh Học (Human Engine):
-  main_key_data = [Pirate Medicine scene cụ thể, vụ nô lệ dramatic, 
-                   vụ phân chia loot dramatic, pirate code enforcement event]
-  sub_key_data = [daily routines, food, clothing, general disease stats, 
-                  economics tổng quát, sensory descriptions]
-
-Thử Lửa (Apex Test):
-  main_key_data = [1-2 combat events PEAK — blow-by-blow]
-  sub_key_data = [minor raids, supporting tactical details, loot values]
-
-Cái Chết Vật Lý (System Collapse):
-  main_key_data = [death event cụ thể, betrayal/twist nếu có]
-  sub_key_data = [decay signs, crew fates, background context]
-
-Bóng Ma Khảo Cổ (Archaeological Ghost):
-  main_key_data = [] (end chapter = callbacks + reflection)
-  sub_key_data = [discovery details, artifacts, modern value, legacy question]
-```
-
-#### New key_data classification SCENE TEST:
-
-```
-Câu hỏi phân loại SHIP-CENTRIC:
-  "Sự kiện này có THAY ĐỔI trạng thái VẬT LÝ hoặc VẬN MỆNH của con tàu không?"
-  
-  CÓ → main_key_data:
-    ✓ "Teach lắp thêm 26 khẩu pháo Swedish" (biến đổi tàu)
-    ✓ "Tàu mắc bãi cạn Beaufort Inlet" (tàu chết)
-    ✓ "Carpenter cưa chân thủy thủ — sống sót, nhận 800 gold" (tàu = phòng phẫu thuật)
-    
-  KHÔNG → sub_key_data:
-    ✗ "Tàu nặng 300 tấn" (thông số thuần)
-    ✗ "Thủy thủ ăn hardtack" (routine)
-    ✗ "Thương mại bị gián đoạn" (hệ quả chung, không cụ thể)
-```
-
----
-
-## File 4: Outline — `system_narrative_outline_pirate.txt`
-
-### What changes: Phase definitions, chapter mapping, writing styles
-
+**Thay đổi 2: L91-101** — Sửa Bánh Răng và Thử Lửa để phân loại đúng:
 ```diff
-  PHASE → CHAPTER MAPPING (for ship):
-- Mồi Nhử → ALWAYS 1 chapter
-- Bối Cảnh & Nguồn Gốc → 1-2 chapters
-- Giải Phẫu Cơ Chế → 1-3 chapters (DENSEST)
-- Nhân Vật & Cao Trào → 1-3 chapters
-- Góc Khuất → 1-2 chapters
-- Sụp Đổ & Di Sản → ALWAYS 1 chapter
+   Bánh Răng Sinh Học (Human Engine): The human cost of operating the machine.
+-    - main_key_data = specific Pirate Medicine scene (ONE cluster: surgery + tools + survival),
+-      slavery incident cluster, pirate code enforcement drama, COLLAPSE SEEDS with evidence
++    - main_key_data = specific Pirate Medicine scene (ONE cluster: surgery + tools + survival),
++      slavery incident cluster, pirate code enforcement drama, COLLAPSE SEEDS as observations
++      (e.g., "the draft was dangerously deep", "syphilis was rampant") — NOT the events
++      that RESULTED from these conditions (those go to later phases)
+     - sub_key_data = general living conditions, routine food/clothing, disease stats
+       without specific incidents, general economic data, environmental descriptions
 
-+ Mồi Nhử → ALWAYS 1 chapter (first)
-+ Bản Vẽ & Nguồn Gốc → 1-2 chapters
-+ Đột Biến → 1-3 chapters (DENSEST — capture + retrofit)
-+ Bánh Răng Sinh Học → 1-2 chapters
-+ Thử Lửa → 1-2 chapters (1 per peak combat event)
-+ Cái Chết Vật Lý → ALWAYS 1 chapter
-+ Bóng Ma Khảo Cổ → ALWAYS 1 chapter (last)
+   Thử Lửa (Apex Test): The machine at PEAK performance.
+-    - main_key_data = EACH PEAK battle/raid as ONE cluster (setup+execution+aftermath).
+-      Typically 2-3 clusters max (e.g., Great Allen, HMS Scarborough, Charleston).
++    - main_key_data = EACH PEAK battle/raid as ONE cluster (setup+execution+aftermath).
++      Typically 2-3 clusters max (e.g., Great Allen, HMS Scarborough, Charleston).
++      If a battle was MOTIVATED by a condition from Bánh Răng (e.g., disease → raid for
++      medicine), include that motivation AS PART OF the battle cluster's setup.
++      Do NOT leave the motivation orphaned in Bánh Răng.
+     - sub_key_data = minor raids, supporting tactical details, general loot values,
+       consequences that followed battles (political fallout, repair needs)
+```
+
+**Thay đổi 3: L144-152** — Đổi THEMATIC MAPPING → LIFECYCLE MAPPING + thêm CAUSAL BRIDGE:
+```diff
+-THEMATIC MAPPING:
+-5. Body phases MUST map to blueprint data in THEMATIC ORDER
+-   - Bản Vẽ → ship_birth, era_context, environment (geography that enabled exploitation)
+-   - Đột Biến → capture_and_mutation, key_figures (captain introduced via ACTION)
+-   - Bánh Răng → ship_life_and_crew, internal_politics, economics, collapse_seeds
+-   - Thử Lửa → combat_events (PEAK only), victim_impact, pyrrhic_elements
+-   - Cái Chết → death_and_collapse, crew_fates
+-   - Bóng Ma → archaeological_legacy, legacy question, modern significance
+-   - NEVER assign a birth event to a combat phase or vice versa
++LIFECYCLE MAPPING:
++5. Body phases follow the ship's LIFECYCLE. Phase names guide the LENS (tone/emotion).
++   - Bản Vẽ → ship_birth, era_context, environment
++   - Đột Biến → capture_and_mutation, key_figures
++   - Bánh Răng → ship_life_and_crew, economics, collapse_seeds AS OBSERVATIONS
++     (this is a FREEZE-FRAME: no specific timeline, just "what daily life was like")
++   - Thử Lửa → combat_events + their MOTIVATIONS (if a battle was driven by a
++     condition from Bánh Răng, bundle the motivation INTO the battle cluster)
++   - Cái Chết → death_and_collapse, crew_fates
++   - Bóng Ma → archaeological_legacy, legacy question, modern significance
++
++   CAUSAL BRIDGE: When a Bánh Răng condition (disease, draft, crew tension) DIRECTLY
++   DRIVES a later event (raid, grounding, mutiny), the MOTIVATION belongs in the later
++   event's phase — NOT isolated in Bánh Răng. Bánh Răng only PLANTS the seed as an
++   observation ("syphilis was rampant"). The HARVEST ("so they raided Charleston for
++   mercury") goes into Thử Lửa.
+```
+
+**Thay đổi 4: L177-183** — Tighten COLLAPSE SEEDS rule:
+```diff
+ COLLAPSE SEEDS RULE:
+-9. Phase "Bánh Răng Sinh Học" MUST include at least 1-2 collapse_seeds in main_key_data
+-   that foreshadow the ship's eventual death. These seeds MUST connect to data in
+-   "Cái Chết Vật Lý" phase.
+-   ✓ GOOD: Bánh Răng main: "The ship's 12.5ft draft and 300-ton weight made it a death
+-   trap in shallow coastal waters — the same waters Teach would need to navigate."
++9. Bánh Răng MUST plant 1-2 collapse_seeds as OBSERVATIONS (conditions, not events):
++   ✓ GOOD: "The ship's 12.5ft draft made it a death trap in shallow waters."
++   ✓ GOOD: "Syphilis infected over half the crew — the ship was a floating hospital."
++   ✗ BAD: "The deep draft would later cause the ship to run aground at Beaufort."
++     (This is a SPOILER, not a seed. The grounding EVENT belongs in Cái Chết.)
++   Seeds are OBSERVATIONS the audience stores subconsciously. When Cái Chết or Thử Lửa
++   arrives, the audience thinks "Ah, THAT's why!" — this creates satisfying payoff.
 ```
 
 ---
 
-## Files NOT Changed
+### Prompt — Outline
 
-| File | Reason |
-|------|--------|
-| `system_narrative_write_pirate.txt` | Writer prompt adapts dynamically via `{pirate_phase}`. Only PHASE-BASED WRITING STYLE section needs minor update to reflect new phase names. |
-| `system_narrative_write_pirate_haven.txt` | Haven = untouched |
-| `core/rewriter.py` | Phase plan pipeline is generic — reads phases from JSON. No code changes needed. |
-| All non-pirate prompts | Biography, battle, mystery = untouched |
+#### [MODIFY] [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
+
+**Thay đổi 1: L52-56** — Update Bánh Răng description to clarify freeze-frame:
+```diff
+   Bánh Răng Sinh Học = IMMERSIVE-DARK (human cost of running the machine)
+     Pattern: Crew organization → Pirate Code as "machine lubricant" → Economics
+       → Pirate Medicine scene → Disease/slavery → COLLAPSE SEEDS
+-    Best for: Second-person immersion ("Imagine the heat hits you..."), stripping romance
++    Best for: FREEZE-FRAME — pause the timeline, take audience INSIDE the machine.
++      Second-person immersion ("Imagine the heat hits you..."), stripping romance.
++      Plant seeds (disease, draft, crew tension) as OBSERVATIONS — audience stores them.
+     POV: Second-person for medical horror + third-person clinical for statistics
+```
+
+**Thay đổi 2: L58-62** — Update Thử Lửa to include motivation recall:
+```diff
+   Thử Lửa = CINEMATIC-ACTION + DUAL LENS (power AND victim cost)
+     Pattern: Setup → Tactics → Execution blow-by-blow → Victim impact
+       → Aftermath (Money Angle) → PYRRHIC ELEMENTS
+-    Best for: Peak action — but EVERY display of power MUST show the cost to victims
++    Best for: Peak action — EVERY display of power MUST show victim cost.
++      MOTIVATION RECALL: If a battle was driven by a Bánh Răng condition (e.g., crew
++      sick → raid for medicine), open the chapter by recalling that condition in 1-2
++      sentences before diving into the battle. This creates seamless cause → effect.
+     POV: Third-person close (captain lái cỗ máy) + third-person for victims
+```
+
+**Thay đổi 3: L183** — Đổi order rule:
+```diff
+-- **THEMATIC ORDER**: Chapters follow phase order (Context → Anatomy → Characters → Dark Reality)
++- **LIFECYCLE ORDER**: Chapters follow the ship's lifecycle. Phase = LENS (tone), not rigid data silo. Freeze-frame chapters (Bánh Răng) pause the timeline; action chapters (Thử Lửa) resume it with a brief motivation recall from the freeze-frame.
+```
+
+**Thay đổi 4: L270** — Đổi critical rule:
+```diff
+-5. **THEMATIC ORDER IS MANDATORY** for the main chapter sequence (Context → Anatomy → Characters → Dark → Legacy)
++5. **LIFECYCLE ORDER IS MANDATORY**. Phases flow: Origin → Mutation → Daily Life (freeze-frame) → Peak Battles → Collapse → Legacy. Action chapters that follow a freeze-frame MUST recall relevant seeds in their opening.
+```
 
 ---
-
-## Execution Order
-
-1. `narrative_lịch_sử_hải_tặc.json` → update ship `steps[]`
-2. `system_research_blueprint_pirate.txt` → restructure sections for ship
-3. `system_narrative_phase_plan_pirate.txt` → new mapping + classification
-4. `system_narrative_outline_pirate.txt` → new phase definitions
-5. `system_narrative_write_pirate.txt` → update PHASE-BASED WRITING STYLE section
-6. Test: generate QAR blueprint → verify data aligns with new phases
 
 ## Verification Plan
 
-### Automated
-- Run pipeline for "Queen Anne's Revenge" with new framework
-- Verify phase_plan output has 7 phases with correct key_data distribution
-- Verify outline has time_anchor/location_anchor populated
-- Verify written chapters have ship-centric hooks and naming origins
+### Manual Verification
+1. Re-run pipeline trên "Queen Anne's Revenge" từ bước phase_plan
+2. Kiểm tra: Bánh Răng vẫn là freeze-frame (không bị ép timeline)
+3. Kiểm tra: Charleston chapter có recall "bệnh dịch" trong setup không
+4. Kiểm tra: Cái Chết chapter có recall "draft sâu" trong setup không
+5. Đọc liên tục Ch4 → Ch5 → Ch6: có cảm giác mạch truyện liền mạch không
 
-### Manual
-- User reviews generated script for ship-centric narrative voice
+### Regression Check
+- Biography/Battle: **không bị ảnh hưởng** (prompt riêng biệt)
+- Pirate Haven: dùng chung [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) → sẽ được áp dụng, cần verify haven output vẫn OK

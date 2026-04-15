@@ -1,7 +1,7 @@
 {
-  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Detailed implementation plan to rebuild blueprint + key_data + phase_plan for the new Ship Biography framework. Covers 4 files that need changing: (1) JSON framework steps, (2) Blueprint research prompt sections, (3) Phase plan prompt mapping + key_data classification, (4) Outline prompt phases. Shows exact before/after for each file with new phase definitions, new key_data classification rules, and new blueprint sections aligned to the ship lifecycle arc.",
-  "updatedAt": "2026-04-14T16:26:59.547541500Z",
-  "version": "5",
-  "requestFeedback": true
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Revised plan to fix narrative flow for pirate ship framework. Instead of forcing everything into chronological order (which would break daily-life chapters that have no timeline), the plan uses a 3-layer approach: (1) Keep Bánh Răng as a FREEZE-FRAME chapter with no timeline pressure, (2) Move SPECIFIC cause-effect events to the chapters where they matter (disease motivation → Charleston chapter, not isolated in Bánh Răng), (3) Add BRIDGE rules at phase transitions to prevent abrupt jumps. Changes target 2 prompt files only.",
+  "createdAt":  "2026-04-15T06:14:27.917562800Z",
+  "updatedAt":  "2026-04-15T06:18:31.897388700Z",
+  "version":  "7"
 }
