@@ -1,0 +1,45 @@
+# Báo Cáo Phân Tích: Đứt Gãy Mạch Truyện Trong Pipeline (Chuyên Đề: Tàu Hải Tặc / Chiến Hạm)
+
+Qua quá trình mổ xẻ các file prompt lõi của hệ thống, đặc biệt là ngách Pirate/Ship, tôi đã xác định được nguyên nhân cốt lõi dẫn đến việc kịch bản được tạo ra bị cứng nhắc, thiếu sự liên kết và xáo trộn hoàn toàn về dòng thời gian (như bạn đã thấy ở các Chapter 4 đến 9 trong *Queen Anne's Revenge*).
+
+Dưới đây là chi tiết và ĐẠI THUYẾT MINH về giải pháp xử lý triệt để.
+
+---
+
+## 1. Vấn Đề Trọng Tâm: Lỗi Xáo Trộn Dòng Thời Gian (Chronological Fragmentation)
+
+### Biểu Hiện Thực Tế
+Trong kịch bản *Queen Anne's Revenge*:
+- Phase **Bánh Răng Sinh Học** (Chap 4, 5) mô tả hoàn toàn về đời sống ngột ngạt và y tế của hải tặc. Ở cuối Chap 5 có gieo điểm yếu (mớn nước sâu).
+- Phase **Thử Lửa** (Chap 6, 7) đùng một cái quay lại kể trận đấu súng hào hùng với HMS Scarborough.
+- Phase **Cái Chết Vật Lý** (Chap 8, 9) lại quay về mô tả vụ mắc cạn do mớn nước sâu.
+- **Tóm lại:** Các chi tiết bị cưỡng ép, đứt gãy trình tự thời gian (ví dụ: tàu bị cướp từ tháng 11/1717, đánh Scarborough đầu năm 1718, phong tỏa Charleston tháng 5/1718, rồi mắc cạn tháng 6/1718). Thay vì diễn biến tự nhiên, mọi sinh hoạt/bệnh tật bị dồn hết vào Chap 4,5, còn đánh nhau dồn hết vào Chap 6,7.
+
+### Nguyên Nhân Gốc Rễ
+- Sự khác biệt về quy định (Rules) khi gán sự kiện vào Phase. Trong nhóm Biography, rule là **CHRONOLOGICAL MAPPING** (Nhóm theo thời gian).
+- Nhưng trong file của Pirate ([system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)), rule lại đang là **THEMATIC MAPPING** (Nhóm Cứng theo Chủ Đề).
+- AI bị trói buộc: Tất cả những sự kiện là `ship_life_and_crew` phải tống hết vào phase `Bánh Răng`; tất cả `combat_events` phải tống hết vào phase `Thử Lửa`. Điều này phá nát trải nghiệm "vòng đời tự nhiên" thăng trầm của một con tàu.
+
+---
+
+## 2. Giải Pháp Toàn Diện: Tư Duy Dán Nhãn & Phân Rã Tự Sự
+
+Để xử lý việc những thông tin mang tính "đời sống vĩnh viễn" (như bệnh tật, ăn uống) không có dòng thời gian, nhưng lại gây méo mó lịch sử nếu nhét chung một cục, chúng ta sẽ áp dụng **Tư duy Kiến trúc RAG (Data Tagging at Source)** kết hợp với **Quy tắc phân rã Tự sự (Narrative Partitioning)**.
+
+### A. Dán nhãn dữ liệu từ gốc (Data Tagging at Source)
+Ở ngay bước tìm kiếm dữ liệu thô ban đầu (`Extract Blueprint`), hệ thống sẽ buộc AI định vị và dán nhãn phân loại cho toàn bộ các `key_data` thu thập được:
+*   **Nhãn `[CHRONIC]`**: Thông tin tĩnh, lặp đi lặp lại, không có mốc thời gian cụ thể (VD: Hải tặc ăn gì hàng ngày, kỹ năng phẫu thuật mùng mền, cấu trúc tàu bằng gỗ sồi).
+*   **Nhãn `[TIMELINE: Thời_gian]`**: Sự kiện động, neo chặt với một mốc lịch sử (VD: Bùng phát dịch sốt rét trên tàu đầu năm 1718, Trận phong tỏa Charleston tháng 5/1718).
+
+### B. Quy tắc rải sự kiện (Scattering) trong Phase Plan
+Sử dụng các nhãn trên, khi bước vào khâu gộp chương (`Phase Plan`), AI sẽ tuân thủ tuyệt đối quy tắc **CHRONOLOGICAL LIFE-CYCLE MAPPING**:
+1. **Quy Hoạch Lại Phase "Bánh Răng Sinh Học":** 
+   - Phase này sẽ đóng vai trò là một màn **"Day-in-the-Life" (Một ngày bình thường)** diễn ra ngay sau khi con tàu được sinh ra (Nhằm đóng băng thời gian để setup bối cảnh).
+   - Nó **chỉ được phép** chứa các thông tin có nhãn `[CHRONIC]`.
+2. **Quy Tắc "Thả Neo & Rải Rác" Sự Kiện Sinh Học:**
+   - Bất kỳ thông tin sinh học hay đời sống nào có dính nhãn `[TIMELINE]` (tức là nó là nguyên nhân/hậu quả của một sự kiện cụ thể) thì **TUYỆT ĐỐI KHÔNG ĐƯỢC** gom vào "Bánh Răng".
+   - Bắt buộc phải đem nó ghép vào Phase chứa sự kiện đó (Ví dụ: Đem `[TIMELINE: Dịch sốt rét]` rải sang Phase **Thử Lửa** làm nguyên nhân trực tiếp thúc đẩy Trận phong tỏa cướp thuốc men; Đem `[TIMELINE: Ván tàu bị hà biển ăn thối rữa]` rải sang Phase **Cái Chết Vật Lý** làm lý do khiến nó dễ dàng bị bẻ gãy khi mắc cạn).
+
+---
+**Kết Luận Cuối Cùng:** 
+Sự thay đổi về thiết kế này lập tức chặn đứng tình trạng AI tự đoán mò "Cái nào là Sự Kiện, cái nào là Bối Cảnh nền". Việc dán nhãn từ gốc không những tái cấu trúc lại tính điện ảnh cao cấp nhất cho Phase Plan mà còn giúp timeline chạy trơn tru, logic Nhân Quả được siết chặt đến không thể bắt bẻ.
