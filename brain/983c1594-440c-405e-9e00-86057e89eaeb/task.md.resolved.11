@@ -1,0 +1,7 @@
+# Resume Extension — Top/List Mode
+
+- [x] 1. Save [_resume.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Isaac_Newton_20260409_1554/_pipeline/_resume.json) in Top/List pipeline ([_do_renew_style](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3182-3714))
+- [x] 2. Add checkpoint detection for Steps 1-4 (detect, blueprint, enrich, ranking)
+- [x] 3. Pass [resume](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#2066-2284) param through [_run_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3599-3635) to shared pipeline
+- [x] 4. Update [_do_resume](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#2066-2284) to handle Top/List mode
+- [x] 5. Verify syntax — OK
