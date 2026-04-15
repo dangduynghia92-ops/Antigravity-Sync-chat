@@ -1,0 +1,46 @@
+# Báo Cáo Phân Tích: Đứt Gãy Mạch Truyện Trong Pipeline (Chuyên Đề: Tàu Hải Tặc / Chiến Hạm)
+
+Qua quá trình mổ xẻ file log ([ch03_prompt_debug.txt](file:///C:/Users/Admin/OneDrive/Documents/Content_Queen_Anne%27s_Revenge_20260415_0042/v1_Chi%E1%BA%BFn_H%E1%BA%A1m_Huy%E1%BB%81n_Tho%E1%BA%A1i/_pipeline/_chapter_data/ch03_prompt_debug.txt)) và các file prompt lõi của hệ thống (đặc biệt là ngách Pirate/Ship), tôi đã xác định được 2 nguyên nhân cốt lõi dẫn đến việc kịch bản được tạo ra bị cứng nhắc, thiếu sự liên kết và xáo trộn hoàn toàn về dòng thời gian (như bạn đã thấy ở các Chapter 4 đến 9 trong *Queen Anne's Revenge*).
+
+Dưới đây là chi tiết và đề xuất giải pháp.
+
+---
+
+## 1. Vấn Đề 1: Lỗi "Ngáo" Khi Bắt Đầu Chapter (Context Disconnect)
+
+### Biểu Hiện
+Khi gọi API cho Chapter 3, mặc dù trong file Outline JSON có ghi rõ: \`"callback_to": "The disease and weakness of Dosset's crew established in the previous chapter."\`, AI vẫn mở đầu một cách cứng nhắc, nhào thẳng vào đoạn "Hai tàu hải tặc ép sát, bắn pháo..." mà không có dòng văn học mượt mà nào để nối tiếp cảm xúc từ cuối Chapter 2. Trong khi đó, nếu dùng chính đoạn prompt này trên Web UI, ChatGPT có thể viết mượt hơn.
+
+### Nguyên Nhân Gốc Rễ
+- **Thiếu biến cục bộ trong System Prompt:** Mặc dù mã nguồn Python ([rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)) có lệnh thay thế biến `{previous_context}` (nhằm bơm 100 chữ cuối của chương trước vào), nhưng trong file Prompt gốc của ngách Pirate ([prompts\system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt)), **từ khóa `{previous_context}` hoàn toàn không tồn tại**.
+- **Tư duy System cứng nhắc:** Khi gọi API qua vai trò hệ thống, AI coi các instruction (như `callback_to`) giống như một tờ danh sách cần tick (check-list). Nó báo cáo ngắn gọn việc "đã nhắc đến bệnh dịch" rồi xông thẳng vào `main_key_data` thay vì nhập vai là người kể chuyện.
+
+### Đề Xuất Sửa Tận Gốc
+- Mở file [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) và thêm rule bắt buộc:
+  > **TRANSITION RULE:** You MUST start this chapter smoothly. Here is the last paragraph of the previous chapter: `{previous_context}`. Continue the narrative seamlessly from that exact emotional tone and scene.
+- Cập nhật cơ chế [auto_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py) để sau khi xuất một Chapter, hệ thống lưu lại một đoạn ngắn cuối cùng và truyền vào `{previous_context}` cho lần chạy kế tiếp.
+
+---
+
+## 2. Vấn Đề 2: Lỗi Xáo Trộn Dòng Thời Gian (Chronological Fragmentation)
+
+### Biểu Hiện
+Trong kịch bản *Queen Anne's Revenge*:
+- Phase **Bánh Răng Sinh Học** (Chap 4, 5) mô tả hoàn toàn về đời sống ngột ngạt và y tế của hải tặc. Ở cuối Chap 5 có gieo điểm yếu (mớn nước sâu).
+- Phase **Thử Lửa** (Chap 6, 7) đùng một cái quay lại kể trận đấu súng hao hùng với HMS Scarborough.
+- Phase **Cái Chết Vật Lý** (Chap 8, 9) lại quay về mô tả vụ mắc cạn do mớn nước sâu.
+- Các chi tiết bị cưỡng ép, đứt gãy trình tự thời gian (ví dụ tàu cướp từ tháng 11/1717, đánh Scarborough đầu năm 1718, phong tỏa Charleston tháng 5/1718, rồi mắc cạn tháng 6/1718). Thay vì chạy tuần tự, thì mọi sinh hoạt bị dồn hết vào Chap 4,5, còn đánh nhau dồn hết vào Chap 6,7.
+
+### Nguyên Nhân Gốc Rễ
+- Sự khác biệt về luật (Rules) giữa các Prompt Phase Plan. Trong file của Biography ([system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)), luật là **CHRONOLOGICAL MAPPING** (Nhóm theo thời gian, không bao giờ đem việc cuối đời lên đầu tiên).
+- Nhưng trong file của Pirate ([system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)), luật lại là **THEMATIC MAPPING** (Nhóm theo Chủ Đề):
+  - Ép tất cả những sự kiện là `ship_life_and_crew`, `economics` phải vào phase `Bánh Răng`.
+  - Ép tất cả những sự kiện là `combat_events` phải vào phase `Thử Lửa`.
+- Hệ quả là AI phải "bóc" toàn bộ các trận đánh ra khỏi mốc thời gian của nó để nhét riêng vào một chỗ, phá nát trải nghiệm "vòng đời tự nhiên" của một sự vật.
+
+### Đề Xuất Sửa Tận Gốc
+- Sửa lại luật trong [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) thành **CHRONOLOGICAL LIFE-CYCLE MAPPING**.
+- Yêu cầu AI vẫn giữ các Phase (Sinh ra -> Vận hành -> Đỉnh cao/Kinh hoàng -> Suy tàn) nhưng **BUỘC phải tuân thủ dòng thời gian lịch sử**, không xé lẻ mảng đời sống và chiến đấu. Nếu một trận chiến diễn ra ở giai đoạn sớm, nó sẽ nằm trong Phase rèn luyện năng lực; nếu một trận chiến diễn ra ở cuối hành trình, nó nằm ở Phase đỉnh cao hoặc Suy tàn. Đời sống và chiến đấu phải đan xen vào nhau để thúc đẩy hành động (Cause & Effect).
+
+---
+**Kết Luận:** Việc giải quyết triệt để 2 vấn đề trên sẽ giúp kịch bản xuất ra từ API có độ mượt mà cao, mạch truyện liền mạch nhân quả và mang đến cảm giác điện ảnh tự nhiên thay vì một bản báo cáo phân loại theo chủ đề.
