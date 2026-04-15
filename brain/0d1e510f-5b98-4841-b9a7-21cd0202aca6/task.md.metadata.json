@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Tracks rename Collapse Seeds → Decline across all 6 pirate files, fix definitions, move Pirate Medicine to Daily Life, fix structural conflicts.",
-  "updatedAt":  "2026-04-15T11:49:56.174025200Z",
-  "version":  "12"
+  "summary":  "Task checklist tracking the biography pipeline audit — phase definitions, litmus tests, empty phase handling, and new Bóng Tối framework implementation.",
+  "updatedAt":  "2026-04-15T16:21:29.101042200Z",
+  "version":  "13"
 }

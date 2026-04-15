@@ -1,8 +1,12 @@
-# Rename Collapse Seeds → Decline + Fix Definitions
+# Biography Pipeline Audit & Enhancement
 
-- [ ] Blueprint research: move medical_horrors to Daily Life, rename + redefine Decline section
-- [ ] JSON: rename steps, lens, pacing, outline_rules, transitions
-- [ ] Phase plan: rename + redefine classification + mapping
-- [ ] Outline: rename lenses, chapter mapping, rules 
-- [ ] Write: rename + fix B1 (IMMERSION) + B3 (Pirate Medicine scope) + B4 (Anti-Hero scope) + B8 (outdated terms)
-- [ ] Audit: rename lifecycle + phase coverage
+- [x] Audit biography phase definitions and key_data allocation
+- [x] Add Origin vs Foundation litmus test (WHO they ARE vs WHAT they LEARNED)
+- [x] Add Foundation to chronological mapping guide
+- [x] Verify empty phase handling (SKIP/MERGE) — already implemented in code
+- [/] Add "Bóng Tối" framework for negative figures
+  - [/] Add framework to `narrative_tiểu_sử_nhân_vật.json`
+  - [ ] Add `dark_impact` section to blueprint research prompt
+  - [ ] Add `downfall_pattern` section to blueprint research prompt
+  - [ ] Validate JSON
+  - [ ] Update walkthrough
