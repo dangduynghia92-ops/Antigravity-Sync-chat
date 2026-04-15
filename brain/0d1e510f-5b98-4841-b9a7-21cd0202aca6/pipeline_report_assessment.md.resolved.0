@@ -1,0 +1,104 @@
+# Đánh Giá Báo Cáo: "Đứt Gãy Mạch Truyện Trong Pipeline"
+
+## Tóm Tắt Đánh Giá
+
+Báo cáo **đúng về triệu chứng** (chronological fragmentation) nhưng **sai về nguyên nhân gốc** và **giải pháp đề xuất quá phức tạp cho vấn đề thực tế**.
+
+---
+
+## 1. Vấn Đề Chronological Fragmentation — Đúng Hay Sai?
+
+### ✅ Đúng: Triệu chứng có tồn tại
+
+Outline thực tế xác nhận cấu trúc thematic:
+| Ch | Phase | Nội dung | Mốc thời gian |
+|----|-------|----------|---------------|
+| 4 | Bánh Răng | Pirate Medicine, bệnh tật | Early 1718 |
+| 5 | Bánh Răng | Nô lệ, collapse seeds (draft sâu) | Spring 1718 |
+| 6 | Thử Lửa | HMS Scarborough encounter | Early 1718 |
+| 7 | Thử Lửa | Charleston Blockade | May 1718 |
+| 8 | Cái Chết | Grounding tại Beaufort Inlet | June 1718 |
+| 9 | Cái Chết | Betrayal & Escape | June 1718 |
+
+**Kết quả**: Ch4-5 (Bánh Răng) nói bệnh tật/nô lệ/draft sâu → Ch6 nhảy sang đánh Scarborough (cũng Early 1718) → Ch8-9 quay lại mắc cạn vì draft sâu. Đúng là cảm giác "đứt gãy" khi bệnh tật (nguyên nhân → Charleston) và draft sâu (nguyên nhân → mắc cạn) bị tách xa hậu quả.
+
+### ❌ Sai: THEMATIC mapping KHÔNG phải lỗi — đó là THIẾT KẾ CÓ CHỦ ĐÍCH
+
+Báo cáo nói: *"rule đang là THEMATIC MAPPING (Nhóm Cứng theo Chủ Đề), AI bị trói buộc"*
+
+**Thực tế**: Framework "Chiến Hạm Huyền Thoại" có **7 phase** cố định theo vòng đời con tàu:
+```
+Mồi Nhử (Hook) → Bản Vẽ (Origin) → Đột Biến (Mutation) 
+→ Bánh Răng (Human Engine) → Thử Lửa (Apex Test) 
+→ Cái Chết (Collapse) → Bóng Ma (Archaeology)
+```
+
+Đây là **narrative arc thiết kế** — không phải lỗi. Nó phục vụ câu hỏi trung tâm: *"Cỗ máy chiến tranh hoạt động ra sao? → Nó thể hiện sức mạnh thế nào? → Nó chết thế nào?"*
+
+Nếu chuyển sang CHRONOLOGICAL toàn bộ, bạn sẽ mất:
+- **Mất immersive effect**: Không còn "đóng băng thời gian" để audience sống bên trong cỗ máy ở phase Bánh Răng
+- **Mất foreshadowing logic**: Collapse seeds (draft sâu, bệnh dịch) PHẢI được gieo TRƯỚC lúc thấy đỉnh cao (Thử Lửa), để audience hiểu "chiến thắng này có cái giá"
+- **Mất structure của framework**: THEMATIC chính là USP của framework Chiến Hạm
+
+---
+
+## 2. Giải Pháp Đề Xuất — Đánh Giá
+
+### ❌ "Dán nhãn [CHRONIC] / [TIMELINE]" — Quá phức tạp, không cần thiết
+
+> [!WARNING]
+> Đề xuất này yêu cầu thay đổi cấu trúc blueprint extraction (bước nghiên cứu) — thêm nhãn dữ liệu mới, sửa schema JSON, sửa code [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py), sửa prompt extract_blueprint. Đây là **overengineering** cho một vấn đề có thể giải quyết đơn giản hơn.
+
+**Vấn đề kỹ thuật:**
+- Blueprint hiện tại đã có `chronological_timeline` field — timeline data ĐANG có sẵn
+- AI đã tự xác định `time_anchor` cho mỗi chapter trong outline → nó BIẾT thứ tự thời gian
+- Việc dán nhãn [CHRONIC]/[TIMELINE] ở bước extract_blueprint chỉ thêm noise cho AI vì nó đã có đủ context
+
+### ❌ "Quy tắc rải sự kiện (Scattering)" — Phá vỡ framework
+
+Đề xuất *"Đem [TIMELINE: Dịch sốt rét] rải sang Phase Thử Lửa"* sẽ:
+1. Phá vỡ `chapter_structure` assignments: Ch4 được gán `immersion`, Ch6 được gán `event` — nếu rải bệnh tật vào Ch6, nó phải thay đổi structure
+2. Phá vỡ `lens` rules: Phase Thử Lửa có lens = `CINEMATIC-ACTION + DUAL LENS`. Dồn bệnh tật vào đây phá vỡ tone
+3. Mâu thuẫn với `collapse_seeds` design: Framework YÊU CẦU gieo seeds ở Bánh Răng, thu hoạch ở Cái Chết — đó là narrative causality
+
+---
+
+## 3. Vấn Đề THỰC SỰ Và Giải Pháp Đúng
+
+### Vấn đề thực sự: **Thiếu cầu nối nhân-quả giữa các phase**
+
+Trải nghiệm "đứt gãy" không phải vì thematic mapping, mà vì:
+1. **Ch5 → Ch6 transition** thiếu causal bridge: Ch5 nói "draft sâu làm tàu dễ mắc cạn" rồi Ch6 nhảy sang đánh Scarborough mà không kết nối
+2. **Ch4-5 → Ch7 connection** bị yếu: bệnh tật (Ch4) → cướp thuốc (Ch7) là nhân-quả tuyệt vời, nhưng AI có thể không nhấn mạnh đủ
+
+### ✅ Giải pháp đúng (đã implement một phần):
+
+**A. `previous_context` (đã có)**: Mỗi chapter writer nhận context từ chapter trước → AI biết "tôi vừa nói gì ở Ch5" khi viết Ch6. Chỉ cần đảm bảo context injection hoạt động tốt.
+
+**B. `callback_to` + `foreshadow` fields (đã có)**: Outline đã chứa:
+- Ch5: `foreshadow = "deep draft making it vulnerable to grounding"`
+- Ch6: `callback_to = "The 40 cannons installed during the mutation phase"`
+- Ch7: `callback_to = "The rampant syphilis and need for mercury established in the medical bay"`
+
+→ AI **đã có** instructions để tạo cầu nối nhân-quả. Nếu output chưa đủ mạnh, vấn đề nằm ở **prompt enforcement**, không phải data structure.
+
+**C. SCENE ANCHOR (đã implement phiên trước)**: Yêu cầu mỗi chapter bắt đầu bằng time/place anchor → giúp audience re-orient khi chuyển phase.
+
+---
+
+## 4. Kết Luận
+
+| Khía cạnh | Đánh giá |
+|-----------|----------|
+| Nhận diện triệu chứng | ✅ Chính xác |
+| Xác định nguyên nhân gốc | ❌ Sai — THEMATIC là thiết kế, không phải lỗi |
+| Giải pháp [CHRONIC]/[TIMELINE] | ❌ Overengineering, không cần thiết |
+| Giải pháp "Scattering" | ❌ Phá vỡ framework lens/structure |
+| Mức độ ảnh hưởng nếu implement | ⚠️ **Cao** — sẽ rewrite lại blueprint extraction + phase plan, risk regression cho tất cả niche |
+
+### Đề xuất hành động:
+1. **Không implement** nhãn [CHRONIC]/[TIMELINE] hay Scattering
+2. **Kiểm tra** `previous_context` injection hoạt động đúng (đã fix filter ratio từ 91-99% xuống ~35%)
+3. **Kiểm tra** `callback_to`/`foreshadow` có được AI thực hiện đúng hay không ở output
+4. **SCENE ANCHOR** đã implement → re-generate chapters xem kết quả có cải thiện
+5. Nếu vẫn cảm thấy đứt gãy → tăng cường prompt ở [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) với rule: *"CAUSAL BRIDGE: When opening a NEW phase, briefly recall the consequence from the previous phase that DRIVES this new phase (1 sentence max, integrated into scene anchor)"*
