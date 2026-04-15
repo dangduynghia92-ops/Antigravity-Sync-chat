@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Comprehensive rules framework for pirate ship pipeline, derived from QAR case study. Covers 3 areas:\n1. KEY DATA CLASSIFICATION — 3 types (Event, Condition, Observation) with clear sorting rules for main vs sub and which phase they belong to.\n2. CHAPTER ORDERING — Lifecycle progression rule, Freeze-Frame placement, Escalation pattern for combat events, Causal Proximity rule.\n3. WRITING RULES — Scene Anchor enforcement, Callback Integration, Motivation Bridge for phase transitions, Escalation Transition between events.\nEach rule includes generic formulation + QAR example + anti-pattern.",
+  "updatedAt":  "2026-04-15T06:33:58.447966100Z"
+}
