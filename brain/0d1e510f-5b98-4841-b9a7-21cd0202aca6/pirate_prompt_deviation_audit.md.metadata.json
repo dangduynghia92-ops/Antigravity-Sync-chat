@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Comprehensive audit comparing all pirate prompt files against biography (stable template) to identify rules that were fabricated without basis. Found 8 deviations: 5 already fixed, 2 still unfixed (UNLESS gates in validator, event_cramming in audit), 1 cosmetic.",
+  "updatedAt": "2026-04-15T01:25:21.283163Z",
+  "requestFeedback": true
+}
