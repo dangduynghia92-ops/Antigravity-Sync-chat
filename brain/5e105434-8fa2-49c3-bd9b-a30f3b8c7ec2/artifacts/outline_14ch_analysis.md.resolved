@@ -121,9 +121,30 @@ Báo cáo này trích xuất trực tiếp toàn bộ dữ liệu (Main/Sub Key)
     1. Đám tàn binh bơ vơ tự rã đám, một số xin Vua ân xá, một số chết.
 
 ---
-## TỔNG KẾT: TẠI SAO BẢN NÀY LẠI DÀI TỚI 14 CHƯƠNG?
+## TỔNG KẾT: GIẢI MÃ HIỆN TƯỢNG PHÌNH 14 CHƯƠNG VÀ LỖI LOGIC HỆ THỐNG
 
-Nhìn vào phân tích trên, nguyên nhân đẻ ra 14 chương là do khả năng **Nghiên cứu quá sắc nét (Hyper-Granularity)** của Model: 
-1. **Nó Không chịu gom "Nhân - Quả" vào 1 chương:** Ví dụ thay vì gom trận bắn tàu hải quân Anh và vụ nhét cờ lê râu để hù dọa thành 1, nó tách phần Hành động sang Ch.9, tốn thêm 1 chương phụ Ch.11 chỉ để nói về *Hậu quả vật lý sau trận đấu* (Careening) và *Hậu quả chính trị* (Hoàng gia nổi giận).
-2. **Nó soi vào Kẽ hở thời gian:** Diễn tiến cướp tàu chỉ mất vài tiếng, nhưng nó vỡ ra làm 3 chương rõ rệt: *Lúc vừa tiếp cận (Ch.4)* -> *Lúc cướp xong bới vàng (Ch.5)* -> *Lúc lột xác máy móc (Ch.6)*.
-3. Việc này làm cho Data rất mảnh, nhưng lại cực kỳ tuyến tính. Đó là lý do khi **thằng Audit (bị hardcode ép gom còn 8 chap) vào xử lý, nó hoảng loạn**, gom 3 chap Đột Biến (4-5-6) thành một cục lộn xộn ở bản v1 mà chúng ta đã thấy!
+Sau khi phân tích dữ liệu và đối chiếu chéo các bộ Prompt (Giữa `Pirate History` và `Biography`), chúng ta phát hiện ra rằng việc AI sinh ra tới 14 chương là một kết quả "hoàn hảo về mặt thi hành luật", nhưng lại là "khủng hoảng về mặt thiết kế hệ thống". Dưới đây là 3 nguyên nhân cốt lõi đúc kết được:
+
+### 1. Luật "Kỹ sư dọn xe" vs Luật "Người vĩ đại" (Sự thiên vị cơ khí)
+*   Trong ngách **Tiểu sử nhân vật (Biography)**: Prompt ép AI chọn các cột mốc xoay chuyển (Turning point). Ví dụ ròng rã ngồi tù 12 năm cũng chỉ bị ném xuống `Sub-key` (Background). Hành động "Bị bắt" mới là Main.
+*   Nhưng trong ngách **Tàu Hải Tặc (Ship-centric)**: Prompt lại mang tư duy Kỹ sư Cơ khí. Câu lệnh `each modification is a separate milestone` đã ép AI đếm từng con ốc. Việc *gắn pháo*, *đổi tên tàu*, *khoét lỗ châu mai* đều được tính là các hành động (Main-key) có trọng lượng ngang bằng với một trận đánh lớn.
+*   **Hậu quả:** Tàu Hải tặc độ cơ khí liên tục nên số lượng Main-key bùng nổ theo cấp số nhân so với quá trình sống của con người.
+
+### 2. Sự can thiệp của Module "Validator" (Nâng cấp Drama)
+Tại Chương 4, việc tên thủy thủ Pháp Louis Arot phản bội là một chi tiết vặt. Nhưng Module Validator quét qua và nhận định: *"This is a pivotal human moment of betrayal"* (Đây là cú Twist phản bội gay cấn).
+=> Lập tức, Validator "Promote" (nâng cấp) chi tiết này từ Sub-key lên thành Main-key. Việc AI tự động nâng cấp Drama đã vô tình đẻ thêm node dữ liệu, khiến chương trình bị kéo dài ra.
+
+### 3. Án tử từ Luật Cấm Gộp (Anti-Merge Rule)
+Dòng lệnh `Do NOT merge distinct blueprint events... Each event = one separate item` trong file Prompt của Tàu Hải Tặc đã ngăn cấm sự nhân nhượng.
+*   **Với Tiểu sử:** `✓ GOOD: main: ["Bị bắt"], sub: ["Ngồi tù 12 năm"]` -> Gộp được Hậu quả xuống Sub.
+*   **Với Tàu Hải tặc:** `✓ GOOD: main: ["Tịch thu tàu"], main: ["Đổi tên"], main: ["Gắn pháo"]` -> Cố tình nâng toàn bộ lên làm chuỗi Main-key riêng rẽ.
+*   **Hậu quả:** Một chuỗi hành động Cướp Tàu (diễn ra trong vài tiếng) bị cấm gộp lại thành 1 câu, nên AI bắt buộc phải bung ra thành 4 array nodes rời rạc. Áp dụng quy tắc 3-4 nodes = 1 chapter, quy trình cướp tàu nở ra thành hẳn Chương 4, Chương 5 và Chương 6.
+
+### 👉 KẾT LUẬN & HƯỚNG GIẢI QUYẾT:
+Bản 14 Chương này sở hữu chất lượng **Routing (Phân loại Data) hoàn hảo 10/10**. Nó diễn đạt câu chuyện chi tiết như một thước phim điện ảnh quay chậm (Micro-slicing). 
+
+**Vấn đề:** Module `Audit` hiện tại đang bị hardcode giới hạn số chương (ép gom về 8 chương) dẫn đến việc "hoảng loạn" nén bẹp 14 chương chất lượng cao này lại thành cháo thập cẩm (Merge chồng chéo ở bản v1).
+
+**Cách khắc phục đề xuất:**
+1. **Dành cho Niche Đồ Vật/Cơ khí:** Nên nới lỏng giới hạn `Audit` để cho phép kịch bản phình lên 10-15 chương, đáp ứng kỳ vọng của khán giả muốn xem phân tích mổ xẻ (Anatomy).
+2. **Nếu muốn nén lại 8 Chương:** Bắt buộc phải vào tệp `system_narrative_phase_plan_pirate.txt` và nới lỏng luật Anti-Merge, cho phép AI gộp các chuỗi sự kiện *"Tịch thu - Đổi tên - Gom Vàng"* thành một Main-key (Sequence Block) duy nhất, và xóa bỏ lệnh `each modification is a separate milestone`.
