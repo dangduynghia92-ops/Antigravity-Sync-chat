@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "All implementation tasks completed. 4 files modified with 15 total edits.",
-  "updatedAt":  "2026-04-15T06:44:59.562537400Z",
-  "version":  "8"
+  "summary":  "Tracks pirate pipeline optimization: Vietnamese→English conversion (done), no-bridge rule (done), context-first opening (done), apex test tone (done), and the current task: splitting Human Engine into Daily Life + Collapse Seeds.",
+  "updatedAt":  "2026-04-15T10:26:45.074780400Z",
+  "version":  "9"
 }
