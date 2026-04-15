@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Documents the rename of Collapse Seeds → Decline across all 6 pirate pipeline files, with definition changes, Pirate Medicine moved to Daily Life, and structural conflicts B1/B3/B4/B8 resolved.",
-  "updatedAt":  "2026-04-15T11:57:13.067652700Z",
-  "version":  "6"
+  "summary":  "Walkthrough documenting the complete Bóng Tối framework implementation: research findings, framework design, phase structure, scoring boundaries, and all files modified.",
+  "updatedAt":  "2026-04-15T16:51:10.527743500Z",
+  "version":  "7"
 }

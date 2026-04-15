@@ -1,40 +1,58 @@
-# Rename Collapse Seeds → Decline — Walkthrough
+# Bóng Tối Framework — Walkthrough
 
-## Core Change
+## Problem
+The biography niche had 2 "general" chronological frameworks:
+- **Sử Thi** — positive figures with lasting legacy (tone: admiring)
+- **Sự Lụi Tàn** — figures who self-destructed (tone: tragic)
 
-**Collapse Seeds** (vague, metaphorical) → **Decline** (clear, actionable)
+**Gap**: No framework for **negative figures who didn't self-destruct** (e.g., Genghis Khan, Idi Amin, Mao).
 
-**New definition**: Causes, events, and progressive deterioration that **directly lead to the Death event**.
+## Research Findings
+Audience psychology for "dark biography" content:
+1. **"How did an ordinary person become THIS?"** — transformation process
+2. **"What system allowed this?"** — enabling factors
+3. **"What was the real cost?"** — cold documentation of impact/victims
 
-**Litmus test**: "Does this explain WHY the machine died?" YES → Decline. NO → Daily Life.
+Key principle: **same chronological timeline** as other frameworks, different **lens** (cold/factual vs admiring/tragic).
 
-## Lifecycle
+## Changes Made
+
+### 1. [narrative_tiểu_sử_nhân_vật.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_tiểu_sử_nhân_vật.json)
+
+**Added framework "Bóng Tối"** (lines 804-958, ~155 lines):
+
+| Phase | Name | Purpose | Lens |
+|---|---|---|---|
+| Hook | Vết Máu | Cold shock fact | Worst number/act → "but they were once ordinary" |
+| Origin | Con Người | WHO they were | Ordinary person BEFORE darkness — build empathy |
+| Foundation | Hình Thành | First signs | Environment/event that planted the seed |
+| Rise | Leo Thang | Escalation | Each step darker — "choice chain" pattern |
+| Peak | Cỗ Máy | Full power | COLD DOCUMENTATION — numbers, methods, victims |
+| End | Kết Cục | Neutral ending | No forced self-destruction |
+| Verdict | Vết Sẹo | Scars left | World AFTER them — lasting damage + lessons |
+
+**Scoring** (`evaluation_focus`):
+- `primary_data_field`: `dark_impact`
+- `tier_field`: `victim_scale` (Local_Harm: 5, National_Destruction: 8, Genocide_Level: 10)
+- Win condition: dark_impact ≥ 7 **AND** downfall_pattern weak/absent
+- Added `dark_impact` + `downfall_pattern` to `excerpt_fields`
+
+---
+
+### 2. [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
+
+**Added 2 new blueprint data sections** (sections 18-19):
+
+**Section 18 — DARK IMPACT**: `victim_scale`, `estimated_casualties`, `systematic_methods`, `enabling_factors`, `affected_populations`
+
+**Section 19 — DOWNFALL PATTERN**: `severity`, `self_inflicted`, `strength_to_weakness`, `cause_of_end`
+
+Both added to schema definitions AND JSON output format. Empty when not applicable.
+
+## Scoring Boundaries (3 General Frameworks)
 
 ```
-Hook → Blueprint → Mutation → Daily Life → Apex Test → Decline → Death → Ghost
+Legacy positive? → SỬ THI (paradigm_shift ≥ 7)
+Self-destructed? → SỰ LỤI TÀN (downfall_pattern ≥ 7)
+Dark impact high + no self-destruct? → BÓNG TỐI (dark_impact ≥ 7, downfall < 5)
 ```
-
-## Files Modified (6 total)
-
-| File | Key Changes |
-|------|-------------|
-| [system_research_blueprint_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_pirate.txt) | §10 → SHIP DECLINE FACTORS (generic, litmus test). `medical_procedures` moved to §9 (Daily Life). |
-| [narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_l%E1%BB%8Bch_s%E1%BB%AD_h%E1%BA%A3i_t%E1%BA%B7c.json) | Step renamed. Lens: `TRAGIC-PROGRESSIVE`. Pacing, transitions, outline_rules, act_breakdown, chapter_design updated. |
-| [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) | Classification → `ship_decline_factors`. Cause-effect: "Decline SHOWS causes. Death HARVESTS." |
-| [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt) | Lens → TRAGIC-PROGRESSIVE. Rule 18: ends_with = INEVITABLE TRAGEDY. |
-| [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) | Decline tone rule. IMMERSION → balanced reflection (B1 fix). Pirate Medicine → Daily Life (B3). Anti-Hero → Blueprint (B4). |
-| [system_narrative_audit_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pirate.txt) | Lifecycle + phase coverage + medicine check updated. |
-
-## Structural Conflicts Fixed
-
-| Issue | Fix |
-|-------|-----|
-| B1: IMMERSION ended with "Collapse Seeds" | → Ends with "balanced reflection" |
-| B3: Pirate Medicine in wrong phase | → Moved to Daily Life (routine procedure) |
-| B4: Anti-Hero scope referenced "Bối Cảnh" | → References "Blueprint" |
-| B8: "ANATOMY/DARK REALITY" outdated | → Fixed in TIME-SPACE ANCHORING |
-
-## Verification
-
-- `grep "Collapse Seeds"` across all pirate files → **0 results** ✓
-- `ship_collapse_signals` → renamed to `ship_decline_factors` ✓
