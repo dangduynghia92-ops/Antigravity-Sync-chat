@@ -1,43 +1,83 @@
-# Phase Naming Standard — Ship Framework
+# Thêm Framework "Bóng Tối" cho Biography Niche
 
-## Naming Convention
+## Mục tiêu
 
-| # | Old [name](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3486-3496) (Vietnamese) | New [name](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3486-3496) (English key) | `purpose` | `description` (giữ tiếng Việt) |
-|---|------------------------|--------------------------|-----------|-------------------------------|
-| 1 | Mồi Nhử Huyền Thoại | Hook | Hook | Phô diễn SCALE tàu |
-| 2 | Bản Vẽ & Nguồn Gốc | Blueprint | Blueprint | Lòng tham Đế quốc + thiết kế gốc |
-| 3 | Đột Biến | Mutation | Mutation | Vụ cướp + naming + giải phẫu đột biến |
-| 4 | Bánh Răng Sinh Học | Human Engine | Human Engine | Đời sống + Pirate Code + Pirate Medicine |
-| 5 | Thử Lửa | Apex Test | Apex Test | 1-2 sự kiện PEAK + hậu quả nạn nhân |
-| 6 | Cái Chết Vật Lý | Death | System Collapse | Suy tàn + sự kiện chết + twist |
-| 7 | Bóng Ma Khảo Cổ | Ghost | Archaeological Ghost | Time-jump + hiện vật + legacy question |
+Thêm framework tổng quát thứ 3 cho nhân vật tiêu cực không tự hủy. Lấp gap giữa:
+- **Sử Thi** (positive legacy) và **Sự Lụi Tàn** (self-destruction)
+- **Bóng Tối** = negative impact + no self-destruction (Genghis Khan, Idi Amin, etc.)
 
-## Field Structure (JSON)
+## Proposed Changes
 
+### Biography JSON Framework
+
+#### [MODIFY] [narrative_tiểu_sử_nhân_vật.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_tiểu_sử_nhân_vật.json)
+
+Add new framework "Bóng Tối" to `frameworks[]` array (after Sự Lụi Tàn, before `chapter_structures`). Structure follows existing pattern:
+
+**Key sections:**
+- `name`: "Bóng Tối"
+- `use_when`: Negative figures who didn't self-destruct
+- `emotional_arc`: Shock → Empathy → Unease → Horror → Cold Documentation → Reflection
+- `structure`: Same chronological as Sử Thi/Sự Lụi Tàn (7 phases)
+- `hook`: Cold shock — worst fact + "but they were once ordinary"
+- `pov_strategy`: Third person cold/distant as default
+- `steps[]`: 7 phases with dark-specific lenses:
+  1. **Vết Máu** (Hook) — cold shock fact
+  2. **Con Người** (Origin) — ordinary childhood, WHO they were
+  3. **Hình Thành** (Foundation) — wound/environment that shaped them, WHAT they learned
+  4. **Leo Thang** (Rise) — pattern of escalation, each step darker
+  5. **Cỗ Máy** (Peak) — full power, cold documentation of impact
+  6. **Kết Cục** (End) — neutral ending, NO forced self-destruction
+  7. **Vết Sẹo** (Verdict) — the world after them, scars + lessons
+- `evaluation_focus`:
+  - `primary_data_field`: "dark_impact"
+  - `tier_field`: "victim_scale"
+  - `tier_scoring`: Local_Harm: 5, National_Destruction: 8, Genocide_Level: 10
+  - Win condition: dark_impact ≥ 7 AND downfall_pattern < 5
+
+---
+
+### Blueprint Research Prompt
+
+#### [MODIFY] [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
+
+Add `dark_impact` section to blueprint data schema:
 ```json
-{
-  "name": "Human Engine",          // ← English key (used for matching/reference)
-  "description": "Đời sống...",    // ← Vietnamese (context for AI khi viết)
-  "purpose": "Human Engine",       // ← English (keep synced with name)
-  "lens": "FREEZE-FRAME..."       // ← Tone/style guidance
+"dark_impact": {
+  "victim_scale": "Local_Harm | National_Destruction | Genocide_Level",
+  "estimated_casualties": "number or range",
+  "systematic_methods": ["list of methods used"],
+  "enabling_factors": ["what allowed this to happen"],
+  "affected_populations": ["who was harmed"]
 }
 ```
 
-## Rules
-- [name](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3486-3496) = English key, used in ALL prompts and references
-- `description` = giữ tiếng Việt (AI cần đọc khi viết script tiếng Việt)
-- `lens` = giữ mix Anh-Việt (instructions + ví dụ tiếng Việt)
-- Prompts reference phases by [name](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3486-3496) (e.g., "Human Engine chapters do NOT bridge")
-
-## Files to Update
-
-| File | What changes |
-|------|-------------|
-| `narrative_lịch_sử_hải_tặc.json` | `steps[].name` → English keys |
-| [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) | All phase references |
-| [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt) | Phase lens section + critical rules |
-| [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) | "Bánh Răng" → "Human Engine" |
-| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | **Không cần sửa** (code không match tên phase) |
+Add `downfall_pattern` section (currently missing, needed for Sự Lụi Tàn scoring too):
+```json
+"downfall_pattern": {
+  "severity": "Poor_Judgment | Systematic_Corruption | Megalomaniac_Collapse",
+  "self_inflicted": true/false,
+  "cause_of_end": "description"
+}
+```
 
 > [!IMPORTANT]
-> Đổi [name](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3486-3496) sẽ ảnh hưởng output của phase_plan và outline. Các file pipeline cũ ([_phase_plan.json](file:///C:/Users/Admin/OneDrive/Documents/Content_Queen_Anne%27s_Revenge_20260415_0042/v1_Chi%E1%BA%BFn_H%E1%BA%A1m_Huy%E1%BB%81n_Tho%E1%BA%A1i/_pipeline/_phase_plan.json), [_renew_outline.json](file:///C:/Users/Admin/OneDrive/Documents/Content_Queen_Anne%27s_Revenge_20260415_0042/v1_Chi%E1%BA%BFn_H%E1%BA%A1m_Huy%E1%BB%81n_Tho%E1%BA%A1i/_pipeline/_renew_outline.json)) sẽ dùng tên cũ → cần chạy lại từ phase_plan.
+> These sections should be collected ONLY WHEN RELEVANT — if the subject has no dark impact or downfall, the fields will be empty (which correctly scores those frameworks low).
+
+---
+
+### Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+
+No structural changes needed. The existing chronological mapping + litmus test already covers Bóng Tối because:
+- It uses the same Origin → Foundation → Rise → Peak → End → Verdict structure
+- Phase plan AI reads the `steps[]` array from the framework
+- The new framework's `lens` fields guide data selection
+
+## Verification Plan
+
+### Manual Verification
+1. **JSON validity**: After adding framework, run `python -c "import json; json.load(open('styles/narrative_tiểu_sử_nhân_vật.json', encoding='utf-8'))"` to verify no syntax errors
+2. **Scoring logic**: Ask user to run the pipeline on a test subject (e.g., Genghis Khan or Idi Amin) and verify that Bóng Tối scores highest in framework recommendation
+3. **Phase plan**: Verify that phase plan correctly maps blueprint data to the 7 Bóng Tối steps
