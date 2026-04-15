@@ -1,145 +1,92 @@
-# Resume & Retry — Narrative New Content Pipeline
+# Resume & Checkpoint — Top/List Mode Extension
 
-## Scope
-- **Phase 1 only**: Narrative mode + New Content type
-- Không động vào: Top/List mode, Rewrite type
+## Context
+Narrative mode already has resume + checkpoint saving. Top/List mode ([_do_renew_style](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3142-3612)) needs the same.
 
----
-
-## 1. Retry cho Validate Step
-
-#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
-
-Trong `_validate_single_phase()`: wrap API call với 3 retries, 10s delay.
-- Mỗi retry log: `"⚠ Validate {phase} failed (attempt 1/3), retry in 10s..."`
-- Sau 3 lần fail: `"❌ Validate {phase} failed after 3 retries"` → return empty (phase giữ nguyên)
-- Delay có thể bị interrupt bởi `stop_check`
+**Key insight**: Steps 5-8 (outline→audit→write→review→merge) already use [_run_shared_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1603-2065) which has `resume=True` support. Only Steps 1-4 need new checkpoint logic.
 
 ---
 
-## 2. Metadata File `_resume.json`
+## Proposed Changes
+
+### 1. Save [_resume.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Isaac_Newton_20260409_1554/_pipeline/_resume.json) in Top/List pipeline
 
 #### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-Lưu ngay khi pipeline bắt đầu (step 0, trước research):
+In [_do_renew_style](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3142-3612) → [_run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3224-3607), right after `os.makedirs(pipeline_dir)` (line ~3288):
 
-```json
-{
-  "mode": "Narrative",
-  "type": "new_content",
-  "niche": "biography tiểu sử nhân vật chân dung cuộc đời",
-  "style": "narrative_tiểu_sử_nhân_vật.json",
-  "lang": "español",
-  "started_at": "2026-04-09T15:54:28"
+```python
+_resume_meta = {
+    "mode": "Top/List Review",
+    "type": "rewrite",
+    "niche": _niche,
+    "style": style_info,
+    "lang": lang,
+    "started_at": datetime.now().isoformat(timespec="seconds"),
 }
-```
-
-Vị trí: `{output_dir}/_pipeline/_resume.json`
-
----
-
-## 3. Resume Button
-
-#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
-
-**UI**: Thêm nút `"▶ Resume"` cạnh nút Stop/Retry (vùng khoanh đỏ)
-
-**Logic khi ấn Resume**:
-```
-1. Đọc Output path từ UI
-   └─ Trống? → log "No output path — set Output first" → return
-
-2. Đọc {output}/_pipeline/_resume.json
-   └─ Không có? → log "No resume data found" → return
-
-3. Check mode + type
-   └─ mode ≠ "Narrative"? → log "Resume only supports Narrative mode" → return
-   └─ type ≠ "new_content"? → log "Resume only supports New Content" → return
-
-4. Scan checkpoint files → chạy pipeline với resume=True
+_resume_path = os.path.join(pipeline_dir, "_resume.json")
+with open(_resume_path, "w", encoding="utf-8") as f:
+    json.dump(_resume_meta, f, indent=2, ensure_ascii=False)
 ```
 
 ---
 
-## 4. Resume Logic trong Pipeline
+### 2. Checkpoint detection in Steps 1-4
 
 #### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-### A. Shared steps (research + framework)
+Add `resume=False` param to [_do_renew_style](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3142-3612). When `resume=True`, check files before each step:
 
-| File tồn tại? | Action |
-|---|---|
-| `_blueprint.json` | Load → skip research |
-| `_rankings.json` | Load → skip framework selection |
-
-### B. Detect versions cần resume
-
-```python
-# Scan output dir cho v*_*/ subdirectories
-version_dirs = [d for d in os.listdir(output_dir) if d.startswith("v") and os.path.isdir(d)]
-
-for vdir in version_dirs:
-    full_script = os.path.join(output_dir, vdir, "FULL_SCRIPT.txt")
-    if os.path.exists(full_script):
-        log(f"✓ [Resume] {vdir} complete — skip")
-    else:
-        # Resume this version
-        ...
-```
-
-### C. Per-version checkpoint (trong `_run_shared_fw_pipeline`)
-
-Thêm param `resume=False`. Khi `resume=True`:
-
-| Step | Check file | Action nếu có |
+| Step | Checkpoint file | Resume action |
 |---|---|---|
-| A1: Phase Plan | `_phase_plan.json` | Load, skip |
-| A2: Validate | `_phase_plan_validated.json` | Load, skip |
-| A3: Split | `_phase_plan_final.json` | Load, skip |
-| B: Outline | `_renew_outline.json` | Load, skip (chạy audit nếu `_audited` chưa có) |
-| C: Audit | `_renew_outline_audited.json` | Load, skip |
-| D: Write Ch.N | `ch_{N:02d}_*.txt` | Load text cho context, skip chapter |
-| E: Review | *(luôn chạy lại)* | Cross-chapter → phải re-review |
-| F: Merge | *(luôn chạy lại)* | Re-merge từ tất cả chapters |
-
-### D. Chapter-level resume (Step D)
-
-```python
-for i, ch_outline in enumerate(out_chapters):
-    out_fname = f"ch_{i+1:02d}_{safe_title}.txt"
-    out_path = os.path.join(fw_output_dir, out_fname)
-    
-    if resume and os.path.exists(out_path):
-        # Load existing text for prev_context
-        with open(out_path, "r", encoding="utf-8") as f:
-            existing_text = f.read()
-        rewritten_texts.append(existing_text)
-        fw_log(f"✓ [Resume] Ch.{i+1}/{total}: loaded")
-        continue
-    
-    # Write new chapter (existing code)
-    ...
-```
+| Step 2: Detect | `_detection.json` | Load → skip detect |
+| Step 3: Blueprint | [_blueprint.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/_pipeline/_blueprint.json) | Load → skip extract |
+| Step 3.5: Enrich | `_enrichment.json` | Load → skip enrich |
+| Step 4: Framework | [_rankings.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/_pipeline/_rankings.json) | Load → skip ranking |
 
 ---
 
-## 5. Files Modified
+### 3. Update [_do_resume](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#2066-2244) for Top/List
 
-| File | Changes |
-|---|---|
-| `core/rewriter.py` | Retry logic trong `_validate_single_phase` |
-| `ui/script_creation_tab.py` | Resume button, `_resume.json` save, resume param, checkpoint detection |
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-## Notes
+Remove mode restriction. Handle both:
+- `mode == "Narrative"` + `type == "new_content"` → existing resume logic
+- `mode == "Top/List Review"` + `type == "rewrite"` → call [_do_renew_style](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3142-3612) with `resume=True`
 
-> [!IMPORTANT]
-> Resume luôn dùng checkpoint files đã có. Không tạo lại outline/phase plan nếu file tồn tại.
+For Top/List resume: need to re-build [checked](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#624-656) chapters from source files.
+**Problem**: Top/List rewrite starts from input chapters (checked files) — but resume may not have these loaded.
+**Solution**: When `type == "rewrite"`, require user to have the input folder loaded in the tree, OR skip Steps 1-3 if blueprint already exists.
 
-> [!WARNING]
-> Review + Merge luôn chạy lại (không skip) vì chúng cần cross-chapter context.
+**Simpler approach**: Top/List resume only needs [_blueprint.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/_pipeline/_blueprint.json) (already saved). Steps 1-3 produce the blueprint. If blueprint exists → skip to Step 4+.
+
+---
+
+### 4. Pass [resume](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#2066-2244) through to [_run_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3498-3533)
+
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
+
+In [_run_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3498-3533) (line ~3498), pass `resume=resume` to [_run_shared_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1603-2065).
+
+---
+
+## Checkpoint file summary (both modes)
+
+| File | Saved by | Used for resume |
+|---|---|---|
+| [_resume.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Isaac_Newton_20260409_1554/_pipeline/_resume.json) | Step 0 (both modes) | Mode/type detection |
+| `_detection.json` | Step 2 (Top/List only) | Skip framework detection |
+| [_blueprint.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/_pipeline/_blueprint.json) | Step 3 (Top/List) / Step 1 (Narrative) | Skip blueprint extraction |
+| `_enrichment.json` | Step 3.5 (Top/List) | Skip enrichment |
+| [_rankings.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/_pipeline/_rankings.json) | Step 4 (both) | Skip framework ranking |
+| `_phase_plan.json` | Step A1 (Narrative bio) | Skip phase planning |
+| `_phase_plan_validated.json` | Step A2 | Skip validation |
+| `_phase_plan_final.json` | Step A3 | Skip split |
+| `_renew_outline.json` | Step B | Skip outline generation |
+| `_renew_outline_audited.json` | Step C | Skip audit |
+| `ch_XX_*.txt` | Step D | Skip written chapters |
+| [FULL_SCRIPT.txt](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260409_0844/v1_S%E1%BB%AD_Thi/V2_FULL_SCRIPT.txt) | Step F | Skip entire version |
 
 ## Verification
-
-1. Chạy Newton → Stop giữa ch.3 → Resume → verify ch.1-2 skip, ch.3 tiếp tục
-2. Chạy dual → Stop v1 giữa chừng, v2 hoàn thành → Resume → verify chỉ v1 chạy
-3. Output trống → ấn Resume → verify log warning
+1. Run Top/List rewrite → Stop at Step 5 → Resume → verify Steps 1-4 skip
+2. Run Top/List rewrite → Stop at ch.3 → Resume → verify ch.1-2 loaded, ch.3 re-written

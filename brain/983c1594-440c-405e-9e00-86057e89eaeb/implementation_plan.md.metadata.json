@@ -1,7 +1,7 @@
 {
-  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary": "Updated implementation plan for Resume & Retry in Narrative pipeline. Phase 1 only covers Narrative + New Content mode. Includes: (1) Retry 3x/10s for validate step, (2) Resume button in UI, (3) _resume.json metadata file saved at step 0, (4) Checkpoint detection from existing files, (5) Dual-version awareness — skip completed versions.",
-  "updatedAt": "2026-04-09T15:06:17.333477800Z",
-  "version": "20",
-  "requestFeedback": true
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Implementation plan for extending Resume to Top/List mode and adding checkpoint file saving to the Top/List pipeline. Covers _resume.json saving, checkpoint detection in Steps 1-4, and unified _do_resume handler.",
+  "createdAt":  "2026-04-15T23:37:19.029530700Z",
+  "updatedAt":  "2026-04-15T23:37:18.696911900Z",
+  "version":  "21"
 }
