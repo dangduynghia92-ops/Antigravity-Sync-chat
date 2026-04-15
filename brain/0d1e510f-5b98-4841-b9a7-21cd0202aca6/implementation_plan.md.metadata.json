@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Revised plan to fix narrative flow for pirate ship framework. Instead of forcing everything into chronological order (which would break daily-life chapters that have no timeline), the plan uses a 3-layer approach: (1) Keep Bánh Răng as a FREEZE-FRAME chapter with no timeline pressure, (2) Move SPECIFIC cause-effect events to the chapters where they matter (disease motivation → Charleston chapter, not isolated in Bánh Răng), (3) Add BRIDGE rules at phase transitions to prevent abrupt jumps. Changes target 2 prompt files only.",
+  "summary":  "Naming standard for pirate ship framework phases. Maps old Vietnamese names to new English keys. Specifies what each field in the JSON step structure means and which files need updating.",
   "createdAt":  "2026-04-15T06:14:27.917562800Z",
-  "updatedAt":  "2026-04-15T06:18:31.897388700Z",
-  "version":  "7"
+  "updatedAt":  "2026-04-15T08:28:35.042097100Z",
+  "version":  "8"
 }
