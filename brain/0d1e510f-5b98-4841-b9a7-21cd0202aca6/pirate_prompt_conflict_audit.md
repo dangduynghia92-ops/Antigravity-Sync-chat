@@ -1,0 +1,122 @@
+# Pirate Prompt Conflict Audit Report
+
+## A. REMAINING VIETNAMESE TEXT (Language Contamination Risk)
+
+### JSON (`narrative_lịch_sử_hải_tặc.json`)
+
+| Line | Field | Vietnamese Text |
+|------|-------|----------------|
+| 53 | `economic_translation` | `"cướp được rất nhiều của cải"`, `"cướp được khối tài sản tương đương..."` |
+| 54 | `macabre_detail_rule` | `"họ bị thương và được chữa trị"`, `"viên đạn đại bác vỡ nát xương..."` |
+| 56 | `micro_hook_mandate` | `"Nhưng con quái vật 40 khẩu..."`, `"Hắn đã có tất cả..."` |
+| 66 | `name` | `"Chiến Hạm Huyền Thoại"` |
+| 67 | `use_when` | `"Chủ đề là một con tàu..."` |
+| 68 | `emotional_arc` | `"Kinh ngạc → Tò mò kỹ thuật → Hồi hộp → Rùng mình → Suy ngẫm"` |
+| 75-79 | `hook.*` | All hook method/shocking_fact/myth_busted/title_card/tone fields |
+| 82-95 | `pov_strategy.*` | All pov shifts descriptions |
+
+### Write Prompt (`system_narrative_write_pirate.txt`)
+
+| Line | Section | Vietnamese Text |
+|------|---------|----------------|
+| 62-70 | SCENE HIERARCHY | Example battle scene + bridge example |
+| 236 | PHASE-BASED WRITING | Header `"Bối Cảnh & Nguồn Gốc (HEAD)"` |
+| 337-342 | IMMERSION structure | `"Bước xuống boong dưới..."` + "Collapse Seeds" in old context |
+| 404 | MONEY ANGLE | `"Quy Đổi Kinh Tế"` subtitle |
+| 416 | PIRATE MEDICINE | `"Y Khoa Rùng Rợn"`, `"Góc Khuất"` references |
+| 425-426 | ANTI-HERO ENGINE | `"Kẻ Phản Diện Thật"`, `"Bối Cảnh"` |
+| 437 | MICRO-HOOK | `"Câu Hỏi Xuyên Phase"` + Vietnamese examples |
+| 440-443 | MICRO-HOOK | `"Nhưng 40 khẩu đại bác..."`, `"Hắn có tất cả..."` |
+| 452-465 | REQUIRED ELEMENTS | All BAD/GOOD examples in Vietnamese |
+| 480-500 | HOOK CHAPTER | Visual cue, shocking fact, myth busted, title card — all Vietnamese |
+| 505 | HOOK feel | `"Không thể tin được!"`, `"Phim đã lừa bạn"` |
+| 531-536 | SPOKEN RHYTHM | Wave pattern + breath point examples in Vietnamese |
+| 544-547 | BANNED PATTERNS | `"Hơn thế nữa"`, `"Ngoài ra"`, etc. |
+
+---
+
+## B. STRUCTURAL CONFLICTS
+
+### B1. IMMERSION structure mentions old "Collapse Seeds" placement
+- **File**: write prompt line 337-342
+- **Issue**: Structure 3 IMMERSION says: `"End with COLLAPSE SEEDS: plant 1-2 details that foreshadow the ship's death"`
+- **Conflict**: Collapse Seeds is now a SEPARATE PHASE. IMMERSION chapters (Daily Life) should NOT plant collapse seeds — that belongs in the Collapse Seeds phase.
+- **Fix**: Change to `"End with balanced reflection — the machine is fascinating and brutal"`
+
+### B2. IMMERSION structure description uses old "daily life horror" framing
+- **File**: write prompt line 343
+- **Issue**: `"Best for: Daily life horror, medical scenes, slavery conditions"`
+- **Conflict**: Daily Life is now BALANCED (not horror-focused). Medical scenes moved to Collapse Seeds.
+- **Fix**: `"Best for: Daily life immersion, crew operations, social dynamics"`
+
+### B3. PIRATE MEDICINE scope references old phase names
+- **File**: write prompt line 416-423
+- **Issue**: `"Góc Khuất (Dark Reality) chapter ONLY"` — this phase doesn't exist anymore
+- **Conflict**: Pirate Medicine now belongs in Collapse Seeds, not "Góc Khuất"
+- **Fix**: `"Collapse Seeds chapter ONLY"`
+
+### B4. ANTI-HERO ENGINE scope references old phase name
+- **File**: write prompt line 426
+- **Issue**: `"Bối Cảnh (Context) chapter establishes the systemic villain ONCE"`
+- **Conflict**: Should reference Blueprint phase
+- **Fix**: `"Blueprint chapter establishes the systemic villain ONCE"`
+
+### B5. Duplicate DUAL LENS rule
+- **File**: write prompt
+- **Issue**: DUAL LENS appears in 3 places:
+  1. Line 322 (STRUCTURE 1: EVENT) — `"DUAL LENS BUILT-IN"`
+  2. Line 640 (SHIP-AS-PROTAGONIST) — `"DUAL LENS COMBAT"`
+  3. JSON outline_rules line 110 — `"Apex Test MUST use DUAL LENS"`
+- **Severity**: Low — redundant but not conflicting. Could consolidate.
+
+### B6. MICRO-HOOK rule conflicts with Daily Life no-bridge
+- **File**: write prompt
+- **Issue**: Line 438 says `"SCOPE: End of EVERY chapter (except final)"` — but Daily Life is also exempt.
+- **Conflict**: The DAILY LIFE ENDING rule (line 132) overrides this, but the MICRO-HOOK scope doesn't mention the exception.
+- **Fix**: `"SCOPE: End of EVERY chapter (except final and Daily Life)"`
+
+### B7. JSON transition "Daily Life → Apex Test" says no micro-hook, but lifecycle now has Collapse Seeds between them
+- **File**: JSON line 112
+- **Issue**: `"MICRO-HOOK at every phase transition except Daily Life → Apex Test"`
+- **Conflict**: The actual order is `Daily Life → Apex Test → Collapse Seeds → Death`. Daily Life → Apex Test is still correct (no bridge). But the transition text doesn't mention Apex Test → Collapse Seeds explicitly.
+- **Fix**: Clarify: `"except Daily Life (self-contained, no bridge)"`
+
+### B8. ANATOMY/DARK REALITY outdated terms
+- **File**: write prompt line 208
+- **Issue**: `"ANATOMY/DARK REALITY chapters"` — these terms don't exist as phases
+- **Fix**: `"Daily Life / Collapse Seeds chapters (descriptive, no single event)"`
+
+---
+
+## C. REDUNDANCY
+
+### C1. Apex Test "80% glory" stated 4 times
+- JSON `steps[4].lens` ✓
+- JSON `outline_rules.middle_chapters` ✓
+- Write prompt APEX TEST TONE (line 139) ✓
+- Write prompt Apex Test technique section (line 271) ✓
+
+> Not harmful but verbose. Could consolidate to 2 mentions (JSON + write prompt).
+
+### C2. "No bridge" for Daily Life stated 3 times
+- JSON `outline_rules.transitions` ✓
+- Outline prompt rule 10 ✓
+- Write prompt DAILY LIFE ENDING (line 132) ✓
+
+> Acceptable — each file needs its own copy since AI reads them independently.
+
+### C3. COLLAPSE MATERIAL rule overlaps
+- Write prompt COLLAPSE SEEDS TONE (line 148) — tone guidance
+- Write prompt SHIP-AS-PROTAGONIST (line 647) — `"COLLAPSE MATERIAL STAYS IN COLLAPSE SEEDS"`
+- Write prompt Structure 3 IMMERSION (line 342) — old `"End with COLLAPSE SEEDS"` (CONFLICTS — see B1)
+
+> Should fix B1 and the other two are fine as reinforcement.
+
+---
+
+## PRIORITY FIX ORDER
+
+1. **B1 + B2 + B3 + B4** — Old phase names / wrong content assignment (will cause AI errors)
+2. **B6 + B7 + B8** — Rule scope conflicts (may cause unexpected behavior)
+3. **A (Vietnamese text)** — Language contamination risk in English output
+4. **C (Redundancy)** — Low priority, not causing errors

@@ -1,19 +1,11 @@
-# Pirate Pipeline Optimization — Phase Split
+# Pirate Prompt Conflict Audit
 
-- [x] Vietnamese → English: JSON names, descriptions, lens, pacing, language, cliffhanger_types
-- [x] Vietnamese → English: Phase plan prompt
-- [x] Vietnamese → English: Outline prompt
-- [x] Vietnamese → English: Write prompt
-- [x] Bánh Răng no-bridge rule: consolidated into 1 rule
-- [x] Context-first opening: replaced SCENE ANCHOR formula
-- [x] Apex Test tone: 80% glory rule + ends_with on power
-- [x] Unique ends_with rule
-- [x] Split Human Engine → Daily Life + Collapse Seeds
-  - [x] Blueprint research: split section 9 into ship_daily_operations + ship_collapse_signals
-  - [x] JSON: add 8th step (Collapse Seeds), rename Human Engine → Daily Life
-  - [x] Phase plan prompt: update phase mapping (8 phases)
-  - [x] Outline prompt: update phase lens + rules
-  - [x] Write prompt: update tone rules for new phases
-  - [x] Audit prompt: update lifecycle + phase coverage checks
-- [x] Clean up remaining Vietnamese phase names across all files
-- [x] Verify JSON is valid
+- [/] Read and cross-reference all 6 pirate files
+  - [ ] JSON framework
+  - [ ] Blueprint research prompt
+  - [ ] Phase plan prompt
+  - [ ] Outline prompt
+  - [ ] Write prompt
+  - [ ] Audit prompt
+- [ ] Identify conflicts, redundancies, inconsistencies
+- [ ] Create audit report
