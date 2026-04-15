@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Documents all changes made to convert the pirate ship framework from THEMATIC to LIFECYCLE mapping. Lists 4 files modified with 15 total edits. Includes diff references for key changes.",
-  "updatedAt":  "2026-04-15T06:45:30.171266600Z",
-  "version":  "3"
+  "summary":  "Final walkthrough documenting all changes made across 4 files for the pirate ship framework optimization: THEMATIC→LIFECYCLE conversion, section-based data classification, generalized cause-effect rule (replacing narrow COLLAPSE SEEDS), freeze-frame + callback integration + escalation transition rules.",
+  "updatedAt":  "2026-04-15T07:08:15.598515Z",
+  "version":  "4"
 }
