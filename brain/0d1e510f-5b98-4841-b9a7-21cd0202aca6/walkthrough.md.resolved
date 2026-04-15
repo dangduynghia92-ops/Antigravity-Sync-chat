@@ -1,71 +1,35 @@
-# Pirate Pipeline Optimization — Walkthrough
+# Walkthrough: Ship Framework — THEMATIC → LIFECYCLE Conversion
 
 ## Changes Made
 
-### 1. Temperature Tuning (0.7 → 0.6)
-**Why**: Gemini 3.0 Pro's stronger language model risks "overly flowery" prose at 0.7.
+### 1. [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
+- **L66**: `THEMATIC order` → `LIFECYCLE order`
+- **L91-110**: Bánh Răng = FREEZE-FRAME + OBSERVATION ONLY + MOTIVATION RULE. Thử Lửa = escalation + motivation bundling
+- **L144-158**: LIFECYCLE MAPPING section + CAUSAL BRIDGE rule
+- **L177-188**: Collapse seeds = observation only, no spoilers, seed proximity
 
-| Function | Role | Old | New |
-|----------|------|-----|-----|
-| `write_from_blueprint` | Write chapter | 0.7 | **0.6** |
-| `rewrite_chapter_narrative` | Rewrite chapter | 0.7 | **0.6** |
-| `write_review_chapter` | Write review | 0.7 | **0.6** |
+### 2. [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt)
+- **L52-58**: Bánh Răng = freeze-frame label + plant seeds as observations
+- **L60-67**: Thử Lửa = motivation recall + escalation order
+- **L146-152**: Question Engine examples updated for lifecycle flow
+- **L183**: LIFECYCLE ORDER description
+- **L270**: Critical rule = LIFECYCLE ORDER IS MANDATORY
 
----
+### 3. [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt)
+- **L120-137**: Added CALLBACK INTEGRATION rule + ESCALATION TRANSITION rule
 
-### 2. Word Count Logic Hardening
-- Removed AI-generated `word_count_target` from all 5 niche outline templates
-- Replaced `{word_count_target}` with `{word_count_rule}` in all writer prompts
-- Removed orphaned field from `_NICHE_OUTLINE_FIELDS` in rewriter.py
-
----
-
-### 3. Pirate Prompt Split: Ship + Location
-
-**Problem**: 1 set of prompts served both "Chiến Hạm Huyền Thoại" (ship) and "Thành Trì Vô Luật" (location) frameworks — but content was ship-biased.
-
-**Solution**: Split into 2 independent prompt sets with framework-aware routing.
-
-#### New Files Created
-| File | Purpose |
-|------|---------|
-| `system_narrative_outline_pirate_haven.txt` | Outline with governance/economy/defense phases |
-| `system_narrative_write_pirate_haven.txt` | Writer with sociological lens, dark underbelly |
-| `system_narrative_audit_pirate_haven.txt` | Audit checks for governance coverage |
-| `system_narrative_review_pirate_haven.txt` | Review for exploitation/slavery compliance |
-
-#### Shared Prompts (unchanged)
-- `system_research_blueprint_pirate.txt` — already handles both via `subject_type`
-- `system_narrative_phase_plan_pirate.txt` — generic
-- `system_validate_sub_key_pirate.txt` — generic
-
-#### Code Changes
-
-**`_FRAMEWORK_PROMPT_OVERRIDE`** (new map in rewriter.py):
-```python
-_FRAMEWORK_PROMPT_OVERRIDE = {
-    "Thành Trì Vô Luật": {
-        "narrative_outline": "system_narrative_outline_pirate_haven.txt",
-        "narrative_writer":  "system_narrative_write_pirate_haven.txt",
-        "narrative_audit":   "system_narrative_audit_pirate_haven.txt",
-        "narrative_review":  "system_narrative_review_pirate_haven.txt",
-    },
-}
-```
-
-**`_require_niche_prompt`** — now accepts `framework_name=""`:
-1. Check `_FRAMEWORK_PROMPT_OVERRIDE` first
-2. Fallback to `_NICHE_PROMPT_MAP` (existing behavior)
-
-**Callers updated**: `generate_narrative_outline`, `audit_outline`, `write_from_blueprint`, `review_narrative_full` — all pass `framework_name`.
-
-#### Routing Behavior
-| Topic | Framework | Prompts Used |
-|-------|-----------|-------------|
-| Queen Anne's Revenge | Chiến Hạm Huyền Thoại | `*_pirate.txt` (ship) |
-| Nassau | Thành Trì Vô Luật | `*_pirate_haven.txt` (location) |
+### 4. [narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_lịch_sử_hải_tặc.json)
+- **L59**: `chapter_design` THEMATIC → LIFECYCLE
+- **L97**: `middle_chapters` THEMATIC → LIFECYCLE + freeze-frame + bundle motivations
+- **L124**: Bánh Răng `lens` → FREEZE-FRAME + seed as observation only
 
 ## Verification
-- ✅ Python test confirms routing: Ship → `*_pirate.txt`, Haven → `*_pirate_haven.txt`
-- ✅ All 4 steps route correctly: outline, writer, audit, review
-- ✅ Existing callers without `framework_name` fallback to niche-level (no regression)
+- ✅ All "THEMATIC" references removed from pirate phase plan, outline, and JSON
+- ✅ No changes to biography or battle prompts
+- ✅ No code changes needed — `pirate_phase` field matching in [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) unaffected
+- ✅ All required data fields (`callback_to`, `foreshadow`, `ends_with`, `time_anchor`) already exist
+
+## Not Changed (by design)
+- Pirate Haven prompts — per user request, ship framework only
+- [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) code — no changes needed
+- Biography/Battle prompts — completely separate

@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Comprehensive feasibility analysis of all 15 proposed key_data rules against the current system. Checks each rule for conflicts with existing prompts, data field availability, and AI executability. Identifies 4 conflict locations that must be updated, 1 critical gap (callback_to not enforced), 1 hidden dependency (framework JSON chapter_design), and confirms all required data fields already exist. Classification: 10 rules fully feasible, 4 require prompt updates, 1 requires both prompt + JSON update.",
+  "updatedAt":  "2026-04-15T06:40:07.839867800Z"
+}

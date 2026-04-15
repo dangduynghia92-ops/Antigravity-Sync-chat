@@ -1,6 +1,6 @@
 {
-  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary": "Complete walkthrough of all pirate pipeline optimizations: temperature tuning, word count fix, and prompt splitting into Ship vs Location with framework-aware routing.",
-  "updatedAt": "2026-04-14T02:19:29.999342400Z",
-  "version": "1"
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Documents all changes made to convert the pirate ship framework from THEMATIC to LIFECYCLE mapping. Lists 4 files modified with 15 total edits. Includes diff references for key changes.",
+  "updatedAt":  "2026-04-15T06:45:30.171266600Z",
+  "version":  "3"
 }
