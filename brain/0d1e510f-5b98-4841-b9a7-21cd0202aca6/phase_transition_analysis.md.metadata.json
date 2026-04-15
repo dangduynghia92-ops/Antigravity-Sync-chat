@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Analysis answering user's 3 questions about phase transitions: (1) Clarifies the MOTIVATION-BUNDLING approach vs forcing daily life into timeline, (2) Analyzes Thử Lửa event selection strategy — iconic event + greatest event + how to transition between them using ESCALATION pattern, (3) Reveals a critical gap: Ch07→Ch08 transition relies on callback_to field but the write prompt has NO rule to enforce it. Proposes concrete fixes.",
+  "updatedAt":  "2026-04-15T06:27:15.156824800Z"
+}

@@ -1,0 +1,115 @@
+# Phân Tích 3 Câu Hỏi Về Phase Transitions
+
+## Câu 1: Cách bundle key_data theo nhân-quả
+
+**Không phải tất cả key_data đi theo timeline.** Cách tiếp cận đúng:
+
+| Loại data | Ở đâu | Ví dụ |
+|-----------|-------|-------|
+| **Trạng thái liên tục** (không có ngày) | Giữ ở Bánh Răng | "Bệnh syphilis hoành hành", "Draft 12.5ft" |
+| **Event cụ thể** (có ngày, có cause-effect) | Đi với event mà nó gây ra | "Cướp thuốc VÌ bệnh" → đi cùng Charleston |
+| **Observation gieo seed** | Giữ ở Bánh Răng | "Con tàu quá nặng cho vùng nước nông" |
+| **Harvest seed** (hậu quả từ seed) | Đi với event kết quả | "Mắc cạn VÌ draft sâu" → đi cùng Cái Chết |
+
+**Rule đơn giản:** Bánh Răng **PLANT** (gieo), chapters sau **RECALL + HARVEST** (nhắc lại + thu hoạch).
+
+---
+
+## Câu 2: Lựa chọn và chuyển tiếp giữa events ở Thử Lửa
+
+### Dữ liệu thực tế (QAR)
+
+Hiện tại Thử Lửa có 2 chapters:
+- **Ch6**: HMS Scarborough (early 1718) — *iconic: đánh thắng tàu chiến Hải quân Anh*
+- **Ch7**: Charleston Blockade (May 1718) — *greatest: phong tỏa cả thành phố*
+
+### Cách chuyển tiếp hiện tại
+
+Outline đã có cơ chế chuyển tiếp tốt:
+```
+Ch6 ends_with: "A tease of an unprecedented escalation from piracy 
+               to outright economic terrorism"
+Ch6 closing_type: "micro_hook"
+```
+→ Từ "đánh thắng 1 tàu chiến" escalate tới "phong tỏa cả thành phố" = **ESCALATION pattern**
+
+### Gợi ý pattern cho event selection
+
+Khi chọn 2-3 events cho Thử Lửa, nên theo pattern **ESCALATION** (leo thang):
+
+```
+Event 1 (iconic): Chiến thắng quân sự thuần túy
+  → micro-hook: "Nhưng hắn không dừng lại ở đó..."
+Event 2 (greatest): Escalation — từ cướp biển thành khủng bố kinh tế
+  → micro-hook: "Chiến thắng lớn nhất lại gieo mầm diệt vong..."
+```
+
+Nếu có event thứ 3 (vd: Great Allen), nên **gom** nó vào Ch6 như sub_key_data hoặc brief mention, KHÔNG tạo chapter riêng vì nó nhỏ hơn 2 events peak.
+
+### Flow lý tưởng cho Thử Lửa
+
+| Ch | Event | Vai trò | Transition |
+|----|-------|---------|------------|
+| 6 | Great Allen + Scarborough | Iconic — chứng minh sức mạnh cỗ máy | "Hắn đã đánh bại Hải quân Anh. Nhưng thứ hắn cần không phải chiến thắng — mà là thuốc." |
+| 7 | Charleston Blockade | Greatest — đỉnh cao, nhưng pyrrhic | "Hắn có thuốc. Nhưng cái giá là cả Đế quốc Anh bây giờ muốn đầu hắn." |
+
+> [!IMPORTANT]
+> Ch6→Ch7 transition nên là **MOTIVATION BRIDGE**: kết thúc Ch6 bằng reveal "tàu đang bệnh" → mở Ch7 bằng "và đó là lý do hắn phong tỏa Charleston cho thuốc, không phải vàng"
+
+---
+
+## Câu 3: Phase 7 (Thử Lửa/Charleston) → Phase 8 (Cái Chết/Grounding)
+
+### Phát hiện lỗ hổng nghiêm trọng ⚠️
+
+**Outline CÓ `callback_to` nhưng writer prompt KHÔNG enforce nó!**
+
+Ch08 outline:
+```json
+{
+  "callback_to": "The 12.5-foot draft and vulnerability to shallow waters established earlier.",
+  "foreshadow": "The impending betrayal of the stranded crew."
+}
+```
+
+Ch07 outline:
+```json
+{
+  "ends_with": "A doom foreshadowing that the ship's greatest victory sealed its inevitable destruction.",
+  "closing_type": "doom_foreshadow"
+}
+```
+
+→ Cơ chế thiết kế: Ch07 kết bằng "doom foreshadow" → Ch08 mở bằng "callback_to draft sâu".
+
+**Nhưng** [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt):
+- ❌ KHÔNG có rule nào nói "read `callback_to` field and execute it"
+- ❌ KHÔNG có rule nào nói "when starting a new phase, reference the seed planted earlier"
+- ✅ Chỉ có `MICRO-CALLBACK` rule (1-4 câu) nhưng nó không kết nối với `callback_to` field
+
+### Tại sao đứt gãy ở đây?
+
+```mermaid
+graph LR
+    A["Ch7: Charleston<br/>May 1718<br/>Chiến thắng vĩ đại"] -- "ends_with: doom" --> B["Ch8: Grounding<br/>June 1718<br/>Tàu mắc cạn"]
+    style A fill:#2d5016
+    style B fill:#5a1010
+```
+
+- **Timeline**: May → June = chỉ 1 tháng → chronologically OK
+- **Causal link**: Charleston drew British attention (sub_key_data) → BUT grounding was intentional self-destruction, NOT a direct consequence of Charleston
+- **Missing bridge**: Tại sao từ "đỉnh cao chiến thắng" → "tự phá hủy tàu"? Audience cần hiểu MOTIVE
+
+### Fix cần thiết
+
+1. **Ch07 `ends_with`** nên tease MOTIVE: "Hắn có tất cả. Nhưng 400 người muốn chia phần. Và cái giá nuôi cỗ máy... đang ăn mòn chính hắn."
+2. **Ch08 opening** (SCENE ANCHOR) nên recall: "Tháng 6, 1718. Một tháng sau Charleston. Con tàu 40 khẩu đại bác nặng 300 tấn đang tiến vào vùng nước nông nhất bờ biển Carolina."
+3. **Thêm rule vào write prompt**: "If this chapter has a `callback_to` field, your SCENE ANCHOR must integrate that callback as context within the first 3 sentences."
+
+---
+
+## Tổng kết: 3 thay đổi cần làm
+
+1. **Phase plan prompt**: Phân loại MOTIVATION vs OBSERVATION đúng chỗ (đã có trong plan)
+2. **Outline prompt**: Thêm rule yêu cầu `ends_with` ở Thử Lửa phải tease MOTIVE của phase tiếp theo (ESCALATION pattern)
+3. **Write prompt** ⚠️: Thêm rule enforce `callback_to` — đây là **lỗ hổng lớn nhất** hiện tại
