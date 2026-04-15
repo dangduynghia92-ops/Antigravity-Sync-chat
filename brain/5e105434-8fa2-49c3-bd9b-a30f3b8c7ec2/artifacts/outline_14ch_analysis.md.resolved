@@ -147,6 +147,18 @@ Trong tệp `system_validate_sub_key_pirate.txt`, bộ lọc cấm của hệ th
 
 **Hậu quả:** Ngách Cướp Biển có quá nhiều yếu tố giật gân, bạo lực. Khi AI đối chiếu với đuôi `UNLESS`, nó coi mọi cảnh cưa chân sống hay trừng phạt nổ súng đều là "Dramatic scene". Validator lập tức bốc các tiểu tiết này từ nền (`Sub`) dồn lên làm sự kiện trọng tâm (`Main`). 
 
+### CASE STUDY MINH HỌA (CHƯƠNG 4 & 5): TÌM HIỂU VÌ SAO 1 VỤ CƯỚP BỊ RÃ THÀNH 4 MAIN-KEYS
+Trong nhận thức của con người, "Quá trình Bắn chặn -> Đầu hàng -> Lấy Vàng -> Đổi tên tàu" chỉ là **MỘT (1) CỤM SỰ KIỆN LIÊN HOÀN** mang tên "Vụ cướp Lịch sử". 
+Tuy nhiên, AI đã băm nát cụm sự kiện vài giờ đồng hồ này thành 4 mẩu Main-keys rải rác làm phình to kịch bản. Nó hoạt động theo Logic máy móc như sau:
+
+1. **Prompt ép bóc tách Định danh:** Dòng luật `main_key_data = capture event (ALWAYS main), naming origin...` khiến AI hiểu rằng "Hành động chặn bắt" và "Sự ra đời của một cái tên" là 2 viên gạch nằm ở 2 tọa độ cách ly nhau.
+2. **Luật Cấm Gộp (Anti-Merge) cấm từ nối VÀ (and):** Ví dụ `✗ BAD: ["Teach captured the ship and renamed it..."]` đã trở thành cái gông cùm. Khi thuật toán nội bộ nội suy thử tóm tắt: *"Dùng pháo ép đầu hàng, lấy vàng VÀ đổi tên"*, nó nhận ra hành vi gộp chữ VÀ này vi phạm Cấm Lệnh. Nó buộc phải bấm bụng ngắt câu chuyện ra thành các dòng Array:
+    *   Mẩu 1: *Bắn pháo uy hiếp.* (Thỏa mãn tiêu chí "capture event").
+    *   Mẩu 2: *Arot chỉ điểm vàng.* (Vì có mùi máu me giật gân, bị Validator quét trúng cửa hậu UNLESS nên đôn cổ từ Sub lên Main).
+    *   Mẩu 3: *Móc được 20lbs vàng.* (Thỏa mãn "economic events").
+    *   Mẩu 4: *Trang hoàng cái tên QAR mới.* (Thỏa mãn "naming origin").
+*(Vì thuật toán gom Chương được tính bằng toán học: Phân bổ 3-4 node làm 1 chương, nên 4 mẩu gạch rơi vãi từ sự kiện cướp tàu này tạo ra dư chấn xé và đẩy câu chuyện sang hẳn 2 Chương là Chương 4 và Chương 5).*
+
 ### 👉 KẾT LUẬN & HƯỚNG GIẢI QUYẾT:
 
 Hệ thống AI không hề làm sai; nó chỉ đang phải cắn răng thực thi mệnh lệnh **"Chia để trị tột độ" (Extreme Micro-slicing)** từ 3 file Prompt nói trên. Khi nó bào ra được một hệ thống 14 chương hoàn hảo về thứ tự, thì AI Kiểm duyệt (`Audit`) lại xuất hiện và tự ý đánh giá "14 chương là mỏng" nên đã ép nén chúng trét vào 8 Chương (Dấn đến bản kịch bản v1 lộn xộn).
