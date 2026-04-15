@@ -1,41 +1,40 @@
-# Pirate Pipeline — Phase Split Walkthrough
+# Rename Collapse Seeds → Decline — Walkthrough
 
-## Changes Made
+## Core Change
 
-### Structural Change: Human Engine → Daily Life + Collapse Seeds
+**Collapse Seeds** (vague, metaphorical) → **Decline** (clear, actionable)
 
-Split 1 phase into 2, creating an **8-phase lifecycle**:
+**New definition**: Causes, events, and progressive deterioration that **directly lead to the Death event**.
+
+**Litmus test**: "Does this explain WHY the machine died?" YES → Decline. NO → Daily Life.
+
+## Lifecycle
 
 ```
-Hook → Blueprint → Mutation → Daily Life → Apex Test → Collapse Seeds → Death → Ghost
+Hook → Blueprint → Mutation → Daily Life → Apex Test → Decline → Death → Ghost
 ```
 
-### Files Modified (6 total)
+## Files Modified (6 total)
 
-| File | Changes |
-|------|---------|
-| [system_research_blueprint_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_pirate.txt) | Split section 9 into `ship_daily_operations` (§9) + `ship_collapse_signals` (§10), renumbered §10-17 → §11-18 |
-| `narrative_lịch_sử_hải_tặc.json` | Added 8th step (Collapse Seeds), updated pacing/transitions/outline_rules/act_breakdown/chapter_design |
-| [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) | Rewrote DATA CLASSIFICATION (3 categories), CAUSE-EFFECT, PHASE MAPPING (8 phases), CRITICAL RULES |
-| [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt) | Added Daily Life + Collapse Seeds lenses, updated chapter mapping (8 phases), added rule 18 (Collapse Seeds ends_with) |
-| [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) | Added Daily Life ending rule, Collapse Seeds tone rule, updated SPECIFIC TECHNIQUES (8 phases) |
-| [system_narrative_audit_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pirate.txt) | Updated lifecycle order, phase coverage, pirate medicine check |
+| File | Key Changes |
+|------|-------------|
+| [system_research_blueprint_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_pirate.txt) | §10 → SHIP DECLINE FACTORS (generic, litmus test). `medical_procedures` moved to §9 (Daily Life). |
+| [narrative_lịch_sử_hải_tặc.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_l%E1%BB%8Bch_s%E1%BB%AD_h%E1%BA%A3i_t%E1%BA%B7c.json) | Step renamed. Lens: `TRAGIC-PROGRESSIVE`. Pacing, transitions, outline_rules, act_breakdown, chapter_design updated. |
+| [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) | Classification → `ship_decline_factors`. Cause-effect: "Decline SHOWS causes. Death HARVESTS." |
+| [system_narrative_outline_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pirate.txt) | Lens → TRAGIC-PROGRESSIVE. Rule 18: ends_with = INEVITABLE TRAGEDY. |
+| [system_narrative_write_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pirate.txt) | Decline tone rule. IMMERSION → balanced reflection (B1 fix). Pirate Medicine → Daily Life (B3). Anti-Hero → Blueprint (B4). |
+| [system_narrative_audit_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pirate.txt) | Lifecycle + phase coverage + medicine check updated. |
 
-### Vietnamese Cleanup (bonus)
+## Structural Conflicts Fixed
 
-All remaining Vietnamese phase names and examples across all 6 files converted to English:
-- `act_breakdown`, `chapter_design`, `anti_framework_leak` in JSON
-- Section headers 6-7 in blueprint research
-- SPECIFIC TECHNIQUES + SHIP-AS-PROTAGONIST in write prompt
-- Chapter mapping + lifecycle order in outline prompt
-- Example text in audit prompt
+| Issue | Fix |
+|-------|-----|
+| B1: IMMERSION ended with "Collapse Seeds" | → Ends with "balanced reflection" |
+| B3: Pirate Medicine in wrong phase | → Moved to Daily Life (routine procedure) |
+| B4: Anti-Hero scope referenced "Bối Cảnh" | → References "Blueprint" |
+| B8: "ANATOMY/DARK REALITY" outdated | → Fixed in TIME-SPACE ANCHORING |
 
-### Key Design Decisions
+## Verification
 
-- **Daily Life** = balanced (IMMERSIVE), not one-sided dark
-- **Collapse Seeds** = clinical foreboding (CLINICAL-FOREBODING)
-- **Collapse Seeds ends_with** = foreboding/dread
-- **Apex Test** = 80% glory, collapse only as motivation
-- **Daily Life no-bridge** = inherited from old Human Engine rule
-- **Pirate Medicine** moved from Daily Life → Collapse Seeds
-- **Classification rule** added to blueprint: "if removing data makes Death unexplainable → Collapse Seeds"
+- `grep "Collapse Seeds"` across all pirate files → **0 results** ✓
+- `ship_collapse_signals` → renamed to `ship_decline_factors` ✓
