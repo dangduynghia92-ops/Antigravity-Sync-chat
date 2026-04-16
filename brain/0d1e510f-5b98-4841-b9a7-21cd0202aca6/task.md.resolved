@@ -4,8 +4,8 @@
 - [x] Check downstream dependencies
 - [x] Design consolidated schema
 - [x] Create implementation plan
-- [/] Apply changes to blueprint prompt
-- [ ] Update audit prompt (`merge_into_existing` fields)
-- [ ] Update crossref prompt (`merge_into_existing` fields)
-- [ ] Update style JSON `excerpt_fields`
-- [ ] Verify syntax
+- [x] Apply changes to blueprint prompt
+- [x] Update audit prompt (`merge_into_existing` fields)
+- [x] Update crossref prompt (`merge_into_existing` fields)
+- [x] Update style JSON `excerpt_fields`
+- [x] Verify JSON syntax ✓

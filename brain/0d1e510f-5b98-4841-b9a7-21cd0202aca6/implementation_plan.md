@@ -1,172 +1,115 @@
-# Battle V2 Key Data Audit & Expansion
+# Biography Key Data Audit & Expansion
 
-## Overlap Audit — Current 17 Sections
+## Current Sections (20 total)
 
-### 🟢 Clean (giữ nguyên)
-| # | Section | Vai trò | Overlap? |
-|---|---------|---------|----------|
-| 1 | `core_topic` | 2-3 câu tóm tắt | Không |
-| 2 | `key_facts` | Dates, numbers, names | Không |
-| 3 | `political_context` | Bối cảnh chính trị + catalyst | Không |
-| 4 | `commanders` | Chỉ huy + quyết định + số phận | Không |
-| 5 | `battle_phases` | Diễn biến từng phase | Không |
-| 6 | `geography` | Địa hình, thời tiết, vị trí | Không |
-| 9 | `resolution_and_aftermath` | Kết quả + hậu quả | Không |
-| 10 | `arguments_and_legacy` | Tranh luận lịch sử | Không |
+### 🟢 Clean — giữ nguyên
+| # | Section | Vai trò |
+|---|---------|---------|
+| 1 | `core_topic` | Tóm tắt nhân vật |
+| 2 | `core_identity` | Tên, ngày sinh/mất, vai trò, era |
+| 3 | `life_phases[]` | Timeline cuộc đời |
+| 5 | `achievements[]` | Thành tựu + cost |
+| 6 | `conflicts[]` | Xung đột + opponents |
+| 7 | `key_relationships[]` | Quan hệ quan trọng |
+| 8 | `dual_nature` | Mặt sáng + mặt tối |
+| 9 | `myths_vs_reality[]` | Myth busting |
+| 12 | `key_quotes[]` | Trích dẫn trực tiếp |
+| 14 | `turning_points[]` | Bước ngoặt cuộc đời |
+| 15 | `systemic_opposition[]` | Hệ thống chống đối |
+| 18 | `dark_impact{}` | Tội ác / gây hại (optional) |
+| 19 | `downfall_pattern{}` | Tự hủy (optional) |
+
+### Domain-specific optionals — giữ nguyên
+| # | Section | Dùng cho |
+|---|---------|----------|
+| 17+ | `creative_works[]` | Artists, writers, musicians |
+| 18+ | `key_ideas[]` | Philosophers, thinkers |
+| 19+ | `military_campaigns[]` | Generals, conquerors |
+| 20+ | `governance[]` | Monarchs, presidents |
+
+---
 
 ### 🟡 Overlap — cần gộp/tái cấu trúc
-| # | Section | Vấn đề | Đề xuất |
-|---|---------|--------|---------|
-| 6 | `technology_and_weapons` | Mô tả chung vũ khí | **Giữ** — mô tả mechanics |
-| 7 | `weapon_asymmetry` | So sánh 2 bên | **Giữ** — bổ sung cho #6 |
-| 8 | `breakthrough_weapons` | Vũ khí đột phá | **Giữ** — riêng biệt đủ rõ |
-| 11 | `narrative_moments` | Cảnh physical/sensory | ⚠️ **Overlap** với `soldier_experience` mới → **GỘP** |
-| 12 | `emotional_drivers` | Tâm lý chiến trường | ⚠️ **Overlap** với `soldier_experience` mới → **GỘP** |
-| 13 | `climactic_turning_points` | Bước ngoặt quyết định | ⚠️ Nhẹ overlap với `battle_phases.turning_point` → **Giữ** vì focus khác (close calls) |
-| 14 | `chronological_campaign_phases` | Multi-day campaign | **Giữ** (optional cho campaigns) |
-| 15 | `must_include` | Facts too powerful to omit | ⚠️ **Overlap** với `texture_and_hooks` → **GỘP** |
-| 16 | `texture_and_hooks` | Quotes, ironies, human moments | ⚠️ **GỘP** `must_include` vào đây |
+
+#### 1. `legacy` ↔ `historiography` ↔ `paradigm_shift` — 3 sections quá gần nhau
+
+| Field | Nội dung | Chồng chéo |
+|-------|----------|------------|
+| `legacy.how_remembered` | Nhớ đến thế nào | = `historiography.perception_evolution` |
+| `legacy.reassessment` | Lịch sử thay đổi? | = `historiography.modern_reassessment` |
+| `legacy.cultural_impact` | Phim, sách, tượng đài | Unique |
+| `historiography.primary_accounts_by` | Ai viết về họ | Unique |
+| `historiography.bias_direction` | Thiên lệch? | Unique |
+| `paradigm_shift.world_before/after` | Thay đổi thế giới? | = `legacy.modern_relevance` |
+
+**Đề xuất:** Gộp `legacy` + `historiography` → `legacy_and_historiography`. Giữ `paradigm_shift` riêng (có tier scoring).
+
+#### 2. `historical_context` — hữu ích nhưng overlap nhẹ với `life_phases`
+
+`life_phases.location` + `life_phases.emotional_state` đã cover context theo phase. `historical_context` cung cấp ERA-WIDE context.
+
+**Đề xuất:** Giữ nhưng rename → `era_context` (rõ hơn — context của THỜI ĐẠI, không phải của nhân vật).
+
+#### 3. `personal_profile.vices_and_obsessions` — thiếu trong JSON schema!
+
+Prompt yêu cầu trích xuất `vices_and_obsessions` (line 66-68) nhưng **JSON output schema** (line 254-261) KHÔNG có field này!
+
+**Đề xuất:** Thêm `vices_and_obsessions` vào JSON schema.
+
+#### 4. `named_sources` — giá trị thấp cho audience
+
+Danh sách tên sách/tác giả → khán giả YouTube không quan tâm. Chỉ hữu ích cho fact-checking.
+
+**Đề xuất:** Giữ nhưng gộp vào `legacy_and_historiography.primary_accounts_by`.
 
 ---
 
-## Proposed Changes
+## ❌ THIẾU — khán giả muốn nghe
 
-### GỘP (reduce overlap, tăng clarity)
+### 1. 🔴 `daily_life_and_habits` — Rutin hàng ngày
+**Tại sao hấp dẫn:** Khán giả MÊ biết "thiên tài sống thế nào mỗi ngày". YouTube thumbnails: "Einstein's INSANE Daily Routine", "How Napoleon Slept Only 4 Hours".
+**Ví dụ:** Thức dậy mấy giờ? Ăn gì? Làm việc thế nào? Nghỉ ngơi ra sao? Có thói quen kỳ quặc gì?
+**Khác `personal_profile`:** personal_profile = TRAITS tĩnh (physical, quirks). daily_life = ROUTINE động (what they DID every day).
 
-#### 1. `narrative_moments` + `emotional_drivers` → `battlefield_experience`
-```json
-"battlefield_experience": [
-  {
-    "phase": "...",
-    "scene": "sensory scene description",
-    "physical_details": ["sight", "sound", "smell"],
-    "scale_indicator": "numbers/distances",
-    "emotional_state": "fear/revenge/desperation/...",
-    "emotional_cause": "what created this emotion",
-    "behavioral_impact": "how it changed behavior",
-    "source": "ai_knowledge"
-  }
-]
-```
-**Why:** Cảnh vật lý và cảm xúc BẤT KHẢ PHÂN LY — cùng 1 khoảnh khắc có cả 2. Tách → AI lặp lại cùng scene 2 lần.
+### 2. 🔴 `financial_details` — Tiền bạc
+**Tại sao hấp dẫn:** "How much was X REALLY worth?" — Money Angle cho biography.
+**Ví dụ:** Thu nhập? Nợ? Thừa kế? Phá sản? Mức sống vs thời đại? Chi tiêu hoang phí?
+**Khác `core_identity.financial_arc`:** financial_arc = 1 dòng tóm tắt. financial_details = chi tiết đầy đủ.
 
-#### 2. `must_include` → gộp vào `texture_and_hooks`
-```json
-"texture_and_hooks": {
-  "memorable_quotes": [...],
-  "dramatic_ironies": [...],
-  "human_moments": [...],
-  "scale_comparisons": [...],
-  "must_include_details": ["fact too powerful to omit 1", "..."]
-}
-```
-**Why:** `must_include` chỉ là catch-all cho facts thuộc `texture_and_hooks`. Gộp giảm confusion.
+### 3. 🟠 `scandals_and_controversies[]` — Bê bối
+**Tại sao hấp dẫn:** "The SCANDAL that Hollywood HIDES" — engagement bait tự nhiên.
+**Ví dụ:** Bê bối, kiện tụng, vụ án, phản bội công khai, bí mật bị lộ.
+**Khác `conflicts`:** conflicts = xung đột 2 phía (có opponents). scandals = sự kiện gây shock công chúng (có thể 1 phía).
+**Khác `dual_nature.dark_side`:** dark_side = TRAITS. scandals = EVENTS cụ thể.
 
-### THÊM MỚI (5 sections)
-
-#### 3. `elite_units` (NEW)
-```json
-"elite_units": [
-  {
-    "unit_name": "Janissaries / Old Guard / Sacred Band...",
-    "faction": "...",
-    "size": "number of troops",
-    "selection_and_training": "how recruited, how trained",
-    "special_equipment": "unique weapons/armor/mounts",
-    "reputation": "feared/legendary — why?",
-    "role_in_this_battle": "what they did specifically",
-    "decisive_moment": "their key action/charge/stand",
-    "fate": "survived/wiped out/captured",
-    "source": "ai_knowledge"
-  }
-]
-```
-
-#### 4. `logistics_and_supply` (NEW)
-```json
-"logistics_and_supply": {
-  "supply_lines": "how each side supplied troops",
-  "food_and_water": "rations, scarcity, impact on morale/performance",
-  "ammunition_reserves": "how much, when did they run low",
-  "medical_support": "battlefield medicine, evacuation, survival rates",
-  "march_distances": "how far troops marched before battle, exhaustion factor",
-  "supply_failures": "critical shortages that changed the battle",
-  "source": "ai_knowledge"
-}
-```
-
-#### 5. `intelligence_and_deception` (NEW — optional, empty [] if none)
-```json
-"intelligence_and_deception": [
-  {
-    "operation": "name or description",
-    "side": "who performed it",
-    "method": "scouts/spies/intercepted messages/feint maneuver/double agent",
-    "what_was_learned_or_hidden": "...",
-    "battle_impact": "how it changed the outcome",
-    "source": "ai_knowledge"
-  }
-]
-```
-
-#### 6. `civilian_impact` (NEW — optional, empty {} if none)
-```json
-"civilian_impact": {
-  "population_before": "city/region population before battle",
-  "destruction": "what was destroyed — cities, infrastructure, farmland",
-  "civilian_casualties": "estimated numbers",
-  "displacement": "refugees, forced migration",
-  "post_battle_famine_or_plague": "secondary effects on civilian population",
-  "source": "ai_knowledge"
-}
-```
-
-#### 7. `force_composition` (NEW — replaces vague `forces` in battle_phases)
-```json
-"force_composition": {
-  "side_a": {
-    "faction_name": "...",
-    "total_strength": "number",
-    "breakdown": {
-      "infantry": "number + type (heavy/light/militia)",
-      "cavalry": "number + type (heavy/light/horse archers)",
-      "artillery": "number of guns + caliber",
-      "naval": "number of ships + type (if applicable)",
-      "special_units": "reference to elite_units[]"
-    }
-  },
-  "side_b": { "..." },
-  "numerical_ratio": "e.g. 3:1 advantage Side A",
-  "quality_assessment": "which side was better trained/equipped despite numbers",
-  "source": "ai_knowledge"
-}
-```
+### 4. 🟡 `death_and_funeral` — Cái chết & tang lễ
+**Tại sao hấp dẫn:** "How did X REALLY die?" — top engagement topic. Tang lễ kể câu chuyện về legacy.
+**Ví dụ:** Circumstances chi tiết, ai có mặt, lời cuối, tang lễ lớn/vắng, di chúc gây tranh cãi.
+**Khác `core_identity.death`:** death = 1 dòng. death_and_funeral = FULL SCENE.
+**Lưu ý:** `core_identity.death` đã có `final_words` + `who_was_present` → expand thành section riêng.
 
 ---
+
+## Proposed Changes Summary
+
+| Action | Trước | Sau |
+|--------|-------|-----|
+| **GỘP** | `legacy` + `historiography` + `named_sources` | → `legacy_and_historiography` |
+| **RENAME** | `historical_context` | → `era_context` |
+| **FIX** | `personal_profile` (thiếu `vices_and_obsessions`) | → Thêm field |
+| **EXPAND** | `core_identity.death` (1 dòng) | → `death_and_funeral` (section riêng) |
+| **THÊM** | *(thiếu)* | + `daily_life_and_habits` |
+| **THÊM** | *(thiếu)* | + `financial_details` |
+| **THÊM** | *(thiếu)* | + `scandals_and_controversies[]` |
+
+**Net: 20 → 19 sections** (gộp 3→1, thêm 4, expand 1)
 
 ## Downstream Impact
 
-| File | Impact | Action |
-|------|--------|--------|
-| `system_research_blueprint_battle.txt` | Main target — add/merge sections | ✅ Update |
-| `system_audit_battle_blueprint.txt` | `merge_into_existing` fields | ✅ Update (`narrative_moments` → `battlefield_experience`, add new sections) |
-| `system_crossref_battle_blueprint.txt` | `merge_into_existing` fields | ✅ Update (same) |
-| `narrative_phân_tích_trận_đánh_v2.json` | `excerpt_fields` | ✅ Add new field names |
-| `system_narrative_phase_plan_battle.txt` | References blueprint sections | ⚠️ Check — may need update |
-| `rewriter.py` | No hardcoded field names | ✅ Safe |
-| `script_creation_tab.py` | No field references | ✅ Safe |
-
-## Summary: TRƯỚC → SAU
-
-| Before (17 sections) | After (18 sections) |
-|---|---|
-| `narrative_moments` | → **gộp** vào `battlefield_experience` |
-| `emotional_drivers` | → **gộp** vào `battlefield_experience` |
-| `must_include` | → **gộp** vào `texture_and_hooks.must_include_details` |
-| *(không có)* | + `elite_units` |
-| *(không có)* | + `logistics_and_supply` |
-| *(không có)* | + `intelligence_and_deception` |
-| *(không có)* | + `civilian_impact` |
-| *(không có)* | + `force_composition` |
-
-**Net: 17 → 18** (gộp 3, thêm 5, bớt 1 standalone)
+| File | Impact |
+|------|--------|
+| `system_research_blueprint_biography.txt` | ✅ Main target |
+| `system_extract_blueprint_biography.txt` | ✅ Must match schema |
+| `system_crossref_biography_blueprint.txt` | ✅ Update `merge_into_existing` |
+| `narrative_tiểu_sử_nhân_vật.json` | ⚠️ Check `pipeline_features` if any |
+| `rewriter.py` | ✅ Safe (no hardcoded fields) |
