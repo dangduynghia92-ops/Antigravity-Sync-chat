@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Checklist for implementing The Deep Anatomy framework, updating write prompt, and extending Head-to-Head Duel criteria.",
-  "updatedAt":  "2026-04-16T11:56:25.414266Z"
+  "summary":  "Updated task checklist showing completed framework addition, write prompt update, and in-progress Head-to-Head Duel criteria extension.",
+  "updatedAt":  "2026-04-16T12:03:52.107911500Z",
+  "version":  "1"
 }
