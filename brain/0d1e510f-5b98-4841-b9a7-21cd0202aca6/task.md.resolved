@@ -1,7 +1,13 @@
-# Add myths_vs_reality to Battle V2
+# Battle V2 Full Integrity Audit
 
-- [x] Add `myths_vs_reality` to [system_research_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_battle.txt)
-- [x] Add to [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) multi-call section definitions
-- [x] Verify [_extract_chapter_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#392-646) — existing myth matching works generically ✅
-- [x] [system_extract_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_battle.txt) — v1, SAFE (separate schema)
-- [x] Python syntax OK
+## Checks:
+- [ ] Style JSON steps (7) match phase plan prompt steps (7)
+- [ ] Phase plan prompt → outline prompt: step names consistent
+- [ ] Writer prompt: no dangling old field references
+- [ ] Validate sub_key_data prompt references correct niche
+- [ ] _extract_chapter_blueprint hook_extras: correct fields
+- [ ] Rewriter.py multi-call sections: all fields present
+- [ ] No empty/dangling `additional_findings` reference in any file
+- [ ] `myths_vs_reality` present in research + multi-call + audit + crossref
+- [ ] JSON valid parse
+- [ ] Python syntax OK
