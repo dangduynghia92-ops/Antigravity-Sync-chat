@@ -10,5 +10,5 @@
   - [x] Technique emphasis (Physical Translation heavily, Enemy/Strawman moderately)
   - [x] Proof Layer: scenario painting thay vì case study copy
 - [x] Cập nhật `system_write_review_firearms.txt` — thêm TOPIC BLOCK CHAPTER WRITING RULES
-- [/] Mở rộng Head-to-Head Duel `always_cover` thành criteria pool linh hoạt
-- [ ] Verification: validate JSON + kiểm tra tính nhất quán
+- [x] Mở rộng Head-to-Head Duel `always_cover` thành criteria pool linh hoạt
+- [x] Verification: validate JSON + kiểm tra tính nhất quán
