@@ -1,0 +1,59 @@
+# Auto-Skip Existing Files + SRT-Based File Naming
+
+## Problem
+1. **No skip logic**: When re-processing, the pipeline regenerates `visual_bible.txt`, `_character_bible.txt`, etc. even if they already exist — wasting API calls and time.
+2. **Generic file names**: Output files (`visual_bible.txt`, `_character_bible.txt`, `prompts.csv`) don't include the source SRT name, making it hard to identify which SRT generated them.
+
+## Proposed Changes
+
+### Process Controller
+
+#### [MODIFY] [process_controller.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py)
+
+**1. SRT-based file naming** — Add `srt_stem` (e.g., `tts_ch_01_intro`) as prefix to all output files:
+
+| Before | After |
+|---|---|
+| `visual_bible.txt` | `tts_ch_01_intro_visual_bible.txt` |
+| `_character_bible.txt` | `tts_ch_01_intro_character_bible.txt` |
+| `prompts.csv` | `tts_ch_01_intro_prompts.csv` |
+
+- Extract `srt_stem` from `project.srt_path` at the start of `_process_single_project()` (around line 203)
+- Update all file save paths (lines 306, 334, 343, 584) to use `f"{srt_stem}_visual_bible.txt"` etc.
+
+**2. Auto-skip existing files** — Before each generation step, check if the output file already exists:
+
+- **Visual Bible** (line 288-313): Check if `{srt_stem}_visual_bible.txt` exists → if yes, load content from file and skip API call
+- **Character Bible** (line 254-279): Check if `{srt_stem}_character_bible.txt` exists → if yes, load content from file and skip pipeline
+- **Prompts CSV** (line 366-382): Check if `{srt_stem}_prompts.csv` exists → if yes, skip prompt generation entirely, mark project as "Done"
+
+> [!IMPORTANT]
+> Skip logic reads existing files and uses their content as if it was just generated — so downstream steps (e.g., Google Check using visual_bible content) still work correctly.
+
+---
+
+### Narrative Review
+
+#### [MODIFY] [narrative_review.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/narrative_review.py)
+
+**3. SRT-based naming in `save_character_bible_csv()`** (line 649) and bible text save (line 790):
+- Add optional `srt_stem` parameter to `save_character_bible_csv()` and `run_character_pipeline()`
+- Change `_character_bible.csv` → `{srt_stem}_character_bible.csv`
+- Change `_character_bible.txt` → `{srt_stem}_character_bible.txt`
+
+---
+
+### Save Results
+
+#### [MODIFY] [process_controller.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/process_controller.py) `_save_results()` (line 579)
+
+**4. SRT-based naming for prompts CSV**:
+- Change `prompts.csv` → `{srt_stem}_prompts.csv`
+- Pass `srt_stem` to `_save_results()` method
+
+## Verification Plan
+
+### Manual Verification
+1. Run the app, add an SRT file (e.g., `tts_ch_01_intro.txt`), process it → verify output files are named with SRT prefix
+2. Run again on the same SRT → verify files are skipped with log messages like `[SKIP] visual_bible already exists`
+3. Delete one file (e.g., the visual_bible), re-run → verify only that file is regenerated, others are skipped

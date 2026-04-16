@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Plan for adding auto-skip logic for existing output files and SRT-based file naming. Covers modifications to process_controller.py and narrative_review.py to prefix all output files with the source SRT stem name and skip regeneration when files already exist.",
+  "updatedAt":  "2026-04-16T22:19:17.884796600Z"
+}
