@@ -1,11 +1,8 @@
-# Audit & Expand Battle V2 Key Data
+# Audit & Expand Biography Key Data
 
-- [x] Audit existing 17 key_data sections for overlaps/redundancy
-- [x] Check downstream dependencies
+- [x] Audit 20 sections for overlaps
 - [x] Design consolidated schema
-- [x] Create implementation plan
-- [x] Apply changes to blueprint prompt
-- [x] Update audit prompt (`merge_into_existing` fields)
-- [x] Update crossref prompt (`merge_into_existing` fields)
-- [x] Update style JSON `excerpt_fields`
-- [x] Verify JSON syntax ✓
+- [/] Apply to `system_research_blueprint_biography.txt`
+- [ ] Update `system_extract_blueprint_biography.txt` (match schema)
+- [ ] Update `system_crossref_biography_blueprint.txt` (merge_into_existing)
+- [ ] Verify syntax
