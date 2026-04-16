@@ -1,0 +1,83 @@
+# Chẩn Đoán: Tại Sao Framework Hiện Tại Không Phù Hợp Với Kịch Bản Mẫu Đối Thủ
+
+## Tóm tắt vấn đề
+
+Sau khi đọc toàn bộ 5 kịch bản mẫu và **chính xác 2311 dòng** của [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json), tôi xác định được **nguyên nhân gốc rễ**:
+
+> [!CAUTION]
+> **Toàn bộ 11 Frameworks hiện tại đều giả định chủ đề là một SẢN PHẨM CỤ THỂ (một khẩu súng).** Không có framework nào được thiết kế để review một **CỠ ĐẠN / LOẠI ĐẠN DƯỢC** (Caliber/Ammunition Type) — kiểu nội dung mà kênh đối thủ đang khai thác cực kỳ thành công.
+
+---
+
+## Phân loại 5 kịch bản đối thủ vs Framework hiện có
+
+| # | Kịch bản | Chủ đề | Loại nội dung | Framework phù hợp? |
+|---|----------|--------|---------------|---------------------|
+| 1 | How Deadly Is .45 ACP | Cỡ đạn .45 ACP | Deep-dive lịch sử + ứng dụng | ❌ Không có |
+| 2 | .45 ACP Most Lethal Round | Cỡ đạn .45 ACP vs 9mm | So sánh 2 cỡ đạn | ❌ Không có |
+| 3 | .38 Special Comeback | Cỡ đạn .38 Special | Deep-dive + phản biện xã hội | ❌ Không có |
+| 4 | .22 LR Secrets | Cỡ đạn .22 LR | Giáo dục kỹ thuật (7 bí mật) | ❌ Không có |
+| 5 | .357 vs .44 Mag | 2 cỡ đạn đấu nhau | So sánh head-to-head cỡ đạn | ❌ Không có |
+
+---
+
+## Lý do cụ thể framework hiện tại không hoạt động
+
+### 1. Đối tượng đánh giá sai hoàn toàn
+- **Framework hiện tại:** Mỗi chapter = 1 khẩu súng cụ thể (VD: Glock 19, Ruger SP101)
+- **Kịch bản đối thủ:** Mỗi chapter = 1 khía cạnh của CỠ ĐẠN (VD: Lịch sử ra đời, Vật lý độ giật, Terminal ballistics, Ứng dụng trong thực chiến)
+
+### 2. Cấu trúc chapter_template không khớp
+- **Framework hiện tại** (ví dụ Tier List): `PRODUCT IDENTITY → STRONGEST CRITERIA → WHAT HOLDS IT BACK → WHO IT'S FOR`
+- **Kịch bản đối thủ cần:** `TOPIC BLOCK → HISTORICAL CONTEXT → PHYSICS/DATA EXPLANATION → REAL-WORLD APPLICATION → TRANSITION`
+
+### 3. Blueprint Extraction không xử lý được
+- Hệ thống [system_extract_blueprint_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_firearms.txt) được thiết kế để trích xuất thông số của **sản phẩm** (giá, cân nặng, barrel length, trigger pull weight...)
+- Kịch bản caliber cần trích xuất: PSI, grain weight, muzzle velocity, ballistic coefficient, trajectory drop, wound channel data, lịch sử quân sự...
+
+### 4. Evaluation Focus không áp dụng được
+- Tất cả frameworks đánh giá theo: `specs_core`, `trigger`, `ergonomics`, `accuracy`, `reliability`, `value_proposition`
+- Kịch bản caliber cần đánh giá theo: `ballistics` (nội, ngoại, terminal), `history & adoption`, `physics of recoil`, `platform versatility`, `suppressor compatibility`, `handloading potential`
+
+### 5. Thiếu kỹ thuật storytelling đặc trưng
+- Kịch bản đối thủ sử dụng rất nhiều **Case Study** (vụ Dearborn Heights, bà cụ Bella Twin bắn gấu) và **Anecdotal Scenario Painting** — nhưng `Scenario Painting` trong framework hiện tại được đánh dấu `use_sparingly`
+- Kịch bản caliber cần **Physical Translation** (xúc giác hóa thông số: "cú đẩy lùi" vs "cú giật nảy gắt") làm kỹ thuật CHÍNH, không phải phụ
+
+---
+
+## Đề Xuất Giải Pháp
+
+Cần bổ sung **2-3 Frameworks mới** vào `Review_súng_đạn.json` chuyên xử lý nội dung về CỠ ĐẠN thay vì SẢN PHẨM:
+
+### Framework mới 1: "The Caliber Deep-Dive" (Mổ Xẻ Cỡ Đạn)
+- **Dùng khi:** Review/giáo dục về 1 cỡ đạn duy nhất (.45 ACP, .22 LR, .38 Special)
+- **Cấu trúc:** Mỗi chapter = 1 khía cạnh (Lịch sử → Ballistics → Vật lý giật → Ứng dụng → Biến thể → Hạn chế)
+- **Áp dụng cho kịch bản 1, 3, 4 của đối thủ**
+
+### Framework mới 2: "The Caliber War" (Cuộc Chiến Cỡ Đạn)
+- **Dùng khi:** So sánh 2 cỡ đạn head-to-head (.45 vs 9mm, .357 vs .44 Mag)
+- **Cấu trúc:** Round-based (giống Head-to-Head Duel nhưng tiêu chí là PSI, velocity, recoil energy, wound channel, cost-per-round thay vì trigger/ergonomics)
+- **Áp dụng cho kịch bản 2, 5 của đối thủ**
+
+### Cập nhật bổ sung
+- **Blueprint Extraction:** Cần prompt mới hoặc bổ sung schema cho dữ liệu cỡ đạn (grain, fps, PSI, ballistic coefficient, trajectory tables, adoption history)
+- **Technique Emphasis:** Đẩy `Scenario Painting`, `Visceral Analogy`, và `Appeal to Authority` lên `use_heavily` cho các framework caliber
+- **Tonal Arc:** Thêm case study / anecdote reference vào các tone như `nostalgic_reverence` và `nerd_out`
+
+---
+
+## Câu Hỏi Cần Bạn Quyết Định
+
+1. Bạn muốn tạo **2 frameworks riêng biệt** (Caliber Deep-Dive + Caliber War) hay gộp thành **1 framework linh hoạt** có thể xử lý cả 2 dạng?
+2. Các framework mới này nên nằm trong **cùng file** `Review_súng_đạn.json` hay tạo **file style JSON riêng** cho niche "Ammunition/Caliber"?
+3. Có cần tạo prompt extraction riêng (`system_extract_blueprint_caliber.txt`) cho dữ liệu cỡ đạn không, hay bổ sung thêm schema vào prompt extraction hiện tại?
+
+---
+
+## Verification Plan
+
+### Automated
+- Chạy pipeline với 1 kịch bản caliber mẫu (ví dụ transcript .45 ACP) qua framework mới để kiểm tra output có đúng cấu trúc chapter block không
+
+### Manual (yêu cầu bạn kiểm tra)
+- So sánh output AI với kịch bản mẫu đối thủ để đánh giá chất lượng storytelling và data density
