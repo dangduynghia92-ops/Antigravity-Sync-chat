@@ -1,9 +1,11 @@
-# Generalize Audit & Crossref Pipeline
+# Audit & Expand Battle V2 Key Data
 
-- [x] Refactor `rewriter.py`: rename functions + add dispatch maps
-- [x] Create `system_audit_biography_blueprint.txt` (empty)
-- [x] Create `system_crossref_biography_blueprint.txt` (SCENE TEST)
-- [x] Update `script_creation_tab.py`: remove battle gating, use generic functions
-- [x] Fix biography `chapter_ending_protocol` (was still "starts FRESH")
-- [x] Verify: syntax check both files ✓
-- [x] Verify: no dangling references to old function names ✓
+- [x] Audit existing 17 key_data sections for overlaps/redundancy
+- [x] Check downstream dependencies
+- [x] Design consolidated schema
+- [x] Create implementation plan
+- [/] Apply changes to blueprint prompt
+- [ ] Update audit prompt (`merge_into_existing` fields)
+- [ ] Update crossref prompt (`merge_into_existing` fields)
+- [ ] Update style JSON `excerpt_fields`
+- [ ] Verify syntax

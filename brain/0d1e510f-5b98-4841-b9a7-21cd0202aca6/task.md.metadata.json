@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Completed checklist for generalizing audit/crossref pipeline.",
-  "updatedAt":  "2026-04-16T03:44:22.480181Z",
-  "version":  "18"
+  "summary":  "Checklist for applying battle key_data audit changes across all affected files.",
+  "updatedAt":  "2026-04-16T03:59:31.752921800Z",
+  "version":  "20"
 }

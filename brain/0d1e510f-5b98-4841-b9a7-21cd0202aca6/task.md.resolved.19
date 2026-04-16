@@ -1,0 +1,9 @@
+# Audit & Expand Battle V2 Key Data
+
+- [/] Audit existing 17 key_data sections for overlaps/redundancy
+- [ ] Check downstream dependencies (phase plan, outline, writer, audit prompts)
+- [ ] Design consolidated schema (merge/split/add)
+- [ ] Create implementation plan
+- [ ] Apply changes to blueprint prompt
+- [ ] Update audit prompt if needed
+- [ ] Verify no downstream breakage
