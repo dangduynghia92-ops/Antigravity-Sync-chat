@@ -1,12 +1,16 @@
-# Biography Pipeline Audit & Enhancement
+# Battle V2 Framework Enhancement
 
-- [x] Audit biography phase definitions and key_data allocation
-- [x] Add Origin vs Foundation litmus test (WHO they ARE vs WHAT they LEARNED)
-- [x] Add Foundation to chronological mapping guide
-- [x] Verify empty phase handling (SKIP/MERGE) — already implemented in code
-- [x] Add "Bóng Tối" framework for negative figures
-  - [x] Add framework to `narrative_tiểu_sử_nhân_vật.json`
-  - [x] Add `dark_impact` section to blueprint research prompt
-  - [x] Add `downfall_pattern` section to blueprint research prompt
-  - [x] Add new fields to `excerpt_fields` for scoring access
-  - [x] Validate structure
+## Completed
+- [x] Add "Bóng Tối" to `_GENERAL_FWS` in `script_creation_tab.py` (2 locations)
+- [x] Remove HEAD/HEART labels from battle v2 JSON (14 references)
+- [x] Add `breakthrough_weapons` to battle blueprint prompt + excerpt_fields
+- [x] Revamp POV strategy (max 1 shift/chapter, any vivid scene)
+- [x] Add 3-beat body chapter opening (bridge → context → content)
+- [x] Fix CONTEXT beat (1-5 sentences, atmosphere/tension)
+
+## In Progress
+- [/] Implement Battle Blueprint Audit step
+  - [ ] Create prompt: `system_audit_battle_blueprint.txt`
+  - [ ] Create function: `audit_battle_blueprint()` in rewriter.py
+  - [ ] Hook into pipeline in script_creation_tab.py (battle niche only)
+  - [ ] Add `additional_findings` to excerpt_fields + phase plan prompt
