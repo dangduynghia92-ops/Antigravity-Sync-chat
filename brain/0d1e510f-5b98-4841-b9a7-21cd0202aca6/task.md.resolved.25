@@ -1,0 +1,8 @@
+# Add myths_vs_reality to Battle V2
+
+- [/] Add `myths_vs_reality` to [system_research_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_battle.txt)
+- [ ] Add to [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) multi-call section definitions
+- [ ] Add to [system_extract_blueprint_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_battle.txt) (if used for v2)
+- [ ] Add to writer prompt reference ([system_narrative_write_battle_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_battle_v2.txt))
+- [ ] Verify [_extract_chapter_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#392-646) hook extras / matching logic
+- [ ] Syntax check + grep verification

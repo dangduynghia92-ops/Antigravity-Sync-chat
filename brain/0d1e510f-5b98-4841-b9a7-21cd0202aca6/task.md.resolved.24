@@ -1,0 +1,14 @@
+# Audit & Expand Biography Key Data
+
+- [x] Audit 20 sections for overlaps
+- [x] Design consolidated schema
+- [x] Apply to [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
+- [x] Update [system_extract_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_biography.txt)
+- [x] Update [system_crossref_biography_blueprint.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_crossref_biography_blueprint.txt)
+- [x] Fix downstream: [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) multi-call sections
+- [x] Fix downstream: `narrative_tiểu_sử_nhân_vật.json` framework scoring
+- [x] Fix downstream: [system_enrich_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_biography.txt)
+- [x] Fix downstream: [research_test_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/research_test_tab.py) test sections
+- [x] Python syntax ✓
+- [x] JSON syntax ✓
+- [x] Old field name scan ✓ (no dangling references)
