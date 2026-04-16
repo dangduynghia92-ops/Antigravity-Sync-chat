@@ -1,46 +1,47 @@
 # Walkthrough: Framework "The Deep Anatomy" + Pipeline Updates
 
-## Thay đổi đã thực hiện
+## Tổng quan: 4 file đã sửa, chỉ niche súng đạn
 
-### 1. Framework mới: "The Deep Anatomy"
-**File:** [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) (+234 dòng, tổng: 2627 dòng, 12 frameworks)
+| # | File | Thay đổi | Dòng |
+|---|------|----------|------|
+| 1 | [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | Thêm framework "The Deep Anatomy" | +234 dòng |
+| 2 | [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | Mở rộng H2H Duel `criteria_pool` | ~12 dòng |
+| 3 | [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt) | Thêm TOPIC BLOCK writing rules | +52 dòng |
+| 4 | [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt) | Fix Bug 1-2: thêm `topic_block` enum + outline rules | +12 dòng |
 
-Framework phân tích chuyên sâu **1 sản phẩm duy nhất** (súng, đạn, phụ kiện) theo nhiều khía cạnh:
-
-| Yếu tố | Chi tiết |
-|---------|----------|
-| **Chapter type** | `topic_block` — mỗi chapter = 1 khía cạnh, KHÔNG phải 1 sản phẩm |
-| **Topic pool** | 10 topics (Origin, Ballistics, Recoil, Terminal, Platforms, Variants, Tactical, Handloading, Myths, Limitations) |
-| **Chapter template** | `TOPIC ANCHOR → DATA FOUNDATION → PHYSICAL TRANSLATION → PROOF LAYER → PRACTICAL IMPLICATION` |
-| **Kỹ thuật chính** | Physical Translation (BẮT BUỘC), Scenario Painting (tự tạo, KHÔNG copy), Data Barrage |
-| **Feedback tích hợp** | ✅ Tribal CTA (end chapter), ✅ Tribal Enemy (use_moderately), ✅ Proof Layer cấm copy case study |
+Tất cả file đều niche-specific — **không ảnh hưởng** niche khác hoặc narrative mode.
 
 ---
 
-### 2. Topic Block Writing Rules
-**File:** [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt) (+52 dòng, tổng: 220 dòng)
+## Chi tiết thay đổi
 
-Thêm block hướng dẫn viết chapter dạng `topic_block` với:
-- 5 required elements mới (vs 5 elements cũ cho product-per-chapter)
-- 4 writing patterns: T1 (Data Lead), T2 (Myth Lead), T3 (Story Lead), T4 (Catalog Lead)
-- Rule: không dùng cùng 1 pattern cho 2 chapter liên tiếp
+### 1. Framework "The Deep Anatomy"
+- Framework thứ 12, mổ xẻ 1 sản phẩm (súng hoặc đạn) theo nhiều khía cạnh
+- Mỗi chapter = 1 topic block: `TOPIC ANCHOR → DATA FOUNDATION → PHYSICAL TRANSLATION → PROOF LAYER → PRACTICAL IMPLICATION`
+- Topic pool: 10 facets (Origin, Ballistics, Recoil, Terminal, Platforms, Variants, Tactical, Handloading, Myths, Limitations)
+- Tích hợp: **Tribal CTA** (end), **Tribal Enemy** (use_moderately), **Proof Layer cấm copy case study**
+
+### 2. Head-to-Head Duel criteria_pool
+- `always_cover` từ 6 criteria cứng → `criteria_pool` linh hoạt (7 firearm + 7 caliber + 2 universal)
+
+### 3. Write Prompt — Topic Block Rules
+- Block mới `If chapter_type is "topic_block"` với 5 elements + 4 patterns (T1-T4)
+- Tách rõ ràng với `If chapter_type is "body"` hiện tại → không xung đột
+
+### 4. Outline Prompt — Bug Fix
+- Thêm `topic_block` vào `chapter_type` enum (dòng 68)
+- Thêm section `TOPIC BLOCK BODY` với 9 rules cho Deep Anatomy (dòng 41-49)
+- Thêm field `topic_block_topic` vào output schema (dòng 70)
 
 ---
 
-### 3. Head-to-Head Duel — Criteria Pool
-**File:** [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) (thay thế 6 dòng → 12 dòng)
+## Audit kết quả
 
-| Trước | Sau |
-|-------|-----|
-| Hardcoded 6 criteria: `trigger, ergonomics, accuracy, reliability, value_proposition, specs_core` | Flexible `criteria_pool` với 3 nhóm: `firearm_criteria` (7), `caliber_criteria` (7), `universal_criteria` (2) |
-
-Giờ Head-to-Head Duel **tự động hoạt động** cho cả .357 vs .44 Mag lẫn Glock 19 vs SIG P365.
-
----
-
-## Validation
-
-- ✅ Framework "The Deep Anatomy" confirmed at position 12/12 in frameworks array
-- ✅ TOPIC BLOCK CHAPTER WRITING RULES confirmed at line 96-147 in write prompt
-- ✅ `criteria_pool` confirmed at line 1617 in Head-to-Head Duel evaluation_focus
-- ⚠️ JSON validation via PowerShell timed out (165KB file too large for ConvertFrom-Json) — file reads confirm valid structure
+| Kiểm tra | Kết quả |
+|----------|---------|
+| JSON `Review_súng_đạn.json` valid | ✅ 2627 dòng |
+| Biography Protection Rule | ✅ Không vi phạm |
+| Outline prompt `chapter_type` enum | ✅ Fixed → `hook | body | topic_block | end` |
+| Outline prompt topic_block rules | ✅ Added |
+| Write prompt branching | ✅ Không xung đột |
+| Ảnh hưởng niche khác | ✅ 0 — chỉ sửa file firearms-specific |

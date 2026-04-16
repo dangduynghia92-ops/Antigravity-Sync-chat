@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Walkthrough documenting all changes made: new Deep Anatomy framework, topic_block chapter writing rules in write prompt, and Head-to-Head Duel criteria pool extension.",
-  "updatedAt":  "2026-04-16T12:10:49.557816500Z"
+  "summary":  "Final walkthrough documenting all 4 changes made: The Deep Anatomy framework, topic_block writing rules, Head-to-Head criteria pool, and outline prompt fixes.",
+  "updatedAt":  "2026-04-16T14:05:01.145656Z",
+  "version":  "1"
 }
