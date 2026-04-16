@@ -1,0 +1,8 @@
+# Generalize Audit & Crossref Pipeline
+
+- [/] Refactor [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py): rename functions + add dispatch maps
+- [ ] Create `system_audit_biography_blueprint.txt` (empty)
+- [ ] Create `system_crossref_biography_blueprint.txt` (SCENE TEST)
+- [ ] Update [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py): remove battle gating, use generic functions
+- [ ] Add `additional_findings` to biography JSON `excerpt_fields`
+- [ ] Verify: syntax check both files
