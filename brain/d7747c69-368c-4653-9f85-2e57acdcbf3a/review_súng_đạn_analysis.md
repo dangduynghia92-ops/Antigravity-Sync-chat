@@ -17,23 +17,30 @@ Quy trình 3 bước cốt lõi:
 
 ## 2. CÁC FRAMEWORK CHÍNH TRONG TOP/LIST (REVIEW SÚNG ĐẠN)
 
-`Review_súng_đạn.json` quản lý 7 Frameworks sắc bén. Đối với kịch bản Top 10 / List dài, hệ thống sẽ auto-detect hoặc sử dụng các framework sau để "thay máu" hoàn toàn cảm giác của một danh sách nhàm chán:
+Hệ thống cấu hình tổng cộng 11 frameworks, trong đó có **chính xác 7 Frameworks (loại countdown, catalog, investigation, chronological, round_based)** được thiết kế riêng rẽ để xử lý chế độ Top/List cho nhiều sản phẩm. Các framework này là:
 
 1. **The Tier List (Countdown chuẩn mực):**
-   - **Xếp hạng:** Từ số điểm thấp nhất (#10) đến số điểm cao nhất (#1).
-   - **Pacing:** Sản phẩm ở chót bảng viết rất nhanh (punchy), sản phẩm tiệm cận Top 3 phân tích cực sâu.
-   - **Yêu cầu:** Mỗi chương phải bám vào 1 "Key Strength" để biện minh vị trí, và 1 "Key Weakness" giải thích tại sao không được xếp cao hơn. Dịch chuyển khéo léo thông qua "Problem-Solution" (VD: Điểm yếu của súng #5 bước sang độ hoàn hảo trên súng #4).
+   - **Xếp hạng:** Từ số điểm thấp nhất (#10) đến cao nhất (#1). Mỗi sản phẩm nêu "Key Strength" (biện minh vị trí) và "Key Weakness" (tại sao không xếp cao hơn).
    
 2. **The Budget Warrior (Kẻ Thách Thức Giá Rẻ):**
-   - **Ứng dụng:** List các súng bình dân.
-   - **Điểm độc đáo:** So sánh tất cả súng trong danh sách với **CÙNG 1 TIÊU CHUẨN ĐẮT TIỀN (Benchmark)** (Dạng: "Súng $300 này làm được 80% mọi thứ mà con Glock $600 làm được").
-   - **Công thức:** Giá (Price) luôn được tung ra cuối đoạn như một đòn "Knockout" sau khi đã build xong thông số.
+   - **Ứng dụng:** So sánh các súng bình dân/giá rẻ.
+   - **Điểm độc đáo:** Tất cả súng được đo lường với **CÙNG 1 TIÊU CHUẨN ĐẮT TIỀN (Benchmark)**. Yếu tố Giá (Price) luôn được tung ra cuối đoạn như đòn "Knockout" về giá trị.
 
-3. **The High-Stakes Scenario (Tình Huống Sinh Tử):**
-   - Đánh giá các súng Home Defense/Duty/Survival. Mọi góc độ thiết kế hay tiêu chí đều đưa qua màng lọc: *"Súng có hoạt động được lúc 3h sáng, khi tay run rẩy và trong bóng tối không?"*
+3. **The Catalog (Danh Sách Độc Lập):**
+   - Dành cho các list không mang tính cạnh tranh hoặc so sánh trực tiếp. Đánh giá thuần tuý điểm mạnh USP dựa theo nhu cầu của từng Target User.
 
-4. **The Catalog (Danh Sách Độc Lập):**
-   - Dành cho các list không mang tính cạnh tranh trực tiếp. Không có "người chiến thắng", đánh giá thuần tuý khách quan theo nhu cầu của mỗi Target User.
+4. **The Myth Buster (Kẻ Phá Bỏ Định Kiến):**
+   - **Ứng dụng:** Danh sách list/tổng hợp để bóc trần những lầm tưởng (myth) trong cộng đồng thay vì review súng đơn thuần. 
+   - **Cách viết:** Đưa ra lầm tưởng (làm khán giả tin) -> Đưa 1 hạt sạn nhỏ -> Dùng thông số Blueprint đập nát lầm tưởng -> Kết luận sự thật.
+
+5. **The Evolution Timeline (Tiến Trình Lịch Sử):**
+   - Định dạng Timeline sắp xếp các tiểu chuẩn/thế hệ sản phẩm từ dòng cổ nhất đến đời mới nhất. Không mặc định "mới là tốt", mỗi thay đổi của các hệ Gen phải truy xuất trade-off và specs.
+
+6. **The Head-to-Head Duel (Cuộc Chiến Đối Đầu):**
+   - Danh sách giới hạn định dạng song đấu (2 item so kè khốc liệt). Tỏ rõ năng lượng "võ đài", đánh giá gắt gao theo tiêu chuẩn (từng hiệp một) như Ergonomics, Trigger, Price,... và kết luận ai thắng từng hiệp.
+
+7. **The Industry Shakeup (Kẻ Phá Bĩnh Ngành Công Nghiệp):**
+   - Chuyên list các sản phẩm mới ra mắt tại Event / Shot Show. Tốc độ phải cực nhanh, tập trung nhấn mạnh vào độ huỷ diệt tầm giá hoặc spec mang tính cách mạng của ngành công nghiệp. Mở đầu bằng tuyên bố Insider quyền lực.
 
 ---
 
