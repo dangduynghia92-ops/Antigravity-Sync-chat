@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Checklist for biography key_data audit and expansion.",
-  "updatedAt":  "2026-04-16T04:15:24.007403Z",
-  "version":  "22"
+  "summary":  "Fixing downstream bugs from biography schema rename.",
+  "updatedAt":  "2026-04-16T04:51:23.884080Z",
+  "version":  "23"
 }
