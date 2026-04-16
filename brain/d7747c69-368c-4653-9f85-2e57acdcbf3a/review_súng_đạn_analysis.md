@@ -1,0 +1,73 @@
+# Review Chi Tiết: Framework & Cách Viết Chuyên Sâu Mode Top/List (Niche Review Súng Đạn)
+
+Dựa trên quá trình phân tích kỹ lưỡng hệ thống (bao gồm các file configuration, style guide `Review_súng_đạn.json` và các system prompts trong quy trình script creation), dưới đây là báo cáo review chi tiết về cách thiết kế và vận hành "Mode Top/List" cho ngách "Review Súng Đạn".
+
+---
+
+## 1. TỔNG QUAN KIẾN TRÚC PIPELINE
+
+Mode **Top/List** trong tab Script Creation thao tác dựa trên một luồng dữ liệu (pipeline) chuyên biệt gọi là **"Review Pipeline"**. Khác với Narrative Pipeline (kể chuyện tiểu sử/lịch sử), Review Pipeline tập trung vào tính logic, thông số kỹ thuật (specs), bằng chứng thực tế và sự bác bỏ các lời đồn thổi (myth busting).
+
+Quy trình 3 bước cốt lõi:
+1. **Extraction (`system_extract_blueprint_firearms.txt`):** Bóc tách nghiêm ngặt dữ liệu gốc. Bot AI được lệnh phân lập rõ ràng **`detailed_facts`** (mức giá, trọng lượng, số lượng kẹt đạn, kết quả test, độ dung sai) khỏi **`author_rhetoric`** (lời bình luận, cảm xúc, phép ẩn dụ của tác giả kịch bản gốc). Việc này là **vital** (cốt tử) để chống đạo nhái (anti-contamination).
+2. **Outline (`system_review_outline_firearms.txt`):** Tạo dàn ý dựa trên Framework. Hệ thống không sử dụng bảng xếp hạng của kịch bản gốc mà **tự xếp hạng lại** dựa trên tiêu chí góc độ của Framework.
+3. **Writing (`system_write_review_firearms.txt`):** Viết chương chi tiết kết hợp Blueprint Data và Style Guide, đảm bảo mật độ data dày đặc.
+
+---
+
+## 2. CÁC FRAMEWORK CHÍNH TRONG TOP/LIST (REVIEW SÚNG ĐẠN)
+
+`Review_súng_đạn.json` quản lý 7 Frameworks sắc bén. Đối với kịch bản Top 10 / List dài, hệ thống sẽ auto-detect hoặc sử dụng các framework sau để "thay máu" hoàn toàn cảm giác của một danh sách nhàm chán:
+
+1. **The Tier List (Countdown chuẩn mực):**
+   - **Xếp hạng:** Từ số điểm thấp nhất (#10) đến số điểm cao nhất (#1).
+   - **Pacing:** Sản phẩm ở chót bảng viết rất nhanh (punchy), sản phẩm tiệm cận Top 3 phân tích cực sâu.
+   - **Yêu cầu:** Mỗi chương phải bám vào 1 "Key Strength" để biện minh vị trí, và 1 "Key Weakness" giải thích tại sao không được xếp cao hơn. Dịch chuyển khéo léo thông qua "Problem-Solution" (VD: Điểm yếu của súng #5 bước sang độ hoàn hảo trên súng #4).
+   
+2. **The Budget Warrior (Kẻ Thách Thức Giá Rẻ):**
+   - **Ứng dụng:** List các súng bình dân.
+   - **Điểm độc đáo:** So sánh tất cả súng trong danh sách với **CÙNG 1 TIÊU CHUẨN ĐẮT TIỀN (Benchmark)** (Dạng: "Súng $300 này làm được 80% mọi thứ mà con Glock $600 làm được").
+   - **Công thức:** Giá (Price) luôn được tung ra cuối đoạn như một đòn "Knockout" sau khi đã build xong thông số.
+
+3. **The High-Stakes Scenario (Tình Huống Sinh Tử):**
+   - Đánh giá các súng Home Defense/Duty/Survival. Mọi góc độ thiết kế hay tiêu chí đều đưa qua màng lọc: *"Súng có hoạt động được lúc 3h sáng, khi tay run rẩy và trong bóng tối không?"*
+
+4. **The Catalog (Danh Sách Độc Lập):**
+   - Dành cho các list không mang tính cạnh tranh trực tiếp. Không có "người chiến thắng", đánh giá thuần tuý khách quan theo nhu cầu của mỗi Target User.
+
+---
+
+## 3. CÁCH VIẾT NỘI DUNG CHI TIẾT (ĐỊNH HƯỚNG TÁC GIẢ AI)
+
+Cách AI được "huấn luyện" để viết nội dung ngách súng đạn cực kỳ gắt gao và nặng tính chuyên môn (Expert Insider). Dưới đây là các lề lối (core rules) lớn nhất:
+
+### A. Bản Sắc & Giọng Điệu (Identity & Tone)
+- **Hình tượng tác giả:** Một chuyên gia thực dụng, có uy quyền, góc nhìn của "người trong cuộc". Sẵn sàng **"thách thức định kiến số đông và hype marketing"**. Không phải gã salesman (người bán hàng).
+- **Nguyên tắc "Lời nói đi đôi với Con số" (Data Density):** Mỗi đoạn (paragraph) BẮT BUỘC chứa tối thiểu 1 thông số cụ thể. Cấm viết những lời khen sáo rỗng như: *"Nó là cây súng tuyệt vời với độ giật thấp."* Phải viết: *"Ở cân nặng 4.5 lbs cùng cơ chế trích khí, nó giảm 30% chấn động so với đối thủ..."*
+- **Quy tắc ngôi thứ (POV):** Xưng hô **ngôi thứ 2 ("You")** để hướng tới người xem và **ngôi thứ 3 ("Testing reveals", "The data shows")** khi cung cấp bằng chứng. Cấm xưng "Tôi" hoặc "Chúng tôi" (The AI hasn't shot anything).
+
+### B. Cấu Trúc Bắt Buộc Của Một Chapter (Body Rules)
+Mỗi item/súng trong danh sách phải mang đủ 5 mảnh ghép (Elements), nhưng thứ tự sẽ đảo liên tục (Pattern A, B, C, D) tuỳ theo Tonal arc (Ví dụ: The Roast - Cười nhạo hàng lởm, The Nostalgic - Tôn vinh huyền thoại):
+1. **[IDENTITY]:** Bản sắc/triết lý thiết kế của súng (VD: "Taurus thiết kế GX4 để làm cây súng micro-compact 13 viên nhỏ nhất thị trường").
+2. **[USP - Unique Selling Point]:** Khai thác cái gốc làm cây súng này khác biệt dựa trên `depth_focus`.
+3. **[SPECS + BENEFIT]:** Mọi thông số (Specs) đều phải dịch ra lợi ích thực tiễn trên trường bắn/thực chiến. Chống "Spec Dump" (quăng thông số như tờ rơi).
+4. **[WEAKNESS]:** Bắt buộc phải có một Nhược Điểm chân thực (điểm neo độ uy tín của video). Ví dụ: *"Rất khó kiếm bao da (OWB holster) cho con này"*. 
+5. **[CLOSER / TARGET USER]:** Kết luận cụ thể người **nên mua** (VD: *"Nếu bạn hay vác súng giấu kín dưới áo phông giữa mùa hè đổ lửa nóng nực, đây là súng của bạn"*). Cấm phán "Súng này không dành cho newbie" v.v...
+
+### C. Triển Khai Hook (Mở Bài)
+Hook của các framework súng đạn cấm mọi template nhạt nhẽo kiểu *"Hôm nay chúng ta sẽ xem xét 10 cây súng..."*. Thay vào đó, AI được yêu cầu ưu tiên 3 phương pháp:
+- **Damning Verdict First:** Đưa luôn phán quyết sốc bưng bít hype marketing (VD: *Súng giá $3,000 được mọi reviewer tâng bốc, nhưng dữ liệu ép xung 2000 viên đạn cho thấy hệ thống trích khí của nó tồi tệ nhất ở phân khúc này*).
+- **Stress Test Cold Open:** Quăng thẳng vào cảnh thử nghiệm cường độ cao (lăn bùn, nung chảy).
+- **Provocative Caliber Question:** Đặt câu hỏi khai thác cuộc chiến Caliber vĩnh cửu trong cộng đồng chơi súng (Caliber wars).
+
+### D. Các Anti-Patterns (Những Lỗi Cấm Kị)
+Hệ thống có bộ lọc cấm khắt khe:
+- **Không dịch bồi (No Parenthetical Translations):** VD Không được viết *"retroceso directo (direct blowback)"*. Phải dùng thuật ngữ chốt. Tên Calliber (`.45 ACP`, `9mm`) là danh từ riêng vĩnh viễn không được quy đổi inch sang mm hay ngược lại.
+- **Không tự chế Flaw kịch tính:** Nếu súng tốt, không bịa ra điểm yếu kỹ thuật cho có vẻ kịch tính. Phải lấy điểm yếu thực sự từ Blueprint, hoặc điểm yếu chung của hệ thống đó.
+- **Không leak từ khóa Framework:** Chữ "Tier list", "Budget Warrior", "Underdog" chỉ là hệ góc nhìn gieo trong lõi, không bao giờ được lộ ra kịch bản.
+
+---
+
+## TỔNG KẾT
+
+Cách mode Top/List review súng đạn được thiết lập là cực kỳ chuyên sâu. Nó loại bỏ tư duy viết "điểm danh từng súng một cách nhàm chán" của AI bình thường, và biến list video thành một tiến trình **"Luận Điểm Cạnh Tranh (Contrarian/Duel)"**, nhồi data kỹ thuật cao (tốc độ đạn fps, grain, MOA accuracy, trigger pound, v.v.), được nhào nặn lại bằng ngôn ngữ của một chuyên gia lão luyện tại trường bắn. Trọng tâm cốt lõi là: **"Data làm vũ khí, Tình huống làm bối cảnh, Cú tát vào Marketing làm sự thu hút"**.
