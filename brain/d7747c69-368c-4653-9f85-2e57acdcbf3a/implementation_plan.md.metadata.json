@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Comprehensive proposal for 3 deliverables: (1) Caliber Blueprint extraction schema with all data fields mapped from competitor transcripts, (2) New single-caliber framework 'The Caliber Anatomy' with Topic Block chapter structure, (3) Head-to-Head Duel compatibility assessment for caliber-vs-caliber content with proposed modifications.",
-  "updatedAt":  "2026-04-16T11:22:50.773479Z",
-  "version":  "2"
+  "summary":  "Final implementation plan for a generic single-product deep-dive framework. Covers: (1) new framework 'The Deep Anatomy' applicable to any product type (gun/caliber/equipment), (2) new body chapter element set for topic-block chapters in the write prompt, (3) Head-to-Head Duel compatibility assessment — confirmed compatible with caliber-vs-caliber, needs only criteria list extension.",
+  "updatedAt":  "2026-04-16T11:31:09.968937300Z",
+  "version":  "3"
 }
