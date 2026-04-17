@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking pipeline refinement work: data leak elimination, end phase separation, hook strategy, and DEMOTE logic implementation.",
-  "updatedAt":  "2026-04-17T15:09:59.742229300Z",
-  "version":  "28"
+  "summary":  "Task checklist tracking all pipeline refinements: data leak fixes, end phase separation, hook strategy, node_count logging, and DEMOTE logic implementation.",
+  "updatedAt":  "2026-04-17T15:17:12.115750400Z",
+  "version":  "29"
 }
