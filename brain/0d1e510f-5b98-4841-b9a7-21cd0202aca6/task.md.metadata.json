@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Full integrity audit of battle v2 pipeline after all changes today.",
-  "updatedAt":  "2026-04-16T08:50:51.842460700Z",
-  "version":  "27"
+  "summary":  "Task checklist tracking pipeline refinement work: data leak elimination, end phase separation, hook strategy, and DEMOTE logic implementation.",
+  "updatedAt":  "2026-04-17T15:09:59.742229300Z",
+  "version":  "28"
 }
