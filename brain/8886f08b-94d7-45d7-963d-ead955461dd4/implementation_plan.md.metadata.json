@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Plan to fix 3 interconnected bugs causing blueprint data loss in the Review Súng Đạn pipeline:\n1. `_strip_source_tags()` doesn't recognize `{\"fact\", \"source\"}` format → source tags persist\n2. Correction code at L4416 blindly overwrites `detailed_facts` array with scalar string → destroys 26 data points\n3. Reality Check prompt lacks guidance for array field corrections → AI returns ambiguous field references\n\nIncludes code-level fixes for script_creation_tab.py and prompt hardening for system_reality_check_firearms.txt.",
+  "updatedAt":  "2026-04-18T09:43:25.196229600Z"
+}

@@ -1,0 +1,6 @@
+# Fix Blueprint Data Loss & Improve Content Quality
+
+- [x] Bug 1: Fix [_strip_source_tags()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3296-3306) to recognize `{"fact", "source"}` format
+- [x] Bug 2: Add array-safe guard to correction application code (L4411-4430)
+- [x] Bug 3: Harden Reality Check prompt for array field corrections
+- [x] Verify fixes with offline test using existing sample data
