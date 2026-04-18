@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Detailed research walkthrough of the Script Creation pipeline for the Review Súng Đạn (firearms review) niche using The Deep Anatomy framework. Covers:\n- Complete 10-step pipeline flow from Detection → Blueprint → Outline → Chapter Writing → Review\n- Niche config parameters (8-11 chapters, English, Pro tier)\n- Style JSON architecture: 4 layers (core_rules, tonal_arc, hook_methods, frameworks)\n- The Deep Anatomy framework in full detail: topic_block chapter type, 10-topic pool, 5 mandatory elements per chapter (TOPIC ANCHOR, DATA FOUNDATION, PHYSICAL TRANSLATION, PROOF LAYER, PRACTICAL IMPLICATION), 4 writing patterns (T1-T4), Tribal CTA\n- Complete annotated example from Barrett M107A1 50 BMG sample video showing all pipeline artifacts and 8 output chapters\n- Prompt file mapping table for all 10 pipeline steps",
+  "updatedAt":  "2026-04-18T08:39:35.779447Z"
+}
