@@ -1,0 +1,21 @@
+# Pipeline Hardening & UI Sync
+
+## Phase 1: Data Loss Fix (DONE)
+- [x] Fix [_strip_source_tags()](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#3306-3320) for `{"fact", "source"}` format
+- [x] Add array-safe guard to correction application
+- [x] Harden Reality Check prompt for array fields
+
+## Phase 2: Optimize Step 5 Enrichment (DONE)
+- [x] Remove Step 5a ([verify_specs_google](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#5644-5801))
+- [x] Reorder: Wave 1 (5b+5c parallel) → Wave 2 (5d sequential)
+
+## Phase 3: UI Changes (DONE)
+- [x] Move Stop/Retry/Save Config to bottom row
+- [x] Freeze Excel checkbox
+- [x] Add Keep Thesis checkbox (Script Creation)
+
+## Phase 4: Sync Auto Pipeline with Script Creation
+- [/] Add `keep_thesis` to [PipelineConfig](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/auto_pipeline.py#34-60) dataclass
+- [ ] Add Keep Thesis checkbox to Auto Pipeline UI
+- [ ] Wire `_cached_keep_thesis` into job dict
+- [ ] Fix Script Creation to read from job dict first
