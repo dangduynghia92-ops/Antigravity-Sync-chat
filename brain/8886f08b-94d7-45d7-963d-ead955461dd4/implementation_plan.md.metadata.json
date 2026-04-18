@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to fix 3 interconnected bugs causing blueprint data loss in the Review Súng Đạn pipeline:\n1. `_strip_source_tags()` doesn't recognize `{\"fact\", \"source\"}` format → source tags persist\n2. Correction code at L4416 blindly overwrites `detailed_facts` array with scalar string → destroys 26 data points\n3. Reality Check prompt lacks guidance for array field corrections → AI returns ambiguous field references\n\nIncludes code-level fixes for script_creation_tab.py and prompt hardening for system_reality_check_firearms.txt.",
-  "updatedAt":  "2026-04-18T09:43:25.196229600Z"
+  "summary":  "Plan to remove verify_specs_google (5a) from the pipeline and optimize Step 5 enrichment flow. Covers: removing the spec verify task, reordering remaining tasks for better data quality (enrich first → rhetoric second), and confirming that the remaining 3 parallel tasks have no field overlap (safe parallel execution).",
+  "updatedAt":  "2026-04-18T10:51:46.388232900Z",
+  "version":  "1"
 }
