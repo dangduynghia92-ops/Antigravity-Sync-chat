@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking source_map implementation, audit fixes, and coverage gap fixes.",
-  "updatedAt":  "2026-04-20T10:08:54.188842700Z",
-  "version":  "32"
+  "summary":  "Task checklist tracking unified source_map implementation for all narrative niches. Phase 5 (biography coverage fixes) done. Now implementing Phase 6: battle v2 source_map, code unification, pirate source_map.",
+  "updatedAt":  "2026-04-20T14:43:55.017000400Z",
+  "version":  "33"
 }
