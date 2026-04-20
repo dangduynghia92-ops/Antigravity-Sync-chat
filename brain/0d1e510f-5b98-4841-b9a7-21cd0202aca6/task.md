@@ -1,14 +1,17 @@
-# Battle V2 & Biography Pipeline Refinement
+# Source Map Implementation — Biography Pipeline
 
-## Completed
-- [x] Eliminate `additional_findings` data leak (prompts + code safety net)
-- [x] Separate end phase from last narrative phase (battle, pirate)
-- [x] Fix phase plan logging (honest `node_count`)
-- [x] Implement combined hook strategy for battle v2 (opening_scene + outcome)
-- [x] Update new-niche workflow with lessons learned
-- [x] Add DEMOTE logic to validate sub-key step (all niches)
-  - [x] Update `system_validate_sub_key_biography.txt` — DEMOTE + Connective Protection
-  - [x] Update `system_validate_sub_key_battle.txt` — DEMOTE + Connective Protection
-  - [x] Update `system_validate_sub_key_pirate.txt` — DEMOTE + Connective Protection
-  - [x] Update `rewriter.py` — parse `demoted` items, move main→sub (backward compat)
-  - [x] Add `iconic_details` to biography research Section A
+## Phase 1: Prompt
+- [/] Update `system_narrative_phase_plan_biography.txt` — add `_source_map` to output schema
+
+## Phase 2: Code — rewriter.py
+- [ ] `generate_narrative_phase_plan` — validate `_source_map` after AI returns, raise if missing
+- [ ] `validate_phase_plan_sub_keys` — update `_source_map` when promoting/demoting items
+- [ ] `_extract_chapter_blueprint` — add `source_map` param, use paths for biography, raise if missing
+- [ ] `write_from_blueprint` — add `source_map` param, enforce for biography body chapters
+
+## Phase 3: Code — script_creation_tab.py
+- [ ] `_run_shared_fw_pipeline` — extract `_source_map` from phase plan, pass to write_from_blueprint
+
+## Phase 4: Verification
+- [ ] Git commit
+- [ ] Test with Galileo biography

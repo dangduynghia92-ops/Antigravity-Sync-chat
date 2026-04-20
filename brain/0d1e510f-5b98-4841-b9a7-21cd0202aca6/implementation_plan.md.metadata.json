@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to add a 'dark_psychology' field to the biography blueprint prompt. Includes taxonomy of 5 dark types (Tragic, Existential, Machiavellian, Fanatical, Complicit) and 4 sub-fields (internal_conflicts, moral_compromises, psychological_wounds, pattern_of_darkness). Only modifies the research prompt file — no code or downstream pipeline changes needed.",
+  "summary":  "Implementation plan for adding `_source_map` to biography pipeline. Now uses STRICT error handling — pipeline stops with RuntimeError if `_source_map` is missing or has bad paths, instead of silently falling back to fuzzy search. This ensures data issues are caught and fixed immediately.",
   "createdAt":  "2026-04-15T06:14:27.917562800Z",
-  "updatedAt":  "2026-04-19T10:13:08.913298700Z",
-  "version":  "13"
+  "updatedAt":  "2026-04-20T05:42:14.203578200Z",
+  "version":  "15"
 }

@@ -59,14 +59,11 @@ Rules for AI:
   - Extract matching blueprint sections by name
   - Still include `core_identity` always (small, essential context)
   - SKIP the always-include of `personal_profile`, `dark_psychology`, `key_quotes` — only include if referenced by `source_map`
-- If `source_map` is NOT provided:
-  - Biography → **raise RuntimeError** (source_map is MANDATORY for biography)
-  - Battle/Pirate → use existing fuzzy search (no change)
+- If `source_map` is NOT provided → **fallback to existing fuzzy search** (backward compatible)
 
 **Change 3: [write_from_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#4401-4634) (L4401-4633)**
 - Add optional parameter: `source_map: dict = None`
 - Pass `source_map` to [_extract_chapter_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#392-646) calls
-- Biography body chapters: if `source_map` is None → **raise RuntimeError**
 
 **Change 4: [_run_shared_fw_pipeline](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1617-2120) in script_creation_tab.py (L1617)**
 - After phase plan is loaded/generated, extract `_source_map` from phase plan dict
@@ -132,14 +129,13 @@ elif isinstance(section, dict) and identifier:
 
 ## Risk Assessment
 
-| Risk | Handling |
+| Risk | Mitigation |
 |---|---|
-| AI outputs wrong path | **RuntimeError** — pipeline stops, log shows which key_data has bad path → fix prompt or re-run |
-| AI omits `_source_map` entirely | **RuntimeError** — pipeline stops at phase plan step with clear error message |
-| AI omits some key_data from `_source_map` | **RuntimeError** — validation checks every key_data has a source entry |
-| [validate_phase_plan_sub_keys](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#3663-3965) moves items between main/sub | Code updates `_source_map` when promoting/demoting items |
-| Battle/pirate breakage | No changes to their prompts. `source_map` defaults to `None` → old fuzzy code path (NOT biography) |
-| Resume from old phase plan (no `_source_map`) | **RuntimeError** — user must delete old `_phase_plan*.json` and re-run phase plan step |
+| AI outputs wrong path | Fallback to fuzzy search if source_map lookup fails |
+| AI omits `_source_map` entirely | Fallback to current logic (full always-include + fuzzy) |
+| [validate_phase_plan_sub_keys](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#3663-3965) moves items between main/sub | `_source_map` keys are text-based — if text changes, lookup fails → fallback |
+| Battle/pirate breakage | No changes to their prompts. `source_map` defaults to `None` → old code path |
+| Resume from old phase plan (no `_source_map`) | `source_map` = `None` → fallback |
 
 ---
 

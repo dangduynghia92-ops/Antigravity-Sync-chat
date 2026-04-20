@@ -1,92 +1,155 @@
-# Enhancing "Dark Data" in Biography Blueprint
+# Source Map: Precise Blueprint Filtering for Biography Pipeline
 
 ## Problem
+The writer AI for each chapter receives a **filtered blueprint** that is too broad — it includes entire sections (`personal_profile`, `dark_psychology`, `key_quotes`) regardless of chapter content. The filter uses **fuzzy keyword search** to guess which blueprint data matches each chapter's `main_key_data`, causing:
+1. Writer sees data belonging to other chapters → writes duplicate scenes
+2. Writer sees data with NO instruction to use → hallucinate scenes from AI training knowledge
+3. Filtered blueprint is ~35-40% of full blueprint per chapter instead of ~10-15%
 
-Blueprint hiện tại có 6 fields liên quan "dark": `dual_nature.dark_side`, `vices_and_obsessions`, `dark_impact`, `downfall_pattern`, `scandals`, `conflicts`. Nhưng chúng chỉ capture **SỰ KIỆN** — không capture **TÂM LÝ** đằng sau. Kết quả: narrative kể cuộc đời đều đều, giai đoạn nào cũng như nhau.
+## Solution: `_source_map`
+Phase Plan AI declares **which blueprint fields** it used for each `main_key_data` item. This map flows through the pipeline and replaces fuzzy search in `_extract_chapter_blueprint`.
 
-**User muốn:** Pipeline phải ưu tiên trích xuất data "dark" — nguyên nhân, diễn biến, hậu quả, giằng xé nội tâm, góc khuất tâm lý. Dùng taxonomy dark types (Tragic, Existential, Machiavellian, Fanatical, Complicit) để AI biết TẬP TRUNG vào đâu.
+## Scope
+- **Biography niche ONLY** — battle/pirate prompts and code paths unchanged
+- Shared function `_extract_chapter_blueprint` gains optional param — backward compatible
+
+---
 
 ## Proposed Changes
 
-### Research Blueprint Prompt
+### Phase Plan Prompt (Biography)
 
-#### [MODIFY] [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
+#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
 
-**Thêm field mới `dark_psychology`** (Section 25) sau optional domain-specific fields:
-
+Add `_source_map` to the output schema:
 ```json
-"dark_psychology": {
-  "dark_type": "Tragic | Existential | Machiavellian | Fanatical | Complicit | Mixed",
-  "dark_type_description": "1-2 dòng mô tả dạng dark phù hợp nhân vật",
-  "internal_conflicts": [
-    {
-      "conflict": "Mô tả xung đột nội tâm",
-      "trigger": "Gì gây ra",
-      "manifestation": "Biểu hiện bên ngoài",
-      "resolution_or_escalation": "Giải quyết hay leo thang"
-    }
-  ],
-  "moral_compromises": [
-    {
-      "situation": "Tình huống buộc phải chọn",
-      "choice_made": "Họ đã chọn gì",
-      "cost": "Cái giá phải trả",
-      "justification": "Họ tự biện minh thế nào"
-    }
-  ],
-  "psychological_wounds": [
-    {
-      "wound": "Tổn thương tâm lý cụ thể",
-      "cause_event": "Sự kiện gây ra",
-      "age_when_inflicted": "Khi nào",
-      "lifelong_effect": "Ảnh hưởng suốt đời"
-    }
-  ],
-  "pattern_of_darkness": "Mô tả 2-3 câu: pattern lặp lại xuyên suốt cuộc đời (chuỗi self-sabotage, escalation of power, moral decay, etc.)"
+{
+  "framework_used": "...",
+  "biography_subject": "...",
+  "phase_chapter_plan": [...],
+  "_source_map": {
+    "Discovered the isochronism of the pendulum in 1583...": [
+      "life_phases.The Reluctant Medical Student",
+      "key_relationships.Vincenzo Galilei"
+    ]
+  }
 }
 ```
 
-**Thêm DARK DATA PRIORITY instruction** vào COMPLETENESS RULES:
+Rules for AI:
+- Every `main_key_data` AND `sub_key_data` text must have an entry in `_source_map`
+- Values are blueprint section paths: `"<top_level_key>"` or `"<top_level_key>.<identifier>"`
+- Use section names + identifiable labels (NOT array indices)
+
+---
+
+### Pipeline Code
+
+#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+**Change 1: `generate_narrative_phase_plan` (L3600-3660)**
+- After parsing AI response (L3646), extract `_source_map` from the result
+- Save `_source_map` as `_source_map.json` debug file in pipeline dir
+- Keep `_source_map` in the `phase_plan` dict (it will be saved in `_phase_plan.json`, `_phase_plan_validated.json`, `_phase_plan_final.json` automatically)
+
+**Change 2: `_extract_chapter_blueprint` (L392-645)**
+- Add optional parameter: `source_map: dict = None`
+- If `source_map` is provided AND is biography:
+  - For each `main_key_data`/`sub_key_data` text in `chapter_outline`, look up sources in `source_map`
+  - Extract matching blueprint sections by name
+  - Still include `core_identity` always (small, essential context)
+  - SKIP the always-include of `personal_profile`, `dark_psychology`, `key_quotes` — only include if referenced by `source_map`
+- If `source_map` is NOT provided:
+  - Biography → **raise RuntimeError** (source_map is MANDATORY for biography)
+  - Battle/Pirate → use existing fuzzy search (no change)
+
+**Change 3: `write_from_blueprint` (L4401-4633)**
+- Add optional parameter: `source_map: dict = None`
+- Pass `source_map` to `_extract_chapter_blueprint` calls
+- Biography body chapters: if `source_map` is None → **raise RuntimeError**
+
+**Change 4: `_run_shared_fw_pipeline` in script_creation_tab.py (L1617)**
+- After phase plan is loaded/generated, extract `_source_map` from phase plan dict
+- Pass `source_map` to `write_from_blueprint` call (L1972)
+
+---
+
+## Data Flow (After Changes)
 
 ```
-DARK DATA PRIORITY:
-- Dark psychology data is the HIGHEST PRIORITY for narrative engagement
-- For every life_phase, ask: "What was the darkest thing that happened here?"
-- For every achievement, ask: "What did it COST them psychologically?"
-- For every relationship, ask: "Was there betrayal, manipulation, or sacrifice?"
-- THIN phases (childhood, education) can be brief. THICK phases (conflict, downfall, moral crisis) need maximum detail
-- If a person seems "clean" — dig deeper: everyone has moral compromises, fears, and inner demons
+Phase Plan AI → {"phase_chapter_plan": [...], "_source_map": {...}}
+      ↓ saved to _phase_plan.json (includes _source_map)
+validate_phase_plan_sub_keys → preserves _source_map (no change needed)
+      ↓ saved to _phase_plan_validated.json
+apply_chapter_splits → preserves _source_map (no change needed)
+      ↓ saved to _phase_plan_final.json
+generate_narrative_outline → reads phase_plan (doesn't use _source_map)
+      ↓
+write_from_blueprint(source_map=phase_plan["_source_map"])
+      ↓
+_extract_chapter_blueprint(blueprint, chapter_outline, source_map=...)
+      ↓ uses source_map paths → precise extraction
+Filtered Blueprint (MUCH smaller, only relevant data)
 ```
 
-**5 dark types (taxonomy cho AI):**
+---
 
-| Dark Type | Tên Tiếng Việt | Đặc Trưng | Ví Dụ |
-|-----------|----------------|-----------|-------|
-| **Tragic** | Bi kịch & Tự hủy hoại | Self-destruction, addiction, talent wasted, karmic suffering | Van Gogh, Nikola Tesla, Alexander the Great |
-| **Existential** | Hiện sinh & Ám ảnh | Inner torment, obsession, meaninglessness, haunting memories | Dostoevsky, Nietzsche, Oppenheimer |
-| **Machiavellian** | Quyền lực & Tham vọng | Calculated manipulation, ruthless decisions, ends justify means | Napoleon, Catherine the Great, Genghis Khan |
-| **Fanatical** | Lý tưởng & Cuồng tín | Blind faith, ideological extremism, sacrificing others for a cause | Robespierre, Torquemada, Mao Zedong |
-| **Complicit** | Đạo đức giả & Đồng lõa | Looking the other way, moral cowardice, benefiting from evil | Many scientists under Nazi/Soviet regimes |
+## Source Map Path Format
 
-> [!IMPORTANT]
-> **KHÔNG thêm field vào mọi section.** Chỉ thêm 1 field `dark_psychology` ở root level. Các field hiện có (`vices_and_obsessions`, `downfall_pattern`, `dark_impact`) giữ nguyên — chúng capture SỰ KIỆN, field mới capture TÂM LÝ.
+The AI outputs paths using section name + identifier (NOT array indices):
 
-### Output Schema
+| Blueprint structure | Path format | Example |
+|---|---|---|
+| `life_phases[{phase_name: "X"}]` | `life_phases.X` | `life_phases.The Reluctant Medical Student` |
+| `key_relationships[{name: "X"}]` | `key_relationships.X` | `key_relationships.Vincenzo Galilei` |
+| `personal_profile.physical_traits` | `personal_profile.physical_traits` | |
+| `personal_profile.unusual_advantages` | `personal_profile.unusual_advantages` | |
+| `achievements[{achievement: "X"}]` | `achievements.X` | `achievements.Hydrostatic balance` |
+| `conflicts[{conflict: "X"}]` | `conflicts.X` | `conflicts.Buoyancy Controversy` |
+| `turning_points[{moment: "X"}]` | `turning_points.X` | |
 
-Thêm `dark_psychology` object vào JSON output schema (sau `downfall_pattern`).
+Code matching logic:
+```python
+# Parse path: "life_phases.The Reluctant Medical Student"
+parts = path.split(".", 1)
+section_name = parts[0]  # "life_phases"
+identifier = parts[1] if len(parts) > 1 else None  # "The Reluctant Medical Student"
 
-### No Other Files Need Changes
+# Match in blueprint
+section = blueprint.get(section_name)
+if isinstance(section, list) and identifier:
+    for item in section:
+        item_text = json.dumps(item, ensure_ascii=False).lower()
+        if identifier.lower() in item_text:
+            result.setdefault(section_name, []).append(item)
+elif isinstance(section, dict) and identifier:
+    # personal_profile.unusual_advantages → extract sub-field
+    if identifier in section:
+        result.setdefault(section_name, {})[identifier] = section[identifier]
+```
 
-- **`rewriter.py`**: Không cần sửa — `_extract_chapter_blueprint()` đã scan ALL remaining sections cho fuzzy key_data matching. `dark_psychology` sẽ tự động được include khi chapter key_data mention liên quan.
-- **Style JSON / frameworks**: Không cần sửa — frameworks đã có `evaluation_focus` dùng `dark_side`, `downfall_pattern` etc. Field mới là **supplementary data** cho writer.
-- **Writer prompt**: Không cần sửa — writer đã có rule "weave data INTO narrative". Data hay hơn → narrative hay hơn.
-- **Outline prompt**: Không cần sửa — outline picks key_data từ blueprint. Nhiều dark data hơn → outline tự chọn dark key_data hơn.
+---
+
+## Risk Assessment
+
+| Risk | Handling |
+|---|---|
+| AI outputs wrong path | **RuntimeError** — pipeline stops, log shows which key_data has bad path → fix prompt or re-run |
+| AI omits `_source_map` entirely | **RuntimeError** — pipeline stops at phase plan step with clear error message |
+| AI omits some key_data from `_source_map` | **RuntimeError** — validation checks every key_data has a source entry |
+| `validate_phase_plan_sub_keys` moves items between main/sub | Code updates `_source_map` when promoting/demoting items |
+| Battle/pirate breakage | No changes to their prompts. `source_map` defaults to `None` → old fuzzy code path (NOT biography) |
+| Resume from old phase plan (no `_source_map`) | **RuntimeError** — user must delete old `_phase_plan*.json` and re-run phase plan step |
+
+---
 
 ## Verification Plan
 
-### Manual Verification
-1. Chạy pipeline với 1 nhân vật (Galileo hoặc nhân vật mới)
-2. Check `_blueprint.json` → xem `dark_psychology` field có xuất hiện không
-3. Check `dark_type` có đúng taxonomy không
-4. Check `internal_conflicts`, `moral_compromises`, `psychological_wounds` có chi tiết không
-5. So sánh output narrative trước/sau → dark data có làm story hay hơn không
+### Manual Testing (User)
+1. Re-run Galileo biography pipeline with the new code
+2. Check `_pipeline/_source_map.json` — verify every `main_key_data` has source paths
+3. Check `_chapter_data/ch02_prompt_debug.txt` — verify filtered blueprint NO LONGER contains `personal_profile.unusual_advantages` (Vincenzo lutenist data)
+4. Check `_chapter_data/ch03_prompt_debug.txt` — verify filtered blueprint DOES contain `key_relationships.Vincenzo` (correctly assigned to ch3)
+5. Compare filter ratio: should drop from ~35-40% to ~10-20%
+6. Read ch2 and ch3 output text — verify NO duplicate Vincenzo scene
+7. **Regression**: Run a battle or pirate pipeline → verify no errors (uses old fuzzy path)

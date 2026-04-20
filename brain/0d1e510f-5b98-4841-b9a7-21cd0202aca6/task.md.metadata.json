@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking all pipeline refinements: data leak fixes, end phase separation, hook strategy, node_count logging, and DEMOTE logic implementation.",
-  "updatedAt":  "2026-04-17T15:17:12.115750400Z",
-  "version":  "29"
+  "summary":  "Task checklist for implementing _source_map in biography pipeline. Tracks progress across prompt changes, code changes in rewriter.py and script_creation_tab.py, and verification.",
+  "updatedAt":  "2026-04-20T05:43:26.110956300Z",
+  "version":  "30"
 }
