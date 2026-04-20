@@ -1,21 +1,17 @@
 # Source Map Implementation — All Niches
 
-## Phase 1-4: Biography Source Map ✅
-- [x] Prompt + code + callers + audit + coverage fixes
+## Phase 1-5: Biography Source Map + Coverage Fixes ✅
 
-## Phase 5: Coverage Gap Fixes ✅
-- [x] Code: always-include texture sections
-- [x] Prompt: coverage checklist rule #10
-
-## Phase 6: Unified Source Map (Battle v2 → Pirate → Refactor)
-- [/] Battle v2: add `_source_map` to phase plan prompt
-- [ ] Code: refactor `_extract_chapter_blueprint` to niche-agnostic
-  - [ ] `_NICHE_ALWAYS_INCLUDE` config dict
-  - [ ] Universal source_map path resolution
-  - [ ] Extract `_extract_battle_section_matches()` helper
-  - [ ] Extract `_extract_pirate_section_matches()` helper
-  - [ ] Remove fuzzy search
-- [ ] Code: generalize `generate_narrative_phase_plan` validation
-- [ ] Pirate: add `_source_map` to phase plan prompt
-- [ ] Git commit
-- [ ] Test battle v2 + verify no regression
+## Phase 6: Unified Source Map
+- [x] Battle v2: add `_source_map` to phase plan prompt (rule #9 + #10)
+- [x] Pirate: add `_source_map` to phase plan prompt (rule #10 + #11)
+- [x] Code: refactor `_extract_chapter_blueprint` to niche-agnostic
+  - [x] `_NICHE_ALWAYS_INCLUDE` config dict
+  - [x] Universal source_map path resolution
+  - [x] `_extract_battle_section_matches()` helper
+  - [x] `_extract_pirate_section_matches()` helper
+  - [x] Remove fuzzy search (76 lines)
+- [x] Code: generalize `generate_narrative_phase_plan` validation
+- [x] Git commit: `752b1da`
+- [ ] Test battle v2 pipeline
+- [ ] Test pirate pipeline

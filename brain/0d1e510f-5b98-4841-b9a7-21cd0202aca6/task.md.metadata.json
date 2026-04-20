@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking unified source_map implementation for all narrative niches. Phase 5 (biography coverage fixes) done. Now implementing Phase 6: battle v2 source_map, code unification, pirate source_map.",
-  "updatedAt":  "2026-04-20T14:43:55.017000400Z",
-  "version":  "33"
+  "summary":  "Task checklist tracking unified source_map implementation across all narrative niches. All phases complete. Battle v2 + pirate prompts updated. Code refactored to unified flow. Ready for testing.",
+  "updatedAt":  "2026-04-20T14:57:25.951678400Z",
+  "version":  "34"
 }

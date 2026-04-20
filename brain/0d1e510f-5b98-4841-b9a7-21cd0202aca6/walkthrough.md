@@ -1,38 +1,54 @@
-# Source Map Implementation — Walkthrough
+# Walkthrough: Unified Source Map for All Narrative Niches
 
 ## What Changed
 
-Added `_source_map` to the biography pipeline so the Phase Plan AI **declares which blueprint fields** it used for each `main_key_data` item. This replaces fuzzy keyword search with precise path-based extraction.
+### Architecture: Before → After
+
+```
+BEFORE (3 strategies, 270 lines):
+├── Biography → source_map paths (55 lines)
+├── Battle → section matching + fuzzy keyword search (100 lines)
+├── Pirate → _PHASE_SECTIONS dict + fuzzy keyword search (60 lines)
+└── Fuzzy search (76 lines, shared)
+
+AFTER (1 unified flow, 90 lines):
+├── Step 1: _NICHE_ALWAYS_INCLUDE[niche] → inject texture sections
+├── Step 2: source_map path resolution (UNIVERSAL)
+├── Step 3: niche section matching (outline metadata → blueprint)
+│   ├── _extract_bio_section_matches()   (existing)
+│   ├── _extract_battle_section_matches() (new)
+│   └── _extract_pirate_section_matches() (new)
+└── No fuzzy search needed
+```
+
+### Commits
+
+| Commit | Description |
+|---|---|
+| `59c2a93` | Biography: add texture sections + coverage checklist rule #10 |
+| `5994eed` | Workflow: add L8 lesson + update niche registry |
+| `752b1da` | **MAIN**: unified source_map for all niches (-42 net lines) |
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt) | Added `_source_map` to output schema + rule #9 |
-| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Added `_resolve_source_path`, `_extract_bio_section_matches` helpers; updated `_extract_chapter_blueprint` + `write_from_blueprint` |
-| [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py) | Pass `_source_map` from phase plan to writer in both narrative + review pipelines |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Refactored `_extract_chapter_blueprint` (270→90 lines), added 2 helper functions, generalized validation |
+| [phase_plan_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_battle.txt) | Added `_source_map` schema + rules #9-#10 |
+| [phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt) | Added `_source_map` schema + rules #10-#11 |
+| [phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt) | Added coverage checklist rule #10 |
+| [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py) | Updated comment (already generic) |
+| [new-niche.md](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/.agent/workflows/new-niche.md) | Added L8 lesson + updated registry |
 
-### Data Flow (New)
-```
-Phase Plan AI → _source_map: {"event text": ["life_phases.X", "key_relationships.Y"]}
-      ↓ saved in _phase_plan.json / _phase_plan_final.json
-_extract_chapter_blueprint(source_map=...)
-      ↓ lookup each main_key_data → paths → extract ONLY those sections
-Writer receives precise, lean filtered blueprint
-```
+## Verification Status
 
-### Error Handling (Strict)
-- Missing `_source_map` → **RuntimeError** (pipeline stops)
-- Missing source entry for any key_data → **RuntimeError** (pipeline stops)
-- Bad path in source_map → silently skipped (section/item may not exist)
-- Battle/pirate niches → `source_map=None` → existing fuzzy search (unchanged)
+- ✅ Biography: tested with Galileo pipeline (12/13 chapters, ch13 crash fixed)
+- ⏳ Battle v2: needs test run to verify source_map output
+- ⏳ Pirate: needs test run after battle confirms pattern
 
-### Git Commit
-`40b6be3` — 6 files, 362 additions, 11 deletions
+## Key Design Decisions
 
-## Testing Required
-1. Delete old `_phase_plan*.json` files for Galileo (they don't have `_source_map`)
-2. Re-run biography pipeline
-3. Check `_phase_plan.json` for `_source_map` field
-4. Compare `_chapter_data/chXX_blueprint.json` sizes — should be much smaller
-5. Read ch2 and ch3 — no more duplicate Vincenzo scenes
+1. **Fuzzy search removed entirely** — source_map provides precise paths; niche section matching handles outline metadata fields
+2. **Strict mode for all niches** — no source_map = RuntimeError (fail-fast)
+3. **Always-include keys in config dict** — not hardcoded per-branch, easy to update per-niche
+4. **Section matching helpers preserved** — outline metadata fields (commanders_featured, life_phase_covered, etc.) are independent from source_map and provide additional filter precision

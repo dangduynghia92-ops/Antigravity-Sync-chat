@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Walkthrough of the _source_map implementation for biography pipeline precise blueprint filtering. Documents all changes, data flow, and testing instructions.",
-  "updatedAt":  "2026-04-20T05:52:29.756121100Z",
-  "version":  "8"
+  "summary":  "Walkthrough documenting the unified source_map refactoring across all narrative niches. Covers code changes, prompt changes, and architecture decisions.",
+  "updatedAt":  "2026-04-20T14:57:25.965096800Z",
+  "version":  "9"
 }
