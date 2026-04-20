@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Walkthrough documenting the complete Bóng Tối framework implementation: research findings, framework design, phase structure, scoring boundaries, and all files modified.",
-  "updatedAt":  "2026-04-15T16:51:10.527743500Z",
-  "version":  "7"
+  "summary":  "Walkthrough of the _source_map implementation for biography pipeline precise blueprint filtering. Documents all changes, data flow, and testing instructions.",
+  "updatedAt":  "2026-04-20T05:52:29.756121100Z",
+  "version":  "8"
 }

@@ -1,58 +1,38 @@
-# Bóng Tối Framework — Walkthrough
+# Source Map Implementation — Walkthrough
 
-## Problem
-The biography niche had 2 "general" chronological frameworks:
-- **Sử Thi** — positive figures with lasting legacy (tone: admiring)
-- **Sự Lụi Tàn** — figures who self-destructed (tone: tragic)
+## What Changed
 
-**Gap**: No framework for **negative figures who didn't self-destruct** (e.g., Genghis Khan, Idi Amin, Mao).
+Added `_source_map` to the biography pipeline so the Phase Plan AI **declares which blueprint fields** it used for each `main_key_data` item. This replaces fuzzy keyword search with precise path-based extraction.
 
-## Research Findings
-Audience psychology for "dark biography" content:
-1. **"How did an ordinary person become THIS?"** — transformation process
-2. **"What system allowed this?"** — enabling factors
-3. **"What was the real cost?"** — cold documentation of impact/victims
+### Files Modified
 
-Key principle: **same chronological timeline** as other frameworks, different **lens** (cold/factual vs admiring/tragic).
+| File | Change |
+|---|---|
+| [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt) | Added `_source_map` to output schema + rule #9 |
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Added `_resolve_source_path`, `_extract_bio_section_matches` helpers; updated `_extract_chapter_blueprint` + `write_from_blueprint` |
+| [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py) | Pass `_source_map` from phase plan to writer in both narrative + review pipelines |
 
-## Changes Made
-
-### 1. [narrative_tiểu_sử_nhân_vật.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_tiểu_sử_nhân_vật.json)
-
-**Added framework "Bóng Tối"** (lines 804-958, ~155 lines):
-
-| Phase | Name | Purpose | Lens |
-|---|---|---|---|
-| Hook | Vết Máu | Cold shock fact | Worst number/act → "but they were once ordinary" |
-| Origin | Con Người | WHO they were | Ordinary person BEFORE darkness — build empathy |
-| Foundation | Hình Thành | First signs | Environment/event that planted the seed |
-| Rise | Leo Thang | Escalation | Each step darker — "choice chain" pattern |
-| Peak | Cỗ Máy | Full power | COLD DOCUMENTATION — numbers, methods, victims |
-| End | Kết Cục | Neutral ending | No forced self-destruction |
-| Verdict | Vết Sẹo | Scars left | World AFTER them — lasting damage + lessons |
-
-**Scoring** (`evaluation_focus`):
-- `primary_data_field`: `dark_impact`
-- `tier_field`: `victim_scale` (Local_Harm: 5, National_Destruction: 8, Genocide_Level: 10)
-- Win condition: dark_impact ≥ 7 **AND** downfall_pattern weak/absent
-- Added `dark_impact` + `downfall_pattern` to `excerpt_fields`
-
----
-
-### 2. [system_research_blueprint_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_biography.txt)
-
-**Added 2 new blueprint data sections** (sections 18-19):
-
-**Section 18 — DARK IMPACT**: `victim_scale`, `estimated_casualties`, `systematic_methods`, `enabling_factors`, `affected_populations`
-
-**Section 19 — DOWNFALL PATTERN**: `severity`, `self_inflicted`, `strength_to_weakness`, `cause_of_end`
-
-Both added to schema definitions AND JSON output format. Empty when not applicable.
-
-## Scoring Boundaries (3 General Frameworks)
-
+### Data Flow (New)
 ```
-Legacy positive? → SỬ THI (paradigm_shift ≥ 7)
-Self-destructed? → SỰ LỤI TÀN (downfall_pattern ≥ 7)
-Dark impact high + no self-destruct? → BÓNG TỐI (dark_impact ≥ 7, downfall < 5)
+Phase Plan AI → _source_map: {"event text": ["life_phases.X", "key_relationships.Y"]}
+      ↓ saved in _phase_plan.json / _phase_plan_final.json
+_extract_chapter_blueprint(source_map=...)
+      ↓ lookup each main_key_data → paths → extract ONLY those sections
+Writer receives precise, lean filtered blueprint
 ```
+
+### Error Handling (Strict)
+- Missing `_source_map` → **RuntimeError** (pipeline stops)
+- Missing source entry for any key_data → **RuntimeError** (pipeline stops)
+- Bad path in source_map → silently skipped (section/item may not exist)
+- Battle/pirate niches → `source_map=None` → existing fuzzy search (unchanged)
+
+### Git Commit
+`40b6be3` — 6 files, 362 additions, 11 deletions
+
+## Testing Required
+1. Delete old `_phase_plan*.json` files for Galileo (they don't have `_source_map`)
+2. Re-run biography pipeline
+3. Check `_phase_plan.json` for `_source_map` field
+4. Compare `_chapter_data/chXX_blueprint.json` sizes — should be much smaller
+5. Read ch2 and ch3 — no more duplicate Vincenzo scenes

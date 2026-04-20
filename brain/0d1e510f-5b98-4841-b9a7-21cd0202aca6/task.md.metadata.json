@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist for implementing _source_map in biography pipeline. Tracks progress across prompt changes, code changes in rewriter.py and script_creation_tab.py, and verification.",
-  "updatedAt":  "2026-04-20T05:43:26.110956300Z",
-  "version":  "30"
+  "summary":  "Task checklist for _source_map implementation. All prompt and code changes complete. Ready for git commit and testing.",
+  "updatedAt":  "2026-04-20T05:50:08.505806Z",
+  "version":  "31"
 }
