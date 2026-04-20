@@ -14,5 +14,11 @@
 - [x] Review pipeline caller — load `_source_map` from `_phase_plan_final.json`, pass to write_from_blueprint
 
 ## Phase 4: Verification
-- [/] Git commit
-- [ ] Test with biography pipeline
+- [x] Git commit
+- [x] Test with biography pipeline → 12/13 chapters OK, ch13 fixed
+- [x] Cross-check audit → found coverage gaps
+
+## Phase 5: Coverage Gap Fixes
+- [/] Code: add always-include texture sections (era_context, key_quotes, dark_psychology) for biography source_map
+- [ ] Prompt: improve phase plan prompt to cover more relationships + death details
+- [ ] Git commit
