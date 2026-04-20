@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Cross-check audit of source_map coverage for Galileo biography pipeline run. Analyzes field overlaps across chapters, covered vs uncovered blueprint sections, and individual field-level gaps. Includes assessment of which gaps are acceptable vs need fixing.",
+  "updatedAt":  "2026-04-20T08:15:57.052964100Z"
+}

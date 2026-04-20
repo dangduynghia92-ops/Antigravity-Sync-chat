@@ -1,0 +1,82 @@
+# Source Map Coverage Audit — Galileo Pipeline Run
+
+## 1. Field Overlaps Across Chapters
+
+**9 blueprint paths** appear in multiple chapters. Assessment:
+
+| Source Path | Chapters | Verdict |
+|---|---|---|
+| `life_phases.The Reluctant Medical Student.key_events` | 3, 4 | ✅ **Expected** — phase split 3 ch |
+| `life_phases.The Pisa Professorship.key_events` | 4, 5 | ✅ **Expected** — phase split 3 ch |
+| `life_phases.The Padua Years.key_events` | 6, 7 | ✅ **Expected** — phase split 2 ch |
+| `life_phases.The Medici Court.key_events` | 8, 9 | ✅ **Expected** — phase split 2 ch |
+| `life_phases.The Great Betrayal.key_events` | 9, 10, 11 | ✅ **Expected** — phase split 3 ch |
+| `life_phases.House Arrest.key_events` | 11, 12 | ✅ **Expected** — phase split 3 ch |
+| `conflicts.The Inquisition Trial` | 1, 10 | ⚠ **Hook + Body** — ch1 hook mentions trial as "twist", ch10 is the actual trial scene |
+| `personal_profile.physical_traits` | 1, 2, 12 | ⚠ **3 chapters** — hook, origin, death chapter all reference appearance |
+| `personal_profile.vices_and_obsessions` | 3, 9 | ⚠ **2 phases** — gout+wine in Formation, enemies-list obsession in Peak |
+
+> [!NOTE]
+> The `life_phases.*.key_events` overlaps are **expected** — when a phase with many events gets split into 2-3 chapters, all chapters in that split reference the same `life_phases` entry, because source_map resolves at the life_phase level, not individual event level. The `_extract_bio_section_matches` then uses `life_phase_covered` to further filter.
+
+> [!WARNING]
+> The `personal_profile.physical_traits` overlap (ch1, ch2, ch12) means all 3 chapters receive the **same physical traits data**. This could cause the writer to describe "cabello rojizo, complexión robusta" in 3 different chapters. Consider if this is acceptable or if traits should only go to ch2 (origin).
+
+## 2. Chapter Blueprint Sizes
+
+| Chapter | Size | Sections |
+|---|---|---|
+| Ch01 (hook) | 72,515 | FULL blueprint (25 sections) ✅ |
+| Ch02 (origin) | 4,678 | `core_identity`, `life_phases`, `personal_profile`, `key_relationships` |
+| Ch03 | 5,586 | `core_identity`, `turning_points`, `personal_profile`, `life_phases`, `key_relationships` |
+| Ch04 | 3,439 | `core_identity`, `achievements`, `life_phases`, `myths_vs_reality` |
+| Ch05 | 3,414 | `core_identity`, `personal_profile`, `life_phases`, `key_relationships` |
+| Ch06 | 3,474 | `core_identity`, `key_relationships`, `achievements`, `life_phases` |
+| Ch07 | 5,375 | `core_identity`, `achievements`, `creative_works`, `key_relationships`, `life_phases`, `myths_vs_reality` |
+| Ch08 | 6,728 | `core_identity`, `governance`, `dual_nature`, `creative_works`, `life_phases`, `key_relationships` |
+| Ch09 | 7,205 | `core_identity`, `conflicts`, `scandals`, `personal_profile`, `life_phases` |
+| Ch10 | 3,633 | `core_identity`, `creative_works`, `conflicts`, `life_phases` |
+| Ch11 | 3,662 | `core_identity`, `turning_points`, `key_relationships`, `life_phases`, `myths_vs_reality` |
+| Ch12 | 5,316 | `core_identity`, `personal_profile`, `creative_works`, `death_and_funeral`, `life_phases`, `key_relationships` |
+| Ch13 | ❌ NOT FOUND | Crashed (audit-added item not in source_map — fixed) |
+
+## 3. Unreferenced Blueprint Sections (9/25)
+
+Entire sections that NO key_data references:
+
+| Section | Items | Assessment |
+|---|---|---|
+| `dark_psychology` | internal_conflicts, moral_compromises, wounds | ⚠ **Should be used** — writer needs psychology for character depth |
+| `era_context` | political/social/scientific landscape | ⚠ **Should be used** — writer needs historical context |
+| `key_quotes` | 7 quotes | ⚠ **Should be used** — writer uses quotes for dialogue/texture |
+| `myths_vs_reality` | 7 myths | ✅ OK — handled separately via `myths_debunked` outline field |
+| `financial_details` | wealth, debts, spending | ℹ️ Acceptable — used as sub_key_data texture, not scene-worthy |
+| `systemic_opposition` | 5 opposition forces | ℹ️ Acceptable — detail-level data, woven into conflict scenes |
+| `downfall_pattern` | self-inflicted, cause_of_end | ℹ️ Acceptable — meta-analytical, not event data |
+| `dark_impact` | victim_scale, casualties | ℹ️ Acceptable — not applicable to Galileo (no victims) |
+| `military_campaigns` | 2 items | ℹ️ Acceptable — Galileo had no real military campaigns |
+
+## 4. Unreferenced Individual Fields (Notable)
+
+| Field | Assessment |
+|---|---|
+| `key_relationships.Vincenzo Viviani` | ⚠ **Should be used** in ch12 — Viviani recorded Galileo's final works |
+| `key_relationships.Cosimo II de' Medici` | ⚠ **Should be used** in ch8 — Medici patron |
+| `key_relationships.Johannes Kepler` | ⚠ **Should be used** in ch7 — Kepler confirmed telescope discoveries |
+| `key_relationships.Benedetto Castelli` | ℹ️ Minor — student/ally, texture data |
+| `personal_profile.cognitive_style` | ⚠ Could enrich origin/formation chapters |
+| `death_and_funeral.final_words` | ⚠ **Should be used** in ch12 — powerful scene-closing data |
+| `death_and_funeral.who_was_present` | ⚠ **Should be used** in ch12 |
+| 6 turning_points (telescope, Sidereus, sunspots, 1616, Urban VIII, Dialogue, Two Sciences) | ⚠ **Already covered** by other paths (achievements, life_phases) but not via turning_points path |
+| 4 creative_works (Assayer, Floating Bodies, Letters Sunspots, Compass) | ℹ️ Minor works — some already covered via conflicts/achievements |
+
+## Summary
+
+| Category | Count | Status |
+|---|---|---|
+| Field overlaps (expected — phase splits) | 6/9 | ✅ OK |
+| Field overlaps (cross-phase) | 3/9 | ⚠ Review `physical_traits` |
+| Unreferenced sections (acceptable) | 5/9 | ✅ OK |
+| Unreferenced sections (should fix) | 3/9 | ⚠ `dark_psychology`, `era_context`, `key_quotes` |
+| Missing key relationships | 3 | ⚠ Viviani, Cosimo II, Kepler |
+| Missing death details | 2 | ⚠ final_words, who_was_present |
