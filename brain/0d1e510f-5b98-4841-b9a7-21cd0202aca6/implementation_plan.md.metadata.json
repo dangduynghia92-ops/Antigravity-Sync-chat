@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Implementation plan for adding `_source_map` to biography pipeline. Now uses STRICT error handling — pipeline stops with RuntimeError if `_source_map` is missing or has bad paths, instead of silently falling back to fuzzy search. This ensures data issues are caught and fixed immediately.",
+  "summary":  "Plan to unify blueprint extraction across all narrative niches using source_map as the universal mechanism. Covers prompt changes (battle, pirate phase plans), code refactoring (_extract_chapter_blueprint to niche-agnostic), per-niche always-include config, and backward compat strategy.",
   "createdAt":  "2026-04-15T06:14:27.917562800Z",
-  "updatedAt":  "2026-04-20T05:42:14.203578200Z",
-  "version":  "15"
+  "updatedAt":  "2026-04-20T14:17:15.363743500Z",
+  "version":  "16"
 }

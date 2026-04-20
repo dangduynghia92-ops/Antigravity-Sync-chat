@@ -1,155 +1,115 @@
-# Source Map: Precise Blueprint Filtering for Biography Pipeline
+# Unified Source Map for All Narrative Niches
 
-## Problem
-The writer AI for each chapter receives a **filtered blueprint** that is too broad — it includes entire sections (`personal_profile`, `dark_psychology`, `key_quotes`) regardless of chapter content. The filter uses **fuzzy keyword search** to guess which blueprint data matches each chapter's `main_key_data`, causing:
-1. Writer sees data belonging to other chapters → writes duplicate scenes
-2. Writer sees data with NO instruction to use → hallucinate scenes from AI training knowledge
-3. Filtered blueprint is ~35-40% of full blueprint per chapter instead of ~10-15%
+## Goal
+Replace 3 separate extraction strategies (source_map / fuzzy / phase-section dict) with ONE unified `source_map`-based flow for all niches. Keep niche-specific always-include keys as config.
 
-## Solution: `_source_map`
-Phase Plan AI declares **which blueprint fields** it used for each `main_key_data` item. This map flows through the pipeline and replaces fuzzy search in `_extract_chapter_blueprint`.
+## Current State
 
-## Scope
-- **Biography niche ONLY** — battle/pirate prompts and code paths unchanged
-- Shared function `_extract_chapter_blueprint` gains optional param — backward compatible
+| Niche | Extraction | Lines of Code | Problem |
+|---|---|---|---|
+| Biography | source_map paths | ~55 lines (L508-562) | ✅ Working |
+| Battle v2 | section matching + fuzzy keyword | ~100 lines (L574-757) | ⚠ Fuzzy can leak |
+| Pirate | `_PHASE_SECTIONS` dict + fuzzy | ~60 lines (L619-679) | ⚠ Hardcoded phase names |
+
+## Proposed Architecture
+
+```
+_extract_chapter_blueprint(blueprint, chapter_outline, source_map)
+    │
+    ├── 1. Always-include: _NICHE_ALWAYS_INCLUDE[niche] → inject texture sections
+    │
+    ├── 2. Source map: if source_map → resolve paths (UNIVERSAL, same for all niches)
+    │
+    ├── 3. Niche section matching: outline metadata fields → blueprint sections
+    │   (biography: life_phase_covered, relationships_featured, myths_debunked)
+    │   (battle: commanders_featured, battle_phases_covered)
+    │   (pirate: figures_featured, myth_busted)
+    │
+    └── 4. Return result (no fuzzy search needed)
+```
+
+> [!IMPORTANT]
+> Step 3 (niche section matching) stays because outline metadata fields like `commanders_featured` and `life_phase_covered` are INDEPENDENT from source_map. Source_map traces key_data → blueprint paths. Section matching traces outline metadata → blueprint sections. Both are precise.
 
 ---
 
 ## Proposed Changes
 
-### Phase Plan Prompt (Biography)
+### Prompt Changes
 
-#### [MODIFY] [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt)
+#### [MODIFY] [system_narrative_phase_plan_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_battle.txt)
 
-Add `_source_map` to the output schema:
-```json
-{
-  "framework_used": "...",
-  "biography_subject": "...",
-  "phase_chapter_plan": [...],
-  "_source_map": {
-    "Discovered the isochronism of the pendulum in 1583...": [
-      "life_phases.The Reluctant Medical Student",
-      "key_relationships.Vincenzo Galilei"
-    ]
-  }
-}
-```
+Add `_source_map` to output schema + SOURCE TRACING rule (like biography).
+Battle paths: `battle_phases.Phase Name`, `commanders.Commander Name`, `turning_points.moment`, `key_facts`, etc.
 
-Rules for AI:
-- Every `main_key_data` AND `sub_key_data` text must have an entry in `_source_map`
-- Values are blueprint section paths: `"<top_level_key>"` or `"<top_level_key>.<identifier>"`
-- Use section names + identifiable labels (NOT array indices)
+#### [MODIFY] [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
+
+Add `_source_map` to output schema + SOURCE TRACING rule.
+Pirate paths: `ship_birth.key_events`, `combat_events.battle`, `key_figures.name`, etc.
 
 ---
 
-### Pipeline Code
+### Code Changes
 
 #### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-**Change 1: `generate_narrative_phase_plan` (L3600-3660)**
-- After parsing AI response (L3646), extract `_source_map` from the result
-- Save `_source_map` as `_source_map.json` debug file in pipeline dir
-- Keep `_source_map` in the `phase_plan` dict (it will be saved in `_phase_plan.json`, `_phase_plan_validated.json`, `_phase_plan_final.json` automatically)
-
-**Change 2: `_extract_chapter_blueprint` (L392-645)**
-- Add optional parameter: `source_map: dict = None`
-- If `source_map` is provided AND is biography:
-  - For each `main_key_data`/`sub_key_data` text in `chapter_outline`, look up sources in `source_map`
-  - Extract matching blueprint sections by name
-  - Still include `core_identity` always (small, essential context)
-  - SKIP the always-include of `personal_profile`, `dark_psychology`, `key_quotes` — only include if referenced by `source_map`
-- If `source_map` is NOT provided:
-  - Biography → **raise RuntimeError** (source_map is MANDATORY for biography)
-  - Battle/Pirate → use existing fuzzy search (no change)
-
-**Change 3: `write_from_blueprint` (L4401-4633)**
-- Add optional parameter: `source_map: dict = None`
-- Pass `source_map` to `_extract_chapter_blueprint` calls
-- Biography body chapters: if `source_map` is None → **raise RuntimeError**
-
-**Change 4: `_run_shared_fw_pipeline` in script_creation_tab.py (L1617)**
-- After phase plan is loaded/generated, extract `_source_map` from phase plan dict
-- Pass `source_map` to `write_from_blueprint` call (L1972)
-
----
-
-## Data Flow (After Changes)
-
-```
-Phase Plan AI → {"phase_chapter_plan": [...], "_source_map": {...}}
-      ↓ saved to _phase_plan.json (includes _source_map)
-validate_phase_plan_sub_keys → preserves _source_map (no change needed)
-      ↓ saved to _phase_plan_validated.json
-apply_chapter_splits → preserves _source_map (no change needed)
-      ↓ saved to _phase_plan_final.json
-generate_narrative_outline → reads phase_plan (doesn't use _source_map)
-      ↓
-write_from_blueprint(source_map=phase_plan["_source_map"])
-      ↓
-_extract_chapter_blueprint(blueprint, chapter_outline, source_map=...)
-      ↓ uses source_map paths → precise extraction
-Filtered Blueprint (MUCH smaller, only relevant data)
-```
-
----
-
-## Source Map Path Format
-
-The AI outputs paths using section name + identifier (NOT array indices):
-
-| Blueprint structure | Path format | Example |
-|---|---|---|
-| `life_phases[{phase_name: "X"}]` | `life_phases.X` | `life_phases.The Reluctant Medical Student` |
-| `key_relationships[{name: "X"}]` | `key_relationships.X` | `key_relationships.Vincenzo Galilei` |
-| `personal_profile.physical_traits` | `personal_profile.physical_traits` | |
-| `personal_profile.unusual_advantages` | `personal_profile.unusual_advantages` | |
-| `achievements[{achievement: "X"}]` | `achievements.X` | `achievements.Hydrostatic balance` |
-| `conflicts[{conflict: "X"}]` | `conflicts.X` | `conflicts.Buoyancy Controversy` |
-| `turning_points[{moment: "X"}]` | `turning_points.X` | |
-
-Code matching logic:
+**1. Define `_NICHE_ALWAYS_INCLUDE` config dict** (~L490)
 ```python
-# Parse path: "life_phases.The Reluctant Medical Student"
-parts = path.split(".", 1)
-section_name = parts[0]  # "life_phases"
-identifier = parts[1] if len(parts) > 1 else None  # "The Reluctant Medical Student"
-
-# Match in blueprint
-section = blueprint.get(section_name)
-if isinstance(section, list) and identifier:
-    for item in section:
-        item_text = json.dumps(item, ensure_ascii=False).lower()
-        if identifier.lower() in item_text:
-            result.setdefault(section_name, []).append(item)
-elif isinstance(section, dict) and identifier:
-    # personal_profile.unusual_advantages → extract sub-field
-    if identifier in section:
-        result.setdefault(section_name, {})[identifier] = section[identifier]
+_NICHE_ALWAYS_INCLUDE = {
+    "biography": ("core_identity", "era_context", "key_quotes", "dark_psychology"),
+    "battle":    ("core_topic", "key_facts"),
+    "pirate":    ("core_topic", "key_facts", "era_context",
+                  "battlefield_experience", "narrative_moments", "texture_and_hooks"),
+}
 ```
+
+**2. Refactor `_extract_chapter_blueprint`** (~L490-770)
+
+Replace 270 lines of niche-branching with:
+```
+if source_map is not None:
+    → always-include from _NICHE_ALWAYS_INCLUDE
+    → source_map path resolution (universal)
+    → niche section matching (kept per-niche)
+    → return
+
+if source_map is None:
+    → raise RuntimeError (strict mode — all niches must have source_map)
+```
+
+The niche section matching functions stay:
+- `_extract_bio_section_matches()` (existing) — life_phase, relationships, myths
+- `_extract_battle_section_matches()` (new) — commanders, battle_phases
+- `_extract_pirate_section_matches()` (new) — figures, myth_busted
+
+**3. Remove fuzzy keyword search** (~L681-757)
+
+76 lines of fuzzy search removed. No longer needed when source_map provides precise paths.
+
+**4. Generalize `generate_narrative_phase_plan` validation** (~L3759)
+
+Change `if niche and "tiểu sử" in niche.lower()` to a broader check that validates `_source_map` for ALL niches.
 
 ---
 
-## Risk Assessment
+### Backward Compatibility
 
-| Risk | Handling |
-|---|---|
-| AI outputs wrong path | **RuntimeError** — pipeline stops, log shows which key_data has bad path → fix prompt or re-run |
-| AI omits `_source_map` entirely | **RuntimeError** — pipeline stops at phase plan step with clear error message |
-| AI omits some key_data from `_source_map` | **RuntimeError** — validation checks every key_data has a source entry |
-| `validate_phase_plan_sub_keys` moves items between main/sub | Code updates `_source_map` when promoting/demoting items |
-| Battle/pirate breakage | No changes to their prompts. `source_map` defaults to `None` → old fuzzy code path (NOT biography) |
-| Resume from old phase plan (no `_source_map`) | **RuntimeError** — user must delete old `_phase_plan*.json` and re-run phase plan step |
+> [!WARNING]
+> Existing pipeline runs (already saved `_phase_plan_final.json` without `_source_map`) will break if strict mode is enabled. Options:
+> - **Option A**: Strict — require re-run of phase plan for existing projects
+> - **Option B**: Grace period — if no source_map, fall back to old logic with warning
+
+Recommend **Option A** (strict) — per user's preference for fail-fast.
 
 ---
 
 ## Verification Plan
 
-### Manual Testing (User)
-1. Re-run Galileo biography pipeline with the new code
-2. Check `_pipeline/_source_map.json` — verify every `main_key_data` has source paths
-3. Check `_chapter_data/ch02_prompt_debug.txt` — verify filtered blueprint NO LONGER contains `personal_profile.unusual_advantages` (Vincenzo lutenist data)
-4. Check `_chapter_data/ch03_prompt_debug.txt` — verify filtered blueprint DOES contain `key_relationships.Vincenzo` (correctly assigned to ch3)
-5. Compare filter ratio: should drop from ~35-40% to ~10-20%
-6. Read ch2 and ch3 output text — verify NO duplicate Vincenzo scene
-7. **Regression**: Run a battle or pirate pipeline → verify no errors (uses old fuzzy path)
+### Automated
+1. Run Galileo biography → verify same results as before
+2. Run a battle topic → verify `_source_map` generated, chapters written correctly
+3. Run cross_check.py on both → verify no gaps
+
+### Manual
+- Compare ch blueprint sizes before/after for battle
+- Check battle output quality is maintained
