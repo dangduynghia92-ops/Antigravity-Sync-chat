@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking manual framework selection, Open button fix, key_data verification, and prompt size optimization analysis.",
-  "updatedAt":  "2026-04-21T02:51:46.964686700Z",
-  "version":  "35"
+  "summary":  "Task checklist tracking prompt optimization implementation: filter chapter-type rules, remove style JSON duplicates, and filter body structures.",
+  "updatedAt":  "2026-04-21T03:08:14.543735400Z",
+  "version":  "36"
 }
