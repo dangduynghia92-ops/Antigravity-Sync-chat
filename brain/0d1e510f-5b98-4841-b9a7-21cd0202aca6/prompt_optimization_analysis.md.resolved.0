@@ -1,0 +1,204 @@
+# Phân Tích Tối Ưu Prompt Viết Chapter
+
+## Tổng Quan
+
+Prompt gửi cho AI viết mỗi chapter (ví dụ ch02 Bruno) = **~99KB / 1,623 dòng**. Với 10 chapters, tổng token tiêu thụ cho input ≈ **990KB** chưa kể response.
+
+Prompt được ghép từ **template tĩnh** (646 dòng / 37KB) + **dữ liệu động** (~62KB).
+
+---
+
+## Bản Đồ Chi Tiết Prompt
+
+| # | Phần | Nguồn | KB | Tĩnh/Động | Thay đổi theo chapter? |
+|---|---|---|---|---|---|
+| 1 | System identity (2 câu) | Template L1-3 | 0.3 | Tĩnh | ❌ Giống nhau 10 ch |
+| 2 | **Style JSON** (core_rules + framework + structures + closings) | [_extract_style_for_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#327-390) → `{style_json}` | **~18** | Động | ❌ **Giống nhau 10 ch** |
+| 3 | Framework name | `{framework_name}` | 0.1 | Động | ❌ Giống |
+| 4 | **Filtered Blueprint** | [_extract_chapter_blueprint()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#559-668) → `{blueprint}` | 5-10 | Động | ✅ Khác mỗi ch |
+| 5 | **Full Outline** (10 chapters + phase_plan + myths + CTA) | `{full_outline}` | **~32** | Động | ❌ **Giống nhau 10 ch** |
+| 6 | Chapter Outline (tóm tắt) | Template L17-35 (placeholders) | 1-2 | Tĩnh+Động | ✅ Khác mỗi ch |
+| 7 | Word count | `{word_count_rule}` | 0.1 | Động | ❌ Giống |
+| 8 | **Previous Context** (full text chapters trước) | `{previous_context}` | 0-15+ | Động | ✅ **Tăng dần** mỗi ch |
+| 9 | Chronological Rule | Template L40-49 | 0.7 | Tĩnh | ❌ Giống 10 ch |
+| 10 | Hook Naming Rule | Template L51-62 | 0.8 | Tĩnh | ❌ Giống 10 ch ⚠️ |
+| 11 | Time-Space Anchoring | Template L64-84 | 1.2 | Tĩnh | ❌ Giống 10 ch |
+| 12 | Character Names Rule | Template L86-97 | 0.7 | Tĩnh | ❌ Giống 10 ch |
+| 13 | Voice Rules | Template L99-116 | 1.2 | Tĩnh | ❌ Giống 10 ch |
+| 14 | Scene Hierarchy | Template L118-149 | 2.0 | Tĩnh | ❌ Giống 10 ch |
+| 15 | Audience Techniques | Template L152-222 | 4.5 | Tĩnh | ❌ Giống 10 ch |
+| 16 | Spoken Rhythm | Template L224-258 | 2.0 | Tĩnh | ❌ Giống 10 ch |
+| 17 | Chapter Flow (Opening + Closing) | Template L259-315 | 3.5 | Tĩnh | ❌ Giống 10 ch |
+| 18 | **Hook Chapter Rules** | Template L316-444 | **8.0** | Tĩnh | ❌ Giống 10 ch ⚠️ |
+| 19 | **End Chapter Rules** | Template L446-471 | **1.5** | Tĩnh | ❌ Giống 10 ch ⚠️ |
+| 20 | **Body Chapter Rules** (8 structures) | Template L473-541 | **4.5** | Tĩnh | ❌ Giống 10 ch ⚠️ |
+| 21 | Myth vs Reality | Template L543-554 | 0.7 | Tĩnh | ❌ Giống 10 ch |
+| 22 | Dual Nature | Template L556-564 | 0.5 | Tĩnh | ❌ Giống 10 ch |
+| 23 | Golden Sample | Template L566-583 | 1.2 | Tĩnh | ❌ Giống 10 ch |
+| 24 | Priority Order | Template L585-596 | 0.8 | Tĩnh | ❌ Giống 10 ch |
+| 25 | Foreign Language Rule | Template L598-617 | 1.2 | Tĩnh | ❌ Giống 10 ch |
+| 26 | Localization | Template L619-636 | 1.0 | Tĩnh | ❌ Giống 10 ch |
+| 27 | Output | Template L638-646 | 0.5 | Tĩnh | ❌ Giống 10 ch |
+
+---
+
+## Phân Loại: BẮT BUỘC vs NÊN BỎ vs CÓ THỂ TỐI ƯU
+
+### ✅ BẮT BUỘC GIỮ (không được cắt)
+
+| Phần | Lý do |
+|---|---|
+| System identity (#1) | AI cần biết vai trò |
+| **Filtered Blueprint (#4)** | Dữ liệu viết — 🔥 đã được lọc tốt (20% blueprint gốc) |
+| **Chapter Outline (#6)** | Chỉ thị chapter cụ thể — nhẹ |
+| **Previous Context (#8)** | Cần cho continuity — nhưng xem phần tối ưu bên dưới |
+| Chronological Rule (#9) | Rule quan trọng tránh timeline jump |
+| Character Names (#12) | Tránh AI tự sáng tạo tên |
+| Voice Rules (#13) | Kiểm soát giọng viết |
+| Scene Hierarchy (#14) | Rule cốt lõi: 2-3 scene + bridges |
+| Spoken Rhythm (#16) | Rule viết cho tai nghe |
+| Chapter Flow (#17) | Opening 3-beat + closing |
+| Output (#27) | Chỉ thị output format |
+
+---
+
+### 🔴 NÊN BỎ / LỌC THEO `chapter_type` (Tiết kiệm cao nhất)
+
+> [!IMPORTANT]
+> Đây là **3 khối lớn nhất** có thể cắt theo chapter_type.
+
+#### 1. Hook Chapter Rules (#18) — **~8KB** cắt cho 8/10 chapters
+
+**Hiện tại:** Gửi cho **TẤT CẢ 10 chapters** (hook, body, end).
+**Thực tế:** Chỉ chapter 1 (hook) cần. 8 body chapters + 1 end chapter nhận rules này một cách lãng phí.
+
+```
+Tiết kiệm: 8KB × 9 chapters = ~72KB tổng
+```
+
+#### 2. End Chapter Rules (#19) — **~1.5KB** cắt cho 9/10 chapters
+
+**Hiện tại:** Gửi cho tất cả 10 chapters.
+**Thực tế:** Chỉ chapter 10 (end) cần.
+
+```
+Tiết kiệm: 1.5KB × 9 chapters = ~13.5KB tổng
+```
+
+#### 3. Body Chapter Structures (#20) — 8 structures nhưng chỉ cần 1
+
+**Hiện tại:** Gửi tất cả 8 structures (origin_story, achievement_showcase, dark_revelation, relationship_crucible, context_excavation, evidence_reversal, source_analysis, verdict_synthesis) cho mỗi chapter.
+**Thực tế:** Mỗi chapter chỉ dùng **1 structure** (ví dụ ch02 = `origin_story`).
+
+```
+Tiết kiệm: ~3.5KB × 10 chapters = ~35KB tổng (giữ 1, bỏ 7)
+```
+
+---
+
+### 🟡 CÓ THỂ TỐI ƯU (cần cân nhắc rủi ro)
+
+#### 4. Full Outline (#5) — **~32KB giống nhau 10 chapters**
+
+**Hiện tại:** Gửi toàn bộ outline 10 chapters cho mỗi chapter.
+**Mục đích:** AI cần biết context trước/sau để viết cliffhanger và bridge.
+**Tối ưu:** Chỉ gửi **ch_prev + ch_current + ch_next** (3 chapters thay vì 10).
+
+```
+Tiết kiệm ước tính: ~22KB per chapter × 10 = ~220KB tổng
+```
+
+> [!WARNING]
+> **Rủi ro:** AI mất narrative arc overview → có thể viết cliffhanger kém cho chapters xa. Tuy nhiên, AI đã có `phase_chapter_plan` tóm tắt toàn bộ arc trong outline, nên rủi ro thấp nếu giữ `phase_chapter_plan` + `cta` + `narrative_arc` ở đầu.
+
+**Phương án an toàn:**
+- Giữ: `framework_used`, `biography_subject`, `narrative_arc`, `canonical_names`, `phase_chapter_plan`, `cta`
+- Lọc: `chapters[]` → chỉ giữ ch_prev + ch_current + ch_next
+- Bỏ: `data_coverage_map`, `myths_distribution` (AI đã có từ chapter outline)
+
+#### 5. Style JSON (#2) — **~18KB giống nhau 10 chapters**
+
+**Đã tối ưu:** [_extract_style_for_framework()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#327-390) đã lọc từ 4 frameworks → 1.
+**Có thể tiếp:**
+
+| Phần trong style JSON | KB | Cần? |
+|---|---|---|
+| `core_rules` (voice, tone, vocab, anti-patterns) | ~5 | ✅ BẮT BUỘC |
+| [framework](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1602-1674) (steps, pacing, pov, language, cliffhangers) | ~7 | ✅ BẮT BUỘC |
+| `chapter_structures` (8 structures) | ~3 | ⚠️ Duplicate với #20 trong template |
+| `closing_types` (6 types) | ~1.5 | ⚠️ Duplicate với #17 trong template |
+| `data_priority` | ~0.5 | ✅ Giữ |
+| `evaluation_focus` | ~1 | 🔴 Không cần khi viết (chỉ cần lúc scoring) |
+
+> [!CAUTION]
+> `chapter_structures` xuất hiện **2 lần**: 1 lần trong style JSON (phần 2), 1 lần trong template rules (phần 20). Đây là **duplication thực sự** — nên bỏ 1 trong 2.
+
+```
+Tiết kiệm nếu bỏ duplicate: ~4.5KB × 10 = ~45KB tổng
+```
+
+#### 6. Previous Context (#8) — **tăng dần, ch10 có thể >15KB**
+
+**Hiện tại:** Gửi **toàn bộ text** các chapters trước đã viết.
+**Vấn đề:** Ch10 nhận text của ch1-ch9 = tất cả chapters (~12,000+ words = ~60KB+).
+
+**Tối ưu:**
+- Chỉ gửi **chapter ngay trước** (ch_prev) full text.
+- Các chapters xa hơn → chỉ gửi `ends_with` (câu cuối chapter) để AI nắm thread.
+
+```
+Tiết kiệm cho ch10: ~50KB → ~5KB
+```
+
+> [!WARNING]
+> **Rủi ro cao nhất.** AI viết dựa trên continuity. Nếu chỉ gửi ch_prev, AI có thể quên tone/detail từ ch1-ch7.
+> **Phương án trung gian:** gửi full ch_prev + tóm tắt 2-3 câu mỗi chapter khác.
+
+---
+
+### ⚪ GIỮ NGUYÊN (nhẹ / ROI thấp nếu tối ưu)
+
+| Phần | KB | Lý do giữ |
+|---|---|---|
+| Time-Space Anchoring (#11) | 1.2 | Quan trọng, nhẹ |
+| Audience Techniques (#15) | 4.5 | 5 kỹ thuật viết quan trọng |
+| Myth vs Reality (#21) | 0.7 | Nhẹ |
+| Dual Nature (#22) | 0.5 | Nhẹ |
+| Golden Sample (#23) | 1.2 | Giữ — AI cần "north star" |
+| Priority Order (#24) | 0.8 | Quan trọng khi rules conflict |
+| Foreign Language (#25) | 1.2 | Cần cho TTS |
+| Localization (#26) | 1.0 | Cần cho đơn vị đo |
+| Hook Naming Rule (#10) | 0.8 | Nhẹ nhưng NÊN lọc — chỉ ch1 cần |
+
+---
+
+## Bảng Tổng Kết Tiết Kiệm
+
+| Optimization | KB/chapter | Total (10 ch) | Rủi ro | Khó code |
+|---|---|---|---|---|
+| **1. Lọc Hook rules theo chapter_type** | -8.0 (9 ch) | **-72** | ❌ Không | Thấp |
+| **2. Lọc End rules theo chapter_type** | -1.5 (9 ch) | **-13.5** | ❌ Không | Thấp |
+| **3. Lọc Body structures → chỉ 1** | -3.5 | **-35** | ⚠️ Thấp | Trung bình |
+| **4. Bỏ duplicate structures/closings** | -4.5 | **-45** | ❌ Không | Thấp |
+| **5. Lọc Full Outline → 3 chapters** | -22 | **-220** | ⚠️ Trung bình | Trung bình |
+| **6. Bỏ evaluation_focus từ style** | -1.0 | **-10** | ❌ Không | Thấp |
+| **7. Giới hạn Previous Context** | -5~50 | **-50~250** | 🔴 Cao | Trung bình |
+| | | | | |
+| **Tổng tiết kiệm (an toàn: 1-4-6)** | | **~175KB** | Minimal | Thấp |
+| **Tổng tiết kiệm (aggressive: all)** | | **~450-650KB** | Mixed | Trung bình |
+
+---
+
+## Khuyến Nghị
+
+### Nên làm ngay (rủi ro = 0, code đơn giản):
+1. **Lọc rules theo chapter_type** — bỏ Hook rules cho body/end, bỏ End rules cho hook/body
+2. **Bỏ duplicate** chapter_structures/closing_types giữa style JSON và template
+3. **Bỏ evaluation_focus** khỏi style JSON khi viết
+
+### Nên cân nhắc (rủi ro thấp-trung bình):
+4. **Lọc body structures** — chỉ gửi structure đang dùng
+5. **Lọc full outline** — giữ metadata + 3 chapters gần nhất
+
+### Tạm chưa làm (cần test kỹ):
+6. **Giới hạn previous_context** — rủi ro mất continuity, cần A/B test

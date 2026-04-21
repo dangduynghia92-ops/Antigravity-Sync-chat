@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Deep analysis of the 99KB per-chapter writer prompt for the narrative pipeline. Catalogs all 27 sections with size, source, and whether they change per chapter. Identifies 7 optimization opportunities ranked by impact, risk, and coding effort. Key findings: Hook rules (8KB) sent to all chapters but only needed by ch1; End rules sent to all but only needed by ch10; body structure definitions duplicated between style JSON and template; full outline (32KB) sent identically to all chapters.",
+  "updatedAt":  "2026-04-21T03:00:01.643883Z"
+}
