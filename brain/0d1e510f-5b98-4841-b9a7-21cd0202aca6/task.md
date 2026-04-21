@@ -1,15 +1,18 @@
-# Task List
+# Prompt Optimization: All Narrative Niches
 
-## Completed
-- [x] Manual framework multi-select (New Content + Rewrite + Review)
-- [x] Fix Open button for blank output field
-- [x] Verify key_data filtering for Bruno pipeline
+## Template Markers
+- [x] `biography.txt` — 8 structures + hook/end markers
+- [x] `battle.txt` — 7 structures + hook/end markers
+- [x] `battle_v2.txt` — hook/end markers only (phase-based, no structures)
+- [x] `mystery.txt` — 8 structures + hook/end markers
+- [x] `pirate.txt` — 5 structures + hook/end markers
+- [x] `pirate_haven.txt` — 6 structures + hook/end markers
 
-## In Progress
-- [x] Analyze prompt size optimization for chapter writing
-- [x] Implement zero-risk optimizations
-  - [x] Add conditional markers to template for hook/end/body rules
-  - [x] Add _apply_chapter_type_filter() to rewriter.py
-  - [x] Remove chapter_structures, closing_types, evaluation_focus from style JSON
-  - [x] Filter body structures to only assigned one
-  - [x] Verify prompt debug output for ch02 (body) vs ch01 (hook)
+## Rewriter Code
+- [x] Restructure `_BODY_STRUCTURES` as niche-keyed dict (5 niches)
+- [x] Update `_apply_chapter_type_filter` with `niche` param + substring matching
+- [x] Update call site in `write_from_blueprint` to pass `niche`
+- [x] Fix niche key matching (substring, not exact — consistent with `_get_niche_prompt`)
+
+## Git
+- [x] Committed all changes
