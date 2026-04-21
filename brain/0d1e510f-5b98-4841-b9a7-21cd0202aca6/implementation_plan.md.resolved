@@ -1,115 +1,62 @@
-# Unified Source Map for All Narrative Niches
+# Manual Framework Selection Feature
 
-## Goal
-Replace 3 separate extraction strategies (source_map / fuzzy / phase-section dict) with ONE unified `source_map`-based flow for all niches. Keep niche-specific always-include keys as config.
-
-## Current State
-
-| Niche | Extraction | Lines of Code | Problem |
-|---|---|---|---|
-| Biography | source_map paths | ~55 lines (L508-562) | ✅ Working |
-| Battle v2 | section matching + fuzzy keyword | ~100 lines (L574-757) | ⚠ Fuzzy can leak |
-| Pirate | `_PHASE_SECTIONS` dict + fuzzy | ~60 lines (L619-679) | ⚠ Hardcoded phase names |
-
-## Proposed Architecture
-
-```
-_extract_chapter_blueprint(blueprint, chapter_outline, source_map)
-    │
-    ├── 1. Always-include: _NICHE_ALWAYS_INCLUDE[niche] → inject texture sections
-    │
-    ├── 2. Source map: if source_map → resolve paths (UNIVERSAL, same for all niches)
-    │
-    ├── 3. Niche section matching: outline metadata fields → blueprint sections
-    │   (biography: life_phase_covered, relationships_featured, myths_debunked)
-    │   (battle: commanders_featured, battle_phases_covered)
-    │   (pirate: figures_featured, myth_busted)
-    │
-    └── 4. Return result (no fuzzy search needed)
-```
-
-> [!IMPORTANT]
-> Step 3 (niche section matching) stays because outline metadata fields like `commanders_featured` and `life_phase_covered` are INDEPENDENT from source_map. Source_map traces key_data → blueprint paths. Section matching traces outline metadata → blueprint sections. Both are precise.
-
----
+Add an "Auto Framework" checkbox. When unchecked + Framework = "Auto (detect & switch)", the pipeline pauses after framework scoring to show the existing ranking popup for user selection.
 
 ## Proposed Changes
 
-### Prompt Changes
+### UI Layout
 
-#### [MODIFY] [system_narrative_phase_plan_battle.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_battle.txt)
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-Add `_source_map` to output schema + SOURCE TRACING rule (like biography).
-Battle paths: `battle_phases.Phase Name`, `commanders.Commander Name`, `turning_points.moment`, `key_facts`, etc.
-
-#### [MODIFY] [system_narrative_phase_plan_pirate.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pirate.txt)
-
-Add `_source_map` to output schema + SOURCE TRACING rule.
-Pirate paths: `ship_birth.key_events`, `combat_events.battle`, `key_figures.name`, etc.
-
----
-
-### Code Changes
-
-#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
-
-**1. Define `_NICHE_ALWAYS_INCLUDE` config dict** (~L490)
+**Change 1: Add checkbox (after Auto-Patch, ~L321)**
 ```python
-_NICHE_ALWAYS_INCLUDE = {
-    "biography": ("core_identity", "era_context", "key_quotes", "dark_psychology"),
-    "battle":    ("core_topic", "key_facts"),
-    "pirate":    ("core_topic", "key_facts", "era_context",
-                  "battlefield_experience", "narrative_moments", "texture_and_hooks"),
-}
+self._chk_auto_fw = QCheckBox("🤖 Auto Framework")
+self._chk_auto_fw.setChecked(True)  # default = auto (current behavior)
+self._chk_auto_fw.setToolTip(
+    "Auto-select framework based on AI ranking.\n"
+    "OFF = Show ranking popup for manual selection after scoring."
+)
+btn_row.addWidget(self._chk_auto_fw)
 ```
 
-**2. Refactor [_extract_chapter_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#490-771)** (~L490-770)
+**Change 2: New Content — intercept after scoring (~L2645)**
 
-Replace 270 lines of niche-branching with:
+Current flow:
 ```
-if source_map is not None:
-    → always-include from _NICHE_ALWAYS_INCLUDE
-    → source_map path resolution (universal)
-    → niche section matching (kept per-niche)
-    → return
-
-if source_map is None:
-    → raise RuntimeError (strict mode — all niches must have source_map)
+L2627: recommend_framework_new_content() → rankings
+L2640: rankings.sort()
+L2645: log AI ranking
+L2647-2679: AUTO-select top frameworks
 ```
 
-The niche section matching functions stay:
-- [_extract_bio_section_matches()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#441-488) (existing) — life_phase, relationships, myths
-- `_extract_battle_section_matches()` (new) — commanders, battle_phases
-- `_extract_pirate_section_matches()` (new) — figures, myth_busted
+New flow (insert between L2645 and L2647):
+```python
+# ── Manual selection if Auto Framework unchecked ──
+if not self._chk_auto_fw.isChecked():
+    # Reuse existing dialog pattern from Rewrite flow
+    self._fw_ranking_event.clear()
+    self._fw_ranking_result = None
+    fw_info_json = json.dumps({"name": "AI Recommendation", "confidence": "N/A", "reasoning": ""})
+    self._fw_ranking_request.emit(rankings, fw_info_json)
+    self._fw_ranking_event.wait()
+    if self._fw_ranking_result is None:
+        log("✗ User cancelled framework selection")
+        return
+    selected_fws = [self._fw_ranking_result]
+    log(f"✓ User selected: '{self._fw_ranking_result}'")
+else:
+    # existing auto-selection logic (L2647-2679)
+```
 
-**3. Remove fuzzy keyword search** (~L681-757)
+**Change 3: [_show_fw_ranking_dialog](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1516-1612) — set event after dialog closes (~L1609)**
 
-76 lines of fuzzy search removed. No longer needed when source_map provides precise paths.
-
-**4. Generalize [generate_narrative_phase_plan](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#3717-3813) validation** (~L3759)
-
-Change `if niche and "tiểu sử" in niche.lower()` to a broader check that validates `_source_map` for ALL niches.
-
----
-
-### Backward Compatibility
-
-> [!WARNING]
-> Existing pipeline runs (already saved [_phase_plan_final.json](file:///C:/Users/Admin/OneDrive/Documents/Biography_Galileo_Galilei_20260420_0552/v1_S%E1%BB%AD_Thi/_pipeline/_phase_plan_final.json) without `_source_map`) will break if strict mode is enabled. Options:
-> - **Option A**: Strict — require re-run of phase plan for existing projects
-> - **Option B**: Grace period — if no source_map, fall back to old logic with warning
-
-Recommend **Option A** (strict) — per user's preference for fail-fast.
-
----
+The dialog already sets `_fw_ranking_result` but the `_fw_ranking_event.set()` call may be missing for the New Content path. Need to ensure `_fw_ranking_event.set()` is called at the end of [_show_fw_ranking_dialog](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1516-1612).
 
 ## Verification Plan
 
-### Automated
-1. Run Galileo biography → verify same results as before
-2. Run a battle topic → verify `_source_map` generated, chapters written correctly
-3. Run cross_check.py on both → verify no gaps
-
-### Manual
-- Compare ch blueprint sizes before/after for battle
-- Check battle output quality is maintained
+### Manual Verification
+1. Launch app → select "Auto (detect & switch)" framework
+2. Check "Auto Framework" → New Content → should auto-select (unchanged behavior)
+3. Uncheck "Auto Framework" → New Content → should show popup after scoring
+4. Select a framework from popup → pipeline continues
+5. Cancel popup → pipeline stops cleanly
