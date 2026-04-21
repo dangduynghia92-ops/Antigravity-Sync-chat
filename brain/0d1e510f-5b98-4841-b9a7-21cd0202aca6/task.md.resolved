@@ -7,9 +7,9 @@
 
 ## In Progress
 - [x] Analyze prompt size optimization for chapter writing
-- [/] Implement zero-risk optimizations
-  - [ ] Add conditional markers to template for hook/end/body rules
-  - [ ] Add _apply_chapter_type_filter() to rewriter.py
-  - [ ] Remove chapter_structures, closing_types, evaluation_focus from style JSON
-  - [ ] Filter body structures to only assigned one
-  - [ ] Verify prompt debug output for ch02 (body) vs ch01 (hook)
+- [x] Implement zero-risk optimizations
+  - [x] Add conditional markers to template for hook/end/body rules
+  - [x] Add _apply_chapter_type_filter() to rewriter.py
+  - [x] Remove chapter_structures, closing_types, evaluation_focus from style JSON
+  - [x] Filter body structures to only assigned one
+  - [x] Verify prompt debug output for ch02 (body) vs ch01 (hook)

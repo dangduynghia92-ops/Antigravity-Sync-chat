@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist tracking prompt optimization implementation: filter chapter-type rules, remove style JSON duplicates, and filter body structures.",
-  "updatedAt":  "2026-04-21T03:08:14.543735400Z",
-  "version":  "36"
+  "summary":  "Task checklist with completed prompt optimization items.",
+  "updatedAt":  "2026-04-21T03:51:02.844036900Z",
+  "version":  "37"
 }
