@@ -1,17 +1,13 @@
-# Source Map Implementation — All Niches
+# Task List
 
-## Phase 1-5: Biography Source Map + Coverage Fixes ✅
+## Completed
+- [x] Manual framework multi-select (New Content + Rewrite + Review)
+- [x] Fix Open button for blank output field
+- [x] Verify key_data filtering for Bruno pipeline
 
-## Phase 6: Unified Source Map
-- [x] Battle v2: add `_source_map` to phase plan prompt (rule #9 + #10)
-- [x] Pirate: add `_source_map` to phase plan prompt (rule #10 + #11)
-- [x] Code: refactor [_extract_chapter_blueprint](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#559-668) to niche-agnostic
-  - [x] `_NICHE_ALWAYS_INCLUDE` config dict
-  - [x] Universal source_map path resolution
-  - [x] [_extract_battle_section_matches()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#490-521) helper
-  - [x] [_extract_pirate_section_matches()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#523-557) helper
-  - [x] Remove fuzzy search (76 lines)
-- [x] Code: generalize [generate_narrative_phase_plan](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#3614-3708) validation
-- [x] Git commit: `752b1da`
-- [ ] Test battle v2 pipeline
-- [ ] Test pirate pipeline
+## In Progress
+- [/] Analyze prompt size optimization for chapter writing
+  - [ ] Research prompt builder code
+  - [ ] Catalog each prompt section with size
+  - [ ] Analyze necessity of each section
+  - [ ] Create optimization recommendation report
