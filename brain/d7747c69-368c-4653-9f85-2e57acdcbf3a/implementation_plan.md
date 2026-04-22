@@ -1,229 +1,154 @@
-# Implementation Plan: Framework "Phân Tích Chuyên Sâu 1 Sản Phẩm" + Cách Viết Chapter
+# Thiết kế Data Fields cho Blueprint Súng/Đạn
 
-## Bản chất vấn đề (Final)
+## 1. Khán giả muốn biết gì?
 
-- **Blueprint extraction:** ✅ Đã đủ linh hoạt, không cần sửa
-- **Framework:** ❌ Thiếu kiểu "phân tích sâu 1 sản phẩm theo nhiều khía cạnh" — áp dụng chung cho cả súng lẫn đạn
-- **Cách viết body chapter:** ❌ Prompt hiện tại bắt buộc 5 elements (`IDENTITY → USP → SPECS+BENEFIT → WEAKNESS → CLOSER`) chỉ hợp khi mỗi chapter = 1 sản phẩm. Khi mỗi chapter = 1 topic block, cần bộ elements khác
-- **Head-to-Head Duel:** ✅ Tương thích cao cho so sánh 2 sản phẩm cùng loại (kể cả 2 cỡ đạn) — chỉ cần mở rộng danh sách criteria
+Tổng hợp từ 5 kịch bản mẫu + nghiên cứu audience:
+
+### Nhóm khán giả và ưu tiên data
+
+| Nhóm | Data ưu tiên hàng đầu |
+|------|----------------------|
+| **Phòng vệ (Self-Defense)** | Penetration depth, expansion, recoil, over-penetration risk, reliability |
+| **Thể thao/bắn chính xác** | Velocity consistency (SD), ballistic coefficient, grouping, trajectory |
+| **Săn bắn** | Energy transfer, terminal performance at range, bullet weight retention |
+| **Mua sắm/so sánh** | Price per round, availability, platform compatibility, aftermarket |
+
+### Data xuất hiện nhiều nhất trong 5 kịch bản mẫu
+
+| Data point | Số lần xuất hiện (5 video) | Ví dụ |
+|-----------|--------------------------|-------|
+| Chamber pressure (PSI) | 4/5 | "21,000 PSI — barely half the 9mm's 35,000" |
+| Muzzle velocity (fps) | 5/5 | "830 fps", "1250 fps vs 1350 fps" |
+| Bullet weight (grains) | 5/5 | "230-grain", "158gr", "240gr" |
+| Recoil comparison | 4/5 | "7.7 ft-lb vs 14.9 ft-lb" |
+| Penetration/over-penetration | 3/5 | "mất động năng khi xuyên tường" |
+| Origin/history | 4/5 | "Moro Rebellion", "1911", FBI load history |
+| Price per round | 2/5 | "$390/1000 vs $230/1000" |
+| Platform list | 3/5 | "Ruger SP101, Charter Arms, Colt Cobra" |
+| Variants/loadings | 3/5 | ".45 Super 1100fps, .460 Rowland 1300fps" |
+| Barrel length effect | 2/5 | "16-18 inch optimal for .22 LR" |
 
 ---
 
-## 1. Framework Mới: "The Deep Anatomy"
+## 2. Nên tách riêng Súng vs Đạn không?
 
-**Tên:** `The Deep Anatomy`
-**Áp dụng cho:** Bất kỳ sản phẩm nào (súng, đạn, optic, suppressor...) khi muốn mổ xẻ chuyên sâu 1 sản phẩm duy nhất theo nhiều khía cạnh
+### Phân tích
 
-### use_when
-Phân tích chuyên sâu 1 sản phẩm duy nhất (súng, cỡ đạn, phụ kiện). Dùng khi blueprint chỉ có 1 sản phẩm chính và mục tiêu là giáo dục người xem toàn diện về mọi mặt của sản phẩm đó — lịch sử, kỹ thuật, ứng dụng, hạn chế.
-
-### emotional_arc
-```
-Authority (đây là thứ bạn tưởng bạn biết)
-→ Discovery (nhưng bạn chưa biết những điều này)
-→ Mastery (giờ bạn hiểu nó sâu hơn 90% người dùng)
-→ Verdict (đây là lúc nào nên / không nên dùng nó)
-```
-
-### Cấu trúc (structure)
-
-```
-total_acts: 3
-Act 1: The Foundation (10-15%) — Hook + thiết lập quyền uy
-Act 2: The Anatomy (70-80%) — Mổ xẻ từng khía cạnh, mỗi chapter = 1 topic block
-Act 3: The Verdict (10-15%) — Chốt verdict theo tình huống sử dụng
-
-type: "topic_block"
-direction: "logic flow — mỗi topic block xây trên hiểu biết của block trước"
-chapters_per_product: 0 (KHÔNG chia theo sản phẩm, chia theo CHỦ ĐỀ)
-```
-
-### Body Chapter Template (Topic Block)
-
-```json
-"chapter_template": [
-  "1. TOPIC ANCHOR: Tuyên bố rõ khía cạnh đang phân tích bằng 1 câu mở sắc nét",
-  "2. DATA FOUNDATION: 1-3 con số/specs cốt lõi từ blueprint làm trụ cột cho topic này",
-  "3. PHYSICAL TRANSLATION: Chuyển data khô thành trải nghiệm thể chất/cảm giác thực tế. VD: '21,000 PSI = cú đẩy lùi vững chãi, không giật nảy' hoặc '4.5 lbs trigger = bóp vỡ que kính'",
-  "4. PROOF LAYER: Case study THẬT, giai thoại lịch sử, hoặc dữ liệu kiểm tra (VD: FBI Miami 1986, vụ Dearborn Heights, bà Bella Twin vs Gấu)",
-  "5. PRACTICAL IMPLICATION: Điều này có nghĩa gì cho người dùng thực tế? Viết bằng ngôi thứ 2 — 'Nếu bạn...'"
-]
-```
+| Tiêu chí | Gộp chung | Tách riêng |
+|----------|-----------|-----------|
+| **Data khác biệt** | ❌ Súng có: trigger, ergonomics, accuracy, aftermarket. Đạn có: ballistic coefficient, penetration, expansion, powder charge. Gộp → nhiều field trống vô nghĩa | ✅ Mỗi loại chỉ có field phù hợp |
+| **Nội dung thực tế** | ❌ Video .45 ACP focus 90% vào đạn nhưng phải điền field "trigger", "ergonomics" | ✅ Blueprint biết đây là đạn → chỉ yêu cầu data đạn |
+| **Enrich** | ❌ Không biết bổ sung "penetration depth" hay "trigger pull weight" | ✅ Thấy `terminal_performance: {}` trống → biết cần search gel test data |
+| **Complexity** | ✅ 1 schema duy nhất | ⚠️ 2 schema, nhưng có shared fields |
 
 > [!IMPORTANT]
-> **So sánh với chapter template hiện tại (product-per-chapter):**
->
-> | Elements hiện tại | Elements mới (Topic Block) |
-> |---|---|
-> | `[IDENTITY]` sản phẩm là gì | `[TOPIC ANCHOR]` khía cạnh đang phân tích là gì |
-> | `[USP]` điểm bán hàng | `[DATA FOUNDATION]` data cốt lõi |
-> | `[SPECS+BENEFIT]` specs → lợi ích | `[PHYSICAL TRANSLATION]` data → cảm giác vật lý |
-> | `[WEAKNESS]` nhược điểm | `[PROOF LAYER]` case study chứng minh |
-> | `[CLOSER]` ai nên mua | `[PRACTICAL IMPLICATION]` nghĩa gì với bạn |
+> **Khuyến nghị: TÁCH RIÊNG**, nhưng bằng cách dùng `product_type` field để AI tự phân loại, không cần tạo 2 file prompt riêng. Cùng 1 extract prompt, dựa vào `product_type` mà fill field phù hợp.
 
-### Chapter Flow gợi ý (6-8 chapters, AI tự chọn từ pool)
+---
 
-Framework KHÔNG cố định thứ tự chapter. Thay vào đó, cung cấp **pool các topic block tiềm năng** để AI (hoặc outline step) chọn 6-8 phù hợp nhất dựa trên blueprint data:
+## 3. Đề xuất Schema Data Fields
+
+### Shared fields (cả súng và đạn)
 
 ```json
-"topic_pool": [
-  {"topic": "Origin & Birth", "use_when": "Blueprint chứa lịch sử ra đời, designer, bối cảnh chiến tranh/nhu cầu"},
-  {"topic": "Core Specs & Ballistics", "use_when": "Blueprint có thông số cốt lõi (PSI, fps, grain, weight, capacity...)"},
-  {"topic": "Recoil & Shootability", "use_when": "Blueprint có data về recoil, áp suất, so sánh cảm giác bắn"},
-  {"topic": "Terminal Performance", "use_when": "Blueprint có wound channel, penetration, stopping power, case study thực tế"},
-  {"topic": "Platform Versatility", "use_when": "Sản phẩm dùng được trên nhiều nền tảng (pistol, revolver, PCC, rifle, SMG...)"},
-  {"topic": "Variants & Evolution", "use_when": "Có biến thể hoặc phiên bản cải tiến (VD: .45 Super, .460 Rowland, Gen 1-5)"},
-  {"topic": "Tactical Application", "use_when": "Blueprint có case study chiến thuật, tình huống sử dụng cụ thể (CQB, suppressed, home defense)"},
-  {"topic": "Handloading & Customization", "use_when": "Blueprint có data về nạp đạn thủ công, tùy biến, phụ kiện"},
-  {"topic": "Myth vs Reality", "use_when": "Sản phẩm có lầm tưởng phổ biến cần phá (VD: '.45 giật mạnh', '.22 yếu')"},
-  {"topic": "Limitations & Trade-offs", "use_when": "Luôn cần — mọi sản phẩm đều có điểm yếu"}
-]
-```
-
-### Hook
-
-```json
-"hook": {
-  "method": "auto_select",
-  "available_methods": [
-    {"name": "authority_legacy", "use_when": "Sản phẩm có lịch sử lâu đời, iconic",
-     "example": ".45 ACP has been dropping hammers since 1911. But most of what people 'know' about it never makes it past the surface."},
-    {"name": "myth_attack", "use_when": "Sản phẩm bị hiểu sai phổ biến",
-     "example": "Everyone says .22 LR is a toy. They're wrong — and the data will prove it in 7 ways you never expected."},
-    {"name": "surprising_stat", "use_when": "Blueprint chứa con số gây sốc",
-     "example": "21,000 PSI. That's all the .45 ACP needs — barely half the pressure of 9mm — to end a fight."}
-  ]
+{
+  "product_name": "...",
+  "product_type": "firearm | ammunition | accessory",
+  "category": "...",
+  "key_specs": {},
+  "origin_history": [],
+  "tactical_application": [],
+  "cost_availability": {},
+  "myths_misconceptions": [],
+  "comparisons": [],
+  "author_rhetoric": [],
+  "source_units": "imperial|metric|mixed"
 }
 ```
 
-### End Chapter
+### Firearm-specific fields (khi `product_type = "firearm"`)
 
 ```json
-"end": {
-  "method": "scenario_verdict",
-  "description": "Không chốt 'sản phẩm nào thắng' (vì chỉ có 1). Chốt THEO TÌNH HUỐNG SỬ DỤNG — khi nào nên dùng, khi nào không.",
-  "elements": [
-    "Recap 1-2 điểm mạnh sát thủ nhất",
-    "Thừa nhận 1 hạn chế cốt lõi",
-    "Verdict theo situation: 'Nếu [tình huống A] → đây là lựa chọn. Nếu [tình huống B] → tìm thứ khác'",
-    "Câu chốt iconic (VD: 'You don't carry .45 because it's trendy. You carry it because it's consistent.')"
-  ]
+{
+  "ergonomics_handling": {
+    "weight": "", "overall_length": "", "barrel_length": "",
+    "grip_feel": "", "controls_layout": "", "sight_system": ""
+  },
+  "action_mechanism": {
+    "action_type": "", "trigger_type": "", "trigger_pull_weight": "",
+    "safety_mechanism": "", "feeding_system": ""
+  },
+  "accuracy_precision": {
+    "effective_range": "", "grouping_data": "", "barrel_twist_rate": ""
+  },
+  "reliability_durability": {
+    "known_issues": [], "round_count_tested": "", "failure_types": []
+  },
+  "aftermarket_customization": {
+    "rail_system": "", "stock_options": [], "aftermarket_support_level": ""
+  },
+  "platform_variants": []
 }
 ```
 
-### Technique Emphasis
+### Ammunition-specific fields (khi `product_type = "ammunition"`)
 
 ```json
-"technique_emphasis": {
-  "use_heavily": [
-    "Physical Translation (BẮT BUỘC — mọi con số phải được dịch thành cảm giác vật lý)",
-    "Data-Driven Substantiation",
-    "Visceral Analogy & Sensory Language",
-    "Historical Case Study / Scenario Painting"
-  ],
-  "use_moderately": [
-    "Appeal to Authority / Social Proof",
-    "Anticipatory Rebuttal (đập myth)"
-  ],
-  "use_sparingly": [
-    "Contrast & Direct Comparison (chỉ khi so vs sản phẩm khác cùng loại)",
-    "Feature-to-Benefit Translation"
-  ]
+{
+  "cartridge_specs": {
+    "bullet_weight_gr": "", "bullet_diameter": "", "case_length": "",
+    "overall_length": "", "powder_charge": "", "primer_type": ""
+  },
+  "internal_ballistics": {
+    "chamber_pressure_psi": "", "muzzle_velocity_fps": "",
+    "muzzle_energy_ftlb": "", "velocity_consistency_sd": "",
+    "test_barrel_length": ""
+  },
+  "external_ballistics": {
+    "ballistic_coefficient": "", "bc_model": "G1|G7",
+    "trajectory_drop": {},
+    "wind_drift": {},
+    "effective_range": ""
+  },
+  "terminal_performance": {
+    "penetration_depth_inches": "", "expansion_diameter": "",
+    "weight_retention_pct": "", "sectional_density": "",
+    "over_penetration_risk": ""
+  },
+  "recoil_profile": {
+    "recoil_impulse_ftlb": "", "felt_recoil_description": "",
+    "physical_translation": ""
+  },
+  "available_loadings": [],
+  "compatible_platforms": []
 }
 ```
 
 ---
 
-## 2. Cách Viết Nội Dung Body Chapter (Write Prompt)
+## 4. Có nên xây dựng ĐẦY ĐỦ tất cả fields?
 
-Cần bổ sung vào `system_write_review_firearms.txt` 1 block mới cho `chapter_type = "topic_block"`:
+> [!TIP]
+> **KHÔNG cần fill 100%.** Schema đầy đủ nhưng extract/enrich chỉ fill **fields có data**. Fields trống = cơ hội cho enrich step bổ sung. Nguyên tắc:
 
-```
-═══════════════════════════════════════
-TOPIC BLOCK CHAPTER WRITING RULES (for "The Deep Anatomy" framework)
-═══════════════════════════════════════
+| Giai đoạn | Kỳ vọng fill rate |
+|-----------|-------------------|
+| **Extract** (từ transcript) | 40-60% — transcript thường chỉ cover 1 số khía cạnh |
+| **Enrich** (AI + search) | 70-85% — bổ sung specs từ manufacturer data, gel test results |
+| **Writer** (sử dụng) | Chỉ dùng fields có data — không bịa field trống |
 
-If chapter_type is "topic_block", include ALL these elements (order flexible):
-
-  [TOPIC ANCHOR] Declare what aspect is being analyzed in 1 sharp sentence
-    - BAD: "Now let's talk about recoil" ← generic, boring
-    - GOOD: "Anyone who says .45 kicks like a mule has never actually fired one" ← myth attack as anchor
-
-  [DATA FOUNDATION] 1-3 core numbers from blueprint that anchor this topic
-    - Always include UNITS (PSI, fps, grains, ft-lb, inches)
-    - BAD: "It has low pressure" ← vague
-    - GOOD: "21,000 PSI — barely half the 35,000 PSI that 9mm runs" ← specific + comparative
-
-  [PHYSICAL TRANSLATION] MANDATORY — Convert every number into a physical sensation
-    - This is the SIGNATURE TECHNIQUE of this framework
-    - BAD: "Recoil is manageable"
-    - GOOD: "It doesn't slap you — it gives a solid straight-back push, like palming a basketball vs catching a fastball"
-    - Rule: If you write a number without a physical translation, you have FAILED
-
-  [PROOF LAYER] Real-world evidence: case study, historical event, adoption record, or test data
-    - BAD: "It's effective in close quarters" ← claim without proof
-    - GOOD: "Tunnel Rats in Vietnam carried 1911s underground. The blast was like a flashbang in a coffin — but one round stopped the fight" ← specific case study
-    - Source: blueprint's detailed_facts (source: transcript) ONLY. Do NOT invent case studies.
-
-  [PRACTICAL IMPLICATION] What this means for the viewer — second person, scenario-based
-    - BAD: "This is important to know"
-    - GOOD: "If you're loading your nightstand gun with .45 hollowpoints, that 21,000 PSI means less wall penetration — your neighbor stays safe"
-
-PATTERN SELECTION for topic_block chapters:
-
-  Pattern T1 — DATA LEAD: [DATA FOUNDATION] → [PHYSICAL TRANSLATION] → [PROOF LAYER] → [PRACTICAL IMPLICATION]
-    Best for: Core specs, ballistics, recoil topics
-
-  Pattern T2 — MYTH LEAD: [TOPIC ANCHOR as myth attack] → [DATA FOUNDATION disproving myth] → [PHYSICAL TRANSLATION] → [PROOF LAYER]
-    Best for: Recoil myths, performance misconceptions
-
-  Pattern T3 — STORY LEAD: [PROOF LAYER as opening case study] → [DATA FOUNDATION explaining why] → [PHYSICAL TRANSLATION] → [PRACTICAL IMPLICATION]
-    Best for: History, tactical application, combat use topics
-
-  Pattern T4 — CATALOG LEAD: [TOPIC ANCHOR] → rapid list of variants/platforms → [DATA FOUNDATION for standout] → [PRACTICAL IMPLICATION]
-    Best for: Platform versatility, variants & evolution topics
-```
+**Lợi ích chính:** Fields trống chính là **trigger để enrich biết cần bổ sung cái gì**. Hiện tại `detailed_facts` không có field trống → enrich vô tác dụng. Với schema mới, `terminal_performance: {}` trống → enrich biết phải search gel test data.
 
 ---
 
-## 3. Head-to-Head Duel — Kiểm Tra Tương Thích
+## 5. Scope ảnh hưởng nếu triển khai
 
-### Kết luận: ✅ TƯƠNG THÍCH — chỉ cần mở rộng `always_cover`
-
-| Yếu tố | Hiện tại | So sánh 2 cỡ đạn (.357 vs .44) | Khớp? |
-|---------|----------|------|-------|
-| Round-based chapters | ✅ Mỗi ch = 1 tiêu chí | Đúng (cartridge arch, ballistics, terminal, recoil, verdict) | ✅ |
-| Chapter template | `ROUND → A data → B data → CONTEXT → WINNER` | Giống hệt | ✅ |
-| Running scorecard | ✅ | Đúng pattern | ✅ |
-| Verdict by use-case | "If X, buy A. If Y, buy B" | ".357 cho 90%. .44 chỉ khi gấu xám" | ✅ |
-| `always_cover` criteria | `specs_core, trigger, ergonomics, accuracy, reliability, value_proposition` | ⚠️ Cần thêm criteria cho sản phẩm không phải súng | ⚠️ |
-
-### Đề xuất: Làm `always_cover` linh hoạt hơn
-
-Thay vì hardcode 6 criteria cụ thể, đổi thành:
-
-```json
-"always_cover": [
-  "specs_core (auto-detect based on product type — gun specs OR caliber ballistics OR optic specs)",
-  "value_proposition (price, cost-per-round, or total cost of ownership)"
-],
-"criteria_pool": [
-  "trigger", "ergonomics", "accuracy", "reliability", "aftermarket",
-  "ballistics_exterior", "terminal_performance", "recoil_physics", "platform_availability",
-  "suppressor_compatibility", "handloading_potential"
-],
-"criteria_selection_rule": "Outline step selects 4-6 criteria from pool based on blueprint data. Each selected criterion = 1 round."
-```
-
-Cách này thì Head-to-Head Duel **tự động hoạt động** cho cả súng vs súng LẪN đạn vs đạn mà không cần tạo framework mới.
-
----
-
-## Tổng kết thay đổi cần làm
-
-| File | Thay đổi | Mức |
-|------|----------|-----|
-| [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | Thêm framework "The Deep Anatomy" + mở rộng `always_cover` của Head-to-Head Duel | ~250 dòng JSON |
-| [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt) | Thêm block "TOPIC BLOCK CHAPTER WRITING RULES" | ~50 dòng |
-| [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt) | Thêm hướng dẫn outline cho topic_block chapters | ~20 dòng |
-| `system_extract_blueprint_firearms.txt` | **Không cần sửa** | 0 |
+| File | Cần sửa | Mức độ |
+|------|---------|--------|
+| `system_extract_blueprint_firearms.txt` | Thay đổi output schema | 🔴 Lớn |
+| `system_enrich_blueprint_firearms.txt` | Hướng dẫn fill fields cụ thể | 🔴 Lớn |
+| `system_review_outline_firearms.txt` | Cập nhật reference đến field mới | 🟡 Nhỏ |
+| `system_write_review_firearms.txt` | Cập nhật field reference | 🟡 Nhỏ |
+| `Review_súng_đạn.json` | topic_pool.use_when map đến field mới | 🟡 Nhỏ |
+| `rewriter.py` | `_extract_chapter_blueprint()` cần hỗ trợ field mới | 🟡 Kiểm tra |
+| **Các niche khác** | ✅ Không ảnh hưởng | ✅ 0 |

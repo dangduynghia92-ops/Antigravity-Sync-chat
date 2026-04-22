@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Final implementation plan for a generic single-product deep-dive framework. Covers: (1) new framework 'The Deep Anatomy' applicable to any product type (gun/caliber/equipment), (2) new body chapter element set for topic-block chapters in the write prompt, (3) Head-to-Head Duel compatibility assessment — confirmed compatible with caliber-vs-caliber, needs only criteria list extension.",
-  "updatedAt":  "2026-04-16T11:31:09.968937300Z",
-  "version":  "3"
+  "summary":  "Analysis of firearms/ammunition blueprint data fields: what audience wants, how to structure fields, whether to separate guns vs ammo, and proposed schema design with separated product_type categories.",
+  "updatedAt":  "2026-04-22T09:08:17.411863600Z",
+  "version":  "4"
 }
