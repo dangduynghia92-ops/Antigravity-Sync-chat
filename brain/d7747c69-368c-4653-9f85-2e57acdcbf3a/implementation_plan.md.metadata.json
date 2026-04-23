@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Updated firearms blueprint schema design incorporating user feedback: 3 new firearm field groups (materials_finish, maintenance_logistics) + rename tactical_application → practical_use_case. 3 new ammunition field groups (projectile_casing, cost_economics with CPR, real_world_performance). Includes evaluation of each addition with final merged schema.",
-  "updatedAt":  "2026-04-23T15:00:10.811558300Z",
-  "version":  "5"
+  "summary":  "Complete implementation plan for \"Firearms v2\" niche: structured blueprint with product_type separation (firearm vs ammunition), 4 consolidated frameworks (Ranking, Catalog, Deep Dive, Head-to-Head), data-to-chapter mapping via outline step, 9 new prompt files, 1 new style JSON. All additive — zero changes to existing niches.",
+  "updatedAt":  "2026-04-23T15:22:50.899249800Z",
+  "version":  "6"
 }

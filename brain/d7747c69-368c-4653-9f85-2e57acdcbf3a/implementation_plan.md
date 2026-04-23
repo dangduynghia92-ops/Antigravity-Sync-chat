@@ -1,229 +1,179 @@
-# Thiết kế Data Fields cho Blueprint Súng/Đạn (v2 — sau feedback)
+# Plan: Niche "Súng Đạn v2" (firearms_v2)
 
-## Đánh giá từng bổ sung
+> **Nguyên tắc:** 100% additive — KHÔNG sửa file/code của niche hiện tại.
 
-### 🔫 FIREARMS — 3 bổ sung
+---
 
-#### 1. Materials & Finish ✅ THÊM
+## 1. Kiến trúc tổng quan
 
-Đánh giá: **Rất cần thiết.** Vật liệu (polymer vs forged aluminum vs stamped steel) ảnh hưởng trực tiếp đến trọng lượng, độ bền, và khả năng chống rỉ. Lớp phủ (Cerakote vs Nitride vs Parkerized vs Blued) là yếu tố quyết định độ bền ngoài trời. Transcript hầu như luôn đề cập — dễ extract.
-
-```json
-"materials_finish": {
-  "receiver_material": "",
-  "barrel_material": "",
-  "finish_type": "",
-  "corrosion_resistance": ""
-}
-```
-
-#### 2. Maintenance & Logistics ✅ THÊM
-
-Đánh giá: **Rất thực tế.** "Field strip có dễ không?", "Cần dụng cụ gì?" là câu hỏi mọi buyer đều nghĩ. Đặc biệt quan trọng cho Head-to-Head — súng nào dễ bảo dưỡng hơn là criteria so sánh mạnh.
-
-```json
-"maintenance_logistics": {
-  "field_strip_difficulty": "",
-  "proprietary_tools_required": "",
-  "parts_availability": "",
-  "cleaning_notes": ""
-}
-```
-
-#### 3. Đổi `tactical_application` → `practical_use_case` ✅ ĐỔI
-
-Đánh giá: **Đồng ý.** "Tactical" nghe edgy nhưng hẹp. `practical_use_case` bao trùm: home defense, concealed carry, range, competition, hunting, duty — không giới hạn vào "chiến thuật".
-
-```json
-"practical_use_case": [
-  {"scenario": "home_defense", "suitability": "excellent", "reason": "..."},
-  {"scenario": "concealed_carry", "suitability": "poor", "reason": "too heavy"}
-]
+```mermaid
+graph TD
+    A["Transcript"] --> B["Extract Blueprint"]
+    B --> C{"product_type?"}
+    C -->|firearm| D["Firearm Fields"]
+    C -->|ammunition| E["Ammunition Fields"]
+    D --> F["Enrich (fill gaps + search cost)"]
+    E --> F
+    F --> G["Framework Recommend"]
+    G --> H{"4 Frameworks"}
+    H --> I["Ranking"]
+    H --> J["Catalog"]
+    H --> K["Deep Dive"]
+    H --> L["Head-to-Head"]
+    I & J & K & L --> M["Outline Step"]
+    M -->|"data_fields per chapter"| N["Writer"]
 ```
 
 ---
 
-### 🔴 AMMUNITION — 3 bổ sung
+## 2. Bốn Framework gốc
 
-#### 1. Projectile & Casing Details ✅ THÊM
+| Framework | Body chapter = | Khi nào dùng | Biến thể theo angle |
+|-----------|---------------|-------------|---------------------|
+| **Ranking** | 1 product/chapter, CÓ xếp hạng | ≥3 products, có tiêu chí rank | Budget, Combat, Value, Underdog... |
+| **Catalog** | 1 product/chapter, KHÔNG xếp hạng | ≥3 products, mục đích giới thiệu | Options showcase, new releases... |
+| **Deep Dive** | 1 topic/chapter, 1 product duy nhất | 1 product, phân tích chuyên sâu | Technical, Historical, Myth-busting... |
+| **Head-to-Head** | 1 criterion/chapter, so sánh 2 products | Đúng 2 products | Combat, Value, Ergonomics... |
 
-Đánh giá: **Thiết yếu.** FMJ vs JHP vs OTM quyết định mục đích sử dụng. Brass vs Steel vs Aluminum quyết định reloadability (dân Mỹ rất hay nhặt vỏ về ép lại). Boxer vs Berdan primer quyết định có reload được không.
-
-> [!NOTE]
-> Hiện tại `cartridge_specs` đã có `primer_type` — cần mở rộng thêm bullet_type và casing_material.
-
-```json
-"projectile_construction": {
-  "bullet_type": "",
-  "bullet_construction": "",
-  "jacket_material": "",
-  "core_material": ""
-},
-"casing": {
-  "casing_material": "",
-  "primer_type": "",
-  "reloadability": ""
-}
-```
-
-#### 2. Cost Per Round (CPR) ✅ THÊM
-
-Đánh giá: **Rất quan trọng.** Giá 1 hộp 20 viên vô nghĩa — CPR mới là số thật. "$0.39/round vs $0.23/round" nói nhiều hơn "$19.99/box vs $11.50/box". Reloadability cũng cần — dân Mỹ reload để tiết kiệm 40-60% chi phí.
-
-> [!NOTE]
-> Gộp vào block `cost_availability` (shared field, cả súng lẫn đạn đều có giá).
-
-```json
-"cost_economics": {
-  "price_per_round_cpr": "",
-  "bulk_price_per_1000": "",
-  "reloadability": "",
-  "brass_resale_value": "",
-  "availability_level": ""
-}
-```
-
-#### 3. Real-World Quirks ✅ THÊM
-
-Đánh giá: **Đặc biệt quan trọng cho review thực chiến.** Đạn lõi thép Nga bẩn + primer cứng → kẹt đạn. Twist rate tối ưu → stabilize đúng weight đầu đạn. Đây là data mà enrich step CÓ THỂ bổ sung rất tốt (manufacturer data + shooting forum data).
-
-```json
-"real_world_performance": {
-  "fouling_level": "",
-  "primer_hardness": "",
-  "optimal_twist_rate": "",
-  "known_feeding_issues": [],
-  "temperature_sensitivity": ""
-}
-```
+> [!IMPORTANT]
+> Sự khác biệt giữa "Budget Warrior" vs "Tier List" vs "Underdog" giờ chỉ là `angle` + `selection_criteria` trong cùng 1 framework Ranking. Không tạo framework riêng.
 
 ---
 
-## Schema hoàn chỉnh (v2)
+## 3. Blueprint Schema (product_type separation)
 
-### Shared fields (cả súng và đạn)
-
-```json
-{
-  "product_name": "...",
-  "product_type": "firearm | ammunition | accessory",
-  "category": "...",
-  "key_specs": {},
-  "origin_history": [],
-  "practical_use_case": [],
-  "cost_economics": {},
-  "myths_misconceptions": [],
-  "comparisons": [],
-  "author_rhetoric": [],
-  "source_units": "imperial|metric|mixed",
-  "source_parts": []
-}
+### Shared fields
+```
+product_name, product_type, category, key_specs,
+origin_history, practical_use_case, cost_economics,
+myths_misconceptions, comparisons, author_rhetoric,
+source_units, source_parts
 ```
 
-### Firearm-only fields
-
-```json
-{
-  "materials_finish": {
-    "receiver_material": "",
-    "barrel_material": "",
-    "finish_type": "",
-    "corrosion_resistance": ""
-  },
-  "ergonomics_handling": {
-    "weight": "", "overall_length": "", "barrel_length": "",
-    "grip_feel": "", "controls_layout": "", "sight_system": ""
-  },
-  "action_mechanism": {
-    "action_type": "", "trigger_type": "", "trigger_pull_weight": "",
-    "safety_mechanism": "", "feeding_system": ""
-  },
-  "accuracy_precision": {
-    "effective_range": "", "grouping_data": "", "barrel_twist_rate": ""
-  },
-  "reliability_durability": {
-    "known_issues": [], "round_count_tested": "", "failure_types": []
-  },
-  "maintenance_logistics": {
-    "field_strip_difficulty": "",
-    "proprietary_tools_required": "",
-    "parts_availability": "",
-    "cleaning_notes": ""
-  },
-  "aftermarket_customization": {
-    "rail_system": "", "stock_options": [], "aftermarket_support_level": ""
-  },
-  "platform_variants": []
-}
+### Firearm-only
+```
+materials_finish, ergonomics_handling, action_mechanism,
+accuracy_precision, reliability_durability,
+maintenance_logistics, aftermarket_customization,
+platform_variants
 ```
 
-### Ammunition-only fields
-
-```json
-{
-  "cartridge_specs": {
-    "bullet_weight_gr": "", "bullet_diameter": "",
-    "case_length": "", "overall_length": ""
-  },
-  "projectile_construction": {
-    "bullet_type": "",
-    "bullet_construction": "",
-    "jacket_material": "",
-    "core_material": ""
-  },
-  "casing": {
-    "casing_material": "",
-    "primer_type": "",
-    "reloadability": ""
-  },
-  "internal_ballistics": {
-    "chamber_pressure_psi": "",
-    "muzzle_velocity_fps": "",
-    "muzzle_energy_ftlb": "",
-    "velocity_consistency_sd": "",
-    "test_barrel_length": ""
-  },
-  "external_ballistics": {
-    "ballistic_coefficient": "",
-    "bc_model": "G1|G7",
-    "trajectory_drop": {},
-    "wind_drift": {},
-    "effective_range": ""
-  },
-  "terminal_performance": {
-    "penetration_depth_inches": "",
-    "expansion_diameter": "",
-    "weight_retention_pct": "",
-    "sectional_density": "",
-    "over_penetration_risk": ""
-  },
-  "recoil_profile": {
-    "recoil_impulse_ftlb": "",
-    "felt_recoil_description": "",
-    "physical_translation": ""
-  },
-  "real_world_performance": {
-    "fouling_level": "",
-    "primer_hardness": "",
-    "optimal_twist_rate": "",
-    "known_feeding_issues": [],
-    "temperature_sensitivity": ""
-  },
-  "available_loadings": [],
-  "compatible_platforms": []
-}
+### Ammunition-only
 ```
+cartridge_specs, projectile_construction, casing,
+internal_ballistics, external_ballistics,
+terminal_performance, recoil_profile,
+real_world_performance, available_loadings,
+compatible_platforms
+```
+
+### Data sourcing priority
+1. 🥇 Transcript → `"source": "transcript"`
+2. 🥈 AI Knowledge → `"source": "ai_knowledge"`
+3. 🥉 Google Search (enrich) → riêng `cost_economics` + fill gaps
 
 ---
 
-## Scope triển khai
+## 4. Outline → Chapter data mapping (giải quyết "chapter viết gì?")
 
-| File | Thay đổi | Mức độ |
-|------|----------|--------|
-| [system_extract_blueprint_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_firearms.txt) | Thay output schema hoàn toàn | 🔴 Lớn |
-| [system_enrich_blueprint_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_firearms.txt) | Hướng dẫn fill fields cụ thể + search targets | 🔴 Lớn |
-| [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt) | Cập nhật field references | 🟡 Nhỏ |
-| [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt) | Cập nhật field references | 🟡 Nhỏ |
-| [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | topic_pool.use_when → field mới | 🟡 Nhỏ |
-| `rewriter.py` | `_extract_chapter_blueprint()` check | 🟡 Kiểm tra |
-| **Niche khác** | ✅ 0 ảnh hưởng | ✅ |
+Outline step xuất thêm field `data_focus` cho mỗi chapter:
+
+```json
+{
+  "chapter_number": 3,
+  "chapter_type": "topic_block",
+  "title": "The Pressure Equation",
+  "data_focus": ["internal_ballistics", "recoil_profile"],
+  "lead_angle": "Chamber pressure so low it extends barrel life",
+  ...
+}
+```
+
+→ `_extract_chapter_blueprint()` filter blueprint theo `data_focus` list
+→ Writer chỉ nhận 2 field groups đó → viết sâu, không ngợp
+
+---
+
+## 5. File cần tạo
+
+### 5a. Style JSON — [NEW]
+
+#### [NEW] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
+- `niche_name`: "firearms_v2"
+- `core_rules`: voice, tone, vocabulary (fork từ v1 + cải tiến)
+- `frameworks`: 4 frameworks (Ranking, Catalog, Deep Dive, Head-to-Head)
+  - Mỗi framework có `angle_presets` (list các góc nhìn phổ biến)
+  - `evaluation_focus` với `criteria_pool` linh hoạt
+  - `chapter_template` đơn giản hơn — writer tự xây dựng từ data
+- `blueprint_schema`: tham chiếu đến bộ fields mới
+
+---
+
+### 5b. Prompts — 9 files [NEW]
+
+| # | File | Mục đích | Khác v1 |
+|---|------|----------|---------|
+| 1 | `system_extract_blueprint_firearms_v2.txt` | Extract blueprint với structured fields | Schema mới hoàn toàn |
+| 2 | `system_enrich_blueprint_firearms_v2.txt` | Fill gaps + search cost data | Biết field nào trống → fill targeted |
+| 3 | `system_review_outline_firearms_v2.txt` | Tạo outline + data_focus mapping | Thêm `data_focus` field per chapter |
+| 4 | `system_audit_outline_firearms_v2.txt` | Audit outline | Kiểm tra data_focus coverage |
+| 5 | `system_write_review_firearms_v2.txt` | Viết chapter từ filtered blueprint | Nhận data fields cụ thể, không flat facts |
+| 6 | `system_check_blueprint_firearms_v2.txt` | Kiểm tra blueprint đủ data | Check theo field groups thay vì count facts |
+| 7 | `system_review_cross_chapter_firearms_v2.txt` | Cross-chapter review | Kiểm tra data overlap giữa chapters |
+| 8 | `system_reality_check_firearms_v2.txt` | Fact-check | Verify structured fields |
+| 9 | `system_transform_rhetoric_firearms_v2.txt` | Tạo alternative_rhetoric | Giữ nguyên logic |
+
+---
+
+### 5c. Code changes — [MODIFY] rewriter.py (additive only)
+
+#### Đăng ký niche mới trong `_NICHE_PROMPT_MAP`:
+```python
+# Thêm "firearms_v2" key vào 7 step maps:
+"extract_blueprint": {
+    "firearms_v2": "system_extract_blueprint_firearms_v2.txt",
+    "firearms": "system_extract_blueprint_firearms.txt",  # giữ nguyên
+    ...
+}
+```
+
+#### Thêm hook detection trong `write_from_blueprint()`:
+```python
+_is_firearms_v2 = "product_type" in blueprint.get(
+    "product_evaluation", [{}])[0]
+if _is_hook:
+    if _is_firearms_v2:
+        chapter_bp = _extract_chapter_blueprint(blueprint, chapter_outline)
+    ...
+```
+
+#### Thêm `_extract_firearms_v2_section_matches()`:
+- Filter blueprint theo `data_focus` list từ outline
+- Trả về chỉ field groups được chỉ định
+
+---
+
+## 6. Không sửa
+
+| Thành phần | Trạng thái |
+|-----------|-----------|
+| `Review_súng_đạn.json` (v1) | ❌ Không động |
+| 9 prompt files `*_firearms.txt` (v1) | ❌ Không động |
+| Tất cả niche narrative (biography, battle, pirate, mystery) | ❌ Không động |
+| `script_creation_tab.py` | ❌ Không sửa — style JSON mới tự hiện trong dropdown |
+| Core pipeline flow | ❌ Giữ nguyên — v2 chạy trên cùng pipeline |
+
+---
+
+## 7. Thứ tự triển khai
+
+| Phase | Công việc | Ước lượng |
+|-------|----------|-----------|
+| **P1** | Tạo `Review_firearms_v2.json` (4 frameworks) | Lớn |
+| **P2** | Tạo `system_extract_blueprint_firearms_v2.txt` (structured schema) | Lớn |
+| **P3** | Tạo `system_enrich_blueprint_firearms_v2.txt` (targeted fill) | Trung bình |
+| **P4** | Tạo `system_review_outline_firearms_v2.txt` (data_focus mapping) | Lớn |
+| **P5** | Tạo `system_write_review_firearms_v2.txt` (field-based writing) | Lớn |
+| **P6** | Tạo 4 prompt phụ (audit, check, cross-chapter, reality, rhetoric) | Trung bình |
+| **P7** | Đăng ký niche trong `rewriter.py` | Nhỏ |
+| **P8** | Test end-to-end với 1 transcript mẫu | Verification |
