@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Analysis of firearms/ammunition blueprint data fields: what audience wants, how to structure fields, whether to separate guns vs ammo, and proposed schema design with separated product_type categories.",
-  "updatedAt":  "2026-04-22T09:08:17.411863600Z",
-  "version":  "4"
+  "summary":  "Updated firearms blueprint schema design incorporating user feedback: 3 new firearm field groups (materials_finish, maintenance_logistics) + rename tactical_application → practical_use_case. 3 new ammunition field groups (projectile_casing, cost_economics with CPR, real_world_performance). Includes evaluation of each addition with final merged schema.",
+  "updatedAt":  "2026-04-23T15:00:10.811558300Z",
+  "version":  "5"
 }
