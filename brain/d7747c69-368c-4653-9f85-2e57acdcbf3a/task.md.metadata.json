@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "All tasks completed and verified.",
-  "updatedAt":  "2026-04-16T12:10:49.535274800Z",
-  "version":  "2"
+  "summary":  "Checklist for implementing the firearms_v2 niche: style JSON, 9 prompt files, code registration, and testing.",
+  "updatedAt":  "2026-04-23T15:44:15.027868500Z",
+  "version":  "3"
 }
