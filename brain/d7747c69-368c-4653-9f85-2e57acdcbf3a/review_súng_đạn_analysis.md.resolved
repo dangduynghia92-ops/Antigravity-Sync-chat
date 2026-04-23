@@ -1,80 +1,222 @@
-# Review Chi Tiết: Framework & Cách Viết Chuyên Sâu Mode Top/List (Niche Review Súng Đạn)
+# Catalog Angle cho Review Súng/Đạn
 
-Dựa trên quá trình phân tích kỹ lưỡng hệ thống (bao gồm các file configuration, style guide `Review_súng_đạn.json` và các system prompts trong quy trình script creation), dưới đây là báo cáo review chi tiết về cách thiết kế và vận hành "Mode Top/List" cho ngách "Review Súng Đạn".
-
----
-
-## 1. TỔNG QUAN KIẾN TRÚC PIPELINE
-
-Mode **Top/List** trong tab Script Creation thao tác dựa trên một luồng dữ liệu (pipeline) chuyên biệt gọi là **"Review Pipeline"**. Khác với Narrative Pipeline (kể chuyện tiểu sử/lịch sử), Review Pipeline tập trung vào tính logic, thông số kỹ thuật (specs), bằng chứng thực tế và sự bác bỏ các lời đồn thổi (myth busting).
-
-Quy trình 3 bước cốt lõi:
-1. **Extraction ([system_extract_blueprint_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_firearms.txt)):** Bóc tách nghiêm ngặt dữ liệu gốc. Bot AI được lệnh phân lập rõ ràng **`detailed_facts`** (mức giá, trọng lượng, số lượng kẹt đạn, kết quả test, độ dung sai) khỏi **`author_rhetoric`** (lời bình luận, cảm xúc, phép ẩn dụ của tác giả kịch bản gốc). Việc này là **vital** (cốt tử) để chống đạo nhái (anti-contamination).
-2. **Outline ([system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt)):** Tạo dàn ý dựa trên Framework. Hệ thống không sử dụng bảng xếp hạng của kịch bản gốc mà **tự xếp hạng lại** dựa trên tiêu chí góc độ của Framework.
-3. **Writing ([system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt)):** Viết chương chi tiết kết hợp Blueprint Data và Style Guide, đảm bảo mật độ data dày đặc.
+Tổng hợp từ: 5 kịch bản mẫu, competitor analysis, YouTube firearms community research.
 
 ---
 
-## 2. CÁC FRAMEWORK CHÍNH TRONG TOP/LIST (REVIEW SÚNG ĐẠN)
+## Phân loại: 8 Angle chính
 
-Hệ thống cấu hình tổng cộng 11 frameworks, trong đó có **chính xác 7 Frameworks (loại countdown, catalog, investigation, chronological, round_based)** được thiết kế riêng rẽ để xử lý chế độ Top/List cho nhiều sản phẩm. Các framework này là:
+### 1. COMBAT / SELF-DEFENSE
+> "Khi mạng sống phụ thuộc vào nó — đây là data thật"
 
-1. **The Tier List (Countdown chuẩn mực):**
-   - **Xếp hạng:** Từ số điểm thấp nhất (#10) đến cao nhất (#1). Mỗi sản phẩm nêu "Key Strength" (biện minh vị trí) và "Key Weakness" (tại sao không xếp cao hơn).
-   
-2. **The Budget Warrior (Kẻ Thách Thức Giá Rẻ):**
-   - **Ứng dụng:** So sánh các súng bình dân/giá rẻ.
-   - **Điểm độc đáo:** Tất cả súng được đo lường với **CÙNG 1 TIÊU CHUẨN ĐẮT TIỀN (Benchmark)**. Yếu tố Giá (Price) luôn được tung ra cuối đoạn như đòn "Knockout" về giá trị.
+| | |
+|---|---|
+| **Mô tả** | Đánh giá sản phẩm qua lăng kính "bạn sẽ cầm nó lúc 3h sáng". Mọi specs đều quy về khả năng sống sót. |
+| **Thesis pattern** | "Specs không phải số liệu — chúng là metrics sinh tồn" |
+| **Ví dụ video** | "Why .45 ACP Is Still America's Most Lethal Pistol Round!" (Video 2 mẫu) |
+| **Works with** | Ranking, Deep Dive, H2H |
 
-3. **The Catalog (Danh Sách Độc Lập):**
-   - Dành cho các list không mang tính cạnh tranh hoặc so sánh trực tiếp. Đánh giá thuần tuý điểm mạnh USP dựa theo nhu cầu của từng Target User.
+**Required data:**
 
-4. **The Myth Buster (Kẻ Phá Bỏ Định Kiến):**
-   - **Ứng dụng:** Danh sách list/tổng hợp để bóc trần những lầm tưởng (myth) trong cộng đồng thay vì review súng đơn thuần. 
-   - **Cách viết:** Đưa ra lầm tưởng (làm khán giả tin) -> Đưa 1 hạt sạn nhỏ -> Dùng thông số Blueprint đập nát lầm tưởng -> Kết luận sự thật.
-
-5. **The Evolution Timeline (Tiến Trình Lịch Sử):**
-   - Định dạng Timeline sắp xếp các tiểu chuẩn/thế hệ sản phẩm từ dòng cổ nhất đến đời mới nhất. Không mặc định "mới là tốt", mỗi thay đổi của các hệ Gen phải truy xuất trade-off và specs.
-
-6. **The Head-to-Head Duel (Cuộc Chiến Đối Đầu):**
-   - Danh sách giới hạn định dạng song đấu (2 item so kè khốc liệt). Tỏ rõ năng lượng "võ đài", đánh giá gắt gao theo tiêu chuẩn (từng hiệp một) như Ergonomics, Trigger, Price,... và kết luận ai thắng từng hiệp.
-
-7. **The Industry Shakeup (Kẻ Phá Bĩnh Ngành Công Nghiệp):**
-   - Chuyên list các sản phẩm mới ra mắt tại Event / Shot Show. Tốc độ phải cực nhanh, tập trung nhấn mạnh vào độ huỷ diệt tầm giá hoặc spec mang tính cách mạng của ngành công nghiệp. Mở đầu bằng tuyên bố Insider quyền lực.
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `terminal_performance` | 🔴 Bắt buộc | Penetration, expansion = yếu tố sống còn |
+| `recoil_profile` | 🔴 Bắt buộc | Recoil quá mạnh = mất mục tiêu sau viên 1 |
+| `reliability_durability` | 🔴 Bắt buộc | Kẹt đạn = chết |
+| `practical_use_case` | 🟡 Nên có | Home defense vs concealed carry context |
+| `ergonomics_handling` | 🟡 Nên có | Bắn 1 tay, đèn pin, tay ướt |
+| `cost_economics` | ⚪ Tuỳ chọn | Giá đạn tập vs đạn phòng vệ |
 
 ---
 
-## 3. CÁCH VIẾT NỘI DUNG CHI TIẾT (ĐỊNH HƯỚNG TÁC GIẢ AI)
+### 2. BUDGET / VALUE
+> "Dưới $X mà vẫn tin được — data nói thế"
 
-Cách AI được "huấn luyện" để viết nội dung ngách súng đạn cực kỳ gắt gao và nặng tính chuyên môn (Expert Insider). Dưới đây là các lề lối (core rules) lớn nhất:
+| | |
+|---|---|
+| **Mô tả** | Tìm sản phẩm giá rẻ nhưng đủ tin cậy. So sánh price/performance ratio. |
+| **Thesis pattern** | "Bạn không cần $1500 để có khẩu súng cứu mạng" |
+| **Ví dụ video** | "Best Budget Shotguns Under $300" |
+| **Works with** | Ranking, Catalog |
 
-### A. Bản Sắc & Giọng Điệu (Identity & Tone)
-- **Hình tượng tác giả:** Một chuyên gia thực dụng, có uy quyền, góc nhìn của "người trong cuộc". Sẵn sàng **"thách thức định kiến số đông và hype marketing"**. Không phải gã salesman (người bán hàng).
-- **Nguyên tắc "Lời nói đi đôi với Con số" (Data Density):** Mỗi đoạn (paragraph) BẮT BUỘC chứa tối thiểu 1 thông số cụ thể. Cấm viết những lời khen sáo rỗng như: *"Nó là cây súng tuyệt vời với độ giật thấp."* Phải viết: *"Ở cân nặng 4.5 lbs cùng cơ chế trích khí, nó giảm 30% chấn động so với đối thủ..."*
-- **Quy tắc ngôi thứ (POV):** Xưng hô **ngôi thứ 2 ("You")** để hướng tới người xem và **ngôi thứ 3 ("Testing reveals", "The data shows")** khi cung cấp bằng chứng. Cấm xưng "Tôi" hoặc "Chúng tôi" (The AI hasn't shot anything).
+**Required data:**
 
-### B. Cấu Trúc Bắt Buộc Của Một Chapter (Body Rules)
-Mỗi item/súng trong danh sách phải mang đủ 5 mảnh ghép (Elements), nhưng thứ tự sẽ đảo liên tục (Pattern A, B, C, D) tuỳ theo Tonal arc (Ví dụ: The Roast - Cười nhạo hàng lởm, The Nostalgic - Tôn vinh huyền thoại):
-1. **[IDENTITY]:** Bản sắc/triết lý thiết kế của súng (VD: "Taurus thiết kế GX4 để làm cây súng micro-compact 13 viên nhỏ nhất thị trường").
-2. **[USP - Unique Selling Point]:** Khai thác cái gốc làm cây súng này khác biệt dựa trên `depth_focus`.
-3. **[SPECS + BENEFIT]:** Mọi thông số (Specs) đều phải dịch ra lợi ích thực tiễn trên trường bắn/thực chiến. Chống "Spec Dump" (quăng thông số như tờ rơi).
-4. **[WEAKNESS]:** Bắt buộc phải có một Nhược Điểm chân thực (điểm neo độ uy tín của video). Ví dụ: *"Rất khó kiếm bao da (OWB holster) cho con này"*. 
-5. **[CLOSER / TARGET USER]:** Kết luận cụ thể người **nên mua** (VD: *"Nếu bạn hay vác súng giấu kín dưới áo phông giữa mùa hè đổ lửa nóng nực, đây là súng của bạn"*). Cấm phán "Súng này không dành cho newbie" v.v...
-
-### C. Triển Khai Hook (Mở Bài)
-Hook của các framework súng đạn cấm mọi template nhạt nhẽo kiểu *"Hôm nay chúng ta sẽ xem xét 10 cây súng..."*. Thay vào đó, AI được yêu cầu ưu tiên 3 phương pháp:
-- **Damning Verdict First:** Đưa luôn phán quyết sốc bưng bít hype marketing (VD: *Súng giá $3,000 được mọi reviewer tâng bốc, nhưng dữ liệu ép xung 2000 viên đạn cho thấy hệ thống trích khí của nó tồi tệ nhất ở phân khúc này*).
-- **Stress Test Cold Open:** Quăng thẳng vào cảnh thử nghiệm cường độ cao (lăn bùn, nung chảy).
-- **Provocative Caliber Question:** Đặt câu hỏi khai thác cuộc chiến Caliber vĩnh cửu trong cộng đồng chơi súng (Caliber wars).
-
-### D. Các Anti-Patterns (Những Lỗi Cấm Kị)
-Hệ thống có bộ lọc cấm khắt khe:
-- **Không dịch bồi (No Parenthetical Translations):** VD Không được viết *"retroceso directo (direct blowback)"*. Phải dùng thuật ngữ chốt. Tên Calliber (`.45 ACP`, `9mm`) là danh từ riêng vĩnh viễn không được quy đổi inch sang mm hay ngược lại.
-- **Không tự chế Flaw kịch tính:** Nếu súng tốt, không bịa ra điểm yếu kỹ thuật cho có vẻ kịch tính. Phải lấy điểm yếu thực sự từ Blueprint, hoặc điểm yếu chung của hệ thống đó.
-- **Không leak từ khóa Framework:** Chữ "Tier list", "Budget Warrior", "Underdog" chỉ là hệ góc nhìn gieo trong lõi, không bao giờ được lộ ra kịch bản.
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `cost_economics` | 🔴 Bắt buộc | CPR, giá súng = trung tâm bài viết |
+| `reliability_durability` | 🔴 Bắt buộc | "Rẻ nhưng có chạy không?" |
+| `key_specs` | 🟡 Nên có | So sánh specs cơ bản giữa mức giá |
+| `materials_finish` | 🟡 Nên có | Rẻ = polymer? Cast? Ảnh hưởng gì? |
+| `maintenance_logistics` | 🟡 Nên có | Phụ tùng rẻ dễ tìm không? |
+| `aftermarket_customization` | ⚪ Tuỳ chọn | Nâng cấp sau có đắt không? |
 
 ---
 
-## TỔNG KẾT
+### 3. MYTH-BUSTING
+> "Mọi thứ bạn nghĩ về [X] đều sai — theo đúng nghĩa đen"
 
-Cách mode Top/List review súng đạn được thiết lập là cực kỳ chuyên sâu. Nó loại bỏ tư duy viết "điểm danh từng súng một cách nhàm chán" của AI bình thường, và biến list video thành một tiến trình **"Luận Điểm Cạnh Tranh (Contrarian/Duel)"**, nhồi data kỹ thuật cao (tốc độ đạn fps, grain, MOA accuracy, trigger pound, v.v.), được nhào nặn lại bằng ngôn ngữ của một chuyên gia lão luyện tại trường bắn. Trọng tâm cốt lõi là: **"Data làm vũ khí, Tình huống làm bối cảnh, Cú tát vào Marketing làm sự thu hút"**.
+| | |
+|---|---|
+| **Mô tả** | Lật đổ niềm tin phổ biến bằng data cứng. Tạo shock value. |
+| **Thesis pattern** | "Cộng đồng tin [myth] — nhưng SAAMI data nói ngược hoàn toàn" |
+| **Ví dụ video** | "How Deadly Is .45 ACP These Facts Will Shock Every 9mm Fan" (Video 1 mẫu), ".22 LR Secrets Every Owner MUST Know" (Video 4 mẫu) |
+| **Works with** | Deep Dive, H2H |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `myths_misconceptions` | 🔴 Bắt buộc | Danh sách myth để lật đổ |
+| `internal_ballistics` | 🔴 Bắt buộc | Pressure, velocity = bằng chứng bác bỏ myth |
+| `terminal_performance` | 🟡 Nên có | "Stopping power" là myth lớn nhất |
+| `recoil_profile` | 🟡 Nên có | "Giật quá mạnh" thường là myth |
+| `origin_history` | 🟡 Nên có | Bối cảnh lịch sử tạo ra myth |
+| `comparisons` | ⚪ Tuỳ chọn | So với đối thủ để chứng minh |
+
+---
+
+### 4. TECHNICAL / DATA-DRIVEN
+> "Con số nói lên tất cả — đây là phân tích mà 90% owners không hiểu"
+
+| | |
+|---|---|
+| **Mô tả** | Deep-dive thuần kỹ thuật. Mỗi claim phải có số liệu kèm theo. Khán giả = hobbyist nghiêm túc. |
+| **Thesis pattern** | "21,000 PSI — con số thay đổi mọi thứ bạn nghĩ về [X]" |
+| **Ví dụ video** | ".357 vs .44 Mag: The BIG Mistake" (Video 5 mẫu) |
+| **Works with** | Deep Dive, H2H |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `internal_ballistics` | 🔴 Bắt buộc | Pressure, velocity, energy = nền tảng |
+| `external_ballistics` | 🔴 Bắt buộc | BC, trajectory, wind drift |
+| `cartridge_specs` | 🔴 Bắt buộc | Specs chính xác từ SAAMI |
+| `terminal_performance` | 🟡 Nên có | Gel test data |
+| `recoil_profile` | 🟡 Nên có | Công thức recoil impulse |
+| `real_world_performance` | 🟡 Nên có | Twist rate, fouling |
+| `action_mechanism` | ⚪ Tuỳ chọn | Nếu review súng |
+
+---
+
+### 5. HERITAGE / EVOLUTION
+> "113 năm — và viên đạn này vẫn chưa nghỉ hưu"
+
+| | |
+|---|---|
+| **Mô tả** | Kể chuyện lịch sử sản phẩm → tiến hóa qua các thời kỳ → vị trí hiện tại. |
+| **Thesis pattern** | "Từ [event lịch sử] đến [ứng dụng hiện tại] — hành trình [N] năm" |
+| **Ví dụ video** | Video 1 (.45 ACP — Moro Rebellion → modern carry), Video 3 (.38 Special comeback) |
+| **Works with** | Deep Dive |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `origin_history` | 🔴 Bắt buộc | Lịch sử = xương sống |
+| `available_loadings` / `platform_variants` | 🔴 Bắt buộc | Tiến hóa qua variants |
+| `practical_use_case` | 🟡 Nên có | Vị trí hiện tại |
+| `internal_ballistics` | 🟡 Nên có | Specs gốc vs hiện đại |
+| `projectile_construction` | 🟡 Nên có | Công nghệ đầu đạn tiến hóa |
+| `myths_misconceptions` | ⚪ Tuỳ chọn | "Huyền thoại" gắn với lịch sử |
+
+---
+
+### 6. UNDERRATED / OVERRATED (Contrarian)
+> "Ai cũng khen [X] — nhưng data kể một câu chuyện khác"
+
+| | |
+|---|---|
+| **Mô tả** | Đi ngược mainstream. Chỉ ra sản phẩm bị đánh giá thấp hoặc bị thổi phồng. Engagement cao nhờ tranh cãi. |
+| **Thesis pattern** | "Thị trường sai — đây là bằng chứng" |
+| **Ví dụ video** | ".38 Special is Making a Comeback" (Video 3 — underrated), "Why You're Wrong About [Gun]" |
+| **Works with** | Ranking, Deep Dive, H2H |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `comparisons` | 🔴 Bắt buộc | So sánh với mainstream pick |
+| `cost_economics` | 🟡 Nên có | "Đắt hơn nhưng KHÔNG tốt hơn" |
+| `reliability_durability` | 🟡 Nên có | Bằng chứng bác bỏ hype |
+| `myths_misconceptions` | 🟡 Nên có | Myth = hype |
+| `internal_ballistics` | 🟡 Nên có | Data cứng phản bác |
+| `practical_use_case` | ⚪ Tuỳ chọn | "Thực tế ai cần cái này?" |
+
+---
+
+### 7. DURABILITY / TORTURE TEST
+> "10,000 viên — và nó vẫn chạy"
+
+| | |
+|---|---|
+| **Mô tả** | Đẩy sản phẩm đến giới hạn. Bùn, cát, nước, bắn liên tục. Khán giả muốn biết "nó chịu được bao nhiêu?" |
+| **Thesis pattern** | "Marketing nói bền — data [N,000] rounds nói khác" |
+| **Ví dụ video** | "Can the [Gun] survive 5000 rounds without cleaning?" |
+| **Works with** | Deep Dive, H2H |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `reliability_durability` | 🔴 Bắt buộc | Round count, failure types |
+| `maintenance_logistics` | 🔴 Bắt buộc | Field strip, cleaning |
+| `materials_finish` | 🟡 Nên có | Corrosion resistance |
+| `action_mechanism` | 🟡 Nên có | Mechanism chịu lực thế nào |
+| `real_world_performance` | 🟡 Nên có | Fouling, feeding issues |
+| `cost_economics` | ⚪ Tuỳ chọn | Chi phí sửa chữa/thay thế |
+
+---
+
+### 8. PRACTICAL / DUTY
+> "Trên giấy tờ đẹp — nhưng ai THỰC SỰ dùng nó?"
+
+| | |
+|---|---|
+| **Mô tả** | Đánh giá qua mục đích sử dụng cụ thể (CCW, duty, range, hunting). Ai nên mua, ai KHÔNG nên. |
+| **Thesis pattern** | "Khẩu súng hoàn hảo cho [situation A] — nhưng thảm hoạ cho [situation B]" |
+| **Ví dụ video** | Video 2 (.45 — "chốt tủ giường" vs "mang ra phố"), Video 5 (.357 vs .44 — verdict theo situation) |
+| **Works with** | Ranking, Deep Dive, H2H |
+
+**Required data:**
+
+| Field | Tầm quan trọng | Lý do |
+|-------|:-:|--------|
+| `practical_use_case` | 🔴 Bắt buộc | Trung tâm bài viết |
+| `ergonomics_handling` | 🔴 Bắt buộc | Weight, concealability, controls |
+| `recoil_profile` | 🟡 Nên có | Bắn được trong scenario nào |
+| `reliability_durability` | 🟡 Nên có | Tin được khi cần |
+| `maintenance_logistics` | 🟡 Nên có | Duty gun cần dễ bảo dưỡng |
+| `cost_economics` | 🟡 Nên có | Budget phù hợp use-case |
+| `aftermarket_customization` | ⚪ Tuỳ chọn | Light, optic, holster options |
+
+---
+
+## Ma trận: Angle × Framework
+
+| Angle | Ranking | Catalog | Deep Dive | H2H |
+|-------|:---:|:---:|:---:|:---:|
+| Combat/Self-Defense | ✅ | ✅ | ✅ | ✅ |
+| Budget/Value | ✅ | ✅ | ❌ | ❌ |
+| Myth-Busting | ❌ | ❌ | ✅ | ✅ |
+| Technical | ❌ | ❌ | ✅ | ✅ |
+| Heritage/Evolution | ❌ | ❌ | ✅ | ❌ |
+| Underrated/Overrated | ✅ | ❌ | ✅ | ✅ |
+| Durability/Torture | ❌ | ❌ | ✅ | ✅ |
+| Practical/Duty | ✅ | ✅ | ✅ | ✅ |
+
+## Cơ chế chọn Angle tự động
+
+```
+1. Extract Blueprint → structured fields
+2. Đếm fill rate mỗi field group
+3. Mỗi angle có required_fields (🔴)
+4. Score = số required_fields đã fill / tổng required_fields
+5. Top 2-3 angles có score cao nhất → gợi ý cho user
+```
+
+**Ví dụ:** Blueprint .45 ACP có `origin_history` (sâu), `myths_misconceptions` (3 items), `internal_ballistics` (đầy đủ), `terminal_performance` (có gel test) → Score:
+- Myth-Busting: 4/4 🔴 filled = **100%** ← gợi ý #1
+- Technical: 3/3 🔴 filled = **100%** ← gợi ý #2
+- Heritage: 2/2 🔴 filled = **100%** ← gợi ý #3
+- Budget: 1/2 🔴 filled = 50% ← không gợi ý
