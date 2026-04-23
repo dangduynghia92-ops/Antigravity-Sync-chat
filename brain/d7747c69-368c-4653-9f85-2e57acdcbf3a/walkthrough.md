@@ -1,47 +1,50 @@
-# Walkthrough: Framework "The Deep Anatomy" + Pipeline Updates
+# Firearms V2 Niche — Walkthrough
 
-## Tổng quan: 4 file đã sửa, chỉ niche súng đạn
+## What was built
 
-| # | File | Thay đổi | Dòng |
-|---|------|----------|------|
-| 1 | [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | Thêm framework "The Deep Anatomy" | +234 dòng |
-| 2 | [Review_súng_đạn.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_s%C3%BAng_%C4%91%E1%BA%A1n.json) | Mở rộng H2H Duel `criteria_pool` | ~12 dòng |
-| 3 | [system_write_review_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms.txt) | Thêm TOPIC BLOCK writing rules | +52 dòng |
-| 4 | [system_review_outline_firearms.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms.txt) | Fix Bug 1-2: thêm `topic_block` enum + outline rules | +12 dòng |
+A complete **new niche** `firearms_v2` with structured blueprint data fields, 4 consolidated frameworks, 8 angle presets, and data-to-chapter mapping. **Zero changes** to existing niches.
 
-Tất cả file đều niche-specific — **không ảnh hưởng** niche khác hoặc narrative mode.
+## Files created (11 total)
 
----
+### Style JSON
+| File | Purpose |
+|------|---------|
+| [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json) | 4 frameworks (Ranking, Catalog, Deep Dive, H2H), 8 angle_presets, topic_mapping, criteria_pool |
 
-## Chi tiết thay đổi
+### Core Prompts (5)
+| File | Purpose |
+|------|---------|
+| [system_extract_blueprint_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_firearms_v2.txt) | Structured schema: shared fields + firearm-only + ammunition-only, source tagging |
+| [system_enrich_blueprint_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_firearms_v2.txt) | Priority-based field fill, cost_economics via Google Search |
+| [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt) | Outline + `data_focus` mapping per chapter |
+| [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt) | Chapter writing with filtered blueprint, all 4 chapter types |
 
-### 1. Framework "The Deep Anatomy"
-- Framework thứ 12, mổ xẻ 1 sản phẩm (súng hoặc đạn) theo nhiều khía cạnh
-- Mỗi chapter = 1 topic block: `TOPIC ANCHOR → DATA FOUNDATION → PHYSICAL TRANSLATION → PROOF LAYER → PRACTICAL IMPLICATION`
-- Topic pool: 10 facets (Origin, Ballistics, Recoil, Terminal, Platforms, Variants, Tactical, Handloading, Myths, Limitations)
-- Tích hợp: **Tribal CTA** (end), **Tribal Enemy** (use_moderately), **Proof Layer cấm copy case study**
+### Supporting Prompts (5)
+| File | Purpose |
+|------|---------|
+| [system_audit_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_audit_outline_firearms_v2.txt) | Validate outline structure + data_focus |
+| [system_check_blueprint_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_check_blueprint_firearms_v2.txt) | Blueprint completeness scoring |
+| [system_review_cross_chapter_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_cross_chapter_firearms_v2.txt) | Cross-chapter consistency check |
+| [system_reality_check_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_reality_check_firearms_v2.txt) | Fact-check written chapters vs blueprint |
+| [system_transform_rhetoric_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_transform_rhetoric_firearms_v2.txt) | Alternative rhetoric generation |
 
-### 2. Head-to-Head Duel criteria_pool
-- `always_cover` từ 6 criteria cứng → `criteria_pool` linh hoạt (7 firearm + 7 caliber + 2 universal)
+### Code Change
+| File | Change |
+|------|--------|
+| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) | Added `firearms_v2` to 6 step maps in `_NICHE_PROMPT_MAP` (lines 50-82) |
 
-### 3. Write Prompt — Topic Block Rules
-- Block mới `If chapter_type is "topic_block"` với 5 elements + 4 patterns (T1-T4)
-- Tách rõ ràng với `If chapter_type is "body"` hiện tại → không xung đột
+## Key architecture decisions
 
-### 4. Outline Prompt — Bug Fix
-- Thêm `topic_block` vào `chapter_type` enum (dòng 68)
-- Thêm section `TOPIC BLOCK BODY` với 9 rules cho Deep Anatomy (dòng 41-49)
-- Thêm field `topic_block_topic` vào output schema (dòng 70)
+1. **Product type separation**: `product_type` field auto-classifies firearm vs ammunition → different field groups
+2. **Data-to-chapter mapping**: Outline outputs `data_focus` per chapter → `_extract_chapter_blueprint()` filters → writer receives only relevant data
+3. **Angle selection by data richness**: Each `angle_preset` declares `required_fields` → AI scores fill rate → recommends top angles
+4. **4 frameworks replace 12**: Ranking, Catalog, Deep Dive, Head-to-Head cover all formats; angle determines variation
 
----
+## Remaining work
 
-## Audit kết quả
+- `_extract_firearms_v2_section_matches()` — deferred until pipeline integration test
+- End-to-end test with sample transcript
+- Integration with `write_from_blueprint()` hook detection
 
-| Kiểm tra | Kết quả |
-|----------|---------|
-| JSON `Review_súng_đạn.json` valid | ✅ 2627 dòng |
-| Biography Protection Rule | ✅ Không vi phạm |
-| Outline prompt `chapter_type` enum | ✅ Fixed → `hook | body | topic_block | end` |
-| Outline prompt topic_block rules | ✅ Added |
-| Write prompt branching | ✅ Không xung đột |
-| Ảnh hưởng niche khác | ✅ 0 — chỉ sửa file firearms-specific |
+## Git
+Committed as `3cf8b15` — `feat: add firearms_v2 niche`
