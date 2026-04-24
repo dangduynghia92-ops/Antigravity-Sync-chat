@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_OTHER",
-  "summary":  "Detailed report showing how firearms_v2 pipeline flows from blueprint data through outline to written chapter content. Includes 2 end-to-end examples: (1) Deep Dive topic_block for .45 ACP internal ballistics, (2) Head-to-Head criterion chapter for .45 ACP vs 9mm recoil. Shows exact JSON outline, filtered blueprint, and expected written output at each stage.",
-  "updatedAt":  "2026-04-24T00:44:24.676807300Z"
+  "summary":  "Updated report adding competitor analysis from @BallisticEdge08. Identifies 6 opening patterns used in ranking body chapters, the consistent 6-element core formula, and how variety is achieved through rotating the LEAD element rather than changing the formula.",
+  "updatedAt":  "2026-04-24T01:08:45.894185900Z",
+  "version":  "1"
 }
