@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Updated task checklist marking completed items for firearms_v2 niche implementation.",
-  "updatedAt":  "2026-04-23T15:57:36.937865200Z",
-  "version":  "4"
+  "summary":  "Task checklist for extending rhetoric_transform to cover all subjective fields (myths_misconceptions, comparisons) and fixing the merge race condition.",
+  "updatedAt":  "2026-04-24T04:12:51.159145200Z",
+  "version":  "6"
 }
