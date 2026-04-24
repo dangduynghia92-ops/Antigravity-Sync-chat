@@ -1,179 +1,75 @@
-# Plan: Niche "Súng Đạn v2" (firearms_v2)
+# Anti-Plagiarism Fix — Content Originality Pipeline
 
-> **Nguyên tắc:** 100% additive — KHÔNG sửa file/code của niche hiện tại.
+## Problem
+Pipeline copies 3 types of content from original source:
+1. **Ranking order** — Same 8 guns in same positions (8→1)
+2. **Unique metaphors** — "fits in a briefcase" (Kel-Tec), NFA legal loophole angle (Mossberg)
+3. **Subjective arguments** — "cheap so if stolen it's less loss" (PSA AR)
 
----
+## Root Cause — 3 Contamination Points
 
-## 1. Kiến trúc tổng quan
-
-```mermaid
-graph TD
-    A["Transcript"] --> B["Extract Blueprint"]
-    B --> C{"product_type?"}
-    C -->|firearm| D["Firearm Fields"]
-    C -->|ammunition| E["Ammunition Fields"]
-    D --> F["Enrich (fill gaps + search cost)"]
-    E --> F
-    F --> G["Framework Recommend"]
-    G --> H{"4 Frameworks"}
-    H --> I["Ranking"]
-    H --> J["Catalog"]
-    H --> K["Deep Dive"]
-    H --> L["Head-to-Head"]
-    I & J & K & L --> M["Outline Step"]
-    M -->|"data_fields per chapter"| N["Writer"]
+### Point 1: Blueprint `author_rhetoric` field
+Blueprint extraction captures original author's **subjective metaphors and conclusions** verbatim:
+```json
+"author_rhetoric": [
+  {"type": "physical_translation", "content": "Se pliega a 16 pulgadas planas. Es más corto que la mayoría de las computadoras portátiles."}
+]
 ```
+This data flows directly to outline + writer → reproduced in output.
+
+### Point 2: `myths_misconceptions` carries reasoning chains
+```json
+"myths_misconceptions": [
+  {"myth": "La gente no quiere dejar un rifle de $1200 en un vehículo por miedo a robos.",
+   "reality": "A $600, la pistola PSA AR reduce significativamente esa barrera económica."}
+]
+```
+This is the **original author's argument**, not objective data. Writer reproduces it as if it's the channel's own insight.
+
+### Point 3: Outline lacks ranking-independence rule
+`system_review_outline_firearms_v2.txt` line 19: `"you MUST NOT replicate thesis"` ✅
+But **NO rule** says: "Create your OWN ranking order based on criteria, not the source's order."
+
+## Proposed Changes
 
 ---
 
-## 2. Bốn Framework gốc
+### Blueprint Extraction
 
-| Framework | Body chapter = | Khi nào dùng | Biến thể theo angle |
-|-----------|---------------|-------------|---------------------|
-| **Ranking** | 1 product/chapter, CÓ xếp hạng | ≥3 products, có tiêu chí rank | Budget, Combat, Value, Underdog... |
-| **Catalog** | 1 product/chapter, KHÔNG xếp hạng | ≥3 products, mục đích giới thiệu | Options showcase, new releases... |
-| **Deep Dive** | 1 topic/chapter, 1 product duy nhất | 1 product, phân tích chuyên sâu | Technical, Historical, Myth-busting... |
-| **Head-to-Head** | 1 criterion/chapter, so sánh 2 products | Đúng 2 products | Combat, Value, Ergonomics... |
+#### [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+
+Add **ANTI-COPY RULES** section:
+1. **Ranking Independence**: "You MUST create your OWN ranking order. The source's ranking is CONTAMINATED DATA — using it is plagiarism. Re-rank based on the angle's primary evaluation criteria."
+2. **Metaphor Prohibition**: "NEVER use metaphors/analogies from `author_rhetoric`. Create original analogies based on raw specs."
+3. **Reasoning Independence**: "The `myths_misconceptions.reality` field contains the source author's reasoning. You may use the FACT but must construct your OWN argument chain."
+
+---
+
+### Writer Prompt
+
+#### [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
+
+Add **ORIGINALITY RULES**:
+1. `author_rhetoric` data is READ-ONLY REFERENCE — do NOT paraphrase or translate it. Create original analogies from raw specs.
+2. Every comparison/analogy must be ORIGINAL — if the blueprint mentions "briefcase", you must NOT use "briefcase" or any container analogy.
+3. Ranking justification must come from YOUR analysis of data_focus fields, not from the blueprint's ranking_reason.
+
+---
+
+### Blueprint Extraction Prompt (upstream fix)
+
+#### [MODIFY] Blueprint extraction prompt (in rewriter.py)
+
+Add instruction: "For `author_rhetoric`, mark entries as `contaminated: true`. These are the source author's intellectual property and MUST NOT be reproduced."
 
 > [!IMPORTANT]
-> Sự khác biệt giữa "Budget Warrior" vs "Tier List" vs "Underdog" giờ chỉ là `angle` + `selection_criteria` trong cùng 1 framework Ranking. Không tạo framework riêng.
+> The `author_rhetoric` field should be kept for context (understanding the source's angle) but explicitly marked as contaminated to prevent downstream reproduction.
 
----
+## Verification Plan
 
-## 3. Blueprint Schema (product_type separation)
-
-### Shared fields
-```
-product_name, product_type, category, key_specs,
-origin_history, practical_use_case, cost_economics,
-myths_misconceptions, comparisons, author_rhetoric,
-source_units, source_parts
-```
-
-### Firearm-only
-```
-materials_finish, ergonomics_handling, action_mechanism,
-accuracy_precision, reliability_durability,
-maintenance_logistics, aftermarket_customization,
-platform_variants
-```
-
-### Ammunition-only
-```
-cartridge_specs, projectile_construction, casing,
-internal_ballistics, external_ballistics,
-terminal_performance, recoil_profile,
-real_world_performance, available_loadings,
-compatible_platforms
-```
-
-### Data sourcing priority
-1. 🥇 Transcript → `"source": "transcript"`
-2. 🥈 AI Knowledge → `"source": "ai_knowledge"`
-3. 🥉 Google Search (enrich) → riêng `cost_economics` + fill gaps
-
----
-
-## 4. Outline → Chapter data mapping (giải quyết "chapter viết gì?")
-
-Outline step xuất thêm field `data_focus` cho mỗi chapter:
-
-```json
-{
-  "chapter_number": 3,
-  "chapter_type": "topic_block",
-  "title": "The Pressure Equation",
-  "data_focus": ["internal_ballistics", "recoil_profile"],
-  "lead_angle": "Chamber pressure so low it extends barrel life",
-  ...
-}
-```
-
-→ `_extract_chapter_blueprint()` filter blueprint theo `data_focus` list
-→ Writer chỉ nhận 2 field groups đó → viết sâu, không ngợp
-
----
-
-## 5. File cần tạo
-
-### 5a. Style JSON — [NEW]
-
-#### [NEW] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
-- `niche_name`: "firearms_v2"
-- `core_rules`: voice, tone, vocabulary (fork từ v1 + cải tiến)
-- `frameworks`: 4 frameworks (Ranking, Catalog, Deep Dive, Head-to-Head)
-  - Mỗi framework có `angle_presets` (list các góc nhìn phổ biến)
-  - `evaluation_focus` với `criteria_pool` linh hoạt
-  - `chapter_template` đơn giản hơn — writer tự xây dựng từ data
-- `blueprint_schema`: tham chiếu đến bộ fields mới
-
----
-
-### 5b. Prompts — 9 files [NEW]
-
-| # | File | Mục đích | Khác v1 |
-|---|------|----------|---------|
-| 1 | `system_extract_blueprint_firearms_v2.txt` | Extract blueprint với structured fields | Schema mới hoàn toàn |
-| 2 | `system_enrich_blueprint_firearms_v2.txt` | Fill gaps + search cost data | Biết field nào trống → fill targeted |
-| 3 | `system_review_outline_firearms_v2.txt` | Tạo outline + data_focus mapping | Thêm `data_focus` field per chapter |
-| 4 | `system_audit_outline_firearms_v2.txt` | Audit outline | Kiểm tra data_focus coverage |
-| 5 | `system_write_review_firearms_v2.txt` | Viết chapter từ filtered blueprint | Nhận data fields cụ thể, không flat facts |
-| 6 | `system_check_blueprint_firearms_v2.txt` | Kiểm tra blueprint đủ data | Check theo field groups thay vì count facts |
-| 7 | `system_review_cross_chapter_firearms_v2.txt` | Cross-chapter review | Kiểm tra data overlap giữa chapters |
-| 8 | `system_reality_check_firearms_v2.txt` | Fact-check | Verify structured fields |
-| 9 | `system_transform_rhetoric_firearms_v2.txt` | Tạo alternative_rhetoric | Giữ nguyên logic |
-
----
-
-### 5c. Code changes — [MODIFY] rewriter.py (additive only)
-
-#### Đăng ký niche mới trong `_NICHE_PROMPT_MAP`:
-```python
-# Thêm "firearms_v2" key vào 7 step maps:
-"extract_blueprint": {
-    "firearms_v2": "system_extract_blueprint_firearms_v2.txt",
-    "firearms": "system_extract_blueprint_firearms.txt",  # giữ nguyên
-    ...
-}
-```
-
-#### Thêm hook detection trong `write_from_blueprint()`:
-```python
-_is_firearms_v2 = "product_type" in blueprint.get(
-    "product_evaluation", [{}])[0]
-if _is_hook:
-    if _is_firearms_v2:
-        chapter_bp = _extract_chapter_blueprint(blueprint, chapter_outline)
-    ...
-```
-
-#### Thêm `_extract_firearms_v2_section_matches()`:
-- Filter blueprint theo `data_focus` list từ outline
-- Trả về chỉ field groups được chỉ định
-
----
-
-## 6. Không sửa
-
-| Thành phần | Trạng thái |
-|-----------|-----------|
-| `Review_súng_đạn.json` (v1) | ❌ Không động |
-| 9 prompt files `*_firearms.txt` (v1) | ❌ Không động |
-| Tất cả niche narrative (biography, battle, pirate, mystery) | ❌ Không động |
-| `script_creation_tab.py` | ❌ Không sửa — style JSON mới tự hiện trong dropdown |
-| Core pipeline flow | ❌ Giữ nguyên — v2 chạy trên cùng pipeline |
-
----
-
-## 7. Thứ tự triển khai
-
-| Phase | Công việc | Ước lượng |
-|-------|----------|-----------|
-| **P1** | Tạo `Review_firearms_v2.json` (4 frameworks) | Lớn |
-| **P2** | Tạo `system_extract_blueprint_firearms_v2.txt` (structured schema) | Lớn |
-| **P3** | Tạo `system_enrich_blueprint_firearms_v2.txt` (targeted fill) | Trung bình |
-| **P4** | Tạo `system_review_outline_firearms_v2.txt` (data_focus mapping) | Lớn |
-| **P5** | Tạo `system_write_review_firearms_v2.txt` (field-based writing) | Lớn |
-| **P6** | Tạo 4 prompt phụ (audit, check, cross-chapter, reality, rhetoric) | Trung bình |
-| **P7** | Đăng ký niche trong `rewriter.py` | Nhỏ |
-| **P8** | Test end-to-end với 1 transcript mẫu | Verification |
+### Manual Check
+1. Re-run pipeline on same "10 Truck Guns" video
+2. Compare new output ranking order vs original — must be DIFFERENT
+3. Check for Kel-Tec "briefcase" analogy — must NOT appear
+4. Check for PSA "stolen gun" argument — must use different reasoning
+5. Check for Mossberg NFA loophole angle — must frame differently

@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete implementation plan for \"Firearms v2\" niche: structured blueprint with product_type separation (firearm vs ammunition), 4 consolidated frameworks (Ranking, Catalog, Deep Dive, Head-to-Head), data-to-chapter mapping via outline step, 9 new prompt files, 1 new style JSON. All additive — zero changes to existing niches.",
-  "updatedAt":  "2026-04-23T15:22:50.899249800Z",
-  "version":  "6"
+  "summary":  "Implementation plan to fix content originality issues in firearms_v2 pipeline. Identifies 3 contamination points: author_rhetoric field carrying original metaphors, myths_misconceptions carrying reasoning chains, and missing ranking-independence rules in outline prompt. Proposes changes to outline prompt, writer prompt, and blueprint extraction.",
+  "updatedAt":  "2026-04-24T03:48:09.429212500Z",
+  "version":  "7"
 }
