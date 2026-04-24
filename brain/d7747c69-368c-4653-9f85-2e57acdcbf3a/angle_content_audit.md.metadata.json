@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Detailed audit of angle-to-content compatibility across 8 angles × 6 opening patterns × 9 body elements. Identifies 12 specific conflict scenarios where an angle's data doesn't support an opening pattern or body element. Proposes solutions: compatibility matrix for outline AI, fallback rules, and required_opening_patterns per angle.",
+  "updatedAt":  "2026-04-24T02:04:16.663664200Z"
+}
