@@ -1,62 +1,45 @@
-# Manual Framework Selection Feature
+# Thêm Narrator Voice Rules vào Writer Prompt
 
-Add an "Auto Framework" checkbox. When unchecked + Framework = "Auto (detect & switch)", the pipeline pauses after framework scoring to show the existing ranking popup for user selection.
+## Bối cảnh
+Script hiện tại kể chuyện đúng, logic, có scene — nhưng thiếu **"giọng kể" cá nhân**. AI viết như sách, không như người kể. Mục tiêu: thêm rules để AI thỉnh thoảng chèn phản ứng cá nhân, câu hỏi, nhận xét — nhưng **chỉ ở đúng vị trí**, không phá mạch truyện.
 
-## Proposed Changes
+## Phân tích hiện trạng
 
-### UI Layout
+Prompt đã có sẵn:
+- **VOICE (L100-116)**: Tone "intimate but authoritative" — nhưng chỉ nói HOW to sound, không nói WHEN to break the 3rd person
+- **AUDIENCE CHALLENGE (L213-223)**: Chỉ kích hoạt khi framework có `you_role = "judge"` — quá hạn chế
+- **BODY OPENING 3-beat (L483-502)**: Bridge → Context → Content — không có slot cho narrator reaction
 
-#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
+## Đề xuất: Thêm 1 section mới `NARRATOR PERSONALITY`
 
-**Change 1: Add checkbox (after Auto-Patch, ~L321)**
-```python
-self._chk_auto_fw = QCheckBox("🤖 Auto Framework")
-self._chk_auto_fw.setChecked(True)  # default = auto (current behavior)
-self._chk_auto_fw.setToolTip(
-    "Auto-select framework based on AI ranking.\n"
-    "OFF = Show ranking popup for manual selection after scoring."
-)
-btn_row.addWidget(self._chk_auto_fw)
-```
+### Vị trí: Sau VOICE (L116), trước SCENE HIERARCHY (L117)
 
-**Change 2: New Content — intercept after scoring (~L2645)**
+> [!IMPORTANT]
+> Chỉ thêm **1 section mới khoảng 25-30 dòng**. Không sửa bất kỳ section hiện tại nào.
 
-Current flow:
-```
-L2627: recommend_framework_new_content() → rankings
-L2640: rankings.sort()
-L2645: log AI ranking
-L2647-2679: AUTO-select top frameworks
-```
+### Nội dung rules:
 
-New flow (insert between L2645 and L2647):
-```python
-# ── Manual selection if Auto Framework unchecked ──
-if not self._chk_auto_fw.isChecked():
-    # Reuse existing dialog pattern from Rewrite flow
-    self._fw_ranking_event.clear()
-    self._fw_ranking_result = None
-    fw_info_json = json.dumps({"name": "AI Recommendation", "confidence": "N/A", "reasoning": ""})
-    self._fw_ranking_request.emit(rankings, fw_info_json)
-    self._fw_ranking_event.wait()
-    if self._fw_ranking_result is None:
-        log("✗ User cancelled framework selection")
-        return
-    selected_fws = [self._fw_ranking_result]
-    log(f"✓ User selected: '{self._fw_ranking_result}'")
-else:
-    # existing auto-selection logic (L2647-2679)
-```
+**3 điểm chèn narrator voice trong mỗi chapter:**
 
-**Change 3: [_show_fw_ranking_dialog](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1516-1612) — set event after dialog closes (~L1609)**
+| Điểm | Vị trí | Mục đích | Giới hạn |
+|---|---|---|---|
+| REACTION | Sau turning point/sự kiện lớn | Giúp khán giả "tiêu hóa" | 1-2 câu, max 1 lần/chapter |
+| QUESTION | Sau moral dilemma / irony | Tạo engagement | 1 câu, max 1 lần/chapter |
+| MODERN BRIDGE | Khi concept xa lạ | Kết nối lịch sử ↔ hiện đại | 1-2 câu, dùng khi cần |
 
-The dialog already sets `_fw_ranking_result` but the `_fw_ranking_event.set()` call may be missing for the New Content path. Need to ensure `_fw_ranking_event.set()` is called at the end of [_show_fw_ranking_dialog](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#1516-1612).
+**Strict limits:**
+- Max 3 interventions / chapter (1 REACTION + 1 QUESTION + 1 MODERN BRIDGE)
+- Giữa các scenes — KHÔNG BAO GIỜ chen giữa scene đang build
+- Không xuất hiện ở 3 câu đầu (thuộc 3-beat opening)
+- Hook chapter: KHÔNG áp dụng (hook có riêng rules)
 
-## Verification Plan
+### Niche scope: Bắt đầu chỉ với `biography` prompt
 
-### Manual Verification
-1. Launch app → select "Auto (detect & switch)" framework
-2. Check "Auto Framework" → New Content → should auto-select (unchanged behavior)
-3. Uncheck "Auto Framework" → New Content → should show popup after scoring
-4. Select a framework from popup → pipeline continues
-5. Cancel popup → pipeline stops cleanly
+Các niche khác (battle, mystery, pirate) sẽ thêm sau khi biography chạy tốt.
+
+## Verification
+
+### Test: Chạy pipeline cho 1 chapter của Séneca rồi so sánh
+- Resume pipeline Séneca (hoặc tạo mới 1 nhân vật test)
+- So sánh output chapter có/không có narrator rules
+- User đánh giá chất lượng subjective

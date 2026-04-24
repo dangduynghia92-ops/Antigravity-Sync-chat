@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to add 'Auto Framework' checkbox that intercepts the New Content pipeline after framework scoring, showing a popup dialog for manual framework selection when unchecked.",
+  "summary":  "Plan to add a NARRATOR PERSONALITY section to the biography writer prompt, defining 3 strategic insertion points (REACTION, QUESTION, MODERN BRIDGE) with strict limits to prevent flow disruption.",
   "createdAt":  "2026-04-15T06:14:27.917562800Z",
-  "updatedAt":  "2026-04-21T00:52:34.708229900Z",
-  "version":  "17"
+  "updatedAt":  "2026-04-24T17:35:40.029947700Z",
+  "version":  "18"
 }
