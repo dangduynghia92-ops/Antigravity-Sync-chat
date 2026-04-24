@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Implementation plan to fix content originality issues in firearms_v2 pipeline. Identifies 3 contamination points: author_rhetoric field carrying original metaphors, myths_misconceptions carrying reasoning chains, and missing ranking-independence rules in outline prompt. Proposes changes to outline prompt, writer prompt, and blueprint extraction.",
-  "updatedAt":  "2026-04-24T03:48:09.429212500Z",
-  "version":  "7"
+  "summary":  "Updated implementation plan with full root cause analysis for content originality issues. Identifies 2 bugs: (1) Race condition between rhetoric transform and enrichment causing alternative_rhetoric to be lost. (2) Outline receives author_rhetoric and myths_misconceptions which contain ranking logic/metaphors, enabling AI to reconstruct original order. Proposes fixes for both.",
+  "updatedAt":  "2026-04-24T03:54:50.761406200Z",
+  "version":  "8"
 }

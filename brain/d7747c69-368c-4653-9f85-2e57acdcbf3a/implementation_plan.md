@@ -1,75 +1,70 @@
-# Anti-Plagiarism Fix — Content Originality Pipeline
+# Anti-Plagiarism Fix — Content Originality
 
-## Problem
-Pipeline copies 3 types of content from original source:
-1. **Ranking order** — Same 8 guns in same positions (8→1)
-2. **Unique metaphors** — "fits in a briefcase" (Kel-Tec), NFA legal loophole angle (Mossberg)
-3. **Subjective arguments** — "cheap so if stolen it's less loss" (PSA AR)
+## Root Cause Analysis
 
-## Root Cause — 3 Contamination Points
+### Bug 1: `alternative_rhetoric` bị mất (Race Condition)
 
-### Point 1: Blueprint `author_rhetoric` field
-Blueprint extraction captures original author's **subjective metaphors and conclusions** verbatim:
-```json
-"author_rhetoric": [
-  {"type": "physical_translation", "content": "Se pliega a 16 pulgadas planas. Es más corto que la mayoría de las computadoras portátiles."}
-]
+`transform_rhetoric()` chạy **song song** với enrichment trong `ThreadPoolExecutor` (Step 5). Cả hai đều ghi vào `blueprint` object rồi save `_blueprint.json`.
+
 ```
-This data flows directly to outline + writer → reproduced in output.
-
-### Point 2: `myths_misconceptions` carries reasoning chains
-```json
-"myths_misconceptions": [
-  {"myth": "La gente no quiere dejar un rifle de $1200 en un vehículo por miedo a robos.",
-   "reality": "A $600, la pistola PSA AR reduce significativamente esa barrera económica."}
-]
+Thread A (enrichment):  blueprint["detailed_facts"] = ... → save _blueprint.json  ✓
+Thread B (rhetoric):    blueprint["alternative_rhetoric"] = ... → save _blueprint.json  ✓ (nhưng ghi sau)
 ```
-This is the **original author's argument**, not objective data. Writer reproduces it as if it's the channel's own insight.
 
-### Point 3: Outline lacks ranking-independence rule
-`system_review_outline_firearms_v2.txt` line 19: `"you MUST NOT replicate thesis"` ✅
-But **NO rule** says: "Create your OWN ranking order based on criteria, not the source's order."
+**Nhưng thực tế:** `_bp_write_lock` chỉ lock file write, không lock blueprint object. Enrichment ghi `_blueprint.json` SAU rhetoric → **đè mất `alternative_rhetoric`** vì enrichment copy KHÔNG có field mới.
 
-## Proposed Changes
+**Bằng chứng:** `_blueprint.json` không chứa `alternative_rhetoric` hay `author_rhetoric`. `_rhetoric_transform.json` chứa alternatives nhưng KHÔNG ai đọc lại nó.
+
+### Bug 2: Ranking order bị copy (Subjective data leak)
+
+Code ĐÚNG LÀ ĐÃ shuffle products + strip `source_parts`, `comparisons`. Nhưng AI vẫn thấy:
+
+| Field | Chứa gì | Ảnh hưởng |
+|-------|--------|-----------|
+| `author_rhetoric` | "Número uno indiscutible" (DDM4) | AI biết DDM4 = #1 |
+| `myths_misconceptions` | PSA: "rifle $1200, sợ trộm → mua rẻ" | AI copy argument này |
+| `practical_use_case.reason` | Savage: "limited to 2 cartridges" | AI suy ra Savage = low rank |
+| `comparisons` | Đã strip ✅ | — |
+| `source_parts` | Đã strip ✅ | — |
+
+**Kết quả:** AI đọc subjective opinions → reconstruct ranking gốc → output y hệt.
 
 ---
 
-### Blueprint Extraction
+## Proposed Fixes
+
+### Fix 1: Merge `alternative_rhetoric` đúng cách
+
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
+
+Sau khi cả enrichment + rhetoric transform hoàn thành, **đọc lại `_rhetoric_transform.json` và merge vào blueprint** trước khi save final. Đồng thời **thay thế** `author_rhetoric` bằng `alternative_rhetoric` (không giữ cả hai).
+
+### Fix 2: Strip subjective fields trước khi gửi outline AI
+
+#### [MODIFY] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
+
+Khi tạo `outline_blueprint` (deep copy trước shuffle), strip thêm:
+```python
+prod.pop("author_rhetoric", None)       # chứa ranking clues
+prod.pop("myths_misconceptions", None)  # chứa subjective arguments  
+```
+**GIỮ LẠI `alternative_rhetoric`** — đây là data sạch, do AI tạo mới.
+
+### Fix 3: Thêm anti-ranking-copy rule vào outline prompt
 
 #### [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
 
-Add **ANTI-COPY RULES** section:
-1. **Ranking Independence**: "You MUST create your OWN ranking order. The source's ranking is CONTAMINATED DATA — using it is plagiarism. Re-rank based on the angle's primary evaluation criteria."
-2. **Metaphor Prohibition**: "NEVER use metaphors/analogies from `author_rhetoric`. Create original analogies based on raw specs."
-3. **Reasoning Independence**: "The `myths_misconceptions.reality` field contains the source author's reasoning. You may use the FACT but must construct your OWN argument chain."
+Thêm rule mới:
+```
+## RANKING INDEPENDENCE (MANDATORY)
+- You MUST create your OWN ranking based on the angle's primary_criterion
+- DO NOT replicate the source's ranking order
+- Re-evaluate each product's position based strictly on the data_focus fields you selected
+```
 
----
+## Verification
 
-### Writer Prompt
-
-#### [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
-
-Add **ORIGINALITY RULES**:
-1. `author_rhetoric` data is READ-ONLY REFERENCE — do NOT paraphrase or translate it. Create original analogies from raw specs.
-2. Every comparison/analogy must be ORIGINAL — if the blueprint mentions "briefcase", you must NOT use "briefcase" or any container analogy.
-3. Ranking justification must come from YOUR analysis of data_focus fields, not from the blueprint's ranking_reason.
-
----
-
-### Blueprint Extraction Prompt (upstream fix)
-
-#### [MODIFY] Blueprint extraction prompt (in rewriter.py)
-
-Add instruction: "For `author_rhetoric`, mark entries as `contaminated: true`. These are the source author's intellectual property and MUST NOT be reproduced."
-
-> [!IMPORTANT]
-> The `author_rhetoric` field should be kept for context (understanding the source's angle) but explicitly marked as contaminated to prevent downstream reproduction.
-
-## Verification Plan
-
-### Manual Check
-1. Re-run pipeline on same "10 Truck Guns" video
-2. Compare new output ranking order vs original — must be DIFFERENT
-3. Check for Kel-Tec "briefcase" analogy — must NOT appear
-4. Check for PSA "stolen gun" argument — must use different reasoning
-5. Check for Mossberg NFA loophole angle — must frame differently
+1. Re-run pipeline trên "10 Truck Guns"
+2. So sánh ranking order → PHẢI khác bản gốc
+3. Kiểm tra Kel-Tec → KHÔNG có "briefcase/maletín"
+4. Kiểm tra PSA → KHÔNG có "stolen gun/sợ trộm"
