@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete audit of promote/demote conditions for main_key_data in phase plan. Uses Constantine test case to identify 3 conflicts where dark/important events get wrongly demoted to sub. Proposes specific rule changes with examples.",
+  "summary":  "Final consolidated plan for rewriting main/sub classification in phase plan prompt. Defines SCENE TEST as primary filter, adds dark events to promote criteria, and adds explicit demote rules for events without internal conflict.",
   "createdAt":  "2026-04-15T06:14:27.917562800Z",
-  "updatedAt":  "2026-04-26T17:45:40.535634Z",
-  "version":  "20"
+  "updatedAt":  "2026-04-26T18:01:03.209064200Z",
+  "version":  "21"
 }

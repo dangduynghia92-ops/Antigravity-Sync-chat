@@ -1,85 +1,64 @@
-# Audit: Promote/Demote Conditions cho main_key_data
+# Siết chặt phân loại main/sub trong Phase Plan
 
-## Bộ rules hiện tại
-
-### PROMOTE → main (L16-21)
-| Rule | Điều kiện |
-|---|---|
-| **P1** | `turning_points` + `conflicts` → LUÔN main |
-| **P2** | `key_events` IF singular milestone → main |
-| **P3** | `achievements` IF concrete + major → main |
-
-### DEMOTE → sub (L23-33)
-| Rule | Điều kiện |
-|---|---|
-| **D1** | Vague gradual processes ("Educated in Turkish") |
-| **D2** | Vague legacy statements ("Became known as great thinker") |
-| **D3** | Consequences that are ONLY transitions ("Traveled back") |
-
-### RESCUE (L31-33)
-| Rule | Điều kiện |
-|---|---|
-| **R1** | SCENE TEST: Can consequence be developed into SCENE? → giữ main |
+## File sửa: `prompts/system_narrative_phase_plan_biography.txt` (L12-33)
 
 ---
 
-## Xung đột phát hiện từ Constantine
+## Định nghĩa mới
 
-### ❌ Xung đột 1: `damnatio memoriae` bị D3 demote sai
-**Hiện tại**: SUB — *"Emitió damnatio memoriae borrando los nombres de Crispo y Fausta"*
-**Lý do**: D3 coi là "consequence/transition" → demote
-**Thực tế**: Đây là HÀNH ĐỘNG CHỦ Ý (xóa con trai khỏi lịch sử) — rất dark, rất scene-worthy. SCENE TEST lẽ ra phải cứu.
-
-### ❌ Xung đột 2: Crispus chỉ huy fleet bị D2 demote sai
-**Hiện tại**: SUB — *"Crispo demostró ser un comandante brillante al liderar la flota"*
-**Lý do**: D2 nghĩ là "legacy statement"
-**Thực tế**: Có scene cụ thể (chỉ huy fleet, đánh bại armada) — và quan trọng vì Crispus BỊ GIẾT SAU ĐÓ → build up cần thiết.
-
-### ❌ Xung đột 3: "Dividió el imperio" bị D3 demote sai
-**Hiện tại**: SUB — *"Dividió el imperio entre sus tres hijos... provocó purgas sangrientas"*
-**Lý do**: D3 coi là "transition to next event"  
-**Thực tế**: Là quyết định gây hậu quả lớn (purgas sangrientas) — scene-worthy.
+**main_key_data** = Event mà writer PHẢI build thành **full scene** (setting, tension, resolution).
+**sub_key_data** = Background texture — writer weave vào scene khác, KHÔNG build riêng.
 
 ---
 
-## Nguyên nhân gốc
+## Bộ rules mới (thay L12-33)
 
-**DEMOTE rules (D1-D3) quá mạnh, RESCUE rule (R1) quá yếu.** AI ưu tiên demote trước, SCENE TEST là afterthought.
+### SCENE TEST — filter CHÍNH (áp dụng cho MỌI event)
 
-Cụ thể:
-- D3 nói *"Consequences that are ONLY transitions"* nhưng AI hiểu rộng → bất kỳ consequence nào cũng bị demote
-- R1 (SCENE TEST) chỉ áp dụng cho "consequences" → không cover dark events bị D2 nuốt
+```
+Hỏi: Event này có CONFLICT hoặc TENSION nội tại không?
+  ✓ Có ai đối đầu, mâu thuẫn, mất mát, bị phản bội, hoặc đưa ra quyết định có cái giá?
+  ✓ Khán giả nghe xong có muốn biết "rồi sao nữa?"
+  → YES = main_key_data
+  → NO = sub_key_data (dù là turning_point hay achievement)
+```
+
+### PROMOTE → main
+
+| Điều kiện | Ví dụ |
+|---|---|
+| `turning_points` / `conflicts` **có conflict nội tại** | ✓ "Forzó suicidarse a su suegro Maximiano" |
+| `key_events` là **singular milestone có drama** | ✓ "Visión de la Cruz antes de marchar sobre Roma" |
+| Dark events (`dark_psychology`, `dual_nature.dark_side`, `scandals`) có **hành động cụ thể + nạn nhân** | ✓ "Ejecutó a su hijo Crispo bajo cargos misteriosos" |
+
+### DEMOTE → sub (dù thuộc field main)
+
+| Điều kiện | Ví dụ |
+|---|---|
+| Event chỉ là **state change** không có đối đầu | ✗ "Fue proclamado Augusto" (được tôn lên — no conflict) |
+| Event chỉ là **hậu quả tất yếu** của event trước | ✗ "Emitió el Edicto de Milán" (consequence của chiến thắng) |
+| Event là **political/alliance move** không có drama | ✗ "Se casó con Fausta para sellar alianza" |
+| Vague gradual process | ✗ "Educated in Turkish", "Grew up in poverty" |
+| Vague legacy/trait | ✗ "Became known as a great thinker", "Tended toward authoritarianism" |
+
+### RESCUE — promote ngược từ sub lên main
+
+| Điều kiện | Ví dụ |
+|---|---|
+| Consequence có **drama riêng** (không chỉ transition) | ✓ "Damnatio memoriae — xóa tên con khỏi lịch sử" |
+| Build-up event cho **dark moment quan trọng sau đó** | ✓ "Crispo chỉ huy fleet đánh bại Licinius" (→ bị giết sau) |
 
 ---
 
-## Đề xuất sửa
+## Test với Constantine — Trỗi Dậy
 
-### 1. Thêm cửa `dark events` vào PROMOTE (thay `achievements`):
-```diff
-- ✓ achievements ONLY IF concrete, major milestones that anchor a life phase.
-+ ✓ dark events from dark_psychology.moral_compromises, dual_nature.dark_side,
-+   or scandals_and_controversies — IF they describe a SPECIFIC ACTION
-+   with a clear subject, victim/target, and consequence.
-+   ✗ Vague character traits → sub_key_data.
-```
+| Event | Hiện tại | Sau sửa | Rule |
+|---|---|---|---|
+| Forzó suicidarse Maximiano | main | **main** | PROMOTE: conflict + dark |
+| Visión de la Cruz | main | **main** | PROMOTE: milestone có drama |
+| Batalla del Puente Milvio | main | **main** | PROMOTE: conflict |
+| Proclamado Augusto | main | **sub** | DEMOTE: state change, no conflict |
+| Se casó con Fausta | main | **sub** | DEMOTE: alliance move, no drama |
+| Edicto de Milán | main | **sub** | DEMOTE: consequence tất yếu |
 
-### 2. Mở rộng SCENE TEST (R1) để cover TẤT CẢ events, không chỉ consequences:
-```diff
-- SCENE TEST: Can this consequence be developed into its own SCENE?
-+ SCENE TEST: Can this event be developed into its own SCENE
-+   (with setting, tension, and resolution)?
-+   Apply to ALL events — not just consequences.
-+   If YES → main_key_data. Do NOT demote scene-worthy events.
-```
-
-### 3. Thêm ví dụ dark vào DEMOTE exceptions:
-```diff
-  [sub_key_data]:
-    ✗ Vague gradual processes
-+   EXCEPTION: deliberate actions with victim/target are NOT "vague processes"
-+     ✓ main: "Erased his own son's name from all public monuments" (damnatio memoriae)
-+     ✗ sub:  "Tended toward authoritarianism" (vague trait)
-```
-
-> [!IMPORTANT]
-> Thay đổi nằm hoàn toàn trong `system_narrative_phase_plan_biography.txt` (L12-33). Không ảnh hưởng code pipeline hay các prompt khác.
+**6 main → 3 main** — writer build 3 scene sâu thay vì 6 scene nông.
