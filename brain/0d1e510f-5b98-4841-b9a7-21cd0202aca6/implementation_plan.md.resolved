@@ -1,45 +1,85 @@
-# Thêm Narrator Voice Rules vào Writer Prompt
+# Audit: Promote/Demote Conditions cho main_key_data
 
-## Bối cảnh
-Script hiện tại kể chuyện đúng, logic, có scene — nhưng thiếu **"giọng kể" cá nhân**. AI viết như sách, không như người kể. Mục tiêu: thêm rules để AI thỉnh thoảng chèn phản ứng cá nhân, câu hỏi, nhận xét — nhưng **chỉ ở đúng vị trí**, không phá mạch truyện.
+## Bộ rules hiện tại
 
-## Phân tích hiện trạng
+### PROMOTE → main (L16-21)
+| Rule | Điều kiện |
+|---|---|
+| **P1** | `turning_points` + `conflicts` → LUÔN main |
+| **P2** | `key_events` IF singular milestone → main |
+| **P3** | `achievements` IF concrete + major → main |
 
-Prompt đã có sẵn:
-- **VOICE (L100-116)**: Tone "intimate but authoritative" — nhưng chỉ nói HOW to sound, không nói WHEN to break the 3rd person
-- **AUDIENCE CHALLENGE (L213-223)**: Chỉ kích hoạt khi framework có `you_role = "judge"` — quá hạn chế
-- **BODY OPENING 3-beat (L483-502)**: Bridge → Context → Content — không có slot cho narrator reaction
+### DEMOTE → sub (L23-33)
+| Rule | Điều kiện |
+|---|---|
+| **D1** | Vague gradual processes ("Educated in Turkish") |
+| **D2** | Vague legacy statements ("Became known as great thinker") |
+| **D3** | Consequences that are ONLY transitions ("Traveled back") |
 
-## Đề xuất: Thêm 1 section mới `NARRATOR PERSONALITY`
+### RESCUE (L31-33)
+| Rule | Điều kiện |
+|---|---|
+| **R1** | SCENE TEST: Can consequence be developed into SCENE? → giữ main |
 
-### Vị trí: Sau VOICE (L116), trước SCENE HIERARCHY (L117)
+---
+
+## Xung đột phát hiện từ Constantine
+
+### ❌ Xung đột 1: `damnatio memoriae` bị D3 demote sai
+**Hiện tại**: SUB — *"Emitió damnatio memoriae borrando los nombres de Crispo y Fausta"*
+**Lý do**: D3 coi là "consequence/transition" → demote
+**Thực tế**: Đây là HÀNH ĐỘNG CHỦ Ý (xóa con trai khỏi lịch sử) — rất dark, rất scene-worthy. SCENE TEST lẽ ra phải cứu.
+
+### ❌ Xung đột 2: Crispus chỉ huy fleet bị D2 demote sai
+**Hiện tại**: SUB — *"Crispo demostró ser un comandante brillante al liderar la flota"*
+**Lý do**: D2 nghĩ là "legacy statement"
+**Thực tế**: Có scene cụ thể (chỉ huy fleet, đánh bại armada) — và quan trọng vì Crispus BỊ GIẾT SAU ĐÓ → build up cần thiết.
+
+### ❌ Xung đột 3: "Dividió el imperio" bị D3 demote sai
+**Hiện tại**: SUB — *"Dividió el imperio entre sus tres hijos... provocó purgas sangrientas"*
+**Lý do**: D3 coi là "transition to next event"  
+**Thực tế**: Là quyết định gây hậu quả lớn (purgas sangrientas) — scene-worthy.
+
+---
+
+## Nguyên nhân gốc
+
+**DEMOTE rules (D1-D3) quá mạnh, RESCUE rule (R1) quá yếu.** AI ưu tiên demote trước, SCENE TEST là afterthought.
+
+Cụ thể:
+- D3 nói *"Consequences that are ONLY transitions"* nhưng AI hiểu rộng → bất kỳ consequence nào cũng bị demote
+- R1 (SCENE TEST) chỉ áp dụng cho "consequences" → không cover dark events bị D2 nuốt
+
+---
+
+## Đề xuất sửa
+
+### 1. Thêm cửa `dark events` vào PROMOTE (thay `achievements`):
+```diff
+- ✓ achievements ONLY IF concrete, major milestones that anchor a life phase.
++ ✓ dark events from dark_psychology.moral_compromises, dual_nature.dark_side,
++   or scandals_and_controversies — IF they describe a SPECIFIC ACTION
++   with a clear subject, victim/target, and consequence.
++   ✗ Vague character traits → sub_key_data.
+```
+
+### 2. Mở rộng SCENE TEST (R1) để cover TẤT CẢ events, không chỉ consequences:
+```diff
+- SCENE TEST: Can this consequence be developed into its own SCENE?
++ SCENE TEST: Can this event be developed into its own SCENE
++   (with setting, tension, and resolution)?
++   Apply to ALL events — not just consequences.
++   If YES → main_key_data. Do NOT demote scene-worthy events.
+```
+
+### 3. Thêm ví dụ dark vào DEMOTE exceptions:
+```diff
+  [sub_key_data]:
+    ✗ Vague gradual processes
++   EXCEPTION: deliberate actions with victim/target are NOT "vague processes"
++     ✓ main: "Erased his own son's name from all public monuments" (damnatio memoriae)
++     ✗ sub:  "Tended toward authoritarianism" (vague trait)
+```
 
 > [!IMPORTANT]
-> Chỉ thêm **1 section mới khoảng 25-30 dòng**. Không sửa bất kỳ section hiện tại nào.
-
-### Nội dung rules:
-
-**3 điểm chèn narrator voice trong mỗi chapter:**
-
-| Điểm | Vị trí | Mục đích | Giới hạn |
-|---|---|---|---|
-| REACTION | Sau turning point/sự kiện lớn | Giúp khán giả "tiêu hóa" | 1-2 câu, max 1 lần/chapter |
-| QUESTION | Sau moral dilemma / irony | Tạo engagement | 1 câu, max 1 lần/chapter |
-| MODERN BRIDGE | Khi concept xa lạ | Kết nối lịch sử ↔ hiện đại | 1-2 câu, dùng khi cần |
-
-**Strict limits:**
-- Max 3 interventions / chapter (1 REACTION + 1 QUESTION + 1 MODERN BRIDGE)
-- Giữa các scenes — KHÔNG BAO GIỜ chen giữa scene đang build
-- Không xuất hiện ở 3 câu đầu (thuộc 3-beat opening)
-- Hook chapter: KHÔNG áp dụng (hook có riêng rules)
-
-### Niche scope: Bắt đầu chỉ với `biography` prompt
-
-Các niche khác (battle, mystery, pirate) sẽ thêm sau khi biography chạy tốt.
-
-## Verification
-
-### Test: Chạy pipeline cho 1 chapter của Séneca rồi so sánh
-- Resume pipeline Séneca (hoặc tạo mới 1 nhân vật test)
-- So sánh output chapter có/không có narrator rules
-- User đánh giá chất lượng subjective
+> Thay đổi nằm hoàn toàn trong [system_narrative_phase_plan_biography.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_biography.txt) (L12-33). Không ảnh hưởng code pipeline hay các prompt khác.

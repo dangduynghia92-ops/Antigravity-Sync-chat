@@ -1,0 +1,65 @@
+# Điều chỉnh main_key_data: Thay achievements → dark events
+
+## Dữ liệu thực: Constantine the Great (Sử Thi)
+
+### Blueprint có dark events gì?
+
+| Field | Sự kiện cụ thể | Scene-worthy? |
+|---|---|---|
+| `dark_psychology.moral_compromises` | "Executed Licinius despite oath to his sister" | ✅ |
+| `dark_psychology.moral_compromises` | "Ordered death of 11-year-old nephew Licinianus" | ✅ |
+| `dual_nature.dark_side` | "Executed son Crispus on unproven allegations" | ✅ |
+| `dual_nature.dark_side` | "Suffocated wife Fausta in overheated bath" | ✅ |
+| `dual_nature.dark_side` | "Executed Licinius despite promising safety" | ✅ |
+| `scandals_and_controversies` | "Forced suicide of father-in-law Maximian" | ✅ |
+
+### Phase plan hiện tại đã xếp dark events thế nào?
+
+| Phase | Dark events trong MAIN | Dark events trong SUB |
+|---|---|---|
+| **Trỗi Dậy** | ✓ "Forzó suicidarse Maximiano" (forced suicide father-in-law) | — |
+| **Đỉnh Cao** | ✓ "Ordenó ejecución de Licinio, rompiendo juramento" (executed Licinius, broke oath) | — |
+| **Sụp Đổ** | ✓ Executed Crispus, ✓ Executed Fausta, ✓ Killed nephew Licinianus | ○ Damnatio memoriae of Crispus/Fausta |
+
+> [!NOTE]
+> **Phát hiện**: AI đã tự đưa hầu hết dark events vào main — không phải vì rule achievements, mà vì chúng CŨNG LÀ `turning_points` và `conflicts`. Rule hiện tại đã work cho case này.
+
+### Vậy rule achievements ảnh hưởng gì?
+
+Achievements hiện ĐÃ ở SUB (không phải main):
+
+| Phase | Achievement trong SUB |
+|---|---|
+| Trỗi Dậy | ○ "Introdujo el solidus" (gold coin reform) |
+| Trỗi Dậy | ○ "Abolió la Guardia Pretoriana" (abolished Praetorian Guard) |
+| Đỉnh Cao | ○ "Comisionó basílicas monumentales" (built St. Peter's, Holy Sepulchre) |
+
+**Kết luận**: SCENE TEST (L31-33) đã tự filter — achievements vague bị đẩy xuống sub. Chỉ achievements kèm milestone cụ thể (Edict of Milan, Battle of Milvian Bridge) vào main — nhưng chúng vào qua cửa `turning_points`/`conflicts`, KHÔNG qua cửa `achievements`.
+
+## Kết luận: Bỏ cửa `achievements` KHÔNG ảnh hưởng nhiều
+
+| Bỏ | Tác động |
+|---|---|
+| Cửa `achievements` | Gần như 0 — achievements quan trọng đã vào qua `turning_points`/`key_events` |
+| Thêm cửa `dark events` | Thấp cho Constantine (đã vào main rồi) — nhưng có thể CÓ ÍCH cho nhân vật mà dark events KHÔNG phải turning_points (ví dụ: Einstein bỏ con, Jobs phủ nhận con — đây không phải turning_point nhưng đáng build scene) |
+
+## Đề xuất thay đổi
+
+```diff
+[main_key_data]:
+  ✓ turning_points and conflicts (Always count as 1 node).
+  ✓ key_events IF they represent a singular milestone.
+- ✓ achievements ONLY IF concrete, major milestones that anchor a life phase.
++ ✓ dark events from dark_psychology.moral_compromises, dual_nature.dark_side,
++   or scandals_and_controversies — IF they describe a SPECIFIC ACTION
++   with a clear subject, victim/target, and consequence.
++   (e.g., "Denied his own daughter for 10 years", "Executed Licinius despite oath")
++   ✗ Vague character traits are NOT dark events
++   (e.g., "Tended toward authoritarianism" → sub_key_data)
+```
+
+> [!IMPORTANT]
+> **Rủi ro thấp** vì:
+> 1. Achievements quan trọng vẫn vào main qua `turning_points`/`key_events`
+> 2. Dark events đã có SCENE TEST filter (vague traits → sub)
+> 3. Constantine test case cho thấy pipeline HIỆN TẠI đã tự đưa dark vào main — rule mới chỉ **chính thức hóa** hành vi này
