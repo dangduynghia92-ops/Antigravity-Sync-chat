@@ -1,0 +1,7 @@
+# Fix Video Cutter Output Folder Logic
+
+- [/] Analyze root cause of shared output folder
+- [ ] Fix Flow A: per-video subfolder in `02_video_chapters`
+- [ ] Fix skip detection to match per-video subfolder
+- [ ] Fix [_open_output](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py#475-491) to handle new structure
+- [ ] Run /auto-git-backup

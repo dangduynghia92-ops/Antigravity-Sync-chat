@@ -1,0 +1,64 @@
+# Fix Video Cutter — Per-Video Output Folders
+
+## Problem
+
+**Flow A** ([_process_one_with_merge](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py#669-716)) uses a **shared** output folder for ALL videos:
+
+```python
+# Line 684 — video_cutter_tab.py
+output_dir = os.path.join(os.path.dirname(merge_dir), "02_video_chapters")
+```
+
+This means all 123 videos dump their `Ch_00.mp4`, `Ch_01.mp4`, etc. into the **same** `02_video_chapters/` folder, causing:
+1. **File overwriting** — later videos overwrite earlier videos' chapters (same filenames `Ch_00_Intro.mp4`)
+2. **False skip detection** — the "already cut" check counts ALL `Ch_*.mp4` files in the shared folder, so after the first video all subsequent ones appear "already cut"
+
+```python
+# Line 687-691 — skip logic checks shared folder
+existing = [f for f in os.listdir(output_dir) if f.startswith("Ch_") and f.endswith(".mp4")]
+if len(existing) >= len(chapters):
+    log("Already cut — skipping")  # FALSE POSITIVE
+```
+
+**Flow B** ([_process_one_without_merge](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py#717-827)) already does this correctly by using `C:/Downloads/video_chapters/{vid}`.
+
+---
+
+## Proposed Changes
+
+### Video Cutter Tab
+
+#### [MODIFY] [video_cutter_tab.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py)
+
+**[_process_one_with_merge](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py#669-716)** (line 682-684): Create per-video subfolder:
+
+```diff
+ merge_dir = os.path.dirname(merge_path)
+-output_dir = os.path.join(os.path.dirname(merge_dir), "02_video_chapters")
++parent_output = os.path.join(os.path.dirname(merge_dir), "02_video_chapters")
++output_dir = os.path.join(parent_output, q["video_id"])
+```
+
+**Skip detection** (line 687-691): Now checks the per-video subfolder — logic is unchanged but correctly scoped.
+
+**[_open_output](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/video_cutter_tab.py#475-491)** (line 479-480): Open the parent `02_video_chapters` folder (not the per-video subfolder) so user sees all videos:
+
+```diff
+-out_dir = os.path.join(
+-    os.path.dirname(os.path.dirname(q["merge_path"])), "02_video_chapters"
+-)
++out_dir = os.path.join(
++    os.path.dirname(os.path.dirname(q["merge_path"])), "02_video_chapters"
++)
+```
+
+This stays the same — opening the parent is correct since now each subfolder inside is a video ID.
+
+## Verification Plan
+
+### Manual Verification
+User runs "Start Cutting All" on 2-3 queued videos and confirms:
+1. Each video's output goes to `02_video_chapters/{video_id}/` subfolder
+2. No files overwrite each other
+3. "Already cut — skipping" only triggers for videos that actually have been cut
+4. "Open Output" opens the parent `02_video_chapters` folder

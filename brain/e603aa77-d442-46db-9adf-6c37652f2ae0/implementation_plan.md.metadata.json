@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Documents the root cause analysis and fix plan for the Video Cutter tab's shared output folder bug. Flow A dumps all videos into the same `02_video_chapters/` folder, causing file overwrites and false skip detection. The fix creates per-video subfolders using the video ID.",
+  "updatedAt":  "2026-04-26T05:36:27.037754600Z"
+}
