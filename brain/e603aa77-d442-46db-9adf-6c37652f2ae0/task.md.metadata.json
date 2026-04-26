@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Tracks the progress of fixing the Video Cutter tab's output folder logic to use per-video subfolders instead of a single shared folder.",
-  "updatedAt":  "2026-04-26T05:36:27.032983Z"
+  "summary":  "Tracks video cutter fix (done) and gun catalog scanner tool creation (in progress).",
+  "updatedAt":  "2026-04-26T05:51:02.846356100Z",
+  "version":  "1"
 }
