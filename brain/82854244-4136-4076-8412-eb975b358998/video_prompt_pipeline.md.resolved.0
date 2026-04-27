@@ -1,0 +1,123 @@
+# Kiến trúc Tổng thể: Pipeline tự động hóa Video Prompt từ Script
+
+Để xây dựng một Tool/Module bằng Python giải quyết triệt để bài toán đồng bộ khung hình, khớp thời gian và hợp logic chuyển cảnh, chúng ta cần một Pipeline (đường ống) dữ liệu chảy qua **5 Module chính**. 
+
+Mục tiêu cốt lõi: Mọi dữ liệu luân chuyển giữa các bước đều phải được format chuẩn **JSON** để code dễ dàng đọc, parse và validation (kiểm chứng) trước khi đẩy vào API tạo video.
+
+---
+
+## Bước 1: Module Tiền xử lý & Căn chỉnh Thời gian (Script Parsing & Timing)
+**Mục tiêu:** Tính toán độ dài âm thanh dự kiến cho chữ để đảm bảo video sinh ra không bị dài/ngắn hơn thoại.
+
+*   **Input:** File text kịch bản (`.txt`) hoặc Tệp sub (`.srt` nếu đã thu âm).
+*   **Logic xử lý:** 
+    * Thuật toán tách câu (Sentence Tokenization) loại bỏ khoảng trắng thừa.
+    * Thuật toán ước tính thời gian đọc (Reading Time Estimation): Công thức chuẩn thường là ~2.5 - 3 từ/giây (Tùy tốc độ voice).
+*   **Output (JSON List):** Danh sách các câu thoại (Segments) kèm thời lượng.
+```json
+[
+  {
+    "segment_id": 1,
+    "text": "You are 18, 82 BC.",
+    "word_count": 6,
+    "estimated_seconds": 2.5
+  },
+  ...
+]
+```
+
+---
+
+## Bước 2: Module Phân tích Siêu Dữ Liệu (Global Context Analysis)
+**Mục tiêu:** Không để AI tự chế bối cảnh và nhân vật một cách mù quáng. Tool cần quét toàn bộ kịch bản để gom nhóm tài nguyên trước khi làm chi tiết.
+
+*   **Input:** Danh sách Segments từ Bước 1 + File tham số (Ví dụ: [styles/Dark Gouache Drama.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/styles/Dark%20Gouache%20Drama.txt)).
+*   **Logic xử lý:** Dùng 1 lượt gọi LLM (ChatGPT/Claude) đọc lướt toàn bộ để trích xuất danh sách nhân vật (Character Sheets) và Các địa điểm xuất hiện (Locations).
+*   **Output (JSON Object - Global Context):**
+```json
+{
+  "global_style": "Dark Gouache Drama, muted colors, historical...",
+  "characters": {
+    "char_1": {"name": "Julius Caesar", "age": 18, "appearance": "thin face, dark messy hair, stressed"}
+  },
+  "locations": {
+    "loc_1": "Dark Roman villa interior, flickering candlelight",
+    "loc_2": "Streets of Rome at dawn"
+  }
+}
+```
+
+---
+
+## Bước 3: Module Phân Đoạn Macro (Sequence Grouping)
+**Mục tiêu:** Gom nhóm các Segments (Câu thoại) rời rạc thành các khối (Sequence) có cùng chung **Không gian (Location)** và **Thời gian (Time of day)**. Việc này giải quyết lỗi "ghép nhiều video vào với nhau nó rời rạc, chả liên quan".
+
+*   **Input:** Output của Bước 1 & Bước 2 (Segments + Context).
+*   **Logic xử lý:** LLM gom 3-5 segments liên tiếp có điểm chung về ý nghĩa hoặc địa điểm thành một Sequence. Tổng thời gian mỗi Sequence khoảng 15-20s.
+*   **Output (JSON List):** Mảng các Sequences, chứa mảng các Segments con.
+```json
+{
+  "sequence_id": "SEQ_01",
+  "location": "loc_1",
+  "total_estimated_seconds": 12.5,
+  "segments_included": [1, 2, 3]
+}
+```
+
+---
+
+## Bước 4: Module Đạo diễn Chia Cảnh Micro (Scene Breakdown)
+**Mục tiêu:** Đây là **"Trái tim"** của Tool. Nó chẻ một Sequence (15s) ra thành các lệnh quay (3-5s), áp dụng quy luật 70/30 (B-roll) và Hành động vật lý.
+
+*   **Input:** Từng `Sequence` (từ Bước 3) đẩy qua một prompt chuyên dụng ("Đạo diễn hình ảnh").
+*   **Logic xử lý:**
+    * LLM bắt buộc xuất data Json chia nhỏ Sequence thành các Scene.
+    * Thuật toán Python check Validate: `Sum(scene_duration)` phải bằng `sequence.total_estimated_seconds`. Nếu vượt quá -> Báo lỗi/Bắt LLM tạo lại.
+*   **Output (JSON List):** Danh sách các Scenes chi tiết (Shot list).
+```json
+[
+  {
+    "scene_id": "SCN_01_A",
+    "duration": 4.0,
+    "matched_audio_text": "You are 18, 82 BC. Sullah has seized Rome...",
+    "shot_type": "Close-up",
+    "roll_type": "B-Roll",
+    "physical_action": "Old scarred hand writing Latin names on parchment with quill."
+  },
+  {
+    "scene_id": "SCN_01_B",
+    "duration": 3.5,
+    "matched_audio_text": "...names on parchment that become death warrants",
+    "shot_type": "Wide Shot",
+    "roll_type": "B-Roll",
+    "physical_action": "Roman soldier nailing paper to stone wall at dawn."
+  }
+]
+```
+
+---
+
+## Bước 5: Module Lắp ráp và Đóng gói (Prompt Assembly)
+**Mục tiêu:** Tạo ra câu lệnh Tiếng Anh cuối cùng hoàn hảo để gọi API tạo Video (Veo/Runway). Ráp các biến động với biến tĩnh.
+
+*   **Input:** `Scene` (Bước 4) + `Global Context` (Bước 2) + `Image Reference Paths` (Nếu có ở dưới máy tính của bạn).
+*   **Logic xử lý:** Ghép chuỗi văn bản theo công thức 7 bước.
+    `[Shot Type]. [Physical Action] at [Location]. [Global Style]. No blur, realistic.`
+*   **Output (Data dùng để gọi API):**
+```json
+{
+  "task_id": "SCN_01_A",
+  "final_prompt": "Close-up shot. Old scarred hand writing Latin names on parchment with quill at Dark Roman villa interior, flickering candlelight. Dark Gouache Drama, muted colors, historical. No blur, highly detailed.",
+  "duration": 5,
+  "image_reference_path": "f:/1.Edit Videos/.../sulla_hand.png"
+}
+```
+
+---
+
+### Tổng kết đường đi dữ liệu (Data Flow)
+**Full Script Text** ---> (B1) ---> **Segments** ---> (B3) ---> **Sequences** ---> (B4) ---> **Scenes** ---> (B5) ---> **Final Prompts (Ready for Video API)**
+
+*(Module 2 chạy song song ở đầu để cung cấp kho dữ liệu Context)*.
+
+Sức mạnh của thiết kế module này nằm ở việc nếu rớt hay sai sót ở đâu, Python sẽ tự check và chỉ gửi đúng "cục" đó cho AI làm lại, chứ không bắt AI đọc lại từ đầu, từ đó tối ưu độ chính xác và chi phí token.

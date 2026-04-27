@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Cập nhật lại quy trình Pipeline, tối ưu từ 5 bước xuống 4 bước. Sáp nhập logic phân rã kịch bản tĩnh vào làm một ở Bước 1.",
+  "updatedAt":  "2026-04-27T13:39:52.989034300Z",
+  "version":  "2"
+}
