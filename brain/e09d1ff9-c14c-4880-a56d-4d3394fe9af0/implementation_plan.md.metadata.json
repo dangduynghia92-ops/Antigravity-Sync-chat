@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete revised v4 implementation plan for Video Prompt Pipeline. Key changes in v4: (1) Step 2 splits into 2 API calls producing 2 files: characters JSON and visual bible JSON (locations), matching existing image pipeline pattern, (2) Final JSON in Step 4 includes character_labels for image reference, (3) Art style injection mechanism fully documented with 3 layers: Mandatory Style keywords, Negative Prompt, and Constraint files (safety + quality + historical), (4) Concrete example of how OverSimplified Cartoon style would be assembled into final prompt.",
-  "updatedAt":  "2026-04-27T18:01:05.752348800Z",
-  "version":  "3"
+  "summary":  "Complete v5 implementation plan for Video Prompt Pipeline. Key v5 changes: (1) Step 3 now uses 2-Phase Chain-of-Thought: Phase 1 synthesizes one visual_event from entire sequence text, Phase 2 creates camera cuts as different angles of that event, (2) matched_text replaced with audio_sync — marks where voiceover is, does NOT dictate visuals, (3) Anti 1:1 translation rule explicitly forbids sentence-to-scene mapping, (4) Montage handling: director picks 1-2 strongest visual moments, no need to cover every sentence, (5) Step 2 = 2 API calls with Pro model, (6) Final JSON keeps character_labels, art style, negative prompt, constraints.",
+  "updatedAt":  "2026-04-27T18:50:10.300803900Z",
+  "version":  "4"
 }

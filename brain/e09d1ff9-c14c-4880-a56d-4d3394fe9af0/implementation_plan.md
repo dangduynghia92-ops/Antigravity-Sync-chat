@@ -1,9 +1,9 @@
-# Video Prompt Pipeline — Bản Kế hoạch Chi tiết (Revised v4)
+# Video Prompt Pipeline — Bản Kế hoạch Chi tiết (v5)
 
-Pipeline tự động hóa chuyển đổi Script (SRT) → Video Prompts chuẩn hóa cho API sinh video (Veo3/Runway). Gồm **4 Module cốt lõi** + 1 **Reliability Engine**. Mọi dữ liệu luân chuyển giữa bước đều là **JSON**. Mỗi bước lưu checkpoint file để hỗ trợ resume khi có lỗi.
+Pipeline tự động hóa chuyển đổi Script (SRT) → Video Prompts chuẩn hóa cho API sinh video (Veo3/Runway). Gồm **4 Module cốt lõi** + 1 **Reliability Engine**. Mọi dữ liệu luân chuyển giữa bước = **JSON**. Mỗi bước lưu checkpoint file.
 
 > [!IMPORTANT]
-> **Art Style** được chọn trước khi chạy pipeline (từ preset `.txt` files có sẵn). Pipeline KHÔNG sinh art style — chỉ inject vào prompt cuối ở Bước 4.
+> **Art Style** được chọn trước khi chạy pipeline (từ preset `.txt` files). Pipeline KHÔNG sinh art style — chỉ inject vào prompt cuối ở Bước 4.
 
 ---
 
@@ -14,9 +14,9 @@ graph LR
     SRT["📄 .SRT File"] --> P["⚙ Python Parse"]
     P --> S1["Bước 1: Semantic Chunking<br/>(LLM)"]
     P --> CLEAN["cleaned_script.txt<br/>(Python thuần)"]
-    S1 --> S2["Bước 2: Global Context<br/>(LLM — 2 API calls)"]
+    S1 --> S2["Bước 2: Global Context<br/>(LLM — 2 API calls, Pro)"]
     CLEAN --> S2
-    S1 --> S3["Bước 3: Scene Storyboard<br/>(LLM)"]
+    S1 --> S3["Bước 3: Scene Storyboard<br/>(LLM — 2-Phase CoT)"]
     S2 --> S3
     S3 --> S4["Bước 4: Prompt Assembly<br/>(Python thuần)"]
     S2 --> S4
@@ -24,53 +24,50 @@ graph LR
 ```
 
 **Thứ tự thực thi:**
-1. **Python Parse** (thuần Python) → tạo `cleaned_script.txt` + JSON sentences có duration
+1. **Python Parse** → `cleaned_script.txt` + JSON sentences
 2. **Bước 1** (LLM) → nhóm sentences thành Sequences
-3. **Bước 2** (LLM, 2 calls) → Call 1: Characters + Factions → Call 2: Locations (Visual Bible)
-4. **Bước 3** (LLM) → nhận Sequences (B1) + Global Context (B2), chia thành Scenes
-5. **Bước 4** (Python thuần) → nối data B2 + B3 + Art Style + Constraints thành prompt cuối
+3. **Bước 2** (LLM, Pro, 2 calls) → Characters/Factions + Locations
+4. **Bước 3** (LLM, 2-Phase CoT) → Sequences → Scenes
+5. **Bước 4** (Python thuần) → Final prompts
 
 ---
 
 ## Tiền xử lý: Python SRT Parse (Không dùng AI)
 
-**Input:** File `.srt` có timecode thô.
+**Input:** File `.srt`
 
 **Xử lý:**
-1. Parse SRT → danh sách `(index, start_time, end_time, text)`
-2. **Merge & Interpolation:** Gộp các dòng SRT gãy vụn thành câu hoàn chỉnh (dựa theo dấu chấm kết câu). Dùng **Linear Interpolation** chia tỷ lệ số ký tự để tính lại `[start_time, end_time]` cho câu bị kẹt giữa 2 dòng subtitle.
-3. Tính `duration = end_time - start_time` cho mỗi câu.
-4. Tạo `cleaned_script.txt` — nối toàn bộ text lại, **lột sạch mọi timecode**, thành văn bản liền mạch.
-5. Tạo JSON trung gian (gửi cho Bước 1). **Lột bỏ** `start_time` và `end_time` để tiết kiệm token — chỉ giữ lại:
+1. Parse SRT → `(index, start_time, end_time, text)`
+2. **Merge & Interpolation:** Gộp SRT gãy vụn thành câu hoàn chỉnh (theo dấu chấm). Dùng **Linear Interpolation** tính lại `[start_time, end_time]` cho câu kẹt giữa 2 dòng subtitle.
+3. Tính `duration = end_time - start_time`
+4. Tạo `cleaned_script.txt` — text liền mạch, lột sạch timecode
+5. Tạo JSON trung gian (gửi Bước 1), lột bỏ `start_time`/`end_time`:
 
 ```json
 [
   {"sentence_id": 1, "text": "You are 18, 82 BC.", "duration": 2.4},
-  {"sentence_id": 2, "text": "Sullah has seized Rome and he is writing lists...", "duration": 6.6}
+  {"sentence_id": 2, "text": "Sullah has seized Rome...", "duration": 6.6}
 ]
 ```
 
-> Mốc `start_time`, `end_time` được Python cất giấu ở local. Khi AI trả về `sentence_id` gộp lại, Python tự ráp mốc Start/End cho Sequence.
+> Mốc `start_time`, `end_time` Python cất ở local. Khi AI trả `sentence_id` gộp lại → Python ráp mốc Start/End.
 
-**Checkpoint:** `_step0_sentences.json` (list câu + timing gốc), `cleaned_script.txt`
+**Checkpoint:** `_step0_sentences.json`, `cleaned_script.txt`
 
 ---
 
 ## Bước 1: Macro Semantic Chunking (LLM)
 
-**Mục tiêu:** Cắt danh sách câu thành các **Sequence** (tối đa 25s) mang trọn vẹn ngữ cảnh Không gian và Nhân vật. Không quy định thời lượng tối thiểu.
+**Mục tiêu:** Cắt danh sách câu thành **Sequence** (tối đa 25s, không có min) trọn vẹn Không gian + Nhân vật.
 
-### Input
-- JSON trung gian từ Tiền xử lý (list câu, chỉ có `sentence_id`, `text`, `duration`)
-
-### 4 Quy tắc Chunking (cho LLM)
+### 4 Quy tắc Chunking
 
 | # | Quy tắc | Mô tả |
 |---|---|---|
-| 1 | **Không gian & Thời gian** (Ưu tiên #1) | Cắt Sequence mới khi Setting thay đổi (địa điểm, thời đại, ánh sáng/môi trường) |
-| 2 | **Chủ thể trọng tâm** (Subject Shift) | Cắt khi tiêu điểm đổi giữa nhóm/cá nhân khác nhau |
-| 3 | **Giới hạn dung lượng** (Max 25s) | Sequence không vượt quá **25 giây**. Nếu lố → chặt đôi. Không có giới hạn tối thiểu |
-| 4 | **Ranh giới Ngữ nghĩa** | Lưỡi dao cắt phải rơi trúng dấu chấm/xuống dòng. Tuyệt đối cấm cắt ngang câu |
+| 1 | **Không gian & Thời gian** (Ưu tiên #1) | Cắt khi Setting thay đổi (địa điểm, thời đại, ánh sáng) |
+| 2 | **Chủ thể trọng tâm** (Subject Shift) | Cắt khi tiêu điểm đổi giữa nhóm/cá nhân |
+| 3 | **Max 25s** | Vượt quá → chặt đôi. Không có giới hạn tối thiểu |
+| 4 | **Ranh giới Ngữ nghĩa** | Cắt phải rơi trúng dấu chấm. Cấm cắt ngang câu |
 
 ### Output
 
@@ -80,9 +77,9 @@ graph LR
     "sequence_id": "SEQ_01",
     "sentence_ids": [1, 2],
     "location_shift": "Sullah's Palace",
-    "main_subject": "Sullah and soldiers",
+    "main_subject": "Sullah",
     "full_text": "You are 18, 82 BC. Sullah has seized Rome...",
-    "total_duration": 9.0
+    "total_duration": 8.9
   }
 ]
 ```
@@ -93,181 +90,121 @@ graph LR
 
 ## Bước 2: Global Context Analysis (LLM — 2 API Calls, Model Pro)
 
-**Mục tiêu:** Quét toàn bộ kịch bản để "Khóa" thiết kế nhân vật và bối cảnh. Tạo ra **2 file riêng biệt** — file nhân vật dùng để gen ảnh Character Sheet làm tham chiếu, file locations dùng làm Visual Bible.
+**Mục tiêu:** Quét kịch bản **một lần** để khóa nhân vật + bối cảnh. Tạo **2 file riêng** — characters (gen ảnh sheet) + locations (visual bible).
 
 > [!WARNING]
-> **Chốt chặn 5,000 từ:** Nếu `cleaned_script.txt` vượt 5,000 từ → dừng pipeline, hiển thị cảnh báo, yêu cầu user quyết định phương án trước khi tiếp tục.
+> **Chốt chặn 5,000 từ:** Nếu `cleaned_script.txt` > 5,000 từ → dừng pipeline, cảnh báo.
 
-> [!NOTE]
-> **Model:** Bước 2 sử dụng model **Pro** mặc định (cần chất lượng phân tích cao nhất).
+### API Call 1 → `_step2_characters.json`
 
-### Input chung
-
-1. **`cleaned_script.txt`** — văn bản sạch, không timecode
-2. **Sequence metadata** — danh sách `location_shift` + `main_subject` trích từ Bước 1
-
----
-
-### API Call 1: Khóa Nhân vật + Phe phái → `_step2_characters.json`
-
-#### A. Nhân vật có tên (Characters)
-
-LLM đọc script sạch, trích xuất **TẤT CẢ** nhân vật có tên/chức danh. Phân loại 2 nhóm:
+#### Characters (đầy đủ, không giới hạn số lượng)
 
 | Nhóm | Tiêu chí | Output |
 |---|---|---|
-| **PROTAGONIST** | Nhân vật trung tâm, thúc đẩy mạch truyện chính | `visual_description` + `body_language` + `chapters` |
-| **NAMED** | Nhân vật phụ có tên/chức danh | `visual_description` + `body_language` + `chapters` |
+| **PROTAGONIST** | Nhân vật trung tâm | `visual_description` + `body_language` + `chapters` + `sheet_prompt` |
+| **NAMED** | Nhân vật phụ có tên/chức danh | `visual_description` + `body_language` + `chapters` + `sheet_prompt` |
 
-- Liệt kê **đầy đủ**, không giới hạn số lượng
-- Mỗi nhân vật kèm theo **danh sách chapters/sequences** xuất hiện
-- Có `sheet_prompt` để gen ảnh Character Sheet làm tham chiếu (giống pipeline ảnh hiện tại)
+#### Factions (quần chúng/quân sự — chỉ mô tả chung)
 
-#### B. Phe phái/Quần chúng (Factions)
+| Field | Mô tả |
+|---|---|
+| `faction_name` | Tên phe |
+| `uniform_description` | Đồng phục chung (1-2 câu) |
+| `banner` | Cờ/phù hiệu |
+| `appears_as` | Vai trò thường gặp |
 
-Mỗi phe chỉ cần **mô tả đồng phục chung** — KHÔNG tạo sheet riêng.
+### API Call 2 → `_step2_visual_bible.json`
 
-#### Output file `_step2_characters.json`:
-
-```json
-{
-  "characters": [
-    {
-      "label": "Roman-Commander-A",
-      "real_name": "Julius Caesar",
-      "group": "PROTAGONIST",
-      "chapters": [1, 2, 3, 4, 5, 6],
-      "visual_description": "Young Roman man (18), short dark curly hair, clean-shaven, wearing white toga with crimson stripe, no weapon",
-      "body_language": "Upright posture, deliberate slow gestures, projects calm authority",
-      "sheet_prompt": "Character reference sheet on clean white background. Three neutral standing views arranged horizontally: front view, 3/4 angle view, side profile view. Young Roman man (18) with short dark curly hair, clean-shaven, wearing white toga with crimson stripe. Bold label text 'Roman-Commander-A' written in large black sans-serif font, centered at the bottom. [STYLE_KEYWORDS], no border, no margin."
-    },
-    {
-      "label": "Roman-General-A",
-      "real_name": "Pompey",
-      "group": "NAMED",
-      "chapters": [3, 4, 5],
-      "visual_description": "Middle-aged Roman man (50), graying short hair, thick jaw, dark red military cloak over bronze chest armor",
-      "body_language": "Stiff military bearing, sharp commanding hand gestures",
-      "sheet_prompt": "Character reference sheet on clean white background. Three neutral standing views arranged horizontally: front view, 3/4 angle view, side profile view. Middle-aged Roman man (50), graying short hair, thick jaw, dark red military cloak over bronze chest armor. Bold label text 'Roman-General-A' written in large black sans-serif font, centered at the bottom. [STYLE_KEYWORDS], no border, no margin."
-    }
-  ],
-
-  "factions": [
-    {
-      "faction_name": "Roman Legionaries",
-      "uniform_description": "Bronze segmented chest armor (lorica segmentata), red wool tunic, leather sandals with shin guards, short iron gladius sword",
-      "banner": "Red banner with golden eagle (SPQR)",
-      "appears_as": "background soldiers, marching columns, battle formations"
-    }
-  ]
-}
-```
-
----
-
-### API Call 2: Khóa Bối cảnh → `_step2_visual_bible.json`
-
-LLM đọc script sạch và trích xuất **TẤT CẢ** bối cảnh/địa điểm. LLM tự phân tích, không phụ thuộc vào tên `location_shift` ở Bước 1 (vì AI Bước 1 có thể đặt tên không nhất quán cho cùng một địa điểm).
-
-#### Output file `_step2_visual_bible.json`:
+LLM tự xác định locations từ script sạch (không dùng frequency pre-filter từ Bước 1 vì tên AI đặt không nhất quán).
 
 ```json
 {
   "locations": [
     {
       "label": "Caesar's Villa",
-      "bible_description": "Modest Roman villa with cracked stone walls, narrow arched doorway, terracotta roof tiles, small inner courtyard with dry fountain, vine-covered pillars",
-      "default_lighting": "Warm golden afternoon sunlight, dust particles in the air"
-    },
-    {
-      "label": "Senate of Rome",
-      "bible_description": "Grand circular marble hall, tiered stone seating around central floor, tall fluted columns, open skylight in domed ceiling",
-      "default_lighting": "Bright natural light from above, dramatic shadows from columns"
+      "bible_description": "Modest Roman villa with cracked stone walls...",
+      "default_lighting": "Warm golden afternoon sunlight..."
     }
   ]
 }
 ```
 
+### Cách gửi vào Bước 3
+
+Cả 2 file nhúng vào system prompt Bước 3 dưới dạng `=== VISUAL REFERENCE ===`.
+
 **Checkpoint:** `_step2_characters.json` + `_step2_visual_bible.json`
 
 ---
 
-### Cách gửi data Bước 2 vào Bước 3
+## Bước 3: Micro Scene Storyboarding (LLM — 2-Phase CoT)
 
-Cả 2 file được **nhúng vào system prompt** của Bước 3 dưới dạng:
+**Mục tiêu:** Đóng vai **Đạo diễn**, đập mỗi Sequence thành **Scenes** (3-6s) bằng tư duy điện ảnh.
 
-```
-=== VISUAL REFERENCE: CHARACTERS & FACTIONS ===
-[nội dung _step2_characters.json — chỉ lấy visual_description, body_language, factions]
+### Dynamic Batching
+- 1 Sequence max **25s**, 1 Batch max **60s** (1 API call)
+- **Output format:** AI trả về **JSON array** — mỗi element cho 1 Sequence: `[{sequence_id: "SEQ_01", scenes: [...]}, ...]`
 
-=== VISUAL REFERENCE: LOCATIONS ===
-[nội dung _step2_visual_bible.json]
-```
+### Quy trình Tư duy 2 Pha (Chain-of-Thought)
 
-AI Bước 3 dùng thông tin này để:
-- Lookup `visual_description` khi viết `physical_action` chứa nhân vật chính/phụ
-- Lookup `uniform_description` khi viết `background_and_extras` chứa quần chúng/quân sự
-- Lookup `bible_description` + `default_lighting` khi mô tả bối cảnh
+> [!IMPORTANT]
+> **Tại sao cần 2 Pha?** Nếu ném text cho AI và bảo "chia Scene", nó sẽ LƯỜI — dịch từng câu = 1 Scene (bẫy Slide PowerPoint). Để phá bẫy, ÉP AI **nghĩ trước khi làm** bằng cách viết `visual_event` TRƯỚC KHI chia Scene.
 
----
+#### Pha 1 — Visual Event Synthesis
+AI đọc **TOÀN BỘ** `full_text` của Sequence → tóm thành **MỘT SỰ KIỆN HÌNH ẢNH** duy nhất.
 
-## Bước 3: Micro Scene Storyboarding (LLM)
+Ví dụ: `full_text` = *"Your family back the wrong side... His men strip your priesthood... They want every stone attached to your name."*
+→ `visual_event`: *"Roman soldiers violently raiding Caesar's villa at night, stripping his belongings and destroying family symbols"*
 
-**Mục tiêu:** Đập vỡ mỗi Sequence thành các **Scene** (shot quay ngắn 3-6s) chuẩn ngôn ngữ điện ảnh.
+> Khi `full_text` chứa **chuỗi hành động nối tiếp** (montage), AI chọn **1-2 hành động mạnh nhất về hình ảnh** để làm `visual_event`. Không cần cover hết mọi câu.
 
-### Input Payload (Dynamic Batching)
+#### Pha 2 — Camera Cuts
+Dựa trên `visual_event` → AI bẻ thành **3-4 GÓC MÁY** quay **CÙNG MỘT** sự kiện, cùng bối cảnh.
 
-**Thuật toán Đóng Lô:**
-- 1 Sequence max **25s**
-- 1 Batch (1 API call) max **60s** (cộng dồn nhiều Sequence: 25s + 20s + 10s = 55s < 60s → gửi)
-
-**Mỗi Batch gồm:**
-1. `sequences[]` — data JSON từ Bước 1 nằm trong batch
-2. `=== VISUAL REFERENCE ===` — data từ 2 file Bước 2 nhúng trong system prompt
-3. System Prompt — 7 Quy tắc Đạo diễn
+#### Quy tắc Chống Dịch 1:1
+- **CẤM** tạo Scene dựa trên ranh giới câu văn
+- Scenes phải là **các GÓC NHÌN KHÁC NHAU** của cùng 1 sự kiện
+- `audio_sync` chỉ cho biết voiceover đang đọc tới đâu, **KHÔNG** quyết định nội dung hình ảnh
 
 ### 7 Quy tắc Đạo diễn (System Prompt)
 
 #### Quy tắc 1: Khóa Cảnh (Location & Subject Lock)
-Mọi hành động PHẢI diễn ra tại đúng `location_shift` và xoay quanh `main_subject` đã chốt ở Bước 1.
+Mọi hành động PHẢI diễn ra tại đúng `location_shift` và xoay quanh `main_subject` từ Bước 1. Khi ghi `locked_location`, sử dụng **CHÍNH XÁC** label từ `=== VISUAL REFERENCE: LOCATIONS ===` để đảm bảo Bước 4 lookup khớp.
 
 #### Quy tắc 2: Toán Thời gian (Time Math)
-- `sum(scene.duration)` phải bằng `total_duration` của Sequence
+- `sum(scene.duration)` = `total_duration` của Sequence
 - Mỗi Scene: **3.0s — 6.0s**
 
 #### Quy tắc 3: Phân loại A-Roll / B-Roll
 
-| Loại | Định nghĩa | Ví dụ |
-|---|---|---|
-| **A-Roll** | Góc máy tập trung HÀNH ĐỘNG / BIỂU CẢM CHÍNH của nhân vật trọng tâm | Full body shot, Profile view, Medium/Close-up cảm xúc |
-| **B-Roll** | Góc máy phụ trợ kể môi trường, không gian | Establishing Wide Shot, Silhouettes, Over-the-shoulder, Extreme Close-up vật thể |
+| Loại | Định nghĩa |
+|---|---|
+| **A-Roll** | Hành động/Biểu cảm chính nhân vật trọng tâm |
+| **B-Roll** | Môi trường, không gian, chi tiết vật thể |
 
 #### Quy tắc 4: Dịch Vật Lý (Physical Action Only)
-CẤM sinh từ trừu tượng (thua trận, buồn bã). Bắt buộc dịch ra sự kiện vật lý nhìn thấy.
+CẤM trừu tượng. Bắt buộc dịch ra sự kiện vật lý nhìn thấy.
 
 > [!NOTE]
-> **Ngôn ngữ:** `matched_text` giữ nguyên ngôn ngữ gốc script (EN/ES). Tất cả field prompt **PHẢI luôn là tiếng Anh**.
+> **Ngôn ngữ:** `audio_sync` giữ ngôn ngữ gốc. Tất cả prompt fields **PHẢI tiếng Anh**.
 
 #### Quy tắc 5: Khí quyển (Lighting / Mood)
-Bóc tách Ánh sáng + Bầu không khí thành field `lighting_and_atmosphere` riêng biệt.
+Bóc tách ánh sáng + bầu không khí thành `lighting_and_atmosphere`.
 
 #### Quy tắc 6: Yếu tố Nền (Background & Extras)
-Bắt buộc điền mô tả quần chúng hoặc chuyển động môi trường. Khung hình KHÔNG được chết lặng.
+Bắt buộc mô tả quần chúng hoặc chuyển động môi trường. **Tham chiếu** `factions[]` từ VISUAL REFERENCE.
 
-**Nguồn dữ liệu:** AI **PHẢI tham chiếu** `factions[]` từ `=== VISUAL REFERENCE ===` để mô tả đồng phục đúng phe.
+#### Quy tắc 7: Camera Motion
 
-#### Quy tắc 7: Chuyển động Máy quay (Camera Motion)
-
-**Mặc định: `Static`.** Chỉ mở khóa khi rơi đúng 1 trong 3 tình huống:
+**Mặc định: `Static`.** 3 ngoại lệ:
 
 | Tình huống | Cỡ cảnh | Camera Motion |
 |---|---|---|
-| Scene **MỞ ĐẦU** Sequence mới | Wide | Slow Pan |
+| **MỞ ĐẦU** Sequence mới | Wide | Slow Pan |
 | Nhân vật **đang di chuyển** | Medium | Slow Tracking |
 | Cảm xúc **cao trào** | Medium/Close-up | Extreme Slow Zoom In |
-| **Mọi tình huống khác** | Bất kỳ | **Static** |
 
-**Ràng buộc:** CẤM Pan ở Close-up. CẤM 2 hướng chuyển động đối nghịch liền kề — phải chèn Static ở giữa (Vector Continuity).
+CẤM Pan ở Close-up. CẤM 2 hướng đối nghịch liền kề (Vector Continuity).
 
 ### Output
 
@@ -276,152 +213,128 @@ Bắt buộc điền mô tả quần chúng hoặc chuyển động môi trườ
   "sequence_id": "SEQ_02",
   "total_sequence_duration": 14.0,
   "locked_location": "Caesar's Villa",
+  "visual_event": "Roman soldiers violently raiding Caesar's villa at night, stripping his belongings and destroying family symbols",
   "scenes": [
     {
       "global_scene_id": "SEQ_02_SCN_01",
       "duration": 4.0,
-      "matched_text": "Your family back the wrong side of his war...",
+      "audio_sync": "Your family back the wrong side of his war and Sullah remembers everything.",
       "character_labels": [],
       "faction_labels": ["Roman Legionaries"],
       "shot_type": "Wide Shot",
       "roll_type": "B-Roll",
       "camera_motion": "Slow Pan",
       "lighting_and_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic.",
-      "background_and_extras": "Silhouettes of soldiers in bronze segmented armor and red tunics standing by the doorway, heavy rain visible through the window.",
-      "physical_action": "Establishing shot of Caesar's Villa exterior in a storm, water streaming down cracked stone walls."
+      "background_and_extras": "Silhouettes of soldiers in bronze segmented armor standing by the doorway.",
+      "physical_action": "Villa door kicked open by armored boots, torchlight flooding into dark courtyard."
     },
     {
       "global_scene_id": "SEQ_02_SCN_02",
       "duration": 5.0,
-      "matched_text": "His men strip your priesthood...",
-      "character_labels": ["Roman-Commander-A"],
+      "audio_sync": "His men strip your priesthood. They confiscate your wife Cornelia's dowy.",
+      "character_labels": [],
       "faction_labels": ["Roman Legionaries"],
       "shot_type": "Medium Close-up",
-      "roll_type": "A-Roll",
+      "roll_type": "B-Roll",
       "camera_motion": "Static",
-      "lighting_and_atmosphere": "Cold moonlight crashing through windows, chaotic and violent mood.",
-      "background_and_extras": "Broken furniture and scattered gold coins shimmering faintly on the marble floor.",
-      "physical_action": "Young Roman man (18), short dark curly hair, white toga, standing rigid as two armored arms aggressively rip a sacred white priest scarf from his shoulders."
+      "lighting_and_atmosphere": "Cold moonlight, chaotic and violent mood.",
+      "background_and_extras": "Broken furniture and scattered gold coins on marble floor.",
+      "physical_action": "Armored hands violently sweeping ornate vases and jewelry boxes off a marble table."
+    },
+    {
+      "global_scene_id": "SEQ_02_SCN_03",
+      "duration": 5.0,
+      "audio_sync": "They want every stone attached to your name.",
+      "character_labels": [],
+      "faction_labels": ["Roman Legionaries"],
+      "shot_type": "Low Angle Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Static",
+      "lighting_and_atmosphere": "Dusty air filled with marble particles, harsh contrast lighting.",
+      "background_and_extras": "Destroyed courtyard with scattered scrolls blowing in wind.",
+      "physical_action": "Roman soldiers swinging heavy metal hammers, smashing a white marble family statue."
     }
   ]
 }
 ```
 
-### Python Validation (Hậu xử lý)
-
-```
-total_ai = sum(scene.duration for scene in scenes)
-total_expected = sequence.total_duration
-error = abs(total_ai - total_expected) / total_expected
-```
+### Python Validation
 
 | Sai số | Hành động |
 |---|---|
 | ≤ 10% | **Auto-fix** bằng Smart Tail Correction |
-| > 10% | **Reject** → retry API call (max 2 lần) |
+| > 10% | **Reject** → retry (max 2 lần) |
 
-#### Smart Tail Correction (Phân bổ đều)
+#### Validation `audio_sync` Coverage
+Nối tất cả `audio_sync` text → so sánh với `full_text` gốc. Nếu thiếu text → ghi warning log (không reject).
 
-- `total_ai < total_expected` → cộng `diff` vào scene cuối. Nếu scene cuối > 6.0s → phân bổ đều cho 2-3 scene cuối
-- `total_ai > total_expected` → trừ `diff` khỏi scene cuối. Nếu scene cuối < 3.0s → phân bổ trừ đều cho 2-3 scene cuối
+**Smart Tail Correction:** Cộng/trừ `diff` vào scene cuối. Nếu vượt 6s hoặc dưới 3s → phân bổ đều cho 2-3 scene cuối.
 
 **Checkpoint:** `_step3_scenes.json`
 
 ---
 
-## Bước 4: Prompt Assembly (Python thuần — KHÔNG dùng AI)
-
-**Mục tiêu:** Đóng gói data từ Bước 2 + Bước 3 + Art Style + Constraints thành payload chuẩn hóa cho API sinh video.
+## Bước 4: Prompt Assembly (Python thuần)
 
 ### Input
-
-1. `_step3_scenes.json` — list scenes
-2. `_step2_characters.json` — characters + factions
-3. `_step2_visual_bible.json` — locations
-4. **Art Style preset** (file `.txt` đã chọn — chứa `Mandatory Style` + `Negative Prompt`)
-5. **Constraint files** (`.txt` — `constraint_safety.txt`, `constraint_quality.txt`, `constraint_historical.txt`)
+1. `_step3_scenes.json`
+2. `_step2_characters.json` + `_step2_visual_bible.json`
+3. Art Style preset (`.txt` → `Mandatory Style` + `Negative Prompt`)
+4. Constraint files (`constraint_safety.txt`, `constraint_quality.txt`, `constraint_historical.txt`)
 
 ### Logic Assembly
+1. `character_labels[]` → lookup `characters[]` → inject `visual_description`
+2. `faction_labels[]` → lookup `factions[]` → inject `uniform_description`
+3. `locked_location` → lookup `locations[].label` → inject `bible_description`
+4. Art Style → trích `Mandatory Style` keywords
+5. Negative Prompt → trích từ file style
+6. Constraints → nối 3 file `.txt`
 
-Python duyệt qua từng Scene:
-1. **Nhân vật** → dùng `character_labels[]` lookup `characters[]` → inject `visual_description`
-2. **Quần chúng** → dùng `faction_labels[]` lookup `factions[]` → inject `uniform_description`
-3. **Location** → match `locked_location` với `locations[].label` → inject `bible_description`
-4. **Art Style** → đọc file style `.txt`, trích xuất `Mandatory Style` keywords
-5. **Negative Prompt** → trích xuất từ file style `.txt`
-6. **Constraints** → nối `constraint_safety.txt` + `constraint_quality.txt` + `constraint_historical.txt`
-
-### Cấu trúc Art Style (từ file `.txt` có sẵn)
-
-Mỗi file style gồm 3 phần chính mà Bước 4 cần trích xuất:
-
-| Phần | Vai trò | Ví dụ (OverSimplified Cartoon) |
-|---|---|---|
-| **Mandatory Style** | Dòng keywords mô tả phong cách, **append vào cuối prompt** | `"Hand-drawn 2D cartoon illustration, OverSimplified animation style, stick-figure characters with perfectly round white circle heads..."` |
-| **Negative Prompt** | Danh sách cấm, **gửi riêng** nếu API hỗ trợ | `"Avoid photorealism, 3D rendering, CGI, anime style..."` |
-| **Anti-Digital Rules** *(nếu có)* | Quy tắc đặc biệt cho một số style (vd: Gouache phải mở đầu bằng "A hand-painted gouache illustration...") | Tùy style |
-
-### Output Format — Final Prompt JSON
+### Output — Final Prompt JSON
 
 ```json
 {
-  "global_scene_id": "SEQ_02_SCN_02",
-  "character_labels": ["Roman-Commander-A"],
+  "global_scene_id": "SEQ_02_SCN_01",
+  "character_labels": [],
   "faction_labels": ["Roman Legionaries"],
-  "shot_type": "Medium Close-up",
-  "camera_motion": "Static",
-  "roll_type": "A-Roll",
-  "subject_action": "Young Roman man (18), short dark curly hair, white toga, standing rigid as two armored arms aggressively rip a sacred white priest scarf from his shoulders.",
-  "background_and_extras": "Broken furniture and scattered gold coins shimmering faintly on the marble floor.",
-  "location": "Modest Roman villa with cracked stone walls, narrow arched doorway, terracotta roof tiles, small inner courtyard with dry fountain, vine-covered pillars",
-  "lighting_and_atmosphere": "Cold moonlight crashing through windows, chaotic and violent mood.",
-  "mandatory_style": "Hand-drawn 2D cartoon illustration, OverSimplified animation style, stick-figure characters with perfectly round white circle heads and black dot eyes, thin black stick-line bodies, clean confident black outlines, detailed historical background environments, flat 2D shading with minimal shadows, muted earthy warm color palette of browns tans olive greens and dusty grays, cartoon props with historical accuracy, wide composition like animation key frame, educational illustration tone, warm approachable atmosphere, full frame, no border, no edge, no margin, no text, no signature, no watermark, 16:9 aspect ratio.",
-  "negative_prompt": "Avoid photorealism, realistic human anatomy, detailed facial features, 3D rendering, CGI, smooth gradients, volumetric lighting, bright saturated colors...",
-  "constraints": "No explicit violence or gore. PG-13. No real celebrity names. No regime symbols. Borderless, full-frame, no text. Single unified scene."
+  "shot_type": "Wide Shot",
+  "camera_motion": "Slow Pan",
+  "roll_type": "B-Roll",
+  "subject_action": "Villa door kicked open by armored boots, torchlight flooding into dark courtyard.",
+  "background_and_extras": "Silhouettes of soldiers in bronze segmented armor standing by the doorway.",
+  "location": "Modest Roman villa with cracked stone walls, narrow arched doorway, terracotta roof tiles",
+  "lighting_and_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic.",
+  "mandatory_style": "[Style keywords from preset .txt]",
+  "negative_prompt": "[Negative keywords from preset .txt]",
+  "constraints": "[Safety + Quality + Historical constraints]"
 }
 ```
 
-> **`character_labels`** giữ lại trong final prompt để **tham chiếu đến ảnh Character Sheet** tương ứng. Khi gen video, hệ thống có thể lookup ảnh `Roman-Commander-A.png` để dùng image-to-video hoặc style reference.
-
-### Ví dụ: Cách ghép Final F-String Prompt (cho text-based API)
-
-```
-Static, Medium Close-up. Young Roman man (18), short dark curly hair, white
-toga, standing rigid as two armored arms aggressively rip a sacred white
-priest scarf from his shoulders. Broken furniture and scattered gold coins
-shimmering faintly on the marble floor. At modest Roman villa with cracked
-stone walls, narrow arched doorway. Cold moonlight crashing through windows,
-chaotic and violent mood. Hand-drawn 2D cartoon illustration, OverSimplified
-animation style, stick-figure characters with perfectly round white circle
-heads, clean confident black outlines, muted earthy warm color palette, full
-frame, no border, no text, no watermark, 16:9 aspect ratio.
-```
+> `character_labels` giữ lại để tham chiếu ảnh Character Sheet.
 
 **Checkpoint:** `_step4_final_prompts.json`
 
 ---
 
-## Reliability Engine: Chống vỡ JSON
+## Reliability Engine
 
-| Tầng | Kỹ thuật | Chi tiết |
-|---|---|---|
-| 1. **Structured Outputs** (ưu tiên) | `response_format={"type": "json_schema"}` | Gemini/OpenAI hỗ trợ, xác suất lỗi ~0% |
-| 2. **Regex Stripping** | Hàm `try_parse()` lột vỏ ` ```json ``` ` | Cho model không hỗ trợ structured output |
-| 3. **Retry Fallback** | Gửi JSON lỗi lại API kèm "Fix the invalid JSON syntax" | Max **2 lần retry** |
-
-> Tuyệt đối KHÔNG từ bỏ JSON. JSON là huyết mạch tự động hóa.
+| Tầng | Kỹ thuật |
+|---|---|
+| 1. **Structured Outputs** | `response_format={"type": "json_schema"}` — xác suất lỗi ~0% |
+| 2. **Regex Stripping** | `try_parse()` lột ` ```json ``` ` |
+| 3. **Retry Fallback** | Gửi JSON lỗi lại + "Fix syntax" — max **2 lần** |
 
 ---
 
-## Checkpoint & Resume System
+## Checkpoint & Resume
 
-| Checkpoint file | Bước | Dữ liệu |
+| File | Bước | Dữ liệu |
 |---|---|---|
-| `_step0_sentences.json` + `cleaned_script.txt` | Tiền xử lý | Câu + timing gốc + script sạch |
-| `_step1_sequences.json` | Bước 1 | List Sequences |
-| `_step2_characters.json` | Bước 2, Call 1 | Characters + Factions (dùng gen ảnh sheet) |
-| `_step2_visual_bible.json` | Bước 2, Call 2 | Locations / Visual Bible |
-| `_step3_scenes.json` | Bước 3 | List Scenes |
+| `_step0_sentences.json` + `cleaned_script.txt` | Tiền xử lý | Câu + timing + script sạch |
+| `_step1_sequences.json` | Bước 1 | Sequences |
+| `_step2_characters.json` | Bước 2, Call 1 | Characters + Factions |
+| `_step2_visual_bible.json` | Bước 2, Call 2 | Locations |
+| `_step3_scenes.json` | Bước 3 | Scenes |
 | `_step4_final_prompts.json` | Bước 4 | Final prompts |
 
 ---
@@ -430,15 +343,17 @@ frame, no border, no text, no watermark, 16:9 aspect ratio.
 
 | # | Quyết định | Lý do |
 |---|---|---|
-| 1 | Bước 2 chạy **SAU** Bước 1 | Cần metadata từ Bước 1 |
-| 2 | Bước 2 = **2 API calls**, model **Pro** | Call 1: Characters+Factions, Call 2: Locations. Tách file để gen ảnh Character Sheet riêng |
-| 3 | Character liệt kê **đầy đủ** + `chapters[]` + `sheet_prompt` | Dùng gen ảnh reference giống pipeline ảnh hiện tại |
-| 4 | Quần chúng/quân sự → `factions[]` mô tả chung | Không cần sheet riêng |
-| 5 | Location do **LLM Bước 2 tự xác định** | Tên AI Bước 1 đặt không nhất quán → không dùng frequency pre-filter |
-| 6 | Sequence max **25s** (không có min), Batch max **60s** | Sweet spot token/accuracy |
-| 7 | Camera Motion mặc định **Static**, 3 ngoại lệ | Tránh AI lạm dụng camera motion |
-| 8 | Validation 2 tầng: ≤10% auto-fix, >10% reject | Đơn giản, hiệu quả |
-| 9 | Cảnh báo dừng nếu script > **5,000 từ** | Phòng token overflow Bước 2 |
-| 10 | Art Style = **preset file** | `Mandatory Style` append cuối prompt, `Negative Prompt` gửi riêng |
-| 11 | Final JSON giữ `character_labels` | Tham chiếu đến ảnh Character Sheet |
-| 12 | Constraints = 3 file `.txt` riêng biệt | Safety, Quality, Historical — nối vào prompt cuối |
+| 1 | Bước 2 chạy **SAU** Bước 1 | Cần metadata Bước 1 |
+| 2 | Bước 2 = **2 API calls, Pro** | File riêng: characters (gen ảnh) + locations (visual bible) |
+| 3 | Characters liệt kê **đầy đủ** + `chapters[]` + `sheet_prompt` | Gen ảnh reference |
+| 4 | Factions → `uniform_description` chung | Không cần sheet riêng |
+| 5 | Location do **LLM Bước 2 tự xác định** | Tên AI Bước 1 không nhất quán |
+| 6 | **2-Phase CoT** ở Bước 3 | Phá bẫy dịch 1:1, ép tư duy đạo diễn |
+| 7 | `audio_sync` thay `matched_text` | Voiceover position ≠ visual content |
+| 8 | **Chống dịch 1:1** | Scenes = góc máy, không phải minh họa từng câu |
+| 9 | Montage → chọn **1-2 hành động mạnh nhất** | Không cần cover hết mọi câu |
+| 10 | Sequence max **25s** (không có min) | Sweet spot |
+| 11 | Camera Motion mặc định **Static** | 3 ngoại lệ duy nhất |
+| 12 | Validation 2 tầng: ≤10% / >10% | Đơn giản |
+| 13 | Art Style = **preset**, Constraints = **3 file .txt** | Inject ở Bước 4 |
+| 14 | Final JSON giữ `character_labels` | Tham chiếu ảnh sheet |

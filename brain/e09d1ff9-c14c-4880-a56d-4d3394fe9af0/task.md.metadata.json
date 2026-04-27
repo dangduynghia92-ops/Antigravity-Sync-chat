@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Tracks progress for building the Video Prompt Pipeline implementation plan.",
-  "updatedAt":  "2026-04-27T17:19:45.313391300Z"
+  "summary":  "Implementation task tracking for the Video Prompt Pipeline, broken into 3 phases: Core Modules, UI, and Testing.",
+  "updatedAt":  "2026-04-27T19:00:36.818600600Z",
+  "version":  "4"
 }

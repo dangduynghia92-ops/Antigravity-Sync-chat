@@ -1,5 +1,6 @@
 {
-  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Full pipeline simulation using 48s Julius Caesar POV script sample. Traces every step from SRT parse through final prompt assembly, with concrete JSON at each stage. Identifies 3 real issues: (1) short staccato sentences (0.8s each) can't form valid 3-6s scenes individually, (2) subject shift rule is ambiguous when narrator POV bridges scenes, (3) time-skip sentences create awkward sequences. Proposes solutions for each.",
-  "updatedAt":  "2026-04-27T18:13:17.322787400Z"
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Part 2 of the Video Prompt Pipeline plan: Internal logic audit identifying 5 issues (data gaps, edge cases, missing fields) with solutions, plus complete UI specification for the new Video Prompt tab. UI design follows existing PyQt6 patterns with ConfigSection (Input SRT, Output, Style, Tier, Threads, Constraints), Pipeline Progress panel (step-by-step checkpoints with status), ActionsSection (Run Pipeline, Stop, Resume, Open Output), and LogSection. Includes all fields, controls, and their data flow mappings to the 4-step pipeline.",
+  "updatedAt":  "2026-04-27T18:56:28.266193500Z",
+  "version":  "1"
 }
