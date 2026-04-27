@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Full pipeline simulation using 48s Julius Caesar POV script sample. Traces every step from SRT parse through final prompt assembly, with concrete JSON at each stage. Identifies 3 real issues: (1) short staccato sentences (0.8s each) can't form valid 3-6s scenes individually, (2) subject shift rule is ambiguous when narrator POV bridges scenes, (3) time-skip sentences create awkward sequences. Proposes solutions for each.",
+  "updatedAt":  "2026-04-27T18:13:17.322787400Z"
+}
