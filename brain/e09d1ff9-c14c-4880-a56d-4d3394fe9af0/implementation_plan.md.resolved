@@ -1,0 +1,446 @@
+# Video Prompt Pipeline — Bản Kế hoạch Chi tiết (Revised)
+
+Pipeline tự động hóa chuyển đổi Script (SRT) → Video Prompts chuẩn hóa cho API sinh video (Veo3/Runway). Gồm **4 Module cốt lõi** + 1 **Reliability Engine**. Mọi dữ liệu luân chuyển giữa bước đều là **JSON**. Mỗi bước lưu checkpoint file để hỗ trợ resume khi có lỗi.
+
+> [!IMPORTANT]
+> **Art Style** được chọn trước khi chạy pipeline (từ preset [.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/srt_default.txt) files có sẵn). Pipeline KHÔNG sinh art style — chỉ inject vào prompt cuối ở Bước 4.
+
+---
+
+## Data Flow Tổng quan
+
+```mermaid
+graph LR
+    SRT["📄 .SRT File"] --> P["⚙ Python Parse"]
+    P --> S1["Bước 1: Semantic Chunking<br/>(LLM)"]
+    P --> CLEAN["cleaned_script.txt<br/>(Python thuần)"]
+    S1 --> S2["Bước 2: Global Context<br/>(LLM)"]
+    CLEAN --> S2
+    S1 --> S3["Bước 3: Scene Storyboard<br/>(LLM)"]
+    S2 --> S3
+    S3 --> S4["Bước 4: Prompt Assembly<br/>(Python thuần)"]
+    S2 --> S4
+    S4 --> OUT["🎬 Final Video Prompts"]
+```
+
+**Thứ tự thực thi:**
+1. **Python Parse** (thuần Python) → tạo `cleaned_script.txt` + JSON sentences có duration
+2. **Bước 1** (LLM) → nhóm sentences thành Sequences
+3. **Bước 2** (LLM) → chạy SAU Bước 1, nhận `cleaned_script.txt` + metadata Sequences
+4. **Bước 3** (LLM) → nhận Sequences (B1) + Global Context (B2), chia thành Scenes
+5. **Bước 4** (Python thuần) → nối data B2 + B3 thành prompt cuối
+
+---
+
+## Tiền xử lý: Python SRT Parse (Không dùng AI)
+
+**Input:** File `.srt` có timecode thô.
+
+**Xử lý:**
+1. Parse SRT → danh sách `(index, start_time, end_time, text)`
+2. **Merge & Interpolation:** Gộp các dòng SRT gãy vụn thành câu hoàn chỉnh (dựa theo dấu chấm kết câu). Dùng **Linear Interpolation** chia tỷ lệ số ký tự để tính lại `[start_time, end_time]` cho câu bị kẹt giữa 2 dòng subtitle.
+3. Tính `duration = end_time - start_time` cho mỗi câu.
+4. Tạo `cleaned_script.txt` — nối toàn bộ text lại, **lột sạch mọi timecode**, thành văn bản liền mạch. File này dùng cho Bước 2.
+5. Tạo JSON trung gian (gửi cho Bước 1). **Lột bỏ** `start_time` và `end_time` để tiết kiệm token — chỉ giữ lại:
+
+```json
+[
+  {"sentence_id": 1, "text": "You are 18, 82 BC.", "duration": 2.4},
+  {"sentence_id": 2, "text": "Sullah has seized Rome and he is writing lists...", "duration": 6.6}
+]
+```
+
+> Mốc `start_time`, `end_time` được Python cất giấu ở local. Khi AI trả về `sentence_id` gộp lại, Python tự ráp mốc Start/End cho Sequence.
+
+**Checkpoint:** `_step0_sentences.json` (list câu + timing gốc), `cleaned_script.txt`
+
+---
+
+## Bước 1: Macro Semantic Chunking (LLM)
+
+**Mục tiêu:** Cắt danh sách câu thành các **Sequence** (10-25s) mang trọn vẹn ngữ cảnh Không gian và Nhân vật.
+
+### Input
+- JSON trung gian từ Tiền xử lý (list câu, chỉ có `sentence_id`, `text`, `duration`)
+
+### 4 Quy tắc Chunking (cho LLM)
+
+| # | Quy tắc | Mô tả |
+|---|---|---|
+| 1 | **Không gian & Thời gian** (Ưu tiên #1) | Cắt Sequence mới khi Setting thay đổi (địa điểm, thời đại, ánh sáng/môi trường) |
+| 2 | **Chủ thể trọng tâm** (Subject Shift) | Cắt khi tiêu điểm đổi giữa nhóm/cá nhân khác nhau |
+| 3 | **Giới hạn dung lượng** (Max 25s) | Sequence không vượt quá **25 giây**. Nếu lố → chặt đôi |
+| 4 | **Ranh giới Ngữ nghĩa** | Lưỡi dao cắt phải rơi trúng dấu chấm/xuống dòng. Tuyệt đối cấm cắt ngang câu |
+
+### Output
+
+```json
+[
+  {
+    "sequence_id": "SEQ_01",
+    "sentence_ids": [1, 2],
+    "location_shift": "Sullah's Palace",
+    "main_subject": "Sullah and soldiers",
+    "full_text": "You are 18, 82 BC. Sullah has seized Rome...",
+    "total_duration": 9.0
+  },
+  {
+    "sequence_id": "SEQ_02",
+    "sentence_ids": [3, 4, 5],
+    "location_shift": "Caesar's Villa",
+    "main_subject": "Julius Caesar and Guards",
+    "full_text": "Your family back the wrong side of his war...",
+    "total_duration": 14.0
+  }
+]
+```
+
+**Checkpoint:** `_step1_sequences.json`
+
+---
+
+## Bước 2: Global Context Analysis (LLM)
+
+**Mục tiêu:** Quét toàn bộ kịch bản **một lần duy nhất** để "Khóa" thiết kế nhân vật và bối cảnh cho toàn dự án.
+
+> [!WARNING]
+> **Chốt chặn 5,000 từ:** Nếu `cleaned_script.txt` vượt 5,000 từ → dừng pipeline, hiển thị cảnh báo, yêu cầu user quyết định phương án trước khi tiếp tục.
+
+### Input (Hybrid)
+
+1. **`cleaned_script.txt`** — văn bản sạch, không timecode (từ Tiền xử lý)
+2. **Sequence metadata** — danh sách unique `location_shift` + `main_subject` trích từ Bước 1 (Python tự extract, không cần AI)
+3. **Character scan prompt** + **Location prompt** (prompt files có sẵn)
+
+### Logic xử lý
+
+#### A. Khóa Nhân vật (Characters) — CHỈ nhân vật có tên
+
+LLM đọc script sạch, trích xuất nhân vật, phân loại 2 nhóm:
+
+| Nhóm | Tiêu chí | Max | Output |
+|---|---|---|---|
+| **PROTAGONIST** | Nhân vật trung tâm, thúc đẩy mạch truyện, xuất hiện ≥50% sequences | 2-3 | `visual_description` + `body_language` |
+| **NAMED** | Nhân vật phụ có tên/chức danh, xuất hiện ≥2 sequences | 2-3 | `visual_description` + `body_language` |
+
+- **KHÔNG tạo character sheet cho quần chúng/quân sự** — chúng thuộc `factions[]`
+- Tổng max: **5-6 nhân vật** có sheet
+
+#### B. Khóa Phe phái/Quần chúng (Factions)
+
+LLM xác định các phe phái/nhóm quần chúng xuất hiện trong script. Mỗi phe chỉ cần **mô tả đồng phục chung** — KHÔNG tạo sheet riêng.
+
+| Field | Mô tả |
+|---|---|
+| `faction_name` | Tên phe (Roman Legionaries, Gallic Warriors, Civilians...) |
+| `uniform_description` | Mô tả đồng phục/trang phục chung (1-2 câu) |
+| `banner` | Cờ/phù hiệu phe (nếu có) |
+| `appears_as` | Vai trò thường gặp (background soldiers, crowd, prisoners...) |
+
+→ Dùng inject vào field `background_and_extras` ở Bước 3.
+
+#### C. Khóa Bối cảnh chính (Locations)
+
+**Tiêu chí lọc (Python pre-filter từ Bước 1):**
+
+| Tiêu chí | Logic |
+|---|---|
+| **Frequency** | Location xuất hiện ≥ 2 Sequences → chọn |
+| **Narrative Weight** | Nơi xảy ra sự kiện chính → chọn (dù chỉ 1 lần, do LLM đánh giá) |
+| **Max cap** | Tối đa 8-10 locations |
+
+Python đếm frequency từ `location_shift` của Bước 1, lọc danh sách locations ≥ 2 lần xuất hiện, gửi danh sách đó cho LLM. LLM có quyền bổ sung thêm nếu phát hiện location quan trọng bị miss.
+
+### Output
+
+```json
+{
+  "characters": [
+    {
+      "label": "Roman-Commander-A",
+      "real_name": "Julius Caesar",
+      "group": "PROTAGONIST",
+      "visual_description": "Young Roman man (18), short dark curly hair, clean-shaven, wearing white toga with crimson stripe, no weapon",
+      "body_language": "Upright posture, deliberate slow gestures, projects calm authority"
+    },
+    {
+      "label": "Roman-General-A",
+      "real_name": "Pompey",
+      "group": "NAMED",
+      "visual_description": "Middle-aged Roman man (50), graying short hair, thick jaw, dark red military cloak over bronze chest armor",
+      "body_language": "Stiff military bearing, sharp commanding hand gestures"
+    }
+  ],
+
+  "factions": [
+    {
+      "faction_name": "Roman Legionaries",
+      "uniform_description": "Bronze segmented chest armor (lorica segmentata), red wool tunic, leather sandals with shin guards, short iron gladius sword",
+      "banner": "Red banner with golden eagle (SPQR)",
+      "appears_as": "background soldiers, marching columns, battle formations"
+    },
+    {
+      "faction_name": "Gallic Warriors",
+      "uniform_description": "Bare-chested or rough leather vest, long braided hair, blue woad face paint, large oval wooden shield, long iron sword",
+      "banner": "Animal fur standard on wooden pole",
+      "appears_as": "opposing army, ambush groups, tribal gatherings"
+    }
+  ],
+
+  "locations": [
+    {
+      "label": "Caesar's Villa",
+      "frequency": 4,
+      "bible_description": "Modest Roman villa with cracked stone walls, narrow arched doorway, terracotta roof tiles, small inner courtyard with dry fountain, vine-covered pillars",
+      "default_lighting": "Warm golden afternoon sunlight, dust particles in the air"
+    },
+    {
+      "label": "Senate of Rome",
+      "frequency": 3,
+      "bible_description": "Grand circular marble hall, tiered stone seating around central floor, tall fluted columns, open skylight in domed ceiling",
+      "default_lighting": "Bright natural light from above, dramatic shadows from columns"
+    }
+  ]
+}
+```
+
+**Checkpoint:** `_step2_global_context.json`
+
+---
+
+## Bước 3: Micro Scene Storyboarding (LLM)
+
+**Mục tiêu:** Đập vỡ mỗi Sequence thành các **Scene** (shot quay ngắn 3-6s) chuẩn ngôn ngữ điện ảnh.
+
+### Input Payload (Dynamic Batching)
+
+**Thuật toán Đóng Lô:**
+- 1 Sequence max **25s**
+- 1 Batch (1 API call) max **60s** (cộng dồn nhiều Sequence: 25s + 20s + 10s = 55s < 60s → gửi)
+- Sweet spot: AI không quá tải output tokens, tiết kiệm API calls
+
+**Mỗi Batch gồm:**
+1. `sequences[]` — data JSON từ Bước 1 nằm trong batch
+2. `global_context` — characters + factions + locations từ Bước 2
+3. System Prompt — 7 Quy tắc Đạo diễn
+
+### 7 Quy tắc Đạo diễn (System Prompt)
+
+#### Quy tắc 1: Khóa Cảnh (Location & Subject Lock)
+Mọi hành động PHẢI diễn ra tại đúng `location_shift` và xoay quanh `main_subject` đã chốt ở Bước 1. Cấm trượt bối cảnh.
+
+#### Quy tắc 2: Toán Thời gian (Time Math)
+- `sum(scene.duration)` phải bằng `total_duration` của Sequence
+- Mỗi Scene: **3.0s — 6.0s**
+
+#### Quy tắc 3: Phân loại A-Roll / B-Roll
+
+| Loại | Định nghĩa | Ví dụ |
+|---|---|---|
+| **A-Roll** | Góc máy tập trung HÀNH ĐỘNG / BIỂU CẢM CHÍNH của nhân vật trọng tâm | Full body shot tương tác, Profile view, Medium/Close-up cảm xúc |
+| **B-Roll** | Góc máy phụ trợ kể môi trường, không gian | Establishing Wide Shot, Silhouettes, Over-the-shoulder, Extreme Close-up vật thể |
+
+#### Quy tắc 4: Dịch Vật Lý (Physical Action Only)
+CẤM sinh từ trừu tượng (thua trận, buồn bã). Bắt buộc dịch ra sự kiện vật lý nhìn thấy (đầu gối gục xuống bùn, tay vuốt mắt...).
+
+> [!NOTE]
+> **Ngôn ngữ:** `matched_text` giữ nguyên ngôn ngữ gốc script (EN/ES). Tất cả các field prompt (`physical_action`, `lighting_and_atmosphere`, `background_and_extras`) **PHẢI luôn là tiếng Anh** — vì đây là input cho API sinh video.
+
+#### Quy tắc 5: Khí quyển (Lighting / Mood)
+Bóc tách Ánh sáng (mưa, nắng, bóng tối) + Bầu không khí (căng thẳng, trang nghiêm) thành field `lighting_and_atmosphere` riêng biệt.
+
+#### Quy tắc 6: Yếu tố Nền (Background & Extras)
+Bắt buộc điền mô tả "nhân vật quần chúng" hoặc "chuyển động môi trường" (rèm bay, lá rơi). Khung hình KHÔNG được chết lặng phía sau nhân vật. Lookup `factions[]` từ Bước 2 để mô tả đồng phục đúng phe.
+
+#### Quy tắc 7: Chuyển động Máy quay (Camera Motion)
+
+**Mặc định: `Static`.** Chỉ mở khóa khi rơi đúng 1 trong 3 tình huống:
+
+| Tình huống | Cỡ cảnh | Camera Motion |
+|---|---|---|
+| Scene **MỞ ĐẦU** Sequence mới (giới thiệu không gian) | Wide | Slow Pan |
+| Nhân vật **đang di chuyển** (chạy, cưỡi ngựa, hành quân) | Medium | Slow Tracking |
+| Cảm xúc **cao trào** (phát hiện bí mật, giận dữ) | Medium/Close-up | Extreme Slow Zoom In |
+| **Mọi tình huống khác** | Bất kỳ | **Static** |
+
+**Ràng buộc:**
+- CẤM Pan ở Close-up (gây biến dạng)
+- CẤM 2 hướng chuyển động đối nghịch liền kề (Pan Left → Pan Right). Phải chèn Static ở giữa (Vector Continuity)
+
+### Output
+
+```json
+{
+  "sequence_id": "SEQ_02",
+  "total_sequence_duration": 14.0,
+  "locked_location": "Caesar's Villa",
+  "scenes": [
+    {
+      "global_scene_id": "SEQ_02_SCN_01",
+      "duration": 4.0,
+      "matched_text": "Your family back the wrong side of his war...",
+      "character_labels": [],
+      "faction_labels": ["Roman Legionaries"],
+      "shot_type": "Wide Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Slow Pan",
+      "lighting_and_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic.",
+      "background_and_extras": "Silhouettes of soldiers in bronze segmented armor and red tunics standing by the doorway, heavy rain visible through the window.",
+      "physical_action": "Establishing shot of Caesar's Villa exterior in a storm, water streaming down cracked stone walls."
+    },
+    {
+      "global_scene_id": "SEQ_02_SCN_02",
+      "duration": 5.0,
+      "matched_text": "His men strip your priesthood. They confiscate your wife Cornelia's dowy.",
+      "character_labels": [],
+      "faction_labels": ["Roman Legionaries"],
+      "shot_type": "Medium Close-up",
+      "roll_type": "B-Roll",
+      "camera_motion": "Static",
+      "lighting_and_atmosphere": "Cold moonlight crashing through windows, chaotic and violent mood.",
+      "background_and_extras": "Broken furniture and scattered gold coins shimmering faintly on the marble floor.",
+      "physical_action": "Two heavy, armored arms of Roman soldiers aggressively ripping a sacred white priest scarf off."
+    },
+    {
+      "global_scene_id": "SEQ_02_SCN_03",
+      "duration": 5.0,
+      "matched_text": "They want every stone attached to your name.",
+      "character_labels": [],
+      "faction_labels": ["Roman Legionaries"],
+      "shot_type": "Low Angle Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Static",
+      "lighting_and_atmosphere": "Dusty air filled with marble particles, harsh contrast lighting.",
+      "background_and_extras": "Empty, destroyed courtyard with scattered ancient Roman scrolls blowing in the wind.",
+      "physical_action": "Roman soldiers swinging heavy metal hammers, smashing a white marble family statue to pieces."
+    }
+  ]
+}
+```
+
+### Python Validation (Hậu xử lý)
+
+#### Validation Thời gian (Dung sai 5%)
+
+```
+total_ai = sum(scene.duration for scene in scenes)
+total_expected = sequence.total_duration
+error = abs(total_ai - total_expected) / total_expected
+```
+
+| Sai số | Hành động |
+|---|---|
+| ≤ 5% | **Auto-fix** bằng Tail Correction (xem bên dưới) |
+| 5% — 15% | **Auto-fix** + ghi warning log |
+| > 15% | **Reject** → retry API call (max 2 lần) |
+
+#### Smart Tail Correction (Phân bổ đều)
+
+Khi `total_ai < total_expected`:
+1. Tính `diff = total_expected - total_ai`
+2. Cộng `diff` vào scene cuối
+3. **Nếu scene cuối > 6.0s sau khi cộng** → phân bổ đều `diff` cho 2-3 scene cuối sao cho không scene nào vượt 6.0s
+
+Khi `total_ai > total_expected`:
+1. Tính `diff = total_ai - total_expected`
+2. Trừ `diff` khỏi scene cuối
+3. **Nếu scene cuối < 3.0s sau khi trừ** → phân bổ trừ đều cho 2-3 scene cuối sao cho không scene nào dưới 3.0s
+
+**Checkpoint:** `_step3_scenes.json`
+
+---
+
+## Bước 4: Prompt Assembly (Python thuần — KHÔNG dùng AI)
+
+**Mục tiêu:** Đóng gói data từ Bước 2 (context tĩnh) + Bước 3 (scenes động) thành payload chuẩn hóa cho API sinh video.
+
+### Logic Assembly
+
+Python duyệt qua từng Scene, dùng `character_labels` và `faction_labels` để lookup data từ Bước 2:
+1. **Nhân vật chính/phụ** → dùng `character_labels[]` để tìm đúng entry trong `characters[]`, inject `visual_description` vào `physical_action`
+2. **Quần chúng/quân sự** → dùng `faction_labels[]` để tìm đúng entry trong `factions[]`, inject `uniform_description` vào `background_and_extras`
+3. **Location** → match `locked_location` với `locations[].label`, inject `bible_description`
+4. **Art Style** → inject từ preset file đã chọn trước pipeline
+
+### Output Format
+
+**Dạng F-string (cho Runway / text-based API):**
+```
+[Camera Motion] [Shot Type]. [Physical Action with character visual description], [Background & Extras with faction uniform]. At [Location bible description]. [Lighting & Atmosphere]. [Art Style].
+```
+
+**Dạng JSON (cho Veo3 / structured API):**
+```json
+{
+  "global_scene_id": "SEQ_02_SCN_01",
+  "duration": 4.0,
+  "camera_movement": "Slow Pan, Wide Shot",
+  "subject_action": "Establishing shot of Caesar's Villa exterior in a storm, water streaming down cracked stone walls.",
+  "background_and_extras": "Silhouettes of soldiers in bronze segmented armor and red tunics standing by the doorway, heavy rain visible through the window.",
+  "location": "Modest Roman villa with cracked stone walls, narrow arched doorway, terracotta roof tiles",
+  "lighting_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic.",
+  "art_style": "Classical Oil Painting Historical"
+}
+```
+
+**Checkpoint:** `_step4_final_prompts.json`
+
+---
+
+## Reliability Engine: Chống vỡ JSON
+
+**3 tầng bảo vệ:**
+
+| Tầng | Kỹ thuật | Chi tiết |
+|---|---|---|
+| 1. **Structured Outputs** (ưu tiên) | `response_format={"type": "json_schema"}` | Gemini/OpenAI hỗ trợ, xác suất lỗi ~0% |
+| 2. **Regex Stripping** | Hàm `try_parse()` lột vỏ ` ```json ``` ` + trim whitespace | Cho model không hỗ trợ structured output |
+| 3. **Retry Fallback** | Gửi JSON lỗi lại API kèm "Fix the invalid JSON syntax" | Max **2 lần retry**, tránh vòng lặp tốn tiền |
+
+> Tuyệt đối KHÔNG từ bỏ JSON. JSON là huyết mạch tự động hóa.
+
+---
+
+## Checkpoint & Resume System
+
+Mỗi bước lưu output thành file JSON. Khi chạy lại, Python check file tồn tại → skip bước đã hoàn thành.
+
+| Checkpoint file | Bước | Dữ liệu |
+|---|---|---|
+| `_step0_sentences.json` + `cleaned_script.txt` | Tiền xử lý | Câu + timing gốc + script sạch |
+| `_step1_sequences.json` | Bước 1 | List Sequences |
+| `_step2_global_context.json` | Bước 2 | Characters + Factions + Locations |
+| `_step3_scenes.json` | Bước 3 | List Scenes (tất cả Sequences) |
+| `_step4_final_prompts.json` | Bước 4 | Final prompts ready for video API |
+
+**Logic resume:**
+```
+if file_exists("_step1_sequences.json"):
+    sequences = load("_step1_sequences.json")  # skip Bước 1
+else:
+    sequences = run_step1()
+    save("_step1_sequences.json", sequences)
+```
+
+---
+
+## Tổng kết Quyết định Thiết kế
+
+| # | Quyết định | Lý do |
+|---|---|---|
+| 1 | Bước 2 chạy **SAU** Bước 1 | Cần metadata `location_shift` + `main_subject` từ Bước 1 để pre-filter |
+| 2 | Character sheet chỉ cho **PROTAGONIST + NAMED** (max 5-6) | Quần chúng/quân sự chỉ cần mô tả chung trong `factions[]` |
+| 3 | Location lọc bằng **frequency** (Python đếm từ Bước 1) | Chỉ khóa location ≥ 2 lần xuất hiện, tối đa 8-10 |
+| 4 | Max Sequence = **25s**, Max Batch = **60s** | Sweet spot token/accuracy |
+| 5 | Camera Motion mặc định **Static**, 3 ngoại lệ duy nhất | Tránh AI lạm dụng camera motion |
+| 6 | Smart Tail Correction phân bổ đều | Tránh scene vượt 6s hoặc dưới 3s |
+| 7 | Cảnh báo dừng nếu script > **5,000 từ** | Phòng token overflow Bước 2 |
+| 8 | Art Style là **preset**, không phải AI sinh | Config trước pipeline, inject ở Bước 4 |
+
+## Verification Plan
+
+### Automated Tests
+- Chưa áp dụng ở giai đoạn plan — sẽ bổ sung khi implement
+
+### Manual Verification
+- User review plan này và chốt các quyết định thiết kế trước khi code
