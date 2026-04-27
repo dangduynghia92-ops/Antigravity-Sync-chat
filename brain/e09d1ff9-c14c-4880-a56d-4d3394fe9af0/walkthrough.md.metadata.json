@@ -1,6 +1,6 @@
 {
-  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Part 2 of the Video Prompt Pipeline plan: Internal logic audit identifying 5 issues (data gaps, edge cases, missing fields) with solutions, plus complete UI specification for the new Video Prompt tab. UI design follows existing PyQt6 patterns with ConfigSection (Input SRT, Output, Style, Tier, Threads, Constraints), Pipeline Progress panel (step-by-step checkpoints with status), ActionsSection (Run Pipeline, Stop, Resume, Open Output), and LogSection. Includes all fields, controls, and their data flow mappings to the 4-step pipeline.",
-  "updatedAt":  "2026-04-27T18:56:28.266193500Z",
-  "version":  "1"
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Documents the completed implementation of the Video Prompt Pipeline: 3 new files created, 1 file modified, all imports verified. Lists file locations, key design decisions, and what was tested.",
+  "updatedAt":  "2026-04-27T19:07:31.163767800Z",
+  "version":  "2"
 }
