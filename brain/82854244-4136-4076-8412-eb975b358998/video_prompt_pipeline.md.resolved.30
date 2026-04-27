@@ -1,0 +1,200 @@
+# Kiến trúc Tổng thể: Pipeline tự động hóa Video Prompt từ Script
+
+Để xây dựng một Tool/Module bằng Python giải quyết triệt để bài toán đồng bộ khung hình, khớp thời gian và hợp logic chuyển cảnh, chúng ta cần một Pipeline (đường ống) dữ liệu chạy qua **4 Module cốt lõi**. 
+
+Mục tiêu cốt lõi: Mọi dữ liệu luân chuyển giữa các bước đều phải được format chuẩn **JSON** để code dễ dàng đọc, parse và validation (kiểm chứng) trước khi đẩy vào API tạo video.
+
+---
+
+## Bước 1: Module Phân rã Kịch bản (Macro Semantic Chunking)
+**Mục tiêu:** Cắt kịch bản Audio thô (SRT) thành các mảng lớn (Sequence) mang trọn vẹn ngữ cảnh Không gian và Nhân vật, đồng thời tính toán chuẩn xác thời lượng để nhồi cho AI.
+
+*   **Tiền xử lý (Python SRT Parsing & Timing):** 
+    * **Input:** File Phụ đề (`.srt`) có chứa timecode thô ráp.
+    * **Merge & Interpolation:** Code Python gộp các đoạn SRT gãy vụn thành các Câu Văn Hoàn Chỉnh (Dựa theo dấu chấm kết câu). Sau đó dùng thuật toán **Nội suy (Linear Interpolation)** chia tỷ lệ số ký tự để tính toán lại chính xác vị trí `[start_time, end_time]` cho những câu bị kẹt giữa 2 dòng phụ đề.
+    * **JSON Trung gian:** Từ mốc Start/End vừa tính, Code dùng phép trừ cơ bản `duration = end_time - start_time`. Một mảng JSON mồi chứa list dữ liệu sẽ được tạo ra. Để TIẾT KIỆM TOKENS (Tránh gửi rác cho AI), ta sẽ **LỘT BỎ** biến `start_time` và `end_time` trước khi ném cho AI đọc, chỉ giữ lại những thông tin cốt lõi nhất:
+```json
+[
+  {
+    "sentence_id": 1,
+    "text": "You are 18, 82 BC.",
+    "duration": 2.4
+  },
+  {
+    "sentence_id": 2,
+    "text": "Sullah has seized Rome and he is writing lists, names on parchment that become death warrants by mourning.",
+    "duration": 6.6
+  }
+]
+```
+    *(Lưu ý: Mốc `start_time, end_time` không hề bị mất, chúng chỉ được **Python cất giấu ở Local**. Khi AI làm xong Bước 1 trả về các dòng `sentence_id` được gộp lại, Python sẽ tự lôi Local Database ra để ráp nối lại mốc Start/End cho tổng Sequence đó).*
+*   **Logic xử lý (LLM Semantic Chunking):** Cỗ máy LLM đọc mảng JSON trung gian đó và áp dụng 4 BỘ QUY TẮC để nhóm các câu thành các Sequence lớn:
+    * **Quy tắc 1 (Không gian & Thời gian - Ưu tiên #1):** Cắt thành Sequence mới ngay khi kịch bản phát hiện sự thay đổi về Setting. (Vd: Từ phòng khách ra ngõ, từ ban ngày sang "3 năm sau" đêm tối). Ánh sáng/Môi trường đổi -> Phải ngắt đoạn.
+    * **Quy tắc 2 (Chủ thể trọng tâm - Subject Shift):** Dù cùng 1 không gian, nhưng nếu tiêu điểm đổi từ Nhóm Tướng Địch (Đám đông) sang Gương mặt Nhân vật chính (Cá nhân) -> Phải ngắt đoạn để module Gen ảnh không tải nhầm Asset.
+    * **Quy tắc 3 (Giới hạn dung lượng - Max Duration):** Nếu 1 cảnh chém nhau ngoài bãi cỏ kéo dài quá lâu (vd 200 từ), hệ thống buộc phải chặt đôi nó ra. Chốt chặn này ngăn AI/RAM không bị tràn bộ nhớ khi xử lý lệnh.
+    * **Quy tắc 4 (Ranh giới Ngữ nghĩa - Semantic Boundary):** Ngay cả khi bị chặt bởi Quy tắc 3, Python tuyệt đối cấm việc "cắt ngang một câu đang nói dở". Lưỡi dao cắt bắt buộc phải rơi trúng dấu chấm hoặc dấu xuống dòng (`.`, `\n`). 
+*   **Output (JSON List Example):** Định dạng chuẩn mực trọn vẹn ngữ nghĩa để đẩy cho Con AI ở Bước 3 làm nhiệm vụ chia Scene:
+```json
+[
+  {
+    "sequence_id": "SEQ_01",
+    "location_shift": "Sullah's Palace",
+    "main_subject": "Sullah and soldiers",
+    "full_text": "You are 18, 82 BC. Sullah has seized Rome and he is writing lists, names on parchment that become death warrants by mourning.",
+    "total_duration": 9.0
+  },
+  {
+    "sequence_id": "SEQ_02",
+    "location_shift": "Caesar's Villa",
+    "main_subject": "Julius Caesar and Guards",
+    "full_text": "Your family back the wrong side of his war and Sullah remembers everything. His men strip your priesthood. They confiscate your wife Cornelia's dowy. They want every stone attached to your name.",
+    "total_duration": 14.0
+  }
+]
+```
+
+---
+
+## Bước 2: Module Phân tích Siêu Dữ Liệu (Global Context Analysis)
+**Mục tiêu:** Quét toàn bộ kịch bản một lần duy nhất để "Khóa" (Lock) thiết kế mĩ thuật cho toàn bộ dự án bằng cách tạo ra các bộ Tham chiếu tĩnh (Character Sheet & Visual Bible).
+
+*   **Input (Tuyệt chiêu Plain Text):** 
+    * **Bản Script Sạch (Cleaned Text):** Code Python ngầm lấy toàn bộ các chuỗi `full_text` ở Bước 1 nối lại, **lột sạch sành sanh mọi con số Timecode hầm bà lằng (00:00:xx)** để đúc thành một File Văn Bản Tiểu Thuyết liền mạch trơn tru.
+    * Gửi nguyên cái Bản Văn Bản Sạch đó cho AI cùng các Tệp Phong cách ([.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt) style) và Tệp Mẫu Prompt ([character_group_prompt.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/character_group_prompt.txt)).
+    * *(Lý do phải làm Sạch: Tránh việc nhồi nhét timecode vào não AI làm nó bị ngộ độc số liệu, mất khả năng gom ngữ cảnh, đồng thời tiết kiệm 50% chi phí Token API)*.
+*   **Logic xử lý (LLM Task):**
+    * **Khóa Nhân vật (Character Design):** LLM đọc cái "Tiểu thuyết" mượt mà đó, trích xuất tất cả tên các nhân vật/phe phái. Định nghĩa 4 thuộc tính (Mũ, Tóc, Quần áo, Vũ khí) và sinh ra câu lệnh (Prompt) chuẩn form: *"Bảng tham chiếu 3 góc độ, nền trắng, có Label tên ở dưới"*.
+    * **Khóa Không gian (Visual Bible):** LLM lọc ra danh sách các bối cảnh chính (Locations) và sinh câu lệnh mô tả chi tiết không gian rộng.
+*   **Output (JSON Object Example):** Kho lưu trữ Context dùng làm "Sườn" để Module 3 lấy thông tin:
+```json
+{
+  "global_style": "Classical Oil Painting Historical, cinematic...",
+  "characters": [
+    {
+      "label": "Constantino el Grande",
+      "sheet_prompt": "Character reference sheet on clean white background. Three neutral standing views... [Roman Emperor armor]. Bold label text 'Constantino'."
+    }
+  ],
+  "locations": [
+    {
+      "label": "Constantinopla City",
+      "bible_prompt": "A majestic establishing shot of Constantinopla, classical Roman architecture... Classical Oil Painting Historical."
+    }
+  ]
+}
+```
+
+---
+
+## Bước 3: Module Đạo diễn Hình ảnh (Micro Scene Storyboarding)
+**Mục tiêu:** Kế thừa "Cỗ được dọn sẵn" là mảng Segment đã nội suy Không gian của Bước 1. Đóng vai trò Đạo diễn, đập vỡ Sequence đó thành các Shot quay ngắn (3-5s) chuẩn ngôn ngữ điện ảnh.
+
+*   **Data Gửi Đi (Input Payload - Kỹ thuật Batching):** Mảng Data tống vào não LLM được đóng gói bằng Thuật toán Gộp Lô (Batching) để tối ưu Giới hạn Tiền tệp/Năng lực của AI:
+    1. **Thuật toán Đóng Lô (Dynamic Batching):** Áp đặt thông số cứng: 1 Phân đoạn lẻ (Sequence) dung lượng tối đa `25s`. Một xe chở hàng (Batch Call API) nặng tối đa `60s` (1 phút). Python tự động cộng dồn các Sequence (Vd: 25s + 20s + 10s = 55s < 60s) thì chốt đóng gói và gửi lên API. Đây là "Điểm Tối Ưu" (Sweet Spot) để AI không bị quá tải Output Tokens, không tính sai toán, và tiết kiệm số lần gọi mạng.
+    2. `Sequence Context`: Tập hợp toàn bộ Data JSON của Bước 1 nằm lọt thỏm trong cái Lô 60 Giây đó.
+    3. `Visual Assets`: Bảng Nhân vật và Không gian được bọc sẵn lấy từ Bước 2.
+    4. `System Prompt`: Lệnh Đạo diễn bắt ép LLM tuân thủ 4 Luật.
+*   **Hướng dẫn AI chia cảnh (System Prompt Rules):**
+    * **Quy tắc Khóa Cảnh (Location & Subject Lock):** Bắt buộc mọi hành động đều PHẢI diễn ra tại đúng Không gian và xoay quanh Chủ thể đã được chốt ở Bước 1. Tránh rủi ro trượt bối cảnh.
+    * **Quy tắc Toán (Time Math):** Tổng các `scene_duration` sinh ra phải BẰNG CHÍNH XÁC `total_duration` của Sequence. Mỗi Shot cho phép dao động từ **3.0s - 6.0s**.
+    * **Quy tắc Điện ảnh (Định nghĩa rõ A-Roll & B-Roll):** Ép LLM rải nhịp điệu dựa trên ranh giới chặt chẽ sau:
+        * **A-Roll (Cảnh Chính):** Là góc máy tập trung làm nổi bật HÀNH ĐỘNG hoặc BIỂU CẢM CHÍNH của Nhân vật trọng tâm (Subject) nhằm thúc đẩy mạch truyện. **Ví dụ như (Examples):** Cảnh toàn thân nhân vật đang tương tác (Full body shot), Góc quay ngang (Profile view), hoặc Cận cảnh cảm xúc (Medium/Close-up), v.v...
+        * **B-Roll (Cảnh Bổ trợ):** Là các góc máy phụ trợ dùng để kể diễn biến môi trường, không gian. **Ví dụ như (Examples):** Cảnh toàn thiết lập (Establishing Wide Shots); Quay bóng ngược sáng (Silhouettes); Quay chéo qua vai/sau lưng (Over-the-shoulder/Back Trailing); Cận cảnh đặc tả chi tiết vật thể/tay chân (Extreme Close-ups), v.v... 
+    * **Quy tắc Dịch Vật Lý (Physical Action Only):** CẤM sinh từ ngữ trừu tượng (Thua trận, buồn bã). Bắt buộc dịch ra sự kiện vật lý nhìn thấy được (đầu gối gục xuống bùn, vuốt mắt...).
+    * **Quy tắc Khí quyển (Lighting/Mood):** Yêu cầu LLM bóc tách rõ Môi trường Ánh sáng (mưa, nắng, tối tăm) và Bầu không khí (căng thẳng, u buồn) thành một cột biến riêng biệt.
+    * **Quy tắc Yếu tố Nền (Background & Extras):** Bắt buộc LLM phải điền thông tin mô tả các "Nhân vật quần chúng" (quân lính lờ mờ phía sau) hoặc "Chuyển động môi trường" (rèm bay, lá rơi) để khung hình Video có sức sống, không bị chết lặng phía sau nhân vật.
+    * **Quy tắc Chuyển động Máy quay (Camera Motion):** Mặc định MỌI Scene đều là `Static`. Chỉ được phép "mở khóa" chuyển động nếu rơi đúng vào 1 trong 3 tình huống trong Bảng Tra Cứu sau:
+
+        | Tình huống cụ thể | Cỡ cảnh | Camera Motion |
+        |---|---|---|
+        | Scene **MỞ ĐẦU** của Sequence mới (Giới thiệu không gian) | Wide | Slow Pan |
+        | Nhân vật **đang di chuyển** (chạy, cưỡi ngựa, hành quân) | Medium | Slow Tracking |
+        | Cảm xúc **cao trào** (phát hiện bí mật, giận dữ) | Medium/Close-up | Extreme Slow Zoom In |
+        | **Mọi tình huống khác** | Bất kỳ | **Static** |
+
+        *Ràng buộc bổ sung:* CẤM tuyệt đối dùng Pan ở Close-up (gây biến dạng hình). CẤM xếp 2 hướng chuyển động đối nghịch liền kề (VD: Pan Left rồi Pan Right). Phải chèn Static ở giữa làm đệm (Vector Continuity).
+*   **Output (JSON List Example - Đã có Index Định vị):** Định dạng trả về hoàn hảo để Python đọc:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "total_sequence_duration": 14.0,
+  "locked_location": "Caesar's Villa",
+  "scenes": [
+    {
+      "global_scene_id": "SEQ_01_SCN_01",
+      "duration": 4.0,
+      "matched_text": "Your family back the wrong side of his war...",
+      "shot_type": "Medium Shot",
+      "roll_type": "A-Roll",
+      "camera_motion": "Slow Push-in",
+      "lighting_and_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic.",
+      "background_and_extras": "Silhouettes of armed Roman guards standing by the doorway, heavy rain visible through the window.",
+      "physical_action": "Young Julius Caesar (18 years old) standing in the dark shadows of his room, body tense with fear."
+    },
+    {
+      "global_scene_id": "SEQ_01_SCN_02",
+      "duration": 5.0,
+      "matched_text": "His men strip your priesthood. They confiscate your wife Cornelia's dowy.",
+      "shot_type": "Medium Close-up",
+      "roll_type": "B-Roll",
+      "camera_motion": "Static",
+      "lighting_and_atmosphere": "Cold moonlight crashing through windows, chaotic and violent mood.",
+      "background_and_extras": "Broken furniture and scattered gold coins shimmering faintly on the marble floor.",
+      "physical_action": "Two heavy, armored arms of Roman soldiers aggressively ripping a sacred white priest scarf off."
+    },
+    {
+      "global_scene_id": "SEQ_01_SCN_03",
+      "duration": 5.0,
+      "matched_text": "They want every stone attached to your name.",
+      "shot_type": "Low Angle Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Slow Tilt Up",
+      "lighting_and_atmosphere": "Dusty air filled with marble particles, harsh contrast lighting.",
+      "background_and_extras": "Empty, destroyed courtyard with scattered ancient Roman scrolls blowing in the wind.",
+      "physical_action": "Roman soldiers swinging heavy metal hammers, smashing a white marble family statue to pieces."
+    }
+  ]
+}
+```
+*   **Python Validation (Cơ chế Dung sai 5%):** Code Python sẽ móc vào cục JSON trên, nhẩm hàm `sum(duration)`.
+    * Trong lập trình Code tự động, KHÔNG BAO GIỜ ép AI chuẩn xác 100% thời gian vì sẽ gây ra vòng lặp vô tận (Infinite Loop). Hệ thống CHẤP NHẬN SAI SỐ `5 - 10%` (Lệch khoảng 1-2 giây).
+    * **Logic Bù Trừ Đuôi (Tail Correction):** Nếu chênh lệch < 5% (Vd tổng AI ra 13s, nhưng gốc ném sang là 14s), Python sẽ tự động lấy `14s - 13s = +1s` và CỘNG DỒN tự động vào cái Scene cuối cùng của mảng (`duration` của Scene 3 trở thành `5 + 1 = 6s`). Chốt hạ thời lượng luôn khớp 100% kịch bản âm thanh mà không tốn api call đi call lại. Trường hợp lỗi lố quá 15% mới Reject gọi lại API.
+---
+
+## Bước 4: Module Lắp Ráp Máy Dệt (Prompt Assembly)
+**Mục tiêu:** Xử lý đoạn hậu kỳ (Post-processing) thuần túy. Đóng gói Data tĩnh (Bước 2) và Data Động (Bước 3) thành Payload chuẩn hóa (Tiếng Anh F-String hoặc Tệp JSON) để bắn sang API sinh Video (Veo3/Runway).
+
+*   **Logic xử lý (Python Dictionary Assembly):**
+    Phần này KHÔNG dùng AI. Tùy thuộc vào yêu cầu của API Máy Render, Code Python sẽ ráp dữ liệu:
+    * *(Truyền thống)*: Nối chuỗi F-string thành 1 dải chữ dài: `[Shot]. [Action], [Background Extras], at [Location], [Lighting]. [Style]`.
+    * *(Dành riêng cho Veo API / Hệ Video Đời Mới)*: Ghép Dictionary Python xuất ra JSON cấu trúc hóa.
+*   **Ví dụ Output (JSON Structured Prompt):**
+```json
+{
+  "camera_movement": "Medium Shot",
+  "subject_action": "Young Julius Caesar (18 years old) standing in the dark shadows of his room, body tense with fear",
+  "background_and_extras": "Silhouettes of armed Roman guards standing by the doorway, heavy rain visible through the window",
+  "location": "Caesar's Villa",
+  "lighting_atmosphere": "Dark moody shadows, flickering warm torchlight, tense and claustrophobic",
+  "art_style": "Classical Oil Painting Historical"
+}
+```
+*   **Trích xuất Cuối (Dữ liệu thành phẩm):** Python xuất List cục JSON này tống thẳng vào Tool Queue nội bộ để sẵn sàng quăng chéo sang con Veo3 chạy nốt ra MP4.
+
+---
+
+## Mảnh ghép Bảo hiểm (Reliability Engine): Chống vỡ định dạng JSON
+**Vấn đề:** Rủi ro cực lớn khi gọi LLM là nó hay lải nhải *"Dạ đây là kết quả của bạn:"* rồi mới nhả JSON, hoặc tệ hơn là viết thiếu cấu trúc ngắt dòng khiến Code Python đọc bị chết ngắc `(JSONDecodeError)`.
+**Lưu ý:** Tuyệt đối KHÔNG ĐƯỢC từ bỏ JSON để dùng Cấu trúc Text thô. JSON là huyết mạch của tự động hóa. Nếu bỏ JSON, Python sẽ mù đường.
+
+**Giải pháp Kỹ thuật xử lý triệt để:**
+1. **Ép Schema từ Core API (Khuyên dùng):** Các Hãng AI đời mới (OpenAI, Gemini) đều đã ra mắt tính năng `Structured Outputs`. Khi bạn viết Code chọc API, chỉ cần chèn thêm cấu hình `response_format={"type": "json_schema"}`. Hệ thống bắt ép AI phải khóa chặt đầu ra thành format JSON, xác suất sai cấu trúc là **0%**.
+2. **Lớp gọt Rác (Regex Stripping):** Trong Python, viết một cái hàm `try_parse` có đính kèm Regex để lột lớp vỏ markdown ` ```json ` ra khỏi string trước khi nạp vào thư viện.
+3. **Cơ chế Dọn dẹp (Retry Fallback):** Nếu file JSON vẫn bị rách, Python không được sụp đổ. Nó ném cái nội dung bị rách đó ngược lại API kèm lệnh *"Fix the invalid JSON syntax"* (Mất chưa tới 2 giây), con AI sẽ tự động vá lại dấu phẩy bị thiếu một cách hoàn hảo.
+
+---
+
+### Tổng kết Đường đi Dữ liệu (Data Flow)
+**Full Script Text** ---> (B1) ---> **Sequences (10-25s)** ---> (B3) ---> **Scenes (3-5s)** ---> (B4) ---> **Final API Prompts**
+
+*(Module 2 chạy một lần ở đầu để lấy data tổng quan làm tài nguyên cho Bước 3 và Bước 4).*
