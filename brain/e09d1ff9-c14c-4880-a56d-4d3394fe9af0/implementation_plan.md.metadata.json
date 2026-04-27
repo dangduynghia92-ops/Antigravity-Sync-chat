@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete revised implementation plan for the Video Prompt Pipeline. 4 modules: (1) SRT → Semantic Sequences via LLM with 4 chunking rules, (2) Global Context Analysis producing characters (PROTAGONIST/NAMED only), factions (uniform descriptions for crowds/military), and locations (frequency-filtered), (3) Micro Scene Storyboarding with 7 director rules including camera motion table and smart tail correction, (4) Pure-Python Prompt Assembly. Includes checkpoint/resume system, 5000-word script warning, Reliability Engine with 3-tier JSON protection, and art style as pre-configured preset.",
-  "updatedAt":  "2026-04-27T17:22:25.212717Z"
+  "summary":  "Complete revised v3 implementation plan for Video Prompt Pipeline. Key changes in v3: (1) Sequence has no minimum duration, only max 25s, (2) Characters listed fully without max cap, each with chapters list, (3) Locations identified by LLM Step 2 directly from script instead of frequency pre-filter from Step 1, (4) Step 2 outputs 1 single checkpoint file with all 3 arrays, sent as VISUAL REFERENCE section in Step 3 prompt, (5) background_and_extras explicitly references factions[] from Step 2, (6) Validation simplified to 2 tiers: ≤10% auto-fix, >10% reject, (7) Final JSON tách rõ từng field, không có duration.",
+  "updatedAt":  "2026-04-27T17:50:20.815525500Z",
+  "version":  "2"
 }
