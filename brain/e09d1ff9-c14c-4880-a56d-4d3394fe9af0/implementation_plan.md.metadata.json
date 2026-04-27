@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete revised v3 implementation plan for Video Prompt Pipeline. Key changes in v3: (1) Sequence has no minimum duration, only max 25s, (2) Characters listed fully without max cap, each with chapters list, (3) Locations identified by LLM Step 2 directly from script instead of frequency pre-filter from Step 1, (4) Step 2 outputs 1 single checkpoint file with all 3 arrays, sent as VISUAL REFERENCE section in Step 3 prompt, (5) background_and_extras explicitly references factions[] from Step 2, (6) Validation simplified to 2 tiers: ≤10% auto-fix, >10% reject, (7) Final JSON tách rõ từng field, không có duration.",
-  "updatedAt":  "2026-04-27T17:50:20.815525500Z",
-  "version":  "2"
+  "summary":  "Complete revised v4 implementation plan for Video Prompt Pipeline. Key changes in v4: (1) Step 2 splits into 2 API calls producing 2 files: characters JSON and visual bible JSON (locations), matching existing image pipeline pattern, (2) Final JSON in Step 4 includes character_labels for image reference, (3) Art style injection mechanism fully documented with 3 layers: Mandatory Style keywords, Negative Prompt, and Constraint files (safety + quality + historical), (4) Concrete example of how OverSimplified Cartoon style would be assembled into final prompt.",
+  "updatedAt":  "2026-04-27T18:01:05.752348800Z",
+  "version":  "3"
 }
