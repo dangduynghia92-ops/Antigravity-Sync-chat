@@ -1,6 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to fix style file integration: restructure into 4 tagged sections, inject CHARACTER STYLE into Step 2, SCENE STYLE into Step 3, add flat_prompt assembly in Step 4.",
-  "updatedAt":  "2026-04-28T05:30:54.215538800Z",
-  "version":  "6"
+  "summary":  "Implementation plan to fix 4 major issues: (1) Multi-chapter merge so all chapters are processed as one project, enabling cross-chapter character consistency and age variants. (2) Location prompts stripped of character appearance rules. (3) Character sheet prompt restored with multi-angle views. (4) Age variants now work because LLM sees the full story timeline.",
+  "updatedAt":  "2026-04-28T19:00:31.148193200Z",
+  "version":  "7",
+  "requestFeedback":  true
 }

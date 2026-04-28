@@ -1,81 +1,124 @@
-# Fix Style Integration Across Video Pipeline
+# Video Pipeline — Multi-Chapter Project Mode + Prompt Quality Fixes
 
-Style file hiện giờ chỉ được Step 4 đọc (Mandatory Style + Negative Prompt). Step 2 và Step 3 không biết style → output không đúng phong cách.
+## Problem Statement
+
+The pipeline currently processes each chapter file **independently** through all 4 steps. For biography/historical videos with multiple chapters, this causes:
+1. **No cross-chapter character consistency** — each chapter generates its own character set
+2. **No age variants detected** — each chapter only sees one life stage
+3. **Location prompts include character descriptions** — `mandatory_style` contains character appearance rules that leak into location reference prompts
+4. **Character sheets lack multi-angle views** — prompt template was oversimplified
 
 ## Proposed Changes
 
-### Style File — Thêm 2 section mới
+### 1. Multi-Chapter Merge (Architecture Change)
 
-#### [MODIFY] [Chibi Storybook Historical.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/video_styles/Chibi%20Storybook%20Historical.txt)
+Currently: `Chapter1 → [Step0→4]` → `Chapter2 → [Step0→4]` → ...
+Proposed: `ALL Chapters → Step0 merge → Step1→4 once`
 
-Restructure thành 4 section có marker rõ ràng:
+#### Flow:
 
 ```
-=== CHARACTER STYLE ===
-(Ngắn gọn 3-5 dòng. Inject vào Step 2 system prompt)
-"Mô tả nhân vật phải theo phong cách: mặt tròn trắng, mắt oval, lông mày biểu cảm, không mũi..."
+Step 0: Parse each file individually (SRT/TXT)
+        → Merge all sentences into one stream
+        → Add chapter markers: {chapter_id: 1, chapter_name: "..."}
+        → Renumber sentence_ids sequentially
 
-=== SCENE STYLE ===
-(Ngắn gọn 3-5 dòng. Inject vào Step 3 user message)
-"physical_action phải mô tả theo phong cách animation stylized, không realistic..."
+Step 1: Semantic chunking on MERGED text
+        → Each sequence knows which chapter it belongs to
+        → LLM sees the FULL story timeline
 
-=== MANDATORY STYLE ===
-(Keywords ghép vào flat_prompt — giữ nguyên)
+Step 2: Character/Location analysis on MERGED text
+        → LLM sees ALL chapters → correctly identifies age variants
+        → Characters are shared across all chapters
+        → Locations are shared across all chapters
 
-=== NEGATIVE PROMPT ===
-(Từ cấm — giữ nguyên)
+Step 3: Storyboarding (batched as before)
+
+Step 4: Assembly → ONE Excel file for the entire project
 ```
-
-Phần "Role & Expertise", "Visual Strategy", "STYLE RULES" → **bỏ hoàn toàn** vì không có step nào consume.
-
----
-
-### Pipeline Code
 
 #### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
 
-**1. Thêm `_parse_style_sections()` helper:**
-- Parse style file thành dict: `{"character_style": "...", "scene_style": "...", "mandatory_style": "...", "negative_prompt": "..."}`
-- Gọi 1 lần trong [run()](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py#856-894), cache kết quả
+- Change `__init__` to accept `srt_paths: List[str]` instead of `srt_path: str`
+- Modify `_run_step0` to parse each file and merge with chapter markers
+- All subsequent steps operate on the merged data
+- Output goes to a single project folder
 
-**2. Step 2 — Inject CHARACTER STYLE:**
-- Append vào cuối `STEP2_CHARACTERS_SYSTEM_PROMPT`:
-  ```
-  === VISUAL STYLE GUIDE ===
-  {character_style from style file}
-  Your visual_description MUST follow this style. Do NOT describe realistic human features.
-  ```
-- Step 2b (Locations) không cần inject style vì locations là mô tả bối cảnh chung
+#### [MODIFY] [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
 
-**3. Step 3 — Inject SCENE STYLE:**
-- Append vào cuối user message (sau VISUAL REFERENCE):
-  ```
-  === ART STYLE ===
-  {scene_style from style file}
-  All physical_action and background_and_extras descriptions MUST follow this style.
-  ```
+- When running a folder group, collect all file paths and pass as one pipeline
+- Single files still run independently
 
-**4. Step 4 — Thêm `flat_prompt` assembly:**
-- Mỗi scene JSON bây giờ thêm field `flat_prompt` — 1 đoạn text prompt ghép từ:
-  ```
-  {mandatory_style}. {shot_type}, {camera_motion}. {subject_action}. {background_and_extras}. {location}. {lighting_and_atmosphere}.
-  ```
-- Field `negative_prompt` giữ riêng (nhiều AI tool nhận negative riêng)
+---
 
-### Data Flow sau khi sửa
+### 2. Fix Location Prompt (No Character Style)
+
+> [!WARNING]
+> Current `mandatory_style` contains: "round white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions..."
+> This causes AI to generate **characters inside location images**.
+
+#### Fix in `_export_excel` Reference Images sheet:
+
+**For Character/Faction prompts:** Prepend full `mandatory_style` (includes character appearance)
+**For Location prompts:** Use a **location-only style** that strips character appearance rules:
 
 ```
-Style File
-├── CHARACTER STYLE ──→ Step 2 (LLM biết vẽ mặt trắng khi mô tả nhân vật)
-├── SCENE STYLE ──────→ Step 3 (LLM viết physical_action theo phong cách)
-├── MANDATORY STYLE ──→ Step 4 (ghép vào flat_prompt)
-└── NEGATIVE PROMPT ──→ Step 4 (field riêng)
+Location style: "Stylized historical animation illustration, detailed painterly backgrounds, 
+scene-driven natural palette, scene-driven lighting, professional animation quality, 
+clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. 
+NO characters, NO people, empty scene only."
 ```
+
+#### [MODIFY] [Chibi Storybook Historical.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/video_styles/Chibi%20Storybook%20Historical.txt)
+
+- Add `=== LOCATION STYLE ===` section with background-only keywords
+- Pipeline parses this section for location reference prompts
+
+---
+
+### 3. Fix Character Sheet — Multi-Angle Views
+
+#### Fix in `STEP2_CHARACTERS_SYSTEM_PROMPT`:
+
+Change `sheet_prompt` template from:
+```
+"Character reference on clean white background. [visual_description]. Label '[label]'."
+```
+To:
+```
+"Character reference sheet on clean white background. Three neutral standing views: front view, 3/4 angle, side profile. [visual_description]. Label '[label]'."
+```
+
+---
+
+### 4. Fix Age Variants
+
+With multi-chapter merge (fix #1), the LLM in Step 2a will see the FULL story timeline and correctly identify that Baldwin IV appears as:
+- `Jerusalem-King-A-Child` (chapters 1-2)
+- `Jerusalem-King-A-Teen` (chapters 3-4)  
+- `Jerusalem-King-A-Adult` (chapters 5-7)
+- `Jerusalem-King-A-Elder` (chapters 8-11)
+
+No additional prompt changes needed — the AGE VARIANT RULE already exists in the system prompt. It just wasn't working because each chapter was processed in isolation.
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Token limit concern**: Merging all 11 chapters (~1700 words total) into one Step 2 call should be fine (well under the 5000 word limit). But for very long scripts, should we add a fallback to split into 2 passes?
+
+> [!IMPORTANT]
+> **Chapter column in Excel**: With merged processing, should the Excel output include a "Chapter" column so you know which chapter each scene belongs to?
 
 ## Verification Plan
 
 ### Automated Tests
-- Parse style file → verify 4 sections extracted correctly
-- Verify Step 2 system prompt contains character style
-- Verify Step 3 user message contains scene style
-- Verify Step 4 output has `flat_prompt` field as text string
+- Run pipeline on the same Baldwin IV dataset with multi-chapter merge
+- Compare character count: should have age variants across chapters
+- Check location prompts: should NOT contain character appearance keywords
+- Check character sheet prompts: should include "front, 3/4, side"
+
+### Manual Verification
+- Generate reference images from the new prompts and verify:
+  - Location images are empty (no characters)
+  - Character sheets show multiple angles
+  - Age variants have visually distinct proportions

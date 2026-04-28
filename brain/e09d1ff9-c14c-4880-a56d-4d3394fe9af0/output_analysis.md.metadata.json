@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Detailed analysis of all pipeline output issues found across 8 processed chapters. Documents 6 specific problems: per-chapter isolation, inconsistent labels, no age variants, location prompts with character style, missing multi-angle character sheets, and flat_prompt label duplication. Includes concrete before/after examples from real output data.",
+  "updatedAt":  "2026-04-28T19:03:06.633879200Z",
+  "requestFeedback":  true
+}
