@@ -1,124 +1,234 @@
-# Video Pipeline — Multi-Chapter Project Mode + Prompt Quality Fixes
+# Video Pipeline Redesign — Complete Implementation Plan
 
-## Problem Statement
+## Problem Summary
 
-The pipeline currently processes each chapter file **independently** through all 4 steps. For biography/historical videos with multiple chapters, this causes:
-1. **No cross-chapter character consistency** — each chapter generates its own character set
-2. **No age variants detected** — each chapter only sees one life stage
-3. **Location prompts include character descriptions** — `mandatory_style` contains character appearance rules that leak into location reference prompts
-4. **Character sheets lack multi-angle views** — prompt template was oversimplified
+6 issues found from test run (see [output_analysis.md](file:///C:/Users/Admin/.gemini/antigravity/brain/e09d1ff9-c14c-4880-a56d-4d3394fe9af0/output_analysis.md)):
+1. Per-chapter isolation → inconsistent labels, no age variants
+2. Step 4 Python ghép flat_prompt máy móc → prompt kém chất lượng
+3. Location prompt chứa character style → ảnh location có nhân vật
+4. Character sheet thiếu multi-angle views
+5. Thiếu mô tả trang phục theo từng cảnh
+6. Faction labels không nhất quán
 
-## Proposed Changes
+## Architecture: Old vs New
 
-### 1. Multi-Chapter Merge (Architecture Change)
-
-Currently: `Chapter1 → [Step0→4]` → `Chapter2 → [Step0→4]` → ...
-Proposed: `ALL Chapters → Step0 merge → Step1→4 once`
-
-#### Flow:
-
+### Old (5 steps, mỗi chapter riêng biệt):
 ```
-Step 0: Parse each file individually (SRT/TXT)
-        → Merge all sentences into one stream
-        → Add chapter markers: {chapter_id: 1, chapter_name: "..."}
-        → Renumber sentence_ids sequentially
-
-Step 1: Semantic chunking on MERGED text
-        → Each sequence knows which chapter it belongs to
-        → LLM sees the FULL story timeline
-
-Step 2: Character/Location analysis on MERGED text
-        → LLM sees ALL chapters → correctly identifies age variants
-        → Characters are shared across all chapters
-        → Locations are shared across all chapters
-
-Step 3: Storyboarding (batched as before)
-
-Step 4: Assembly → ONE Excel file for the entire project
+Per Chapter File:
+  Step 0  Parse SRT/TXT → sentences                          [Python]
+  Step 1  Chunking → sequences                               [LLM]
+  Step 2a Characters                                          [LLM Pro]
+  Step 2b Locations                                           [LLM Pro]
+  Step 3  Storyboard → scenes {action, bg, camera, lighting}  [LLM]
+  Step 4  Ghép flat_prompt = style + camera + action + bg     [Python ← VẤN ĐỀ]
 ```
 
-#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+### New (4 steps, tất cả chapters gộp 1 lần):
+```
+ALL Chapter Files → Merge:
+  Step 0  Parse + Merge → sentences (with chapter markers)    [Python]
+  Step 1  Chunking → sequences                               [LLM]
+  Step 2  World Bible → characters + factions + locations     [LLM Pro]
+  Step 3  Scene Prompt → scenes with flat_prompt              [LLM ← VIẾT PROMPT]
+  Step 4  Export → Excel                                      [Python only]
+```
 
-- Change `__init__` to accept `srt_paths: List[str]` instead of `srt_path: str`
-- Modify `_run_step0` to parse each file and merge with chapter markers
-- All subsequent steps operate on the merged data
-- Output goes to a single project folder
+## Key Design Decision
 
-#### [MODIFY] [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
-
-- When running a folder group, collect all file paths and pass as one pipeline
-- Single files still run independently
+> [!IMPORTANT]
+> **LLM viết flat_prompt, không phải Python.** Giống image pipeline (`prompt_generator.py`):
+> - System prompt = Style file (toàn bộ rules)
+> - User message = Scene data + Character Bible + Location Bible
+> - LLM trả về `flat_prompt` tự nhiên
+> - Python chỉ append `Mandatory Style:` suffix cuối cùng
 
 ---
 
-### 2. Fix Location Prompt (No Character Style)
+## Detailed Step Design
 
-> [!WARNING]
-> Current `mandatory_style` contains: "round white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions..."
-> This causes AI to generate **characters inside location images**.
+### Step 0: Parse + Merge [Python]
 
-#### Fix in `_export_excel` Reference Images sheet:
+**Single file:** Parse như cũ
+**Multi-file (folder group):** Parse từng file → merge tất cả sentences → renumber
 
-**For Character/Faction prompts:** Prepend full `mandatory_style` (includes character appearance)
-**For Location prompts:** Use a **location-only style** that strips character appearance rules:
-
+```python
+# Input:  ["chapter1.txt", "chapter2.txt", ..., "chapter11.txt"]
+# Output: merged sentences with chapter markers
+[
+  {"sentence_id": 1,  "chapter": 1, "chapter_name": "The Numb Arm", "text": "...", ...},
+  {"sentence_id": 2,  "chapter": 1, ...},
+  ...
+  {"sentence_id": 28, "chapter": 2, "chapter_name": "The Final Verdict", "text": "...", ...},
+  ...
+]
 ```
-Location style: "Stylized historical animation illustration, detailed painterly backgrounds, 
-scene-driven natural palette, scene-driven lighting, professional animation quality, 
-clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. 
-NO characters, NO people, empty scene only."
+
+**Timing:** Mỗi chapter bắt đầu từ timecode riêng. Khi merge, offset timing:
 ```
+Chapter 1: 0s → 49s
+Chapter 2: 49s → 97s  (offset = chapter1.end_time)
+Chapter 3: 97s → 154s
+...
+```
+
+---
+
+### Step 1: Semantic Chunking [LLM, 1 call]
+
+Không thay đổi logic. Chỉ khác: nhận TẤT CẢ sentences từ tất cả chapters.
+
+**Output:** sequences giữ `chapter` field:
+```json
+{"sequence_id": "SEQ_01", "chapter": 1, "sentence_ids": [1,2,3], ...}
+```
+
+---
+
+### Step 2: World Bible [LLM Pro, 2 calls]
+
+**Step 2a: Characters + Factions** — nhận toàn bộ script → thấy tất cả giai đoạn cuộc đời
+
+Thay đổi:
+- **Age variants** hoạt động vì LLM thấy toàn bộ timeline
+- **Multi-angle sheet_prompt**: thêm "Three neutral standing views: front, 3/4 angle, side profile"
+- Seed list từ Step 1 (subjects + locations) giúp LLM không bỏ sót
+
+**Step 2b: Locations** — không thay đổi logic
+
+**Output Example (characters):**
+```json
+{
+  "characters": [
+    {
+      "label": "Jerusalem-King-A-Child",
+      "real_name": "Baldwin IV",
+      "group": "PROTAGONIST",
+      "age_stage": "child",
+      "visual_description": "...",
+      "sheet_prompt": "Character reference sheet, three views: front, 3/4, side. Clean white background. ..."
+    },
+    {
+      "label": "Jerusalem-King-A-Teen",
+      "real_name": "Baldwin IV",
+      "group": "PROTAGONIST", 
+      "age_stage": "teen",
+      "visual_description": "...",
+      "sheet_prompt": "..."
+    }
+  ]
+}
+```
+
+---
+
+### Step 3: Scene Design + Prompt Writing [LLM, batched]
+
+> [!IMPORTANT]
+> **Đây là thay đổi lớn nhất.** Step 3 cũ chỉ output structured data (action, bg, camera). Step 3 mới output `flat_prompt` trực tiếp — giống `prompt_generator.py`.
+
+**System Prompt:** Toàn bộ style file (Role + Visual Strategy + Rules)
+
+**User Message per batch:**
+```
+=== WORLD BIBLE (REFERENCE) ===
+Characters: [list with labels, visual descriptions]
+Factions: [list with labels, uniform descriptions]  
+Locations: [list with labels, descriptions, default lighting]
+=== END WORLD BIBLE ===
+
+=== SEQUENCES TO PROCESS ===
+[batch of sequences with full_text, total_duration]
+=== END SEQUENCES ===
+
+=== OUTPUT FORMAT ===
+For each sequence, split into scenes (max 8s each).
+Each scene must include:
+{
+  "scene_id": "SEQ_01_SCN_01",
+  "duration": 5.5,
+  "shot_type": "Wide Shot",
+  "camera_motion": "Slow Pan",
+  "characters_used": ["Jerusalem-King-A-Child"],
+  "location_used": "Palace Courtyard",
+  "flat_prompt": "Complete prompt paragraph. Include: art style opener, camera, 
+                  [Location-Label], [Character-Label] with costume + action + expression,
+                  background details, lighting. End with style denial."
+}
+=== END OUTPUT ===
+```
+
+**LLM viết flat_prompt kiểu:**
+> *"A stylized historical animation with thick dark outlines depicting a wide shot slowly panning across [Palace-Courtyard]. [Jerusalem-King-A-Child] in a dirt-stained linen tunic, his bandaged right forearm exposed, pins a larger boy to the sun-baked flagstones. Rows of [Noble-Boys] in muted tunics grapple in clouds of dust behind them. Bright Middle Eastern sunlight casts sharp contrasting shadows under the stone colonnades. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT 3D CGI."*
+
+**Ưu điểm so với Step 4 cũ:**
+- ✅ Trang phục cụ thể theo cảnh (không lặp character sheet)
+- ✅ Flow tự nhiên (không ghép keyword)
+- ✅ [Label] reference đúng chỗ
+- ✅ Style opener + denial tự nhiên
+
+**Sau khi LLM trả về:** Python append `Mandatory Style:` + `Negative Prompt:` suffix (giống image pipeline).
+
+---
+
+### Step 4: Export [Python only, NO LLM]
+
+Chỉ đọc output Step 3 → xuất Excel:
+
+**Sheet 1: Video Prompts**
+| # | Chapter | Scene ID | Duration | Characters | Location | Flat Prompt | Negative Prompt |
+
+**Sheet 2: Reference Images**  
+| # | Type | Label | Prompt (gen ảnh tham chiếu) | Negative Prompt |
+
+**Location reference prompt:** Dùng **location-only style** (KHÔNG chứa character appearance):
+```
+Stylized historical animation illustration, detailed painterly backgrounds,
+scene-driven natural palette, scene-driven lighting, professional animation quality,
+full frame, no border, no text, no watermark, 16:9 aspect ratio.
+[location description]. [default lighting]. 
+Empty scene, NO characters, NO people.
+```
+
+---
+
+## Style File Changes
 
 #### [MODIFY] [Chibi Storybook Historical.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/video_styles/Chibi%20Storybook%20Historical.txt)
 
-- Add `=== LOCATION STYLE ===` section with background-only keywords
-- Pipeline parses this section for location reference prompts
-
----
-
-### 3. Fix Character Sheet — Multi-Angle Views
-
-#### Fix in `STEP2_CHARACTERS_SYSTEM_PROMPT`:
-
-Change `sheet_prompt` template from:
+Add `=== LOCATION STYLE ===` section:
 ```
-"Character reference on clean white background. [visual_description]. Label '[label]'."
-```
-To:
-```
-"Character reference sheet on clean white background. Three neutral standing views: front view, 3/4 angle, side profile. [visual_description]. Label '[label]'."
+=== LOCATION STYLE ===
+Stylized historical animation illustration, detailed painterly backgrounds, 
+scene-driven natural palette, scene-driven lighting, professional animation quality, 
+clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio.
 ```
 
 ---
 
-### 4. Fix Age Variants
+## File Changes Summary
 
-With multi-chapter merge (fix #1), the LLM in Step 2a will see the FULL story timeline and correctly identify that Baldwin IV appears as:
-- `Jerusalem-King-A-Child` (chapters 1-2)
-- `Jerusalem-King-A-Teen` (chapters 3-4)  
-- `Jerusalem-King-A-Adult` (chapters 5-7)
-- `Jerusalem-King-A-Elder` (chapters 8-11)
-
-No additional prompt changes needed — the AGE VARIANT RULE already exists in the system prompt. It just wasn't working because each chapter was processed in isolation.
+| File | Change |
+|---|---|
+| `video_pipeline.py` | Refactor: multi-file merge in Step 0, merge Step 3+4, LLM writes flat_prompt |
+| `video_prompt_tab.py` | Collect all files in folder group → pass as list to single pipeline |
+| `Chibi Storybook Historical.txt` | Add `LOCATION STYLE` section |
 
 ## Open Questions
 
 > [!IMPORTANT]
-> **Token limit concern**: Merging all 11 chapters (~1700 words total) into one Step 2 call should be fine (well under the 5000 word limit). But for very long scripts, should we add a fallback to split into 2 passes?
+> **Batching strategy cho Step 3 mới:** Hiện tại batch theo ~60s. Vì giờ LLM viết prompt (output nhiều hơn), nên giảm batch size xuống ~30-40s? Hay giữ 60s?
 
 > [!IMPORTANT]
-> **Chapter column in Excel**: With merged processing, should the Excel output include a "Chapter" column so you know which chapter each scene belongs to?
+> **Cột Chapter trong Excel:** Thêm cột "Chapter" để biết scene thuộc chapter nào? (Hữu ích khi merge 11 chapters)
 
 ## Verification Plan
 
-### Automated Tests
-- Run pipeline on the same Baldwin IV dataset with multi-chapter merge
-- Compare character count: should have age variants across chapters
-- Check location prompts: should NOT contain character appearance keywords
-- Check character sheet prompts: should include "front, 3/4, side"
+### Automated
+- Run pipeline trên Baldwin IV dataset (11 chapters)
+- Verify: 1 Excel file duy nhất, characters nhất quán, age variants có mặt
+- Check flat_prompt: có trang phục, flow tự nhiên, không keyword dump
 
-### Manual Verification
-- Generate reference images from the new prompts and verify:
-  - Location images are empty (no characters)
-  - Character sheets show multiple angles
-  - Age variants have visually distinct proportions
+### Manual
+- Generate reference images → verify location images trống (không có nhân vật)
+- Character sheets có 3 góc nhìn
+- Age variants có ngoại hình khác nhau

@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Implementation plan to fix 4 major issues: (1) Multi-chapter merge so all chapters are processed as one project, enabling cross-chapter character consistency and age variants. (2) Location prompts stripped of character appearance rules. (3) Character sheet prompt restored with multi-angle views. (4) Age variants now work because LLM sees the full story timeline.",
-  "updatedAt":  "2026-04-28T19:00:31.148193200Z",
-  "version":  "7",
+  "summary":  "Complete pipeline redesign addressing all 6 issues: multi-chapter merge, merged Step 3+4 where LLM writes flat_prompt directly, location-only style for reference images, multi-angle character sheets, and age variant support. Compares old vs new flow, details each step's input/output, and includes the prompt strategy inspired by the working image pipeline.",
+  "updatedAt":  "2026-04-28T19:16:08.948076Z",
+  "version":  "8",
   "requestFeedback":  true
 }
