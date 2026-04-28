@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete v5 implementation plan for Video Prompt Pipeline. Key v5 changes: (1) Step 3 now uses 2-Phase Chain-of-Thought: Phase 1 synthesizes one visual_event from entire sequence text, Phase 2 creates camera cuts as different angles of that event, (2) matched_text replaced with audio_sync — marks where voiceover is, does NOT dictate visuals, (3) Anti 1:1 translation rule explicitly forbids sentence-to-scene mapping, (4) Montage handling: director picks 1-2 strongest visual moments, no need to cover every sentence, (5) Step 2 = 2 API calls with Pro model, (6) Final JSON keeps character_labels, art style, negative prompt, constraints.",
-  "updatedAt":  "2026-04-27T18:50:10.300803900Z",
-  "version":  "4"
+  "summary":  "Plan to fix style file integration: restructure into 4 tagged sections, inject CHARACTER STYLE into Step 2, SCENE STYLE into Step 3, add flat_prompt assembly in Step 4.",
+  "updatedAt":  "2026-04-28T05:30:54.215538800Z",
+  "version":  "6"
 }
