@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete pipeline redesign addressing all 6 issues: multi-chapter merge, merged Step 3+4 where LLM writes flat_prompt directly, location-only style for reference images, multi-angle character sheets, and age variant support. Compares old vs new flow, details each step's input/output, and includes the prompt strategy inspired by the working image pipeline.",
-  "updatedAt":  "2026-04-28T19:16:08.948076Z",
-  "version":  "8",
+  "summary":  "Complete pipeline redesign v2 with detailed data flow between all 5 steps. Step 4 processes one scene per LLM call (like image pipeline) with full context window showing previous/next scenes. Each step's exact system prompt and user message structure is documented. Includes token optimization strategy (mini-bible per scene) and the exact JSON schema for Step 3 output including costume_note field.",
+  "updatedAt":  "2026-04-28T19:24:57.034674200Z",
+  "version":  "9",
   "requestFeedback":  true
 }

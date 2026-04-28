@@ -1,6 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Documents the completed implementation of the Video Prompt Pipeline: 3 new files created, 1 file modified, all imports verified. Lists file locations, key design decisions, and what was tested.",
-  "updatedAt":  "2026-04-27T19:07:31.163767800Z",
-  "version":  "2"
+  "summary":  "Walkthrough of all changes made to harden the AI animation pipeline: multi-chapter merge, label system, LLM prompt writing, location style isolation, UI folder grouping.",
+  "updatedAt":  "2026-04-28T19:54:59.686856100Z",
+  "version":  "3",
+  "requestFeedback":  true
 }

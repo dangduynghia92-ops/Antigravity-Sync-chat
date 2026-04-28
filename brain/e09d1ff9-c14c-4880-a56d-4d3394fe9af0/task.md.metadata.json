@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task checklist for video pipeline improvements: UI refactor, style integration, flat_prompt output, reference images, Step 1→2 seed list, age variants.",
-  "updatedAt":  "2026-04-28T07:57:29.367094Z",
-  "version":  "6"
+  "summary":  "Final task list — all phases complete except verification with real dataset.",
+  "updatedAt":  "2026-04-28T19:54:35.810874200Z",
+  "version":  "9"
 }

@@ -1,0 +1,40 @@
+# Video Pipeline Redesign — Task List
+
+## Phase 1: Style File
+- [x] Add `=== LOCATION STYLE ===` section to `Chibi Storybook Historical.txt`
+- [x] Update `_parse_style_section` to extract location_style (generic helper)
+
+## Phase 2: Pipeline Core (`video_pipeline.py`)
+- [x] Update `__init__` to accept `srt_paths: List[str]`
+- [x] Step 0: Multi-file parse + merge with chapter markers + timing offset
+- [x] Step 1: Pass merged sentences (no logic change)
+- [x] Step 2a: Character analysis — updated sheet_prompt for multi-angle views
+- [x] Step 2b: Location analysis (no logic change)
+- [x] Extract VALID_LABELS after Step 2 (`_extract_valid_labels`)
+- [x] Step 3: Refactor to 1 call per sequence
+  - [x] New system prompt with `costume_note` field
+  - [x] Include AVAILABLE LABELS constraint
+  - [x] Label validation + fuzzy fix (`_validate_scene_labels`)
+- [x] Step 4: NEW — Prompt writing (1 call per sequence)
+  - [x] System prompt = full style file
+  - [x] Build mini-bible per sequence (`_build_mini_bible`)
+  - [x] Build prev/next context (`_build_scene_context`)
+  - [x] LLM writes flat_prompts for all scenes
+  - [x] Append mandatory_style suffix
+- [x] Step 5: Export Excel (renamed from old Step 4)
+  - [x] Location reference: use LOCATION STYLE (no character appearance)
+  - [x] Character reference: add multi-angle views fallback
+  - [x] Add Chapter column
+- [x] Update `run()` method with new step sequence + label extraction
+- [x] Syntax check (import test) ✅
+
+## Phase 3: UI (`video_prompt_tab.py`)
+- [ ] Folder group → collect all paths → 1 pipeline
+- [ ] Single file → 1 pipeline (backward compatible)
+- [ ] Progress display for new step count
+
+## Phase 4: Verify
+- [ ] Run on Baldwin IV dataset
+- [ ] Check label consistency across chapters
+- [ ] Check flat_prompt quality
+- [ ] Git commit
