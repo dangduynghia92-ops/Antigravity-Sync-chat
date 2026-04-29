@@ -1,0 +1,7 @@
+{
+  "title": "No grep_search Tool Rule",
+  "summary": "MANDATORY: Never use grep_search tool. It hangs/blocks the terminal and frustrates the user. Use view_file to read files directly instead. This applies to ALL conversations.",
+  "created": "2026-04-29T21:20:00+07:00",
+  "lastAccessed": "2026-04-29T21:20:00+07:00",
+  "references": []
+}
