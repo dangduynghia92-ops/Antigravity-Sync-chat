@@ -1,122 +1,74 @@
-# Step 1 Refactor — Implementation Plan
+# Step 2 Refactor — Implementation Plan
 
 ## Mục tiêu
-Nâng cấp Step 1 (Sequence Chunking) để output có thông tin nhân vật chuẩn hóa, xử lý per-chapter thay vì 1 call toàn bộ, và mở rộng age_stage lên 5 level.
+1. Đổi input Step 2 từ raw script → sequences từ Step 1
+2. Bỏ factions hoàn toàn
+3. Cập nhật age_stage lên 5 level
+4. Dọn dẹp downstream (Step 3, 4, 5) bỏ faction references
 
 ---
 
 ## Proposed Changes
 
-### 1. STEP1_SYSTEM_PROMPT — Rewrite
+### 1. STEP2_CHARACTERS_SYSTEM_PROMPT — Rewrite
 
 #### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
 
-**a) Thêm `characters` field vào output schema:**
+**Thay đổi:**
+- Input: nhận **danh sách sequences** (có `characters`, `location_shift`, `full_text`)
+- Bỏ toàn bộ section FACTIONS
+- Age_stage: 5 level (child/teen/young_adult/mature_adult/elder)
+- Output: `{"characters": [...]}` — không còn `factions`
+
+**Input mới cho Step 2a:**
 ```json
-{
-  "sequence_id": "SEQ_01",
-  "sentence_ids": [2, 3, 4],
-  "location_shift": "Palace courtyard",
-  "main_subject": "Baldwin wrestling with boys",
-  "characters": ["child Baldwin, prince", "Baldwin's tutor"],
-  "full_text": "...",
-  "total_duration": 12.5
-}
+[
+  {"sequence_id": "SEQ_01", "characters": ["child Baldwin, prince", "Baldwin's tutor"], 
+   "location_shift": "Palace courtyard", "full_text": "You are 9 years old..."},
+  {"sequence_id": "SEQ_02", ...}
+]
 ```
 
-**b) Thêm Character Formula rule vào prompt:**
-```
-## CHARACTER IDENTIFICATION
-List all NAMED or TITLED characters mentioned in this sequence.
-Format EACH character using this formula:
+### 2. STEP2_LOCATIONS_SYSTEM_PROMPT — Update input
 
-  HAS a proper name:    [age_stage] [Name], [title/role]
-  NO proper name:        [age_stage] [Anchor]'s [relationship/role]
+**Thay đổi:** Gửi sequences thay vì raw script
+- LLM nhận danh sách `location_shift` + `full_text` → mô tả visual chi tiết
 
-- age_stage is OPTIONAL — only include if age is stated or clearly implied
-- Use the SAME name for the same person throughout ALL sequences
-- "Anchor" = the main character this person relates to
+### 3. `_run_step2a()` — Đổi input source
 
-AGE CLASSIFICATION (exact thresholds):
-  child:        0-12, or described as "boy/girl/child"
-  teen:         13-17, or "young man/youth"
-  young_adult:  18-30, or "young warrior/knight"
-  mature_adult: 31-55, or "seasoned/experienced/middle-aged"
-  elder:        56+, or "old/grey-haired/aged"
-  → If unclear, omit age_stage entirely
-```
-
-**c) Bỏ chapter_id khỏi input** (không cần nữa vì xử lý per-chapter)
-
-**d) Bỏ rule "Chapter Boundary"** (tự động đảm bảo vì per-chapter)
-
----
-
-### 2. Per-Chapter Processing — Refactor `_run_step1()`
-
-Thay vì gửi toàn bộ sentences trong 1 API call → gửi từng chapter riêng.
-
-**Flow mới:**
-```
-sentences → group by chapter_id → [chapter_1, chapter_2, ...]
-                                       ↓           ↓
-                                   LLM call 1   LLM call 2  ...
-                                       ↓           ↓
-                                   [SEQ_01-05]  [SEQ_06-10]
-                                       ↓
-                               merge + re-number IDs
-                                       ↓
-                               SEQ_01 → SEQ_29 (continuous)
-```
-
-**Chi tiết:**
-- Group sentences by `chapter_id`
-- Mỗi chapter = 1 LLM call (payload nhỏ, ~20-40 sentences)
-- Sau khi nhận kết quả → merge tất cả sequences → re-number `SEQ_01, SEQ_02, ...`
-- Có thể chạy **parallel** (ThreadPoolExecutor) nếu `threads > 1`
-- Bỏ post-validation cross-chapter (không cần nữa)
-
----
-
-### 3. Update Step 2 Seed Logic
-
-**Step 2a (Characters)** — thay `main_subject` bằng `characters`:
 ```python
 # Trước:
-subjects = set(s.get("main_subject", "") for s in self.sequences)
+user_msg = self.cleaned_text + seed hints
 
 # Sau:
-all_chars = set()
-for seq in self.sequences:
-    all_chars.update(seq.get("characters", []))
-seed = f"Characters detected: {', '.join(sorted(all_chars))}"
+seq_data = [{"sequence_id": s["sequence_id"], "characters": s.get("characters", []),
+             "location_shift": s.get("location_shift", ""), "full_text": s["full_text"]}
+            for s in self.sequences]
+user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
 ```
 
-**Step 2b (Locations)** — giữ nguyên logic `location_shift`.
+### 4. `_run_step2b()` — Đổi input source tương tự
 
----
+### 5. Bỏ factions — Downstream cleanup
 
-### 4. Update age_stage trong STEP2_CHARACTERS_SYSTEM_PROMPT
-
-Mở rộng từ 4 → 5 level, thêm bảng tham chiếu tuổi:
-```
-### AGE VARIANT RULE
-- `Label-Child`         (age_stage: "child", 0-12)
-- `Label-Teen`          (age_stage: "teen", 13-17)
-- `Label-YoungAdult`    (age_stage: "young_adult", 18-30)
-- `Label-MatureAdult`   (age_stage: "mature_adult", 31-55)
-- `Label-Elder`         (age_stage: "elder", 56+)
-```
+| File/Function | Thay đổi |
+|---|---|
+| `_extract_valid_labels()` | Bỏ `factions` khỏi `valid_labels` dict |
+| `_build_labels_block()` | Bỏ dòng "Factions: ..." |
+| `_validate_scene_labels()` | Bỏ fuzzy match cho `faction_labels` |
+| `_build_mini_bible()` | Bỏ inject faction descriptions |
+| STEP3 prompt | Bỏ `faction_labels` khỏi scene schema |
+| STEP4 prompt | Bỏ faction references trong context |
+| `_export_excel()` | Bỏ cột factions, bỏ Faction rows trong sheet ref |
+| `StepStatus` | Đổi label "Characters+Factions" → "Characters" |
+| `__init__` valid_labels | Bỏ `"factions": []` |
 
 ---
 
 ## Open Questions
 
 > [!IMPORTANT]
-> **Q1:** Giữ `main_subject` hay bỏ? Hiện tại nó chỉ dùng để seed Step 2, nhưng nếu đã có `characters` thì `main_subject` chủ yếu cho **human readability** khi review JSON. Giữ?
-
-> [!IMPORTANT]
-> **Q2:** Step 1 per-chapter — nếu 1 chapter quá ngắn (1-2 sentences) thì vẫn gọi API riêng? Hay gộp chapter ngắn với chapter kế?
+> **Q1:** Bỏ factions thì quân lính/đám đông trong scene sẽ mô tả bằng gì? Hiện tại Step 3 dùng `faction_labels` để gọi "Army of Jerusalem" chẳng hạn. Bỏ thì Step 3 sẽ phải tự mô tả đám đông trong `action`/`background` text?
 
 ---
 
@@ -124,15 +76,6 @@ Mở rộng từ 4 → 5 level, thêm bảng tham chiếu tuổi:
 
 ### Automated Tests
 1. `python -c "import core.video_pipeline"` — syntax check
-2. Xóa checkpoint `_step1_sequences.json` của Baldwin IV → chạy lại Step 1
-3. Kiểm tra:
-   - Mỗi sequence chỉ chứa sentences từ 1 chapter
-   - Field `characters` có dạng công thức đúng
-   - Sequence IDs liên tục (SEQ_01 → SEQ_N)
-   - Duration vẫn ≤ 25s
-
-### Manual Verification
-- Review `characters` field cho 5-10 sequences → kiểm tra:
-  - Có tên nhất quán (cùng "Baldwin" không đổi)
-  - Có age_stage đúng khi text nhắc tuổi
-  - Nhân vật không tên dùng format `Anchor's role`
+2. Xóa checkpoints Step 2 + 3 + 4 → chạy lại
+3. Kiểm tra JSON output không còn `factions`/`faction_labels`
+4. Kiểm tra Excel output không còn cột factions

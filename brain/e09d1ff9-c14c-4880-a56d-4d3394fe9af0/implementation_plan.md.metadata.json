@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Implementation plan for Step 1 refactor: per-chapter processing, 3-part character formula, 5-level age_stage, and updated Step 2 seed logic.",
-  "updatedAt":  "2026-04-29T17:26:31.931336Z",
-  "version":  "10",
+  "summary":  "Plan to refactor Step 2: change input source from raw script to Step 1 sequences, remove factions entirely, update age_stage to 5 levels, and clean up all downstream references to factions.",
+  "updatedAt":  "2026-04-29T19:05:32.027709400Z",
+  "version":  "11",
   "requestFeedback":  true
 }
