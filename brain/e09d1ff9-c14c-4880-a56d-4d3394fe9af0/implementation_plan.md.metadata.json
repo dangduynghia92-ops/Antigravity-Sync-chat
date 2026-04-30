@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Updated Step 2 refactor plan: sequences input, remove factions, add World Bible, 5-level age_stage, downstream cleanup.",
-  "updatedAt":  "2026-04-29T19:21:41.587904800Z",
-  "version":  "12",
+  "summary":  "Plan to fix inconsistent reference images by:\n1. Reordering Step 2: World Bible runs FIRST, then Characters and Locations receive historical context\n2. Upgrading World Bible prompt to output faction-specific colors, heraldry, armor, architecture\n3. Upgrading Characters prompt to require specific costume details (colors, emblems, weapons)\n4. Upgrading Locations prompt to require Architecture, Environment, Key Props, Atmosphere + fixed camera angle\n5. Fixing field name mismatch (real_name vs original_name)",
+  "updatedAt":  "2026-04-30T07:53:01.805979600Z",
+  "version":  "13",
   "requestFeedback":  true
 }

@@ -1,119 +1,165 @@
-# Step 2 Refactor — Implementation Plan (Updated)
+# Nâng cấp Step 2: World Bible → Characters → Locations
 
-## Mục tiêu
-1. Input từ sequences (Step 1) thay vì raw script
-2. Bỏ factions hoàn toàn
-3. Thêm **World Bible** (auto-generate theo thời kỳ lịch sử)
-4. Age_stage 5 level
-5. Dọn downstream bỏ faction references
+## Vấn đề hiện tại
 
----
+Reference images ra kết quả không nhất quán vì thiếu historical context:
+- **Characters**: "flashy crusader armor" → AI tự chọn màu/biểu tượng → 2 ảnh khác nhau hoàn toàn
+- **Locations**: Không biết era → Japanese temple vs Medieval European village
+- **World Bible**: Output sơ sài, `era` trống, không phân theo faction
+
+### So sánh với Product Tab (SRT Prompt)
+
+| Tiêu chí | Product Tab | Video Pipeline |
+|---|---|---|
+| Historical context | ✅ `character_scan_prompt.txt` có "HISTORICAL CONTEXT: Time Period, Geography, Factions" | ❌ Không có |
+| Location detail | ✅ `location_prompt.txt` có Architecture, Environment, Key Props, Atmosphere | ❌ Chỉ có `bible_description` 2-3 câu |
+| World Bible → Character | ✅ Context truyền từ scan → character description | ❌ Step 2c chạy SAU 2a → không dùng được |
 
 ## Proposed Changes
 
-### 1. Prompts — Rewrite
+### 1. Đảo thứ tự Step 2
 
-#### STEP2_CHARACTERS_SYSTEM_PROMPT
-- Input: danh sách sequences (có `characters`, `full_text`)
-- Bỏ FACTIONS section
-- Age_stage 5 level: child/teen/young_adult/mature_adult/elder
-- Output: `{"characters": [...]}`
+```
+TRƯỚC: Step 2a (Characters) → Step 2b (Locations) → Step 2c (World Bible)
+SAU:   Step 2c (World Bible) → Step 2a (Characters) → Step 2b (Locations)
+```
 
-#### STEP2_LOCATIONS_SYSTEM_PROMPT  
-- Input: danh sách sequences (có `location_shift`, `full_text`)
-- Output: `{"locations": [...]}`
+---
 
-#### [NEW] STEP2_WORLD_BIBLE_PROMPT
-- Input: danh sách sequences
-- LLM tự nhận diện thời kỳ lịch sử
-- Output:
+### 2. Nâng cấp Step 2c — World Bible Prompt
+
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+
+Sửa `STEP2_WORLD_BIBLE_PROMPT` — output phải bao gồm:
+
 ```json
 {
-  "era": "Kingdom of Jerusalem, 1161-1185 AD",
-  "periods": [
+  "era": "Crusader States Period, 1174-1185 AD",
+  "geography": "Kingdom of Jerusalem, Levant",
+  "factions": [
     {
-      "period": "Early Crusader reign (1174-1177)",
-      "military": {
-        "crusader_infantry": "...",
-        "crusader_knight": "...",
-        "ayyubid_soldier": "..."
-      },
-      "civilian": {
-        "commoner": "...",
-        "noble": "...",
-        "court_official": "..."
-      },
-      "weapons": { ... },
-      "architecture": { ... }
+      "name": "Kingdom of Jerusalem (Crusaders)",
+      "heraldry": "Gold Jerusalem cross on white/silver field",
+      "primary_colors": ["white", "gold", "red"],
+      "armor": "Chain mail hauberk with coif, flat-top great helm or nasal helm, white surcoat with gold Jerusalem cross, kite shield",
+      "civilian_clothing": "Linen tunics, woolen mantles, leather sandals",
+      "weapons": ["broadsword", "kite shield", "lance", "crossbow"]
+    },
+    {
+      "name": "Ayyubid Sultanate (Saracens)",
+      "heraldry": "Eagle of Saladin on yellow field",
+      "primary_colors": ["yellow", "green", "black"],
+      "armor": "Lamellar armor over mail, spiked helm with aventail, round shield",
+      "civilian_clothing": "Flowing robes, turbans, embroidered sashes",
+      "weapons": ["curved scimitar", "round shield", "composite bow"]
     }
-  ]
+  ],
+  "architecture": {
+    "crusader": "Romanesque limestone fortresses, pointed arches, crenellated walls, cross-shaped windows",
+    "islamic": "Horseshoe arches, geometric tilework, muqarnas vaults, minarets",
+    "mixed_jerusalem": "Blend of Romanesque and Islamic elements, golden limestone, domed roofs"
+  },
+  "props": {
+    "military": "banners with faction heraldry, siege engines, war drums",
+    "civilian": "oil lamps, clay pots, woven carpets, market stalls",
+    "royal": "golden throne, velvet cushions, jeweled crown, silk banners"
+  }
 }
 ```
 
 ---
 
-### 2. Code Changes — `_run_step2a/2b` + new `_run_step2c`
+### 3. Nâng cấp Step 2a — Characters Prompt
 
-#### [MODIFY] `_run_step2a()` — Characters
+Sửa `STEP2_CHARACTERS_SYSTEM_PROMPT`:
+
+**Thêm vào visual_description requirement:**
+```
+- **visual_description**: MUST include ALL of the following:
+  1. BODY: height, build, skin tone, hair style + color
+  2. FACE: distinguishing features (scar, beard, expression)
+  3. COSTUME (MAIN): primary garment with EXACT colors and emblems from World Bible faction data
+  4. COSTUME (DETAIL): belt, boots, gloves, cape, accessories
+  5. SIGNATURE ITEM: one unique prop/weapon that identifies this character
+  
+  BAD: "A mature man in crusader armor"
+  GOOD: "A tall, broad-shouldered man (~5 heads tall) with short brown hair 
+         and a thick handlebar mustache. Wears a white surcoat with a gold 
+         Jerusalem cross over chain mail, brown leather belt with lion-head 
+         buckle, tall brown riding boots. Carries a broadsword on left hip."
+```
+
+**Inject World Bible context:**
 ```python
-# Input: sequences từ Step 1
-seq_data = [{"seq": s["sequence_id"], "characters": s.get("characters", []),
-             "full_text": s["full_text"]} for s in self.sequences]
-user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+# In _run_step2a():
+if self.world_bible_data:
+    sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE ===\n{json.dumps(self.world_bible_data)}"
+    sys_prompt += "\nUse faction colors, heraldry, and armor types from this reference."
 ```
-- Bỏ `factions` count/log
-- Output: `{"characters": [...]}`
 
-#### [MODIFY] `_run_step2b()` — Locations
+---
+
+### 4. Nâng cấp Step 2b — Locations Prompt
+
+Sửa `STEP2_LOCATIONS_SYSTEM_PROMPT`:
+
+**Thêm chi tiết giống Product Tab:**
+```
+For each unique location:
+- **label**: Location name
+- **bible_description**: MUST include ALL of:
+  1. ARCHITECTURE: building style, materials, structural elements matching the era
+  2. ENVIRONMENT: landscape, terrain, vegetation, indoor/outdoor
+  3. KEY PROPS: furniture, decorations, objects in this setting
+  4. ATMOSPHERE: typical weather, lighting, time of day, mood
+- **default_lighting**: Specific lighting (e.g., "warm torchlight from iron sconces")
+- **camera_angle**: FIXED camera angle for reference image — always "wide establishing shot, 
+  eye-level, slightly low angle to show full space, 16:9 aspect ratio"
+```
+
+**Inject World Bible context:**
 ```python
-seq_data = [{"seq": s["sequence_id"], "location_shift": s.get("location_shift", ""),
-             "full_text": s["full_text"]} for s in self.sequences]
-user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+# In _run_step2b():
+if self.world_bible_data:
+    arch_ref = json.dumps(self.world_bible_data.get("architecture", {}))
+    sys_prompt += f"\n\n=== ARCHITECTURE REFERENCE ===\n{arch_ref}"
+    sys_prompt += "\nAll locations MUST use architecture styles from this reference."
 ```
 
-#### [NEW] `_run_step2c()` — World Bible
-- Checkpoint: `_step2_world_bible.json`
-- Lưu vào `self.world_bible`
-- Inject vào Step 3/4 như context
+> [!IMPORTANT]
+> **Camera angle thống nhất**: Tất cả location reference images phải dùng cùng 1 góc nhìn cố định (wide establishing shot, eye-level) để đảm bảo consistency khi tạo ảnh.
 
 ---
 
-### 3. Downstream — Bỏ factions + thêm world_bible
+### 5. Code Changes — `_run_step` ordering
 
-| Vị trí | Thay đổi |
-|---|---|
-| `__init__` | Thêm `self.world_bible = {}`, bỏ `factions` từ `valid_labels` |
-| `_extract_valid_labels()` | Bỏ faction labels |
-| `_build_labels_block()` | Bỏ "Factions: ..." |
-| `_validate_scene_labels()` | Bỏ `faction_labels` validation |
-| STEP3 prompt schema | Bỏ `faction_labels`, thêm world_bible context |
-| `_build_mini_bible()` | Bỏ factions, thêm world_bible |
-| STEP4 prompt | Bỏ faction refs, inject world_bible |
-| `_export_excel()` | Bỏ factions column + sheet rows |
-| `StepStatus` | "Characters+Factions" → "Characters" |
-| `run()` | Thêm `_run_step2c()` vào flow |
+```python
+# Current order in run():
+("step2a", self._run_step2a),  # Characters
+("step2b", self._run_step2b),  # Locations  
+("step2c", self._run_step2c),  # World Bible
 
----
-
-### 4. Pipeline Flow (Updated)
-
-```
-Step 0: Parse + Merge
-Step 1: Semantic Chunking (per-chapter) → sequences with characters
-Step 2a: Character Bible (from sequences) → characters
-Step 2b: Location Bible (from sequences) → locations
-Step 2c: World Bible (from sequences) → era/military/civilian/architecture
-  ↓ Label Extraction
-Step 3: Scene Design (1 call per sequence)
-Step 4: Prompt Writing
-Step 5: Excel Export
+# New order:
+("step2c", self._run_step2c),  # World Bible FIRST
+("step2a", self._run_step2a),  # Characters (with World Bible context)
+("step2b", self._run_step2b),  # Locations (with World Bible context)
 ```
 
 ---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Camera angle cho location ref**: Nên dùng góc nào cố định? Đề xuất: "wide establishing shot, eye-level, slightly low angle" — nhưng bạn có muốn khác không?
+> 2. **field `original_name` ở Step 2a**: Hiện tại là `real_name` trong prompt nhưng code đọc `original_name`. Cần thống nhất tên field?
 
 ## Verification Plan
-1. Import test
-2. Xóa checkpoints Step 2/3/4 → chạy lại Baldwin IV
-3. Kiểm tra: không còn `factions`/`faction_labels` trong output
-4. Kiểm tra: world_bible.json có era + periods hợp lý
-5. Kiểm tra: Step 3 scenes mô tả đám đông trực tiếp trong action/background
+
+### Test
+1. Xóa checkpoints Step 2a/2b/2c
+2. Chạy lại pipeline cho Baldwin IV
+3. Kiểm tra:
+   - World Bible có đủ faction + heraldry + architecture
+   - Character visual_description có màu sắc cụ thể từ faction
+   - Location bible_description có 4 mục (Architecture, Environment, Props, Atmosphere)
+4. Tạo ảnh reference từ Excel → kiểm tra consistency

@@ -1,29 +1,10 @@
-# Pipeline Refactor — Task List
+# Task: Nâng cấp Step 2 Pipeline
 
-## Step 1 Refactor
-- [x] Per-chapter processing
-- [x] 5-level age classification
-- [x] Chapter tagging (chapter_id, chapter_name)
-- [x] location_type classification (physical/abstract/montage)
-
-## Step 2 Refactor
-- [x] Step 2a: sequences input, no factions
-- [x] Step 2b: sequences input
-- [x] Step 2c: World Bible (new)
-
-## Downstream — Remove factions
-- [x] All faction references removed (labels, validation, visual ref, mini bible, excel, prompts)
-
-## Step 3 Enhancement
-- [x] STEP3 prompt: Rule 1b — location_type handling
-- [x] Code: inherited_location injection for abstract/montage
-
-## Step 4 Review
-- [x] Factions cleaned
-- [x] World Bible injected into mini_bible
-- [ ] Simplify chapter_info lookup (use seq.chapter_name directly)
-
-## Verify
-- [x] Import test ✅
-- [x] Zero faction references ✅
-- [ ] Full pipeline test (requires checkpoint cleanup)
+- [x] 1. Upgrade Step 2c prompt (World Bible) — factions, heraldry, architecture
+- [x] 2. Upgrade Step 2a prompt (Characters) — 5-item visual_description, fix real_name → original_name
+- [x] 3. Upgrade Step 2b prompt (Locations) — Architecture, Environment, Props, Atmosphere, camera_angle
+- [x] 4. Reorder: 2c → 2a → 2b (code)
+- [x] 5. Inject World Bible into Step 2a code
+- [x] 6. Inject World Bible into Step 2b code
+- [x] 7. Verify _resolve_character_info uses original_name (already correct)
+- [x] 8. Test import — OK

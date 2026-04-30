@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Complete task tracking for pipeline refactor: Step 1 (location_type), Step 2 (sequences input, world bible), Step 3 (location handling), Step 4 (cleanup). Only full test and chapter_info simplification remain.",
-  "updatedAt":  "2026-04-30T01:44:53.414033200Z",
-  "version":  "12"
+  "summary":  "All tasks completed for Step 2 pipeline upgrade.",
+  "updatedAt":  "2026-04-30T08:04:07.338917900Z",
+  "version":  "14"
 }

@@ -1,0 +1,10 @@
+# Task: Nâng cấp Step 2 Pipeline
+
+- [ ] 1. Upgrade Step 2c prompt (World Bible) — factions, heraldry, architecture
+- [ ] 2. Upgrade Step 2a prompt (Characters) — 5-item visual_description, fix real_name → original_name
+- [ ] 3. Upgrade Step 2b prompt (Locations) — Architecture, Environment, Props, Atmosphere
+- [ ] 4. Reorder: 2c → 2a → 2b (code)
+- [ ] 5. Inject World Bible into Step 2a code
+- [ ] 6. Inject World Bible into Step 2b code
+- [ ] 7. Fix field name in _resolve_character_info
+- [ ] 8. Test import
