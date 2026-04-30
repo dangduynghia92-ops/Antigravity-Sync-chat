@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Full evaluation of the pipeline output for Baldwin IV biography test case. Analyzes all 5 steps: sequence segmentation, character/location extraction, world bible, scene design, and prompt writing. Identifies issues and provides quality scores.",
+  "updatedAt":  "2026-04-30T04:10:57.852802900Z",
+  "requestFeedback":  true
+}
