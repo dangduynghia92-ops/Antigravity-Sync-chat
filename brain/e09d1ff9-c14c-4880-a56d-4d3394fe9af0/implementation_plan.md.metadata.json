@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to refactor Step 2: change input source from raw script to Step 1 sequences, remove factions entirely, update age_stage to 5 levels, and clean up all downstream references to factions.",
-  "updatedAt":  "2026-04-29T19:05:32.027709400Z",
-  "version":  "11",
+  "summary":  "Updated Step 2 refactor plan: sequences input, remove factions, add World Bible, 5-level age_stage, downstream cleanup.",
+  "updatedAt":  "2026-04-29T19:21:41.587904800Z",
+  "version":  "12",
   "requestFeedback":  true
 }

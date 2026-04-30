@@ -1,0 +1,28 @@
+# Step 2 Refactor — Task List
+
+## Prompts
+- [ ] Rewrite STEP2_CHARACTERS_SYSTEM_PROMPT (no factions, 5-level age)
+- [ ] Update STEP2_LOCATIONS_SYSTEM_PROMPT
+- [ ] Add STEP2_WORLD_BIBLE_PROMPT
+
+## Code — Step 2
+- [ ] Rewrite `_run_step2a()` — input from sequences
+- [ ] Rewrite `_run_step2b()` — input from sequences
+- [ ] Add `_run_step2c()` — world bible
+- [ ] Add `self.world_bible` to `__init__`
+- [ ] Add StepStatus for step2c
+- [ ] Update `run()` flow — add step2c
+
+## Downstream — Remove factions
+- [ ] `_extract_valid_labels()` — remove factions
+- [ ] `_build_labels_block()` — remove factions line
+- [ ] `_validate_scene_labels()` — remove faction_labels validation
+- [ ] STEP3 prompt — remove faction_labels from schema
+- [ ] `_build_mini_bible()` — remove factions, add world_bible
+- [ ] STEP4 prompt — remove faction refs, inject world_bible
+- [ ] `_export_excel()` — remove factions column + rows
+- [ ] StepStatus label — "Characters+Factions" → "Characters"
+
+## Verify
+- [ ] Import test
+- [ ] Run Baldwin IV test

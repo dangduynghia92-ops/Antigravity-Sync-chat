@@ -1,81 +1,119 @@
-# Step 2 Refactor — Implementation Plan
+# Step 2 Refactor — Implementation Plan (Updated)
 
 ## Mục tiêu
-1. Đổi input Step 2 từ raw script → sequences từ Step 1
+1. Input từ sequences (Step 1) thay vì raw script
 2. Bỏ factions hoàn toàn
-3. Cập nhật age_stage lên 5 level
-4. Dọn dẹp downstream (Step 3, 4, 5) bỏ faction references
+3. Thêm **World Bible** (auto-generate theo thời kỳ lịch sử)
+4. Age_stage 5 level
+5. Dọn downstream bỏ faction references
 
 ---
 
 ## Proposed Changes
 
-### 1. STEP2_CHARACTERS_SYSTEM_PROMPT — Rewrite
+### 1. Prompts — Rewrite
 
-#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+#### STEP2_CHARACTERS_SYSTEM_PROMPT
+- Input: danh sách sequences (có `characters`, `full_text`)
+- Bỏ FACTIONS section
+- Age_stage 5 level: child/teen/young_adult/mature_adult/elder
+- Output: `{"characters": [...]}`
 
-**Thay đổi:**
-- Input: nhận **danh sách sequences** (có `characters`, `location_shift`, `full_text`)
-- Bỏ toàn bộ section FACTIONS
-- Age_stage: 5 level (child/teen/young_adult/mature_adult/elder)
-- Output: `{"characters": [...]}` — không còn `factions`
+#### STEP2_LOCATIONS_SYSTEM_PROMPT  
+- Input: danh sách sequences (có `location_shift`, `full_text`)
+- Output: `{"locations": [...]}`
 
-**Input mới cho Step 2a:**
+#### [NEW] STEP2_WORLD_BIBLE_PROMPT
+- Input: danh sách sequences
+- LLM tự nhận diện thời kỳ lịch sử
+- Output:
 ```json
-[
-  {"sequence_id": "SEQ_01", "characters": ["child Baldwin, prince", "Baldwin's tutor"], 
-   "location_shift": "Palace courtyard", "full_text": "You are 9 years old..."},
-  {"sequence_id": "SEQ_02", ...}
-]
+{
+  "era": "Kingdom of Jerusalem, 1161-1185 AD",
+  "periods": [
+    {
+      "period": "Early Crusader reign (1174-1177)",
+      "military": {
+        "crusader_infantry": "...",
+        "crusader_knight": "...",
+        "ayyubid_soldier": "..."
+      },
+      "civilian": {
+        "commoner": "...",
+        "noble": "...",
+        "court_official": "..."
+      },
+      "weapons": { ... },
+      "architecture": { ... }
+    }
+  ]
+}
 ```
-
-### 2. STEP2_LOCATIONS_SYSTEM_PROMPT — Update input
-
-**Thay đổi:** Gửi sequences thay vì raw script
-- LLM nhận danh sách `location_shift` + `full_text` → mô tả visual chi tiết
-
-### 3. `_run_step2a()` — Đổi input source
-
-```python
-# Trước:
-user_msg = self.cleaned_text + seed hints
-
-# Sau:
-seq_data = [{"sequence_id": s["sequence_id"], "characters": s.get("characters", []),
-             "location_shift": s.get("location_shift", ""), "full_text": s["full_text"]}
-            for s in self.sequences]
-user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
-```
-
-### 4. `_run_step2b()` — Đổi input source tương tự
-
-### 5. Bỏ factions — Downstream cleanup
-
-| File/Function | Thay đổi |
-|---|---|
-| `_extract_valid_labels()` | Bỏ `factions` khỏi `valid_labels` dict |
-| `_build_labels_block()` | Bỏ dòng "Factions: ..." |
-| `_validate_scene_labels()` | Bỏ fuzzy match cho `faction_labels` |
-| `_build_mini_bible()` | Bỏ inject faction descriptions |
-| STEP3 prompt | Bỏ `faction_labels` khỏi scene schema |
-| STEP4 prompt | Bỏ faction references trong context |
-| `_export_excel()` | Bỏ cột factions, bỏ Faction rows trong sheet ref |
-| `StepStatus` | Đổi label "Characters+Factions" → "Characters" |
-| `__init__` valid_labels | Bỏ `"factions": []` |
 
 ---
 
-## Open Questions
+### 2. Code Changes — `_run_step2a/2b` + new `_run_step2c`
 
-> [!IMPORTANT]
-> **Q1:** Bỏ factions thì quân lính/đám đông trong scene sẽ mô tả bằng gì? Hiện tại Step 3 dùng `faction_labels` để gọi "Army of Jerusalem" chẳng hạn. Bỏ thì Step 3 sẽ phải tự mô tả đám đông trong `action`/`background` text?
+#### [MODIFY] `_run_step2a()` — Characters
+```python
+# Input: sequences từ Step 1
+seq_data = [{"seq": s["sequence_id"], "characters": s.get("characters", []),
+             "full_text": s["full_text"]} for s in self.sequences]
+user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+```
+- Bỏ `factions` count/log
+- Output: `{"characters": [...]}`
+
+#### [MODIFY] `_run_step2b()` — Locations
+```python
+seq_data = [{"seq": s["sequence_id"], "location_shift": s.get("location_shift", ""),
+             "full_text": s["full_text"]} for s in self.sequences]
+user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+```
+
+#### [NEW] `_run_step2c()` — World Bible
+- Checkpoint: `_step2_world_bible.json`
+- Lưu vào `self.world_bible`
+- Inject vào Step 3/4 như context
+
+---
+
+### 3. Downstream — Bỏ factions + thêm world_bible
+
+| Vị trí | Thay đổi |
+|---|---|
+| `__init__` | Thêm `self.world_bible = {}`, bỏ `factions` từ `valid_labels` |
+| `_extract_valid_labels()` | Bỏ faction labels |
+| `_build_labels_block()` | Bỏ "Factions: ..." |
+| `_validate_scene_labels()` | Bỏ `faction_labels` validation |
+| STEP3 prompt schema | Bỏ `faction_labels`, thêm world_bible context |
+| `_build_mini_bible()` | Bỏ factions, thêm world_bible |
+| STEP4 prompt | Bỏ faction refs, inject world_bible |
+| `_export_excel()` | Bỏ factions column + sheet rows |
+| `StepStatus` | "Characters+Factions" → "Characters" |
+| `run()` | Thêm `_run_step2c()` vào flow |
+
+---
+
+### 4. Pipeline Flow (Updated)
+
+```
+Step 0: Parse + Merge
+Step 1: Semantic Chunking (per-chapter) → sequences with characters
+Step 2a: Character Bible (from sequences) → characters
+Step 2b: Location Bible (from sequences) → locations
+Step 2c: World Bible (from sequences) → era/military/civilian/architecture
+  ↓ Label Extraction
+Step 3: Scene Design (1 call per sequence)
+Step 4: Prompt Writing
+Step 5: Excel Export
+```
 
 ---
 
 ## Verification Plan
-
-### Automated Tests
-1. `python -c "import core.video_pipeline"` — syntax check
-2. Xóa checkpoints Step 2 + 3 + 4 → chạy lại
-3. Kiểm tra JSON output không còn `factions`/`faction_labels`
-4. Kiểm tra Excel output không còn cột factions
+1. Import test
+2. Xóa checkpoints Step 2/3/4 → chạy lại Baldwin IV
+3. Kiểm tra: không còn `factions`/`faction_labels` trong output
+4. Kiểm tra: world_bible.json có era + periods hợp lý
+5. Kiểm tra: Step 3 scenes mô tả đám đông trực tiếp trong action/background
