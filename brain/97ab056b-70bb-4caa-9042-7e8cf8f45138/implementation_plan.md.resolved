@@ -1,382 +1,291 @@
-# POV Biography Niche — Implementation Plan v3
+# POV Biography Niche — Implementation Plan v5
 
-Trả lời chi tiết 6 câu hỏi thiết kế + plan thực thi.
-
----
-
-## Câu 1: Blueprint Fields — Bỏ gì, Giữ gì, Thêm gì?
-
-### So sánh trực tiếp
-
-| Field (Biography hiện tại) | POV? | Lý do |
-|---|---|---|
-| `core_topic` | ✅ GIỮ | Vẫn cần: tên, thời đại, identity |
-| `life_phases` | ✅ GIỮ + ADAPT | Giữ nhưng thêm `age_at_start` bắt buộc per phase |
-| `key_events` | ✅ GIỮ + ADAPT | Giữ nhưng mỗi event phải có `physical_detail` |
-| `turning_points` | ✅ GIỮ | Vẫn cần cho chapter breaks |
-| `key_relationships` | ✅ GIỮ nhưng GIẢN HÓA | Chỉ cần: tên + vai trò + kết cục. Bỏ chi tiết |
-| `legacy` | ✅ GIỮ | Cần cho end chapter |
-| `myths_vs_reality` | ❌ BỎ | POV không debunk myths |
-| `dark_psychology` | ❌ BỎ | POV không phân tích tâm lý |
-| `dual_nature` | ❌ BỎ | POV không phân loại light/dark |
-| `systemic_opposition` | ❌ BỎ | Không cần cho POV |
-| `personal_profile` (chi tiết) | ❌ BỎ phần lớn | Bỏ cognitive_style, behavioral_quirks. Chỉ giữ `health_conditions` |
-| `downfall_pattern` | ❌ BỎ | Không cần phân loại pattern |
-
-### 3 Fields MỚI (đặc thù POV)
-
-| Field mới | Vì sao bắt buộc | Ví dụ từ script mẫu |
-|---|---|---|
-| **`age_timeline`** | Mọi chapter mở bằng "You are [X]" — cần danh sách tuổi + sự kiện | `[{age: 9, event: "Father poisoned"}, {age: 12, event: "First kill"}, ...]` |
-| **`physical_state_arc`** | Body = đồng hồ đếm ngược — cần biết trạng thái cơ thể thay đổi qua thời gian | Baldwin: "numb arm → cracking skin → useless hand → blind → bed-bound" |
-| **`death_scene`** | End chapter cần chi tiết cụ thể: nơi chết, cách chết, ai có mặt, di nguyện | Genghis: "Horse accident → fever → mountains of Gansu → no grave marker" |
-
-### Kết quả: Blueprint POV nhẹ hơn ~50%
-
-Biography blueprint: ~20-25 fields → POV blueprint: ~12 fields. Ít field hơn = AI research nhanh hơn, ít noise, output chính xác hơn.
+> **Cập nhật v5:** Chỉnh sửa tiêu chí main/sub key data, validate sub-key, và cách chia chapter.
 
 ---
 
-## Câu 2: Phase Plan — Giữ nguyên hay thay đổi?
+## Câu 1: Tiêu Chí main_key_data vs sub_key_data
 
-### Giữ: Cấu trúc logic chronological
+### Phân tích thực tế từ script mẫu
 
-Phase plan **vẫn là chronological phases** giống biography. Lý do: cả 3 script mẫu đều kể theo trình tự thời gian.
+Tôi đã phân tích từng chapter — trong POV, data chia thành **3 loại** (không phải 2):
 
-### Thay đổi chính:
+**Baldwin Chapter 5 ("The Rotting Throne") — phân tích chi tiết:**
 
-| Aspect | Biography hiện tại | POV mới |
+```
+ANCHOR EVENT (main_key_data):
+  "Court factions splitting — mother schemes, French knight positions for crown"
+  → Đây là cái chapter XOAY QUANH
+
+TEXTURE DETAILS (sub_key_data loại 1):
+  "Right hand nearly useless, skin cracking, bandages cover body"
+  "Someone has to lift you onto the horse"
+  "You sit on the throne wrapped in linen"
+  → Body details weave VÀO scene, không phải events riêng
+
+BRIDGE FACT (sub_key_data loại 2):
+  "Saladin is still out there. He's rebuilding. He's recruiting. He's patient."
+  → Giữ mạch thời gian, nhắc viewer Saladin vẫn là threat
+```
+
+**Genghis Chapter 8 ("Great Law") — phân tích:**
+
+```
+ANCHOR EVENT (main_key_data):
+  "You build written law — first conqueror to build law before army marches"
+
+TEXTURE DETAILS (sub_key_data loại 1):
+  "Promotion by merit, not blood"
+  "Religious tolerance in conquered lands"
+  "Decimal military structure"
+  "Mounted courier network faster than any on Earth"
+  "Betrayal punished by death, without exception"
+  → Tất cả là DETAILS của anchor event, không phải events riêng
+
+BRIDGE FACT (sub_key_data loại 2):
+  (Không cần — chapter 7 kết thúc liền mạch → chapter 8)
+```
+
+**Genghis Chapter 7 ("Becoming Khan") — 2 ANCHORS cùng chapter:**
+
+```
+ANCHOR 1 (main_key_data):
+  "200,000 people kneel, proclaimed Genghis Khan"
+
+ANCHOR 2 (main_key_data):
+  "Sworn brother delivered in chains, asks noble death, Khan grants it"
+
+TEXTURE:
+  "White banner raised nine times"
+  "Shaman say sky god chose you"
+```
+
+→ Chapter này có 2 anchors vì chúng **xảy ra cùng thời điểm** (cùng năm 44 tuổi, cùng sự kiện unification).
+
+### Tiêu chí phân loại cho Phase Plan POV
+
+| Loại | Tiêu chí | Vai trò trong chapter |
 |---|---|---|
-| **Phase names** | Từ framework steps cố định (Nguồn Gốc, Hình Thành, Trỗi Dậy...) | AI tự đặt `scene_label` dựa trên nội dung — *"The Blood Clot", "The First Kill", "The Alliance"* |
-| **main_key_data/phase** | 2-4 events | **1 event** (bắt buộc — POV = 1 scene/chapter) |
-| **sub_key_data** | Background events riêng | **Physical/sensory details** để weave vào scene (thời tiết, cơ thể, không gian) |
-| **node_count** | 3-6 | **1-3** (thấp hơn vì mỗi chapter ngắn) |
-| **Bắt buộc mới** | Không có | `age_at_chapter` + `physical_state` per phase |
-| **source_map** | CÓ (complex, strict) | **KHÔNG** — dùng fuzzy search (blueprint nhẹ, ít overlap) |
-| **Validate sub-key (Step A2)** | CÓ (3 tests) | **BỎ** — chỉ 1 event/chapter, không cần validate |
+| **main_key_data** (ANCHOR) | Event mà chapter **xoay quanh**. Phải trả lời được: "Chapter này KỂ VỀ CHUYỆN GÌ?" bằng 1 câu | Được phát triển thành scene chính 3-8 câu |
+| **sub_key_data — texture** | Facts/details **bổ sung** cho anchor. Trả lời: "TRONG LÚC ĐÓ, cơ thể/không gian/người xung quanh THẾ NÀO?" | Weave vào scene: body state, weather, reactions, numbers |
+| **sub_key_data — bridge** | Thông tin **nối** giữa chapter trước và chapter sau. Trả lời: "GIỮA KHOẢNG ĐÓ CÓ GÌ XẢY RA?" | 1-2 câu transition ở đầu hoặc cuối chapter |
 
-### Ví dụ output Phase Plan POV:
+### So sánh với tiêu chí biography hiện tại
 
-```json
-{
-  "phase_chapter_plan": [
-    {
-      "phase": "The Blood Clot",
-      "age_at_chapter": 0,
-      "physical_state": "Born clutching a blood clot in his fist",
-      "main_key_data": ["Born on the Mongolian steppe, 1162, blood clot omen"],
-      "sub_key_data": ["Freezing winds, no shelter, father is minor chieftain"],
-      "node_count": 1
-    },
-    {
-      "phase": "The Orphan",
-      "age_at_chapter": 9,
-      "physical_state": "Starving, eating roots and rats",
-      "main_key_data": ["Father poisoned by Tatars, clan abandons family"],
-      "sub_key_data": ["Winter survival, tree bark diet"],
-      "node_count": 1
-    }
-  ]
-}
-```
-
----
-
-## Câu 3: Tiêu Chí Chọn Thông Tin — Tại Sao Ngắn Gọn Vậy?
-
-Đây là câu hỏi **quan trọng nhất**. Phân tích trực tiếp từ 3 script mẫu:
-
-### Bằng chứng cụ thể
-
-**Genghis Khan sống 65 năm.** Script chọn đúng **13 events** cho 13 chapters:
-
-| Level | Event được chọn | Hàng trăm events bị BỎ |
+| | Biography | POV |
 |---|---|---|
-| 1 | Blood clot at birth | ~~Childhood games, daily life, tribal customs~~ |
-| 3 | Kill half-brother over a fish | ~~Other childhood conflicts, hunting, daily survival~~ |
-| 5 | Wife kidnapped → 3 armies rescue | ~~Other raids, political maneuvers, trade~~ |
-| 10 | Ambassador executed → 3 days silence | ~~Diplomatic exchanges, court politics~~ |
+| **main_key_data** | Events qua Scene Test (có conflict/tension) | Events trả lời "Chapter NÀY kể về CHUYỆN GÌ?" — có physical moment + có agency |
+| **sub_key_data** | Background events woven into scenes | 2 loại: **texture** (details enriching scene) + **bridge** (timeline connectors) |
+| **Test chính** | Scene Test (conflict/tension?) | **Visual Moment Test**: "Có hình ảnh cụ thể không? Viewer có thể THẤY nó không?" |
 
-**Mỗi event được chọn KHÔNG PHẢI vì nó "quan trọng lịch sử" — mà vì nó THAY ĐỔI CƠ THỂ hoặc TÂM LÝ nhân vật.**
-
-### 3 Tiêu Chí Chọn (POV Filter)
-
-Mỗi event phải qua **cả 3 tests** mới được chọn làm chapter:
-
-**Test 1: BODY TEST** — "Cơ thể hoặc tâm lý phải PHẢN ỨNG vật lý"
-```
-✅ "You pick up your bow and end it. Clean. Final." (giết nửa anh)
-✅ "You go completely still. Officers report total silence for several minutes." (im lặng 3 ngày)
-✅ "Your arm is already weakening. You can barely grip the reins." (bệnh Baldwin)
-❌ "He signed a trade agreement with the Chinese" (không có body reaction)
-❌ "He reformed the tax system" (không có physical moment)
-```
-
-**Test 2: DECISION TEST** — "Có quyết định phải đưa ra không?"
-```
-✅ "You refuse. You ride out." (Baldwin chọn ra trận dù bệnh)
-✅ "You write your resignation by lamplight. And you leave for Rome." (Caesar bỏ Tây Ban Nha)
-✅ "You offer neither submission. You offer partnership." (Genghis chọn liên minh)
-❌ "He was crowned at age 15" (không có decision — nó xảy ra với anh ta)
-❌ "The plague spread across the empire" (external event, no agency)
-```
-
-**Test 3: IRREVERSIBILITY TEST** — "Sau sự kiện này, không thể quay lại"
-```
-✅ "You are 12 years old. The steppe has already finished your education." (hết do dự)
-✅ "The die is cast." (qua sông Rubicon = nội chiến)
-✅ "When you walk back down, every decision is already made." (quyết chiến Khwarezm)
-❌ "He met with ambassadors" (reversible, no permanent change)
-❌ "He built new roads" (incremental, not threshold-crossing)
-```
-
-### Công thức tránh lan man
-
-**Biography hiện tại** hỏi: *"Sự kiện này QUAN TRỌNG không?"* → Nhiều sự kiện quan trọng → dài
-
-**POV format** hỏi: *"Sự kiện này có THAY ĐỔI cơ thể/tâm lý VĨNH VIỄN không?"* → Rất ít events pass → ngắn
-
-> [!IMPORTANT]
-> **Quy tắc vàng:** Nếu bỏ event đó ra khỏi script mà viewer vẫn hiểu nhân vật đi từ A đến B → BỎ.
-> Chỉ giữ event mà nếu thiếu nó, viewer KHÔNG THỂ hiểu bước nhảy tiếp theo.
-
----
-
-## Câu 4: Outline — Cách Chia Level
-
-### Level Format
-
-Mỗi chapter = 1 Level. Title bắt buộc format:
+### Visual Moment Test (thay Scene Test cho POV)
 
 ```
-"Level {N}: {2-4 Word Emotional Label}"
-```
+VISUAL MOMENT TEST:
+  "Nếu tôi quay scene này thành video, có HÌNH ẢNH CỤ THỂ không?"
 
-Ví dụ từ script mẫu:
-- Level 1: The Blood Clot
-- Level 5: The Alliance  
-- Level 8: The Great Law
-- Level 10: The Reckoning
-- Level 13: The Open Sky
+✅ PASS → main_key_data:
+  "375 knights slam into 26,000 soldiers" → CÓ hình ảnh
+  "You pick up your bow and end it" → CÓ hình ảnh
+  "Officers report total silence for several minutes" → CÓ hình ảnh (im lặng = visual)
+  "You pull your toga over your face" → CÓ hình ảnh
 
-**Label KHÔNG phải tên sự kiện** — nó là **trạng thái cảm xúc/biến đổi** của nhân vật tại thời điểm đó.
-
-### Cách chọn lọc thông tin cho outline
-
-| Quy tắc | Biography hiện tại | POV |
-|---|---|---|
-| **main_key_data/chapter** | 2-3 events → phát triển thành scenes | **1 event duy nhất** → 1 scene |
-| **sub_key_data** | Background events riêng biệt | **Physical details** weave vào scene chính |
-| **myths_debunked** | Có | **BỎ** |
-| **dual_nature_aspect** | light/dark/both | **BỎ** |
-| **relationships_featured** | Danh sách | **BỎ** — inline vào main_key_data |
-| **narrative_techniques** | 2-3 techniques | **BỎ** — POV chỉ dùng 1 kỹ thuật: action writing |
-| **pacing_texture** | dramatic/analytical/intimate... | **BỎ** — tốc độ luôn nhanh |
-| **chapter_structure** | 8 loại | **3 loại**: action_scene, transformation_scene, legacy_close |
-| **closing_type** | 5 loại | **3 loại**: cold_fact, paradox, forward_pull |
-| **word_count_target** | 400-700 | **100-200** |
-
-### Chapter schema POV:
-
-```json
-{
-  "chapter_number": 3,
-  "chapter_title": "Level 3: The First Kill",
-  "chapter_type": "body",
-  "level_number": 3,
-  "age_anchor": "You are 12.",
-  "physical_state": "Hungry. Winter. 9 months of cold.",
-  "main_key_data": ["Kills half-brother over stolen fish"],
-  "sub_key_data": ["Mother's horror", "steppe survival logic"],
-  "chapter_structure": "action_scene",
-  "closing_type": "paradox",
-  "emotional_beat": "threshold_crossed",
-  "word_count_target": 150
-}
+❌ FAIL → sub_key_data:
+  "Disease is accelerating" → KHÔNG CÓ hình ảnh cụ thể (nhưng "skin cracking" thì CÓ → texture)
+  "Court splits into factions" → KHÔNG CÓ hình ảnh (nhưng "mother whispers in corners" thì CÓ → texture)
+  "He's rebuilding. He's recruiting." → KHÔNG CÓ hình ảnh → bridge fact
 ```
 
 ---
 
-## Câu 5: Cách Viết Nội Dung Chi Tiết
+## Câu 2: Validate Sub-Key — GIỮ Hay BỎ?
 
-### Phân tích DNA cách viết từ 3 script mẫu
+### Kết luận: GIỮ nhưng đổi 3 Tests
 
-#### 5A. SENTENCE STRUCTURE — Nhịp 3-Beat
+Bước validate sub-key **nên giữ** vì:
+- AI phase plan vẫn có thể phân loại sai (đặt event vào sub khi nó đáng main, hoặc ngược lại)
+- POV cần kiểm soát chặt hơn vì mỗi chapter rất ngắn — 1 event sai chỗ ảnh hưởng lớn
 
-Pattern lặp lại trong MỌI chapter:
+### 3 Tests mới cho POV (thay thế 3 tests biography)
 
+**TEST 1 — PHYSICAL MOMENT TEST** (thay Scene Test):
 ```
-SHORT. SHORT. LONG (with weight).
-```
+"Event này có KHOẢNH KHẮC VẬT LÝ cụ thể không?"
+  - Có hành động cơ thể (grip, ride, kneel, strike)?
+  - Có phản ứng giác quan (eyes go wet, chest tightens, silence)?
+  - Có đồ vật/không gian cụ thể (wooden cage, marble floor, silver mask)?
+YES = pass | NO = fail
 
-Ví dụ thực tế:
-```
-"You refuse. You ride out. Your arm is already weakening."
-"Clean. Final. Your mother weeps for days."
-"You close your fist around it without reading it."
-```
-
-**Quy tắc cụ thể:**
-- Câu ngắn: 3-8 words (hành động, quyết định)
-- Câu dài: 12-20 words (hậu quả, bối cảnh cảm xúc)
-- Trung bình: ~12 words/câu
-- KHÔNG BAO GIỜ quá 25 words/câu
-
-#### 5B. CHAPTER FLOW — 4 nhịp cố định
-
-Mọi body chapter đều theo flow:
-
-```
-BEAT 1: AGE ANCHOR     → "Level N, [label]. You are [age]."
-BEAT 2: SETUP          → 1-3 câu: tình huống, bối cảnh vật lý (KHÔNG context lịch sử)
-BEAT 3: ACTION         → 3-8 câu: hành động chính, quyết định, hậu quả
-BEAT 4: WEIGHT         → 1-2 câu kết: nghịch lý hoặc bài học qua action (KHÔNG nói thẳng)
+✅ "Slams the plank into a guard's skull and escapes" → physical action + object
+✅ "You go completely still. Officers report total silence." → physical stillness
+❌ "Became known as a great conqueror" → no physical moment
+❌ "Reformed the tax system" → abstract
 ```
 
-**Ví dụ phân tích Chapter 10 Genghis Khan:**
-
+**TEST 2 — AGENCY TEST** (thay Turning Point Test):
 ```
-BEAT 1: "Level 10, the reckoning. You are 55."
+"Nhân vật có CHỦ ĐỘNG quyết định hoặc hành động không?"
+  - Subject = "You" (nhân vật) → pass
+  - Subject = external force (fate, others) → fail
+YES = pass | NO = fail
 
-BEAT 2: "A merchant convoy of 450 men, traveling under your banner and 
-         your protection, is massacred at a western border by a governor 
-         who wanted their goods."
-         → SETUP: tình huống + con số + hành động kẻ thù
-
-BEAT 3: "You send three ambassadors demanding justice. He executes one. 
-         He shaves the beards of the other two and sends them home.
-         You go completely still. Officers outside your tent report 
-         total silence for several minutes. Then you walk out alone, 
-         climb a nearby hill, and kneel in the dirt. You stay there 
-         for 3 days."
-         → ACTION: phản ứng physical, không lời, không cảm xúc named
-
-BEAT 4: "This is not grief. It is calculation at a scale that requires 
-         complete silence. When you walk back down, every decision is 
-         already made."
-         → WEIGHT: nghịch lý (im lặng = tính toán, không phải đau buồn)
+✅ "You refuse. You ride out." → YOU decide
+✅ "You offer partnership, not submission" → YOU choose
+❌ "Your father is poisoned by Tatars" → father dies TO you, not BY you
+❌ "The plague spreads across the empire" → external event
 ```
 
-#### 5C. NGÔN NGỮ — 6 Quy Tắc
+> **Lưu ý:** Test 2 FAIL không tự động demote — event vẫn có thể pass Test 1 + Test 3. Cha bị đầu độc FAIL Agency nhưng PASS Physical ("poisoned" = cụ thể) + PASS Consequence (mất gia đình, phải tự sinh tồn).
 
-| Quy tắc | Ví dụ ĐÚNG | Ví dụ SAI |
-|---|---|---|
-| **Action verbs only** | grip, slam, ride, pull, burn, scatter | feel, realize, understand, contemplate |
-| **Numbers = power** | "375 knights slam into 26,000 soldiers" | "A small force defeated a larger army" |
-| **Body, not emotion** | "Your eyes go wet." | "You feel a profound sadness." |
-| **Fact, not adjective** | "23 wounds. The marble is cold." | "A brutal, horrifying assassination" |
-| **Zero context paragraphs** | (just start the action) | "Saladin — vị tướng người Kurd đã..." |
-| **Paradox endings** | "No satisfaction, only distance." | "He learned an important lesson." |
-
-#### 5D. PACING — Tốc Độ Thay Đổi Theo Arc
-
+**TEST 3 — CONSEQUENCE TEST** (thay Causal Independence Test):
 ```
-Chapters 1-3 (Origin):    NHANH + KHÔ KHAN — survival, ngắn, thô
-Chapters 4-7 (Rise):      NHANH + MẠNH — chiến thắng, liên minh, phản bội
-Chapters 8-10 (Peak):     VỪA + NẶNG — quyền lực, luật pháp, tính toán lạnh
-Chapters 11-12 (Cost):    CHẬM + ĐAU — cơ thể suy yếu, chiến dịch cuối
-Chapter 13 (End):         CHẬM + IM LẶNG — chết, scorecard, "you are history"
+"Hậu quả có THẤY NGAY trong chapter không?"
+  - Hậu quả visible trong cùng scene → pass
+  - Hậu quả chỉ hiểu khi đọc chapter sau → fail
+YES = pass | NO = fail
+
+✅ "Sworn brother asks noble death, Khan grants it" → hậu quả ngay: anh ta chết
+✅ "375 knights slam into 26,000 → army shatters" → hậu quả ngay: quân tan
+❌ "He studied engineering" → hậu quả chỉ thấy years later
 ```
 
-#### 5E. FORBIDDEN LIST — Những Thứ KHÔNG BAO GIỜ Xuất Hiện
+### Promote / Demote Criteria
 
-- Context paragraphs giải thích bối cảnh
-- Narrator reactions ("Think about that for a moment")
-- Myth-busting sections
-- Modern comparisons ("Like a modern CEO...")
-- Rhetorical questions ("But was he really?")
-- Source citations ("According to historians...")
-- Bridge sentences between chapters
-- Emotional labels ("You feel anger/sadness/pride")
-- Academic framing
-- Passive voice
+**PROMOTE (sub → main):**
+- Phải pass Physical Moment Test (bắt buộc)
+- Thêm pass ít nhất 1 trong 2 tests còn lại
+- **Physical + 1 = PROMOTE**
+
+**DEMOTE (main → sub):**
+- Fail Physical Moment Test → CANDIDATE for demotion
+- Pass Physical nhưng fail CẢ Agency + Consequence → CANDIDATE
+- CANDIDATE + không protected → DEMOTE
+
+**CONNECTIVE PROTECTION** (giữ từ biography):
+```
+"Nếu bỏ item này, viewer có hiểu BƯỚC NHẢY từ chapter trước sang chapter sau không?"
+
+✅ PROTECT: "Father is poisoned" → dù fail Agency, bỏ nó thì viewer 
+   không hiểu tại sao bỗng orphan ở chapter tiếp
+✅ PROTECT: "Crown passes to you" → dù fail Physical, bỏ nó thì viewer 
+   không hiểu tại sao bỗng là king
+❌ NO PROTECT: "He was given a new horse" → bỏ không ảnh hưởng mạch chuyện
+```
 
 ---
 
-## Câu 6: Khán Giả Muốn Nghe Gì?
+## Câu 3: Chia Chapter Thế Nào?
 
-### Tâm Lý Khán Giả POV (khác hoàn toàn biography)
+### Khác biệt cốt lõi với biography
 
-| | Biography hiện tại | POV |
+| | Biography | POV |
 |---|---|---|
-| **Viewer = ai?** | Người xem documentary | **Người SỐNG cuộc đời nhân vật** |
-| **Muốn cảm thấy gì?** | "Wow, tôi hiểu rồi" | **"Wow, tôi đã SỐNG điều đó"** |
-| **Engagement hook** | Thông tin bất ngờ, myth-busting | **Cảm giác agency — TÔI đang quyết định** |
-| **Retention hook** | "Chuyện gì xảy ra tiếp?" | **"Tôi sẽ sống sót qua level tiếp không?"** |
-| **Emotional payoff** | Hiểu sâu hơn về nhân vật | **Cảm giác đã trải qua toàn bộ cuộc đời** |
+| **Words/chapter** | 400-700 | 100-200 |
+| **main_key_data/chapter** | 2-3 events → phát triển full scenes | 1-2 ANCHOR events (hiếm khi 3) |
+| **Quy tắc** | node_count → split [3,6] | Mỗi ANCHOR = 1 Level chapter |
 
-### 4 Thứ Khán Giả POV Muốn
+### Quy tắc chia: 1 Anchor Event ≈ 1 Level Chapter
 
-**1. AGENCY ILLUSION** — Cảm giác "Tôi đang quyết định"
-```
-"You refuse. You ride out."
-"You offer neither submission. You offer partnership."
-"You write your resignation. And you leave for Rome."
-→ Mỗi chapter có MỘT quyết định — viewer cảm giác MÌNH đang quyết
-```
+Verify từ Genghis Khan 13 chapters:
 
-**2. VISCERAL STAKES** — Cảm giác đau bằng cơ thể, không phải bằng lời
-```
-"A servant straps the shield to your arm because your fingers can't hold it."
-"Your chest tightens. Your eyes go wet. And you do not wipe them."
-"23 wounds. The marble is cold against your cheek."
-→ Viewer CẢM THẤY trong cơ thể, không phải NGHE giải thích
-```
+| Chapter | Anchor event(s) | Texture details | Số anchors |
+|---|---|---|---|
+| Lv1: Blood Clot | Born with blood clot omen | Father minor chieftain, mother kidnapped | 1 |
+| Lv2: Orphan | Father poisoned, clan abandons | Eat roots/rats, tree bark | 1 |
+| Lv3: First Kill | Kills half-brother | Mother's horror, steppe logic | 1 |
+| Lv4: The Cage | Captured + escape | Wooden cage, cart of wool, stranger helps | 1 |
+| Lv5: Alliance | Wife kidnapped + 3-army rescue | Partnership offer, dawn raid | 1 |
+| Lv6: Betrayal | Sworn brother raises army | 3-day battle, men on both sides | 1 |
+| **Lv7: The Name** | **Proclaimed Khan + sworn brother death** | Banner, shaman, horizon | **2** |
+| Lv8: Great Law | Builds written law system | Meritocracy, courier, military structure | 1 |
+| Lv9: The Wall | Jin Dynasty conquered | Cavalry around wall, bribery, emperor flees | 1 |
+| Lv10: Reckoning | Ambassador executed → 3 days silence | 450 merchant convoy, shaved beards | 1 |
+| Lv11: The Flood | Khwarezm Empire erased | River diverted, Shah dies alone, libraries burn | 1 |
+| Lv12: Last Campaign | Final campaign through winter | Body failing, generals watching | 1 |
+| Lv13: Open Sky | Death at 65 | No grave, horses over burial, "you are history" | 1 |
 
-**3. LEVEL PROGRESSION** — Cảm giác "leveling up" giống game
-```
-Level 1: sinh ra (powerless)
-Level 5: liên minh đầu tiên (first ally)
-Level 8: viết luật (system builder)
-Level 13: chết (full circle)
-→ Mỗi level = 1 bước lên/xuống rõ ràng → viewer theo dõi progression
-```
+**Kết quả: 12/13 chapters = 1 anchor. 1 chapter = 2 anchors (khi events cùng thời điểm).**
 
-**4. CLEAN CLOSURE** — Mỗi chapter kết bằng 1 câu có trọng lượng
+### Chapter Split Logic
+
 ```
-"Hesitation is death."
-"No satisfaction, only distance."
-"You came from nothing. You returned to nothing. And now you are history."
-→ Viewer nhớ câu kết — nó trở thành "tagline" của level đó
+Mỗi main_key_data item trong phase plan → ~1 Level chapter
+
+Exceptions (gộp 2 anchors vào 1 chapter):
+  - 2 events xảy ra CÙNG thời điểm (same age/year)
+  - 2 events có quan hệ NHÂN QUẢ TRỰC TIẾP (event B là hậu quả tức thì của event A)
+  - 2 events cùng THEME (cùng xoay quanh 1 quyết định)
 ```
 
-### Khán giả KHÔNG muốn:
+### split_threshold cho code
 
-- ❌ Bối cảnh lịch sử chi tiết → "Tôi đang SỐNG ở đó, tôi không cần ai giải thích"
-- ❌ Narrator commentary → "Đừng nói cho tôi cảm gì — để tôi TỰ cảm"
-- ❌ Myth-busting → "Tôi không đang xem documentary"
-- ❌ Source citations → "Tôi không cần biết ai nói — tôi đang Ở ĐÓ"
-- ❌ Slow pacing/long paragraphs → "Cuộc đời đang diễn ra — đừng dừng lại"
+Biography dùng `[3, 6]`: 1-3 events → 1ch, 4-6 → 2ch, 7+ → 3ch
+
+POV dùng `[2, 3]`: **1-2 events → 1ch, 3 → 2ch, 4+ → 3ch**
+
+Lý do: mỗi chapter POV chỉ ~150 words, không đủ chỗ cho nhiều events.
+
+### Flow: Phase Plan → Chapter Split → Outline
+
+```
+PHASE PLAN (AI):
+  Phase "Nguồn Gốc":
+    main_key_data: ["Blood clot birth", "Father poisoned/clan abandons", "Kills half-brother"]
+    sub_key_data: ["Steppe survival, tree bark", "Mother's horror"]
+    node_count: 4
+                    ↓
+CHAPTER SPLIT (deterministic, threshold [2,3]):
+    node_count 4 → 3 chapters
+    → Ch1: ["Blood clot birth"] + textures
+    → Ch2: ["Father poisoned/clan abandons"] + textures
+    → Ch3: ["Kills half-brother"] + textures
+                    ↓
+OUTLINE (AI):
+    Ch1: Level 1: The Blood Clot, age_anchor: "You are born", ...
+    Ch2: Level 2: The Orphan, age_anchor: "You are 9", ...
+    Ch3: Level 3: The First Kill, age_anchor: "You are 12", ...
+```
+
+### Cách outline distribute key_data vào chapters
+
+**Quy tắc (giống biography nhưng đơn giản hơn):**
+
+1. **main_key_data**: Distribute theo chronological order — events sớm → chapters sớm
+2. **sub_key_data texture**: Outline AI gán texture phù hợp cho mỗi chapter (body state → chapter có body decline, weather → chapter có outdoor scene)
+3. **sub_key_data bridge**: Outline AI đặt bridge facts ở chapters có time gap lớn với chapter trước
+4. **KHÔNG DROP**: Tất cả main_key_data PHẢI xuất hiện ở ít nhất 1 chapter
 
 ---
 
-## Pipeline So Sánh (Giữ lại từ plan v2)
+## Các Phần Giữ Nguyên Từ Plan v4
 
-POV đi qua **đúng các bước giống biography**. Code chỉ cần thêm niche branches.
+### Blueprint Fields
+Bỏ 6 (myths, dark_psych, dual_nature, systemic_opposition, profile detail, downfall_pattern), giữ 6, thêm 3 (age_timeline, physical_state_arc, death_scene).
 
-| Bước | Loại | Chi tiết |
-|---|---|---|
-| Research Blueprint | 🟡 Clone + cắt 50% | Bỏ 6 fields, thêm 3 fields mới |
-| Select Framework | 🟢 Code chung | POV chỉ có 1 framework |
-| Phase Plan | 🟡 Clone + adapt | 1 event/phase, thêm age + physical_state |
-| Validate Sub-Key | ❌ Bỏ hẳn | Không cần cho POV |
-| Chapter Split | 🟢 Code chung | Chỉ đổi threshold |
-| Outline | 🟡 Clone + cắt 55% | Level format, schema giản hóa |
-| Audit | 🟡 Clone + giản hóa | Check POV voice, age anchor |
-| **Writer** | 🔴 **Viết mới** | 150 dòng, khác 90% biography |
-| Review | 🟡 Clone + adapt | Check 2nd person compliance |
-| Auto-Patch | 🟢 Code chung | Không đổi |
-| Merge | 🟢 Code chung | Không đổi |
+### Phase Plan Phases
+4-5 life phases: Nguồn Gốc → Thử Lửa → Trỗi Dậy → Đỉnh Cao & Cái Giá → Kết Thúc. Multi-event per phase.
+
+### Chapter Flow
+5 kiểu opening (Standard 50%, Callback 25%, Thesis 15%, Atmosphere 8%, Cold Open 2%). Writer prompt dạy menu, không formula.
+
+### Sentence Rhythm
+4 patterns (Staccato, Wave, Build, Stillness). Mỗi chapter dùng ≥2 patterns.
+
+### Writer Prompt
+~150-200 dòng. Menu-based. Golden rules: 2nd person, body-not-emotion, numbers-as-power, zero context, zero narrator.
+
+### Pipeline
+Code chung giữ nguyên. Chỉ thêm `elif _is_pov:` branches. 12 files mới/sửa.
+
+### Ngôn ngữ/Blueprint/Length
+Tất cả theo UI user chọn, như biography.
 
 ---
 
-## Open Questions
+## Verification Plan
 
-> [!IMPORTANT]
-> **Q1: Ngôn ngữ output?** English, Vietnamese, hay cả hai?
-
-> [!IMPORTANT]
-> **Q2: Blueprint source?** Research (AI tự research), Extract (từ script gốc), hay cả hai?
-
-> [!IMPORTANT]
-> **Q3: Video target length?** Giữ 8–12 phút (10–13 chapters × 100–200 words)?
+1. JSON validation cho style JSON
+2. Dispatch coverage test
+3. **Biography regression**: chạy biography pipeline → output unchanged
+4. **Smoke test**: POV pipeline với Genghis Khan
+5. So sánh output với script mẫu gốc
