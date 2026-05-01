@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "So sánh cấu trúc kịch bản POV Baldwin IV (19 chapters) vs kịch bản tham khảo Genghis Khan (13 levels). Phân tích 4 vấn đề gốc và đề xuất phương án fix: validate_sub_key quá hung hăng, thiếu bước gộp cùng tuổi, phase plan thiếu ngưỡng cứng, và mối quan hệ giữa lifespan và chapter count.",
+  "updatedAt":  "2026-05-01T09:53:29.085329100Z",
+  "requestFeedback":  true
+}
