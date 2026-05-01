@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to fix inconsistent reference images by:\n1. Reordering Step 2: World Bible runs FIRST, then Characters and Locations receive historical context\n2. Upgrading World Bible prompt to output faction-specific colors, heraldry, armor, architecture\n3. Upgrading Characters prompt to require specific costume details (colors, emblems, weapons)\n4. Upgrading Locations prompt to require Architecture, Environment, Key Props, Atmosphere + fixed camera angle\n5. Fixing field name mismatch (real_name vs original_name)",
-  "updatedAt":  "2026-04-30T07:53:01.805979600Z",
-  "version":  "13",
+  "summary":  "Root cause analysis and fix plan for the validation step bug that incorrectly promotes weak sub_key_data items to main_key_data, causing weak standalone chapters in POV biography mode. Two fixes needed: (1) stricter validation prompt, (2) code safety check to auto-demote items that fail scene test.",
+  "updatedAt":  "2026-05-01T13:15:45.799666300Z",
+  "version":  "14",
   "requestFeedback":  true
 }
