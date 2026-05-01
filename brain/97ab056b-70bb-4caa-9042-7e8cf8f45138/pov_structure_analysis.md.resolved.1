@@ -1,0 +1,95 @@
+# Phân tích: Tại sao Biography mượt, POV rời rạc?
+
+## Sự khác biệt cốt lõi
+
+| | Biography (mượt) | POV (rời rạc) |
+|---|---|---|
+| **Tiêu chí chọn** | SCENE TEST: "Có conflict/tension?" | LEVEL GATE: "Permanent change? Visual?" |
+| **Đơn vị chapter** | 1 FACET (khía cạnh cuộc đời) | 1 MOMENT (khoảnh khắc đơn lẻ) |
+| **Liên kết chapters** | Transition protocol + previous_context + closing_type | Không có — mỗi Level tự đứng |
+| **Câu hỏi chọn lọc** | "Sự kiện này có DRAMA bên trong?" | "Sự kiện này có thay đổi vĩnh viễn?" |
+| **Kết quả** | Chapters nối nhau bằng dòng chảy tự nhiên | Chapters = list bullet points xếp theo thời gian |
+
+## Vấn đề gốc: DRAMA ≠ NARRATIVE
+
+Tiêu chí hiện tại (Level Gate) hỏi: **"Sự kiện này có kịch tính không?"**
+- "Claw hand deformity" → Có! Permanent! Visual! → main ✓
+- "Isabella wedding interrupted" → Có! Visual! → main ✓  
+- "Voice reduced to whisper" → Có! Permanent! → main ✓
+
+→ 19 events đều "kịch tính" → 19 chapters → rời rạc.
+
+Kịch bản tham khảo hỏi câu khác: **"Bỏ sự kiện này, story có VỠ không?"**
+- Father poisoned → CÓ (nếu bỏ: tại sao clan bỏ đi?)
+- Kills half-brother → CÓ (nếu bỏ: tại sao bị truy đuổi?)
+- Claw hand → KHÔNG (Montgisard chapter đã bao gồm body failing, claw hand là texture trong đó)
+
+## Đề xuất: Thay Level Gate bằng CHAIN TEST
+
+Không chọn sự kiện theo drama → chọn theo **quan hệ nhân quả**.
+
+### Chain Test — 2 câu hỏi:
+
+```
+1. "Sự kiện này TRỰC TIẾP gây ra sự kiện nào ở chapter tiếp theo?"
+   → CÓ = main_key_data (mắt xích trong chuỗi)
+   → KHÔNG = sub_key_data (texture)
+
+2. "Nếu bỏ sự kiện này, người xem có HIỂU được chapter tiếp theo không?"
+   → KHÔNG hiểu = main_key_data (bắt buộc phải kể)
+   → VẪN hiểu = sub_key_data (kể cũng tốt, bỏ cũng được)
+```
+
+### Ví dụ Baldwin IV — Chain Test:
+
+```
+Chuỗi nhân quả:
+Age 9: Discover numb arm      → "Tôi có bệnh"
+  ↓ GÂY RA
+Age 13: Crowned despite disease → "Tôi phải cai trị dù sắp chết"
+  ↓ GÂY RA  
+Age 16: Montgisard — prove worth → "Tôi chứng minh mình không yếu"
+  ↓ GÂY RA
+Age 18: Body fails in battle     → "Cơ thể phản bội tôi"
+  ↓ GÂY RA
+Age 22: Blind, litter to Kerak   → "Không thể tự đi nhưng vẫn chỉ huy"
+  ↓ GÂY RA
+Age 23: Gates of Ascalon         → "Guy phản bội, tôi bất lực"
+  ↓ GÂY RA
+Age 23: Crown nephew Baldwin V   → "Bảo vệ vương quốc sau khi chết"
+  ↓ GÂY RA
+Age 24: Death                    → "Kết thúc"
+```
+
+**8 mắt xích.** Mỗi cái GÂY RA cái tiếp theo.
+
+Những sự kiện bị loại khỏi chain:
+- "Claw hand deformity" → TEXTURE woven vào chapter Montgisard (age 16)
+- "Isabella wedding interrupted" → TEXTURE woven vào chapter Kerak (age 22)
+- "Voice reduced to whisper" → TEXTURE woven vào chapter Ascalon (age 23)
+- "Facial disfigurement" → TEXTURE woven vào chapter cuối Suy Tàn
+- "Saladin's army routed" → KẾT QUẢ của Montgisard, không phải event riêng
+- "Total loss of mobility" → TEXTURE woven vào chapter litter (age 22)
+
+## Sự khác biệt với mô hình hiện tại
+
+| | Level Gate (hiện tại) | Chain Test (đề xuất) |
+|---|---|---|
+| Hỏi | "Event này có dramatic?" | "Bỏ event này, story có vỡ?" |
+| Chọn theo | Chất lượng từng event ĐƠN LẺ | Quan hệ giữa CHUỖI events |
+| Kết quả | 19 events đều "tốt" → 19 ch | 8 events tạo chuỗi nhân quả |
+| Texture | Sub = events "kém drama" | Sub = events drama nhưng KHÔNG cần để hiểu story |
+
+## Vấn đề kỹ thuật cần giải quyết
+
+> [!IMPORTANT]
+> Chain Test khó cho AI hơn Level Gate vì cần nhìn TOÀN BỘ events trước khi chọn, thay vì đánh giá từng event riêng lẻ.
+
+**Đề xuất thực thi:**
+Sửa phase plan prompt:
+1. Bước 1: AI liệt kê TẤT CẢ events candidate (tất cả events từ blueprint)
+2. Bước 2: AI xây dựng CAUSAL CHAIN — nối events bằng "→ GÂY RA →"
+3. Bước 3: Events TRÊN chain = main_key_data. Events NGOÀI chain = sub_key_data.
+4. Mỗi main_key_data item = 1 MẮT XÍCH, có thể gồm nhiều events cùng tuổi xảy ra trong cùng scene.
+
+Kỹ thuật này tương tự biography SCENE TEST nhưng thêm chiều dọc: không chỉ "event này có drama?" mà còn "event này nối vào đâu trong dòng chảy?"

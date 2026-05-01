@@ -1,6 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_OTHER",
-  "summary":  "So sánh cấu trúc kịch bản POV Baldwin IV (19 chapters) vs kịch bản tham khảo Genghis Khan (13 levels). Phân tích 4 vấn đề gốc và đề xuất phương án fix: validate_sub_key quá hung hăng, thiếu bước gộp cùng tuổi, phase plan thiếu ngưỡng cứng, và mối quan hệ giữa lifespan và chapter count.",
-  "updatedAt":  "2026-05-01T09:53:29.085329100Z",
+  "summary":  "So sánh chi tiết 3 cấu trúc: Kịch bản tham khảo Baldwin IV (10 Levels) và Genghis Khan (13 Levels) vs đề xuất Chain Test (8 mắt xích). Phát hiện 3 vấn đề của đề xuất: bỏ mất các Level trung gian (physician, iron will, blind king), thiếu BODY DECAY THREAD, và không hiểu rằng kịch bản tham khảo dùng Deterioration Chain chứ không phải Causal Chain. Đưa ra đề xuất mới: Deterioration Chain Test dựa trên mất cơ thể như đồng hồ cốt truyện.",
+  "updatedAt":  "2026-05-01T10:14:25.493944500Z",
+  "version":  "2",
   "requestFeedback":  true
 }
