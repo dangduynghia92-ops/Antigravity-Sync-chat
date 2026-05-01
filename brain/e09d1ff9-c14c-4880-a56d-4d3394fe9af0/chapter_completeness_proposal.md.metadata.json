@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Analysis of Baldwin IV reference script chapter structure. Identifies the 3-beat pattern (SCENE → CONTEXT → STAKES/FORESHADOW) that makes chapters feel complete vs the current pipeline which only generates the SCENE beat. Proposes adding a CHAPTER COMPLETENESS principle to the write prompt.",
+  "updatedAt":  "2026-05-01T16:03:00.540424600Z",
+  "requestFeedback":  true
+}
