@@ -1,0 +1,9 @@
+{
+  "title": "Prompt Engineering Mandatory Rules",
+  "summary": "MANDATORY rules for creating/editing ANY prompt or style JSON in the narrative pipeline. These rules have been violated repeatedly and must be checked BEFORE every edit.",
+  "created": "2026-05-01T22:32:00+07:00",
+  "lastAccessed": "2026-05-01T22:32:00+07:00",
+  "references": [
+    "conversation:e09d1ff9-c14c-4880-a56d-4d3394fe9af0"
+  ]
+}
