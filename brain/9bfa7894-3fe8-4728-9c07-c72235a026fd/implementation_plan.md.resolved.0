@@ -1,0 +1,88 @@
+# Implementation Plan: New Niche "POV Biography"
+
+Đây là kế hoạch triển khai pipeline cho niche mới **POV Biography** (Tiểu sử góc nhìn thứ hai - "Your Life as..."). Niche này tập trung vào sự sinh tồn, ý chí sắt đá, góc nhìn thứ hai cực kỳ lôi cuốn, văn phong dồn dập (staccato) và việc chia nhỏ cuộc đời thành các "Level" theo độ tuổi.
+
+Dựa trên tài liệu `new-niche.md`, dưới đây là danh sách toàn bộ các bước cần thực hiện để tích hợp niche này vào hệ thống hiện tại.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Tên định danh (Niche ID):** Tôi đề xuất sử dụng từ khóa `pov_biography` (hoặc `tiểu_sử_pov`) làm định danh (identifier) chính trong toàn bộ hệ thống (file naming, JSON niche key, code logic `_is_pov_biography`). Xin hãy xác nhận tên định danh này.
+
+## Open Questions
+
+> [!WARNING]
+> 1. **Blueprint Structure (Source Map vs Fuzzy Search):** Vì đây vẫn là thể loại Tiểu sử (Biography), dữ liệu cuộc đời sẽ trải dài qua nhiều chương và độ tuổi. Chúng ta có nên kế thừa cơ chế **`source_map`** (khớp chính xác dữ liệu từ blueprint vào chương) giống như niche Biography gốc không, hay dùng **Fuzzy Search**? Đề xuất: Nên dùng **`source_map`** để tránh rò rỉ (leak) sự kiện sai độ tuổi.
+> 2. **Chế độ (Modes):** Niche này sẽ tập trung vào **New Content** (tạo mới hoàn toàn từ AI research) hay **Rewrite** (làm lại từ kịch bản có sẵn)? Hay cả hai?
+
+## Proposed Changes
+
+---
+
+### 1. PHASE A: CẤU HÌNH STYLE & PROMPTS (TẠO FILE MỚI)
+
+Tất cả các file sẽ được lưu trong thư mục `styles/` và `prompts/`.
+
+#### 1.1. Khởi tạo Style JSON
+- [NEW] `styles/narrative_pov_biography.json`: 
+  - Khai báo quy tắc cốt lõi: góc nhìn "You", giọng văn Staccato, cấu trúc "Level [X]: [Tên Level] - You are [Tuổi]".
+  - Khai báo Frameworks (ví dụ: `The_Conqueror_Path`, `The_Cursed_King`, `The_Betrayed_Ruler`).
+  - Định nghĩa bắt buộc chương cuối (Kết Thúc) luôn kết thúc bằng câu hook: *"And now you are history."*
+
+#### 1.2. Tạo nhóm Prompts cho Research & Blueprint
+- [NEW] `system_research_blueprint_pov_biography.txt`: Hướng dẫn AI tìm kiếm thông tin, nhấn mạnh vào các nghịch cảnh tuổi thơ, các quyết định lạnh lùng, tổn thương thể xác và tâm lý.
+- [NEW] `system_enrich_blueprint_pov_biography.txt`: (Nếu cần) Đào sâu vào các "Vices_and_obsessions", các sự kiện thể hiện ý chí sinh tồn để làm sâu sắc dữ liệu.
+- [NEW] `system_audit_pov_biography_blueprint.txt`: Kiểm tra blueprint để đảm bảo không bị thiếu các móc thời gian (độ tuổi của nhân vật).
+- [NEW] `system_crossref_pov_biography_blueprint.txt`: Lọc blueprint, cấm trường `additional_findings`.
+
+#### 1.3. Tạo nhóm Prompts cho Narrative Pipeline
+- [NEW] `system_narrative_phase_plan_pov_biography.txt`: Chia cuộc đời thành các "Level" (ví dụ: The Golden Cage, The Hunted Boy). Mỗi phase đại diện cho một Level hoặc độ tuổi nhất định.
+- [NEW] `system_validate_sub_key_pov_biography.txt`: Kiểm tra Sub-Key. Đề bạt những sự kiện mang tính sinh tồn/cạnh tranh lên thành Main Key.
+- [NEW] `system_narrative_outline_pov_biography.txt`: Phác thảo sườn chương, đảm bảo khai báo số tuổi (Age) ở mỗi chương và tên Level ấn tượng.
+- [NEW] `system_narrative_audit_pov_biography.txt`: Kiểm tra outline có tuân thủ cấu trúc *"Level X... You are Y..."* hay không.
+- [NEW] `system_narrative_write_pov_biography.txt`: Prompt quan trọng nhất cho người viết. Bắt buộc dùng đại từ "You", viết câu ngắn, lạnh lùng, tả thực (Show Don't Tell), không dùng từ nối thừa thãi.
+- [NEW] `system_narrative_review_pov_biography.txt`: Chấm điểm bản viết dựa trên độ gai góc và nhịp điệu (rhythm).
+
+---
+
+### 2. PHASE B: CODE WIRING (TÍCH HỢP VÀO HỆ THỐNG)
+
+Thay đổi logic trong file lõi của Python, không làm ảnh hưởng các Niche cũ.
+
+#### [MODIFY] `core/rewriter.py`
+- **Research Sections:**
+  - Định nghĩa 3 hằng số section: `_POV_BIO_RESEARCH_SECTION_A` (Tuổi thơ & Nghịch cảnh), `_POV_BIO_RESEARCH_SECTION_B` (Đỉnh cao & Quyền lực), `_POV_BIO_RESEARCH_SECTION_C` (Sự phản bội & Di sản).
+  - Cập nhật hàm `_get_research_sections()`.
+- **Niche Branching (`_is_pov_biography`):**
+  - Khai báo biến `_is_pov_biography` dựa trên keywords.
+  - Cập nhật `_extract_chapter_blueprint()`: Khai báo các section "luôn mang theo" (always include) như tâm lý học, tình trạng thể chất của nhân vật (ví dụ: căn bệnh phong của Baldwin). Xử lý logic `source_map`.
+  - Cập nhật `write_from_blueprint()`: Thiết lập chiến thuật truyền dữ liệu cho chương Hook.
+  - Cập nhật `validate_phase_plan_sub_keys()` và `_extract_style_for_framework()`.
+- **Dispatch Maps:**
+  - Cập nhật `_NICHE_PROMPT_MAP` cho tất cả 6 pipeline steps (outline, phase plan, validate, audit, writer, review) để trỏ đúng tới các file txt vừa tạo.
+- **Key Normalization & Outline Fields:**
+  - Cập nhật `_NICHE_OUTLINE_FIELDS` (Thêm trường cho Tuổi - `current_age` và tên Level - `level_name`).
+  - Cập nhật `_KEY_NORMALIZE` (nếu cần).
+
+---
+
+### 3. PHASE C: VERIFICATION & TESTING
+
+## Verification Plan
+
+### Automated/Code Verification
+1. Chạy lệnh parse JSON để đảm bảo file `narrative_pov_biography.json` hợp lệ.
+2. Kiểm tra Regression: Chạy song song thử thuật toán trên pipeline `Biography` và `Battle v2` để đảm bảo code dùng chung bị sửa trong `rewriter.py` không phá vỡ bất cứ Niche nào cũ.
+
+### Workflow Verification
+1. Chọn một nhân vật thử nghiệm (Ví dụ: *Napoleon Bonaparte* hoặc *Alexander the Great*).
+2. Chạy toàn bộ pipeline từ đầu đến cuối với `pov_biography`.
+3. Kiểm tra đầu ra các tệp `.txt` của chương:
+   - Các chương có bắt đầu bằng: `"Level [X]... You are [Tuổi]..."` không?
+   - Chương cuối cùng có kết thúc bằng câu `"And now you are history."` không?
+   - Có xuất hiện ngôi thứ ba "He/She" (bị cấm) hay toàn bộ là "You"?
+   - Câu văn có ngắn gọn, nhịp độ nhanh (Staccato) không?
+
+---
+> [!TIP]
+> Vui lòng xem xét các câu hỏi ở phần **Open Questions** và cho tôi ý kiến/phê duyệt trước khi bắt tay vào thiết lập chi tiết.
