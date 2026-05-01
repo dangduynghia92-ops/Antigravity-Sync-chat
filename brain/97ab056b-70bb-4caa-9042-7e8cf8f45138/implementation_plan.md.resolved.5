@@ -1,0 +1,304 @@
+# POV Biography Niche — Implementation Plan v6
+
+> **Cập nhật v6:** Audit blueprint fields chi tiết + Phase plan 6 phases.
+
+---
+
+## 1. Blueprint Fields — Audit Chi Tiết
+
+### Câu hỏi cốt lõi: Bỏ field có MẤT DATA không?
+
+Trả lời ngắn: **KHÔNG mất DATA, chỉ mất LENS (cách nhìn).**
+
+Phân biệt quan trọng:
+- **DATA** = sự kiện, hành động, facts → xuất hiện trong `key_events`, `conflicts`, `turning_points`
+- **LENS** = cách phân loại, cách nhìn sự kiện → `dark_psychology`, `dual_nature`, `downfall_pattern`
+
+POV format **chỉ cần DATA** (show hành động) → không cần LENS (phân tích tâm lý).
+
+### Audit từng field bị bỏ
+
+#### ❌ `dark_psychology` — BỎ field, DATA VẪN CÒN
+
+`dark_psychology` chứa:
+- `dark_type`: "Machiavellian" → **phân loại**, không phải sự kiện → POV không cần
+- `internal_conflicts`: "what tormented them" → **phân tích tâm lý** → POV show qua hành động thay vì nói
+- `moral_compromises`: "moments they betrayed values" → **SỰ KIỆN** → nhưng data này CŨNG xuất hiện trong `key_events` và `conflicts`
+- `psychological_wounds`: "traumas" → **SỰ KIỆN** → xuất hiện trong `life_phases.key_events`
+- `pattern_of_darkness`: "repeating pattern" → **LENS** → POV không phân tích pattern
+
+**Bằng chứng:** Genghis giết nửa anh em (moral compromise) — event này nằm trong `life_phases[0].key_events`, KHÔNG CẦN field `dark_psychology` riêng để research nó.
+
+**Mitigations:** Trong research blueprint prompt POV, thêm instruction rõ:
+```
+DARK DATA PRIORITY (giữ từ biography):
+  Khi research key_events cho mỗi life_phase, PRIORITIZE:
+  → Hành động tàn ác, bạo lực, đẫm máu
+  → Phản bội, hy sinh, mất mát
+  → Quyết định đạo đức khó khăn
+  → Khoảnh khắc nhân vật vượt qua giới hạn đạo đức
+  OVER: milestones, appointments, publications
+```
+
+→ **Kết luận:** dark_psychology bị bỏ nhưng dark DATA vẫn đầy đủ trong key_events + conflicts.
+
+---
+
+#### ❌ `dual_nature` — BỎ, KHÔNG MẤT GÌ
+
+`dual_nature` chứa: `light_side` list + `dark_side` list → **PHÂN LOẠI** events thành "tốt" vs "xấu".
+
+POV format **không phân loại** — nó SHOW hành động, viewer tự cảm nhận. Script mẫu KHÔNG BAO GIỜ nói "this was his dark side" hay "but he also had a good side."
+
+**Bằng chứng:** Genghis Lv8 (Great Law) show luật công bằng (light). Lv11 (Erasing Khwarezm) show hủy diệt (dark). Script không phân biệt — cả hai đều show qua hành động.
+
+→ Data vẫn có trong key_events. Classification bị bỏ vì không cần.
+
+---
+
+#### ❌ `myths_vs_reality` — BỎ
+
+POV không debunk myths. Nếu có fact thú vị từ myth → nó sẽ xuất hiện tự nhiên trong `key_events`.
+
+→ Không mất data quan trọng.
+
+---
+
+#### 🟡 `personal_profile` — GIỮ MỘT PHẦN
+
+| Sub-field | POV? | Lý do |
+|---|---|---|
+| `physical_traits` | ✅ **GIỮ** | **QUAN TRỌNG cho POV** — body-as-clock. Baldwin: "skin cracking", "arm numb". Genghis: "scars on body". Cần physical details cụ thể |
+| `health_conditions` | ✅ **GIỮ** | Baldwin leprosy, Caesar epilepsy — cốt lõi cho POV |
+| `behavioral_quirks` | ❌ BỎ | POV không mô tả quirks — show qua action |
+| `cognitive_style` | ❌ BỎ | POV không phân tích cách nghĩ |
+| `vices_and_obsessions` | ❌ BỎ | Data xuất hiện trong key_events nếu vice gây hậu quả |
+| `unusual_advantages` | ❌ BỎ | Show qua action |
+| `unusual_disadvantages` | ❌ BỎ | Show qua action, health_conditions đã cover |
+| `daily_routine` | ❌ BỎ | Không cần |
+
+→ **Kết luận:** Giữ `physical_traits` + `health_conditions`. Bỏ phần còn lại.
+
+---
+
+#### ❌ `systemic_opposition` — BỎ nhưng MIGRATE DATA
+
+`systemic_opposition` chứa: institutions that opposed them (Church vs Galileo, Senate vs Caesar).
+
+POV KHÔNG CẦN field riêng — nhưng data NÀY quan trọng: "The Senate hall fills with men you personally pardoned" (Caesar Lv11).
+
+**Mitigation:** Research prompt POV thêm instruction trong `conflicts`:
+```
+Conflicts MUST include institutional opposition:
+  Who/what institution opposed them? What did they DO?
+  → Put in conflicts with specific named opponents
+```
+
+→ Data migrate vào `conflicts` thay vì field riêng.
+
+---
+
+#### ❌ `downfall_pattern` — BỎ
+
+`downfall_pattern` = classification ("Poor_Judgment", "Megalomaniac_Collapse") + strength_to_weakness.
+
+POV không cần classification — events suy tàn nằm trong `life_phases` (phase "Suy Tàn") + `key_events`.
+
+→ Không mất data.
+
+---
+
+#### ❌ `financial_details` — BỎ
+
+POV format hầu như không dùng financial data. Exception: nếu tiền ảnh hưởng trực tiếp đến action (Caesar mượn tiền Crassus) → data nằm trong `key_events`.
+
+→ Mất details về peak_wealth, spending_habits — nhưng POV format không cần.
+
+---
+
+#### ❌ `scandals_and_controversies` — BỎ FIELD RIÊNG
+
+Data scandal nằm trong `key_events` + `conflicts`. Không cần field riêng.
+
+---
+
+#### ❌ `era_context` — BỎ
+
+POV format KHÔNG có context paragraphs → không cần era_context riêng. Nếu cần context, weave vào texture.
+
+---
+
+### Tổng kết Blueprint Fields POV
+
+**GIỮ (có adapt):**
+| # | Field | Adapt |
+|---|---|---|
+| 1 | `core_topic` | Giữ nguyên |
+| 2 | `core_identity` | Giữ nguyên |
+| 3 | `life_phases` | Thêm `age_at_start` per phase |
+| 4 | `personal_profile.physical_traits` | Giữ nguyên |
+| 5 | `personal_profile.health_conditions` | Giữ nguyên |
+| 6 | `achievements` | Giản hóa: bỏ recognition, giữ cost |
+| 7 | `conflicts` | Thêm institutional opposition |
+| 8 | `key_relationships` | Giản hóa: tên + vai trò + kết cục |
+| 9 | `death_and_funeral` | Giữ nguyên — quan trọng cho end chapter |
+| 10 | `key_quotes` | Giữ nguyên |
+| 11 | `turning_points` | Giữ nguyên |
+| 12 | `legacy_and_historiography` | Giản hóa: chỉ how_remembered + modern_relevance |
+| 13 | `military_campaigns` | Giữ (optional, nếu applicable) |
+| 14 | `governance` | Giữ (optional, nếu applicable) |
+| 15 | `dark_impact` | Giữ (quan trọng cho nhân vật tiêu cực) |
+
+**MỚI:**
+| # | Field | Mục đích |
+|---|---|---|
+| 16 | `age_timeline` | `[{age, event}]` — cho age anchoring |
+| 17 | `physical_state_arc` | Body changes qua thời gian — cho body-as-clock |
+
+**BỎ hoàn toàn:** `myths_vs_reality`, `dark_psychology`, `dual_nature`, `systemic_opposition` (migrate vào conflicts), `downfall_pattern`, `financial_details`, `scandals_and_controversies` (migrate vào key_events), `era_context`, `paradigm_shift`, phần lớn `personal_profile`
+
+---
+
+## 2. Phase Plan — 6 Phases
+
+### Cấu trúc mới
+
+```
+Nguồn Gốc → Thử Lửa → Trỗi Dậy → Đỉnh Cao → Suy Tàn → Kết Thúc
+```
+
+### Phase "Kết Thúc" — Nội dung gì?
+
+Phân tích từ 3 script mẫu:
+
+**Genghis Khan Lv13 (death chapter):**
+```
+- Death event: horse accident → fever → dies at 65
+- Legacy scorecard: "a fifth of the earth's land mass, from Pacific to Europe"
+- Burial detail: no grave marker, ordered himself, horses driven over site
+- Circular callback: "You came from nothing. You returned to nothing."
+- Final line: "And now you are history."
+```
+
+**Baldwin IV (last chapters):**
+```
+- Death event: dies at 24, leprosy consumed everything
+- Aftermath: "2 years after your death, the French knight will lose Jerusalem"
+- Legacy: the kingdom he held together falls apart
+- Callback: back to the numb arm from Level 1
+```
+
+**Caesar Lv12 (conclusion):**
+```
+- NO new death event (assassination was Lv11 = Suy Tàn)
+- Legacy reflection: "dismantled the old Republic"
+- Aftermath: "destroyed by the very men he had empowered"
+- Callback: "from an observant boy in the slums to the architect of a new world"
+```
+
+### Phase "Kết Thúc" — Quy tắc
+
+| Nội dung | main_key_data? | Ví dụ |
+|---|---|---|
+| **Death scene** (nếu chưa cover ở Suy Tàn) | ✅ main | Genghis: horse accident → fever → dies |
+| **Burial/funeral details** | sub (texture) | No grave, horses over site, soldiers killed |
+| **Legacy scorecard** | sub (texture) | "A fifth of earth's land mass" |
+| **Aftermath** — world AFTER them | sub (texture) | "2 years later, Jerusalem falls" |
+| **Circular callback** | sub (texture) | "You came from nothing" |
+
+**2 trường hợp:**
+
+**Trường hợp A:** Death chưa cover ở Suy Tàn → Kết Thúc CÓ main_key_data
+```json
+{
+  "phase": "Kết Thúc",
+  "main_key_data": ["Dies at 65 after horse accident and fever in Gansu mountains"],
+  "sub_key_data": ["No grave marker", "Horses driven over burial site", 
+                    "Legacy: a fifth of earth's land mass", "From nothing to nothing"]
+}
+```
+
+**Trường hợp B:** Death đã cover ở Suy Tàn (Caesar: assassination = Lv11) → Kết Thúc main_key_data = []
+```json
+{
+  "phase": "Kết Thúc",
+  "main_key_data": [],
+  "sub_key_data": ["Legacy: dismantled the Republic", "Destroyed by men he empowered",
+                    "From observant boy to architect of world order"]
+}
+```
+
+### Mapping 3 nhân vật vào 6 phases
+
+**Genghis Khan (13 chapters):**
+| Phase | Chapters | Events |
+|---|---|---|
+| Nguồn Gốc | Lv1-2 | Birth, father poisoned/orphaned |
+| Thử Lửa | Lv3-4 | First kill, captured/escape |
+| Trỗi Dậy | Lv5-7 | Alliance, betrayal, proclaimed Khan |
+| Đỉnh Cao | Lv8-11 | Great law, Jin Dynasty, reckoning, Khwarezm erased |
+| Suy Tàn | Lv12 | Last campaign, body failing |
+| Kết Thúc | Lv13 | Death at 65, no grave, legacy scorecard |
+
+**Baldwin IV (11 chapters):**
+| Phase | Chapters | Events |
+|---|---|---|
+| Nguồn Gốc | Lv1-2 | Numb arm, leprosy diagnosis |
+| Thử Lửa | Lv3 | Boy king at 13, court vultures |
+| Trỗi Dậy/Đỉnh Cao | Lv4 | Montgisard miracle — 375 vs 26,000 |
+| Suy Tàn | Lv5-9 | Rotting throne, iron will, court factions, blind king |
+| Kết Thúc | Lv10-11 | Death at 24, Jerusalem falls 2 years later |
+
+**Caesar (12 chapters):**
+| Phase | Chapters | Events |
+|---|---|---|
+| Nguồn Gốc | Lv1 | Golden cage, Subura slums |
+| Thử Lửa | Lv2-3 | Sulla's purge, pirate capture |
+| Trỗi Dậy | Lv4-6 | Weeping at Alexander, debt engine, triumvirate |
+| Đỉnh Cao | Lv7-9 | Gaul conquest, Rubicon, civil war/Cleopatra |
+| Suy Tàn | Lv10-11 | Dictator arrogance, assassination |
+| Kết Thúc | Lv12 | Legacy reflection (main_key_data = []) |
+
+> [!NOTE]
+> Baldwin IV có Suy Tàn rất dài (5 chapters) vì bệnh leprosy = slow decline. Genghis có Đỉnh Cao dài (4 chapters) vì nhiều conquests. Caesar có Trỗi Dậy dài (3 chapters) vì political rise phức tạp. → Phase plan linh hoạt theo nhân vật.
+
+---
+
+## Phần Giữ Nguyên Từ Plan v5
+
+### Tiêu chí main/sub key data
+- main = ANCHOR (chapter xoay quanh nó, có Visual Moment)
+- sub = TEXTURE (details enriching scene) + BRIDGE (timeline connectors)
+- Visual Moment Test thay Scene Test
+
+### Validate Sub-Key
+- GIỮ bước này, đổi 3 Tests: Physical Moment, Agency, Consequence
+- Connective Protection giữ từ biography
+
+### Chia Chapter
+- 1 anchor ≈ 1 Level chapter, split_threshold [2,3]
+- Exceptions: 2 events cùng thời điểm/nhân quả → gộp 1 chapter
+
+### Chapter Flow
+- 5 kiểu opening (Standard, Callback, Thesis, Atmosphere, Cold Open)
+- 4 sentence patterns (Staccato, Wave, Build, Stillness)
+
+### Writer Prompt
+- ~150-200 dòng, menu-based, không formula cứng
+
+### Pipeline
+- Code chung giữ nguyên, thêm `elif _is_pov:` branches
+- 12 files mới/sửa
+
+### Ngôn ngữ/Blueprint/Length
+- Theo UI user chọn, như biography
+
+---
+
+## Verification Plan
+
+1. JSON validation cho style JSON
+2. Dispatch coverage test
+3. **Biography regression**: chạy biography pipeline → output unchanged
+4. **Smoke test**: POV pipeline với Genghis Khan
+5. So sánh output với script mẫu gốc

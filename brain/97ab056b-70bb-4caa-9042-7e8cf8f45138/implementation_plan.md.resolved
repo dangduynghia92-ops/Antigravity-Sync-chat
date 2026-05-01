@@ -1,291 +1,232 @@
-# POV Biography Niche — Implementation Plan v5
+# POV Biography Niche — Implementation Plan v7
 
-> **Cập nhật v5:** Chỉnh sửa tiêu chí main/sub key data, validate sub-key, và cách chia chapter.
-
----
-
-## Câu 1: Tiêu Chí main_key_data vs sub_key_data
-
-### Phân tích thực tế từ script mẫu
-
-Tôi đã phân tích từng chapter — trong POV, data chia thành **3 loại** (không phải 2):
-
-**Baldwin Chapter 5 ("The Rotting Throne") — phân tích chi tiết:**
-
-```
-ANCHOR EVENT (main_key_data):
-  "Court factions splitting — mother schemes, French knight positions for crown"
-  → Đây là cái chapter XOAY QUANH
-
-TEXTURE DETAILS (sub_key_data loại 1):
-  "Right hand nearly useless, skin cracking, bandages cover body"
-  "Someone has to lift you onto the horse"
-  "You sit on the throne wrapped in linen"
-  → Body details weave VÀO scene, không phải events riêng
-
-BRIDGE FACT (sub_key_data loại 2):
-  "Saladin is still out there. He's rebuilding. He's recruiting. He's patient."
-  → Giữ mạch thời gian, nhắc viewer Saladin vẫn là threat
-```
-
-**Genghis Chapter 8 ("Great Law") — phân tích:**
-
-```
-ANCHOR EVENT (main_key_data):
-  "You build written law — first conqueror to build law before army marches"
-
-TEXTURE DETAILS (sub_key_data loại 1):
-  "Promotion by merit, not blood"
-  "Religious tolerance in conquered lands"
-  "Decimal military structure"
-  "Mounted courier network faster than any on Earth"
-  "Betrayal punished by death, without exception"
-  → Tất cả là DETAILS của anchor event, không phải events riêng
-
-BRIDGE FACT (sub_key_data loại 2):
-  (Không cần — chapter 7 kết thúc liền mạch → chapter 8)
-```
-
-**Genghis Chapter 7 ("Becoming Khan") — 2 ANCHORS cùng chapter:**
-
-```
-ANCHOR 1 (main_key_data):
-  "200,000 people kneel, proclaimed Genghis Khan"
-
-ANCHOR 2 (main_key_data):
-  "Sworn brother delivered in chains, asks noble death, Khan grants it"
-
-TEXTURE:
-  "White banner raised nine times"
-  "Shaman say sky god chose you"
-```
-
-→ Chapter này có 2 anchors vì chúng **xảy ra cùng thời điểm** (cùng năm 44 tuổi, cùng sự kiện unification).
-
-### Tiêu chí phân loại cho Phase Plan POV
-
-| Loại | Tiêu chí | Vai trò trong chapter |
-|---|---|---|
-| **main_key_data** (ANCHOR) | Event mà chapter **xoay quanh**. Phải trả lời được: "Chapter này KỂ VỀ CHUYỆN GÌ?" bằng 1 câu | Được phát triển thành scene chính 3-8 câu |
-| **sub_key_data — texture** | Facts/details **bổ sung** cho anchor. Trả lời: "TRONG LÚC ĐÓ, cơ thể/không gian/người xung quanh THẾ NÀO?" | Weave vào scene: body state, weather, reactions, numbers |
-| **sub_key_data — bridge** | Thông tin **nối** giữa chapter trước và chapter sau. Trả lời: "GIỮA KHOẢNG ĐÓ CÓ GÌ XẢY RA?" | 1-2 câu transition ở đầu hoặc cuối chapter |
-
-### So sánh với tiêu chí biography hiện tại
-
-| | Biography | POV |
-|---|---|---|
-| **main_key_data** | Events qua Scene Test (có conflict/tension) | Events trả lời "Chapter NÀY kể về CHUYỆN GÌ?" — có physical moment + có agency |
-| **sub_key_data** | Background events woven into scenes | 2 loại: **texture** (details enriching scene) + **bridge** (timeline connectors) |
-| **Test chính** | Scene Test (conflict/tension?) | **Visual Moment Test**: "Có hình ảnh cụ thể không? Viewer có thể THẤY nó không?" |
-
-### Visual Moment Test (thay Scene Test cho POV)
-
-```
-VISUAL MOMENT TEST:
-  "Nếu tôi quay scene này thành video, có HÌNH ẢNH CỤ THỂ không?"
-
-✅ PASS → main_key_data:
-  "375 knights slam into 26,000 soldiers" → CÓ hình ảnh
-  "You pick up your bow and end it" → CÓ hình ảnh
-  "Officers report total silence for several minutes" → CÓ hình ảnh (im lặng = visual)
-  "You pull your toga over your face" → CÓ hình ảnh
-
-❌ FAIL → sub_key_data:
-  "Disease is accelerating" → KHÔNG CÓ hình ảnh cụ thể (nhưng "skin cracking" thì CÓ → texture)
-  "Court splits into factions" → KHÔNG CÓ hình ảnh (nhưng "mother whispers in corners" thì CÓ → texture)
-  "He's rebuilding. He's recruiting." → KHÔNG CÓ hình ảnh → bridge fact
-```
+> **Cập nhật v7:** Định nghĩa rõ 6 phases.
 
 ---
 
-## Câu 2: Validate Sub-Key — GIỮ Hay BỎ?
-
-### Kết luận: GIỮ nhưng đổi 3 Tests
-
-Bước validate sub-key **nên giữ** vì:
-- AI phase plan vẫn có thể phân loại sai (đặt event vào sub khi nó đáng main, hoặc ngược lại)
-- POV cần kiểm soát chặt hơn vì mỗi chapter rất ngắn — 1 event sai chỗ ảnh hưởng lớn
-
-### 3 Tests mới cho POV (thay thế 3 tests biography)
-
-**TEST 1 — PHYSICAL MOMENT TEST** (thay Scene Test):
-```
-"Event này có KHOẢNH KHẮC VẬT LÝ cụ thể không?"
-  - Có hành động cơ thể (grip, ride, kneel, strike)?
-  - Có phản ứng giác quan (eyes go wet, chest tightens, silence)?
-  - Có đồ vật/không gian cụ thể (wooden cage, marble floor, silver mask)?
-YES = pass | NO = fail
-
-✅ "Slams the plank into a guard's skull and escapes" → physical action + object
-✅ "You go completely still. Officers report total silence." → physical stillness
-❌ "Became known as a great conqueror" → no physical moment
-❌ "Reformed the tax system" → abstract
-```
-
-**TEST 2 — AGENCY TEST** (thay Turning Point Test):
-```
-"Nhân vật có CHỦ ĐỘNG quyết định hoặc hành động không?"
-  - Subject = "You" (nhân vật) → pass
-  - Subject = external force (fate, others) → fail
-YES = pass | NO = fail
-
-✅ "You refuse. You ride out." → YOU decide
-✅ "You offer partnership, not submission" → YOU choose
-❌ "Your father is poisoned by Tatars" → father dies TO you, not BY you
-❌ "The plague spreads across the empire" → external event
-```
-
-> **Lưu ý:** Test 2 FAIL không tự động demote — event vẫn có thể pass Test 1 + Test 3. Cha bị đầu độc FAIL Agency nhưng PASS Physical ("poisoned" = cụ thể) + PASS Consequence (mất gia đình, phải tự sinh tồn).
-
-**TEST 3 — CONSEQUENCE TEST** (thay Causal Independence Test):
-```
-"Hậu quả có THẤY NGAY trong chapter không?"
-  - Hậu quả visible trong cùng scene → pass
-  - Hậu quả chỉ hiểu khi đọc chapter sau → fail
-YES = pass | NO = fail
-
-✅ "Sworn brother asks noble death, Khan grants it" → hậu quả ngay: anh ta chết
-✅ "375 knights slam into 26,000 → army shatters" → hậu quả ngay: quân tan
-❌ "He studied engineering" → hậu quả chỉ thấy years later
-```
-
-### Promote / Demote Criteria
-
-**PROMOTE (sub → main):**
-- Phải pass Physical Moment Test (bắt buộc)
-- Thêm pass ít nhất 1 trong 2 tests còn lại
-- **Physical + 1 = PROMOTE**
-
-**DEMOTE (main → sub):**
-- Fail Physical Moment Test → CANDIDATE for demotion
-- Pass Physical nhưng fail CẢ Agency + Consequence → CANDIDATE
-- CANDIDATE + không protected → DEMOTE
-
-**CONNECTIVE PROTECTION** (giữ từ biography):
-```
-"Nếu bỏ item này, viewer có hiểu BƯỚC NHẢY từ chapter trước sang chapter sau không?"
-
-✅ PROTECT: "Father is poisoned" → dù fail Agency, bỏ nó thì viewer 
-   không hiểu tại sao bỗng orphan ở chapter tiếp
-✅ PROTECT: "Crown passes to you" → dù fail Physical, bỏ nó thì viewer 
-   không hiểu tại sao bỗng là king
-❌ NO PROTECT: "He was given a new horse" → bỏ không ảnh hưởng mạch chuyện
-```
+## Phase Plan — 6 Phases: Định Nghĩa Chi Tiết
 
 ---
 
-## Câu 3: Chia Chapter Thế Nào?
+### Phase 1: NGUỒN GỐC
 
-### Khác biệt cốt lõi với biography
+**Định nghĩa:** Nhân vật CHƯA chọn gì — thế giới chọn cho họ. Những thứ họ KHÔNG kiểm soát: nơi sinh, gia đình, bệnh tật bẩm sinh, hoàn cảnh xã hội.
 
-| | Biography | POV |
-|---|---|---|
-| **Words/chapter** | 400-700 | 100-200 |
-| **main_key_data/chapter** | 2-3 events → phát triển full scenes | 1-2 ANCHOR events (hiếm khi 3) |
-| **Quy tắc** | node_count → split [3,6] | Mỗi ANCHOR = 1 Level chapter |
+**Litmus Test:** *"Event này xảy ra VỚI nhân vật, hay DO nhân vật?"*
+- Xảy ra VỚI họ → Nguồn Gốc
+- DO họ → chuyển sang Thử Lửa
 
-### Quy tắc chia: 1 Anchor Event ≈ 1 Level Chapter
+**Dữ liệu ưu tiên từ blueprint:** `life_phases` (childhood), `core_identity.birth`, `health_conditions`, `physical_traits`
 
-Verify từ Genghis Khan 13 chapters:
+**Viewer cảm thấy:** Empathy + "Đời bất công" + muốn biết nhân vật sẽ phản ứng thế nào
 
-| Chapter | Anchor event(s) | Texture details | Số anchors |
+**Ví dụ:**
+| Nhân vật | Events Nguồn Gốc |
+|---|---|
+| Genghis | Born with blood clot omen, father is minor chieftain, mother kidnapped from another man |
+| Genghis | Father poisoned by Tatars, clan abandons family, eat roots/rats |
+| Baldwin | Numb arm at age 9, candle test — no pain |
+| Baldwin | Leprosy diagnosis at 11 — terminal, no cure |
+| Caesar | Born in Subura slums despite ancient family name, surrounded by debt |
+
+**Anti-patterns (KHÔNG thuộc Nguồn Gốc):**
+- ❌ "Kills half-brother" → nhân vật CHỦ ĐỘNG → Thử Lửa
+- ❌ "Forms alliance" → nhân vật QUYẾT ĐỊNH → Trỗi Dậy
+- ❌ "Proclaimed king" → kết quả hành động → Trỗi Dậy hoặc Đỉnh Cao
+
+---
+
+### Phase 2: THỬ LỬA
+
+**Định nghĩa:** Lần ĐẦU TIÊN nhân vật tự chọn, tự hành động, tự đối mặt. Những "first" quyết định tính cách: first kill, first escape, first stand, first survival test.
+
+**Litmus Test:** *"Đây có phải LẦN ĐẦU nhân vật đối mặt và PHẢN ỨNG bằng hành động không?"*
+- Lần đầu → Thử Lửa
+- Đã quen, đã có kinh nghiệm → Trỗi Dậy
+
+**Dữ liệu ưu tiên từ blueprint:** `life_phases` (adolescence/youth), `turning_points` sớm, `conflicts` đầu tiên
+
+**Viewer cảm thấy:** Shock + "Wow, nhân vật dám làm thế" + respect bắt đầu hình thành
+
+**Ví dụ:**
+| Nhân vật | Events Thử Lửa |
+|---|---|
+| Genghis | **First kill** — kills half-brother over stolen fish (age 12) |
+| Genghis | **First escape** — captured, wooden cage, slams plank into guard, escapes (age 15) |
+| Baldwin | **First throne** — crowned at 13, barons calculating, Saladin emerging |
+| Caesar | **First survival** — Sulla's purge, hiding in countryside, nearly dies of illness (age 18) |
+| Caesar | **First defiance** — captured by pirates, demands higher ransom, crucifies them (age 25) |
+
+**Anti-patterns:**
+- ❌ "Conquers Jin Dynasty" → đã có quân đội, kinh nghiệm → Đỉnh Cao
+- ❌ "Forms political alliance" → strategic, not survival → Trỗi Dậy
+- ❌ "Issues new law" → system building → Đỉnh Cao
+
+---
+
+### Phase 3: TRỖI DẬY
+
+**Định nghĩa:** Từ survivor → leader. Nhân vật bắt đầu XÂY DỰNG: liên minh, followers, quyền lực, uy tín. Có cả thắng lợi VÀ phản bội — vì khi lên cao, mối quan hệ phức tạp hơn.
+
+**Litmus Test:** *"Nhân vật đang TÍCH LŨY power hay đang DÙNG power?"*
+- Tích lũy → Trỗi Dậy
+- Đã có power và dùng nó → Đỉnh Cao
+
+**Dữ liệu ưu tiên từ blueprint:** `key_relationships` (allies, betrayers), `conflicts` (power struggles), `achievements` sớm, `turning_points` giữa cuộc đời
+
+**Viewer cảm thấy:** Momentum + rooting for nhân vật + lo lắng khi có phản bội
+
+**Ví dụ:**
+| Nhân vật | Events Trỗi Dậy |
+|---|---|
+| Genghis | Wife kidnapped → forms 3-army alliance → rescue → "United, you are something" |
+| Genghis | Sworn brother raises army → 3-day battle → betrayal destroyed |
+| Genghis | 200,000 people kneel → proclaimed Genghis Khan → sworn brother asks noble death |
+| Caesar | Weeps at Alexander's statue → resigns → returns to Rome with ambition |
+| Caesar | Borrows from Crassus → sponsors games → wins Pontifex Maximus |
+| Caesar | Forms First Triumvirate → divides Republic's resources |
+
+**Anti-patterns:**
+- ❌ "Born into poverty" → passive, no agency → Nguồn Gốc
+- ❌ "Conquers Gaul for 8 years" → already HAS power → Đỉnh Cao
+- ❌ "Body failing, generals watching" → declining → Suy Tàn
+
+---
+
+### Phase 4: ĐỈNH CAO
+
+**Định nghĩa:** Maximum power. Nhân vật ĐÃ CÓ quyền lực và DÙNG nó ở quy mô lớn nhất. Chinh phục, xây hệ thống, thay đổi thế giới. **Nhưng:** hạt giống suy tàn bắt đầu xuất hiện (cơ thể yếu, kẻ thù âm mưu, kiêu ngạo).
+
+**Litmus Test:** *"Nhân vật đang ở ĐỈNH quyền lực chưa? Hành động này có quy mô LỚN NHẤT không?"*
+- Quy mô lớn nhất, power cao nhất → Đỉnh Cao
+- Power đang giảm, cơ thể/tâm lý suy → Suy Tàn
+
+**Dữ liệu ưu tiên từ blueprint:** `achievements` lớn nhất, `military_campaigns`, `governance`, `conflicts` quy mô lớn, `dark_impact`
+
+**Viewer cảm thấy:** Awe + "Incredible" + nhưng bắt đầu thấy cái giá ("No satisfaction, only distance")
+
+**Ví dụ:**
+| Nhân vật | Events Đỉnh Cao |
+|---|---|
+| Genghis | Builds written law — meritocracy, tolerance, courier network |
+| Genghis | Conquers Jin Dynasty — makes Great Wall irrelevant |
+| Genghis | Ambassador executed → 3 days silence → decides total war |
+| Genghis | Erases Khwarezm Empire — river diverted over ruins |
+| Baldwin | Montgisard — 375 knights defeat 26,000 (his only peak moment) |
+| Caesar | 8-year Gaul conquest — millions dead, Vercingetorix surrenders |
+| Caesar | Crosses Rubicon — "The die is cast" |
+| Caesar | Defeats Pompey, places Cleopatra, "Veni Vidi Vici" |
+
+**Anti-patterns:**
+- ❌ "First alliance formed" → still building power → Trỗi Dậy
+- ❌ "Body failing, can't ride" → declining → Suy Tàn
+- ❌ "Dies at 65" → death → Kết Thúc
+
+---
+
+### Phase 5: SUY TÀN
+
+**Định nghĩa:** Cơ thể, quyền lực, hoặc mối quan hệ đang SỤP ĐỔ. Nhân vật vẫn chiến đấu nhưng viewer BIẾT kết cục đang đến. Body-as-clock tăng tốc ở phase này.
+
+**Litmus Test:** *"Nhân vật đang MẠNH LÊN hay YẾUĐI? Viewer có cảm giác 'hết rồi' chưa?"*
+- Yếu đi, mất kiểm soát → Suy Tàn
+- Vẫn mạnh, vẫn chinh phục → Đỉnh Cao
+
+**Dữ liệu ưu tiên từ blueprint:** `health_conditions` (progression), `conflicts` cuối, `key_relationships` tan vỡ, `physical_state_arc`
+
+**Viewer cảm thấy:** Dread + sadness + respect cho nhân vật vẫn chiến đấu dù biết thua
+
+**Ví dụ:**
+| Nhân vật | Events Suy Tàn |
+|---|---|
+| Genghis | Last campaign through winter — body failing, "not what it was", generals watch like men watching a fire running low |
+| Baldwin | Rotting throne — skin cracking, can't grip, someone lifts him onto horse |
+| Baldwin | Iron will — legs giving out, silver mask, strips brother-in-law of power |
+| Baldwin | Last ride — nearly blind, carried on litter, but Saladin withdraws at sight of banners |
+| Baldwin | Blind king — totally blind, bedridden, still issues orders |
+| Baldwin | Sand castle — crowns nephew, "my reign has been buying time" |
+| Caesar | Dictator for Life — arrogance, refuses to stand for senators, "falling sickness" |
+| Caesar | Ides of March — 23 stab wounds, pulls toga over face |
+
+> [!NOTE]
+> **Baldwin đặc biệt:** Suy Tàn chiếm 5/11 chapters (Lv5-9) vì leprosy = slow, visible decline kéo dài. Đỉnh Cao chỉ 1 chapter (Montgisard). → Phase plan linh hoạt theo nhân vật.
+> 
+> **Caesar đặc biệt:** Assassination (Ides) nằm ở Suy Tàn (không phải Kết Thúc) vì đó là HẬU QUẢ của kiêu ngạo — climax của sự sụp đổ.
+
+**Anti-patterns:**
+- ❌ "Builds courier network" → system building at power → Đỉnh Cao
+- ❌ "Born with disease" → passive, childhood → Nguồn Gốc
+- ❌ "Legacy reflection" → no new events → Kết Thúc
+
+---
+
+### Phase 6: KẾT THÚC
+
+**Định nghĩa:** Chapter cuối cùng. Death scene (nếu chưa ở Suy Tàn) + legacy scorecard + circular callback + what happened AFTER them.
+
+**Litmus Test:** *"Nhân vật đã CHẾT hoặc cuộc đời đã KẾT THÚC chưa? Phần này có nói về THẾ GIỚI SAU HỌ không?"*
+- Vẫn sống, vẫn hành động → Suy Tàn
+- Đã chết hoặc cuộc đời kết thúc → Kết Thúc
+
+**Dữ liệu ưu tiên từ blueprint:** `death_and_funeral`, `legacy_and_historiography`, `key_quotes` cuối đời
+
+**Viewer cảm thấy:** Weight + silence + reflection + "đã sống cùng toàn bộ cuộc đời"
+
+**main_key_data:**
+- **CÓ** death scene nếu chưa cover ở Suy Tàn (Genghis: death at 65)
+- **= []** nếu death đã cover ở Suy Tàn (Caesar: assassination was Lv11)
+
+**sub_key_data luôn chứa:**
+- Legacy scorecard (numbers, achievements, territory)
+- Aftermath (what happened to the world after them)
+- Circular callback (connect back to Nguồn Gốc)
+- Burial/funeral details (if applicable)
+
+**Ví dụ:**
+| Nhân vật | Kết Thúc |
+|---|---|
+| Genghis | Death: horse accident → fever → dies at 65. Legacy: "a fifth of earth's land mass." Burial: no grave, horses over site. Callback: "You came from nothing. You returned to nothing. And now you are history." |
+| Baldwin | Death: dies at 24, leprosy. Aftermath: "2 years later, the French knight loses Jerusalem." Callback: numb arm from Lv1 → entire body numb at death |
+| Caesar | (death covered in Suy Tàn). Legacy: "dismantled the Republic, destroyed by men he empowered." Callback: "from observant boy in slums → architect of world order" |
+
+**Anti-patterns:**
+- ❌ New character development → should be in earlier phases
+- ❌ New conflict/enemy → should be in Suy Tàn
+- ❌ Analysis/interpretation → POV doesn't analyze, just SHOWS
+
+---
+
+## Bảng Ranh Giới: Phân Biệt 2 Phase Liền Kề
+
+| Ranh giới | Câu hỏi | Nếu A → | Nếu B → |
 |---|---|---|---|
-| Lv1: Blood Clot | Born with blood clot omen | Father minor chieftain, mother kidnapped | 1 |
-| Lv2: Orphan | Father poisoned, clan abandons | Eat roots/rats, tree bark | 1 |
-| Lv3: First Kill | Kills half-brother | Mother's horror, steppe logic | 1 |
-| Lv4: The Cage | Captured + escape | Wooden cage, cart of wool, stranger helps | 1 |
-| Lv5: Alliance | Wife kidnapped + 3-army rescue | Partnership offer, dawn raid | 1 |
-| Lv6: Betrayal | Sworn brother raises army | 3-day battle, men on both sides | 1 |
-| **Lv7: The Name** | **Proclaimed Khan + sworn brother death** | Banner, shaman, horizon | **2** |
-| Lv8: Great Law | Builds written law system | Meritocracy, courier, military structure | 1 |
-| Lv9: The Wall | Jin Dynasty conquered | Cavalry around wall, bribery, emperor flees | 1 |
-| Lv10: Reckoning | Ambassador executed → 3 days silence | 450 merchant convoy, shaved beards | 1 |
-| Lv11: The Flood | Khwarezm Empire erased | River diverted, Shah dies alone, libraries burn | 1 |
-| Lv12: Last Campaign | Final campaign through winter | Body failing, generals watching | 1 |
-| Lv13: Open Sky | Death at 65 | No grave, horses over burial, "you are history" | 1 |
-
-**Kết quả: 12/13 chapters = 1 anchor. 1 chapter = 2 anchors (khi events cùng thời điểm).**
-
-### Chapter Split Logic
-
-```
-Mỗi main_key_data item trong phase plan → ~1 Level chapter
-
-Exceptions (gộp 2 anchors vào 1 chapter):
-  - 2 events xảy ra CÙNG thời điểm (same age/year)
-  - 2 events có quan hệ NHÂN QUẢ TRỰC TIẾP (event B là hậu quả tức thì của event A)
-  - 2 events cùng THEME (cùng xoay quanh 1 quyết định)
-```
-
-### split_threshold cho code
-
-Biography dùng `[3, 6]`: 1-3 events → 1ch, 4-6 → 2ch, 7+ → 3ch
-
-POV dùng `[2, 3]`: **1-2 events → 1ch, 3 → 2ch, 4+ → 3ch**
-
-Lý do: mỗi chapter POV chỉ ~150 words, không đủ chỗ cho nhiều events.
-
-### Flow: Phase Plan → Chapter Split → Outline
-
-```
-PHASE PLAN (AI):
-  Phase "Nguồn Gốc":
-    main_key_data: ["Blood clot birth", "Father poisoned/clan abandons", "Kills half-brother"]
-    sub_key_data: ["Steppe survival, tree bark", "Mother's horror"]
-    node_count: 4
-                    ↓
-CHAPTER SPLIT (deterministic, threshold [2,3]):
-    node_count 4 → 3 chapters
-    → Ch1: ["Blood clot birth"] + textures
-    → Ch2: ["Father poisoned/clan abandons"] + textures
-    → Ch3: ["Kills half-brother"] + textures
-                    ↓
-OUTLINE (AI):
-    Ch1: Level 1: The Blood Clot, age_anchor: "You are born", ...
-    Ch2: Level 2: The Orphan, age_anchor: "You are 9", ...
-    Ch3: Level 3: The First Kill, age_anchor: "You are 12", ...
-```
-
-### Cách outline distribute key_data vào chapters
-
-**Quy tắc (giống biography nhưng đơn giản hơn):**
-
-1. **main_key_data**: Distribute theo chronological order — events sớm → chapters sớm
-2. **sub_key_data texture**: Outline AI gán texture phù hợp cho mỗi chapter (body state → chapter có body decline, weather → chapter có outdoor scene)
-3. **sub_key_data bridge**: Outline AI đặt bridge facts ở chapters có time gap lớn với chapter trước
-4. **KHÔNG DROP**: Tất cả main_key_data PHẢI xuất hiện ở ít nhất 1 chapter
+| **Nguồn Gốc ↔ Thử Lửa** | "Nhân vật CHỦ ĐỘNG hành động chưa?" | Chưa → Nguồn Gốc | Rồi → Thử Lửa |
+| **Thử Lửa ↔ Trỗi Dậy** | "Lần ĐẦU hay đã có kinh nghiệm?" | Lần đầu → Thử Lửa | Có nền tảng → Trỗi Dậy |
+| **Trỗi Dậy ↔ Đỉnh Cao** | "Đang TÍCH LŨY power hay DÙNG power?" | Tích lũy → Trỗi Dậy | Dùng ở quy mô lớn → Đỉnh Cao |
+| **Đỉnh Cao ↔ Suy Tàn** | "Đang MẠNH LÊN hay YẾU ĐI?" | Mạnh/stable → Đỉnh Cao | Yếu đi, mất control → Suy Tàn |
+| **Suy Tàn ↔ Kết Thúc** | "Vẫn SỐNG/hành động hay đã KẾT THÚC?" | Vẫn chiến đấu → Suy Tàn | Chết/legacy only → Kết Thúc |
 
 ---
 
-## Các Phần Giữ Nguyên Từ Plan v4
+## Đặc Biệt: Nhân Vật Suy Tàn Sớm vs Muộn
 
-### Blueprint Fields
-Bỏ 6 (myths, dark_psych, dual_nature, systemic_opposition, profile detail, downfall_pattern), giữ 6, thêm 3 (age_timeline, physical_state_arc, death_scene).
+| Pattern | Ví dụ | Phase distribution |
+|---|---|---|
+| **Suy Tàn dài** (bệnh/decline chậm) | Baldwin IV | Nguồn Gốc 2ch, Thử Lửa 1ch, Đỉnh Cao 1ch, **Suy Tàn 5ch**, Kết Thúc 2ch |
+| **Đỉnh Cao dài** (nhiều chinh phục) | Genghis Khan | Nguồn Gốc 2ch, Thử Lửa 2ch, Trỗi Dậy 3ch, **Đỉnh Cao 4ch**, Suy Tàn 1ch, Kết Thúc 1ch |
+| **Trỗi Dậy dài** (political rise) | Julius Caesar | Nguồn Gốc 1ch, Thử Lửa 2ch, **Trỗi Dậy 3ch**, Đỉnh Cao 3ch, Suy Tàn 2ch, Kết Thúc 1ch |
 
-### Phase Plan Phases
-4-5 life phases: Nguồn Gốc → Thử Lửa → Trỗi Dậy → Đỉnh Cao & Cái Giá → Kết Thúc. Multi-event per phase.
-
-### Chapter Flow
-5 kiểu opening (Standard 50%, Callback 25%, Thesis 15%, Atmosphere 8%, Cold Open 2%). Writer prompt dạy menu, không formula.
-
-### Sentence Rhythm
-4 patterns (Staccato, Wave, Build, Stillness). Mỗi chapter dùng ≥2 patterns.
-
-### Writer Prompt
-~150-200 dòng. Menu-based. Golden rules: 2nd person, body-not-emotion, numbers-as-power, zero context, zero narrator.
-
-### Pipeline
-Code chung giữ nguyên. Chỉ thêm `elif _is_pov:` branches. 12 files mới/sửa.
-
-### Ngôn ngữ/Blueprint/Length
-Tất cả theo UI user chọn, như biography.
+→ AI phase plan KHÔNG cần chia đều — phase nào có nhiều events quan trọng nhất thì dài nhất.
 
 ---
 
-## Verification Plan
+## Phần Giữ Nguyên (Đã Duyệt)
 
-1. JSON validation cho style JSON
-2. Dispatch coverage test
-3. **Biography regression**: chạy biography pipeline → output unchanged
-4. **Smoke test**: POV pipeline với Genghis Khan
-5. So sánh output với script mẫu gốc
+- **Blueprint Fields**: Bỏ 6 fields (LENS), giữ 15 fields (DATA), thêm 2 fields mới
+- **Tiêu chí main/sub**: Visual Moment Test, 3 loại (anchor, texture, bridge)
+- **Validate Sub-Key**: GIỮ, 3 Tests mới (Physical Moment, Agency, Consequence)
+- **Chia Chapter**: 1 anchor ≈ 1 Level, split_threshold [2,3]
+- **Chapter Flow**: 5 kiểu opening, 4 sentence patterns, menu-based
+- **Writer Prompt**: ~150-200 dòng, viết mới hoàn toàn
+- **Pipeline**: Code chung giữ nguyên, thêm niche branches
+- **Ngôn ngữ/Blueprint/Length**: Theo UI
