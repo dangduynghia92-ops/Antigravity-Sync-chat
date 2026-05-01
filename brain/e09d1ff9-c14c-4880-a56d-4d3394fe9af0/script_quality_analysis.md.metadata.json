@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Detailed analysis of biography script output for King Baldwin IV. Identifies 3 systemic issues: (1) chapters missing temporal/spatial context at the opening - the reader can't tell when or where events happen, (2) chapter endings are abrupt without thematic closure, (3) outline assigns weak sub_key_data items as standalone chapter events. Includes specific examples from all 15 chapters and proposes solutions at the outline and writing prompt level.",
+  "updatedAt":  "2026-05-01T12:43:20.084773500Z",
+  "requestFeedback":  true
+}
