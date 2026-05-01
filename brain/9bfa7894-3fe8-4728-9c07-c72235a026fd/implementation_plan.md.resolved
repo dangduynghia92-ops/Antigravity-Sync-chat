@@ -3,7 +3,7 @@
 *Kế hoạch này được chia nhỏ và thực hiện theo từng bước. Hiện tại chỉ tập trung vào **Bước 1: Research Blueprint**.*
 
 ## Mục tiêu Bước 1
-Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Niche POV Biography. Dựa trên Blueprint của "Tiểu sử", chúng ta sẽ giữ lại gần như toàn bộ sự đồ sộ của dữ liệu để AI có nguyên liệu "Show, Don't Tell", **chỉ loại bỏ 2 trường thừa thãi** theo yêu cầu: `myths_vs_reality` và `legacy_and_historiography`.
+Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Niche POV Biography. Dựa trên Blueprint của "Tiểu sử", chúng ta sẽ giữ lại gần như toàn bộ sự đồ sộ của dữ liệu để AI có nguyên liệu "Show, Don't Tell", **chỉ loại bỏ 1 trường thừa thãi** theo yêu cầu: `myths_vs_reality`. Trái với đề xuất trước, ta sẽ **GIỮ LẠI** trường `legacy_and_historiography` vì kịch bản có Phase Conclusion (Verdict) cần phân tích di sản.
 
 ---
 
@@ -15,18 +15,18 @@ Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Nic
 - **Nguồn:** Clone từ `system_research_blueprint_biography.txt`.
 - **Hành động:** 
   - Xóa bỏ Field: `myths_vs_reality`.
-  - Xóa bỏ Field: `legacy_and_historiography`.
+  - GIỮ LẠI Field: `legacy_and_historiography`.
   - **Bổ sung luật:** Ép buộc AI phải tìm kiếm và đính kèm **Độ tuổi (Age)** và các **Chi tiết giác quan/tả thực (Sensory details)** vào các sự kiện trong `life_phases` và `conflicts` để phục vụ cho văn phong Cinematic của POV sau này.
 
 #### 2. Tạo `system_audit_pov_biography_blueprint.txt`
 - **Nguồn:** Clone từ `system_audit_biography_blueprint.txt`.
 - **Hành động:** 
-  - Điều chỉnh file schema để khớp với Blueprint mới (không còn 2 trường đã xóa).
+  - Điều chỉnh file schema để khớp với Blueprint mới (chỉ xóa myths_vs_reality).
   - Nghiêm cấm AI nhét dữ liệu rác vào trường `additional_findings` (đưa các chi tiết thừa vào `texture_and_hooks` hoặc loại bỏ).
 
 #### 3. Tạo `system_crossref_pov_biography_blueprint.txt`
 - **Nguồn:** Clone từ `system_crossref_biography_blueprint.txt`.
-- **Hành động:** Chỉnh sửa tương tự Audit, loại bỏ 2 trường không cần thiết và đảm bảo việc gộp dữ liệu từ 3 luồng Research diễn ra trơn tru.
+- **Hành động:** Chỉnh sửa tương tự Audit, loại bỏ trường myths_vs_reality và đảm bảo việc gộp dữ liệu từ 3 luồng Research diễn ra trơn tru.
 
 *(Tùy chọn: `system_enrich_blueprint_pov_biography.txt` nếu cần đào sâu thêm các yếu tố dark_psychology).*
 
@@ -51,7 +51,93 @@ elif "pov_biography" in niche_lower or "pov" in niche_lower:
 
 > [!IMPORTANT]
 > Đây là bản kế hoạch CHỈ dành cho **Bước 1 (Research)**. 
-> - Việc loại bỏ 2 trường `myths_vs_reality` và `legacy_and_historiography` đã được cập nhật.
+> - Việc loại bỏ trường `myths_vs_reality` đã được cập nhật (Và giữ lại trường `legacy_and_historiography`).
 > - Việc ép AI tìm "Độ tuổi" và "Chi tiết tả thực" vào các sự kiện có phù hợp với mong muốn của bạn không?
 > 
 > Xin hãy xem xét và phê duyệt để tôi bắt đầu viết Prompt và Code cho riêng Bước 1 này. Sau khi hoàn thành và test xong Bước 1, chúng ta mới lên kế hoạch cho Bước 2.
+
+---
+
+## Proposed Changes (Step 2: Select Framework)
+
+*Khắc phục vấn đề nhiều Framework của Tiểu sử bằng cách tạo một JSON duy nhất cho POV.*
+
+### Tạo `styles/narrative_pov_biography.json`
+- Theo đúng ý bạn: Chỉ có **1 Framework DUY NHẤT** áp dụng cho mọi nhân vật.
+- Framework duy nhất này sẽ sử dụng lộ trình 6 bước liên tục (100% Body Phases), chắt lọc sự khốc liệt từ Lụi Tàn và Bóng Tối nhưng không quá rườm rà:
+  1. **Nguồn Gốc (Origin):** Tuổi thơ, sự kiện tàn khốc định hình bản ngã.
+  2. **Hình Thành (Foundation):** Những bài học máu lạnh đầu đời.
+  3. **Trỗi Dậy (Rise):** Hành trình vươn lên giành quyền lực.
+  4. **Đỉnh Cao (Peak):** Quyền lực tối thượng nhưng đầy cô độc.
+  5. **Sụp Đổ (Fall/Climax):** Sự phản bội, thất bại, hoặc cơ thể tàn tạ.
+  6. **Kết Cục (End):** Cái chết (Kết thúc đột ngột ngay tại khoảnh khắc nhắm mắt/thất bại tột cùng. Tuyệt đối không phân tích di sản hay triết lý rườm rà).
+
+---
+
+## Proposed Changes (Step 3)
+
+*Kế hoạch cho Step 3: Narrative Pipeline (Bao gồm từ Phase Plan đến Review).*
+
+### Phase A: Cấu hình Prompts cho Step 3 (Tạo file mới)
+
+#### 1. Tạo `system_narrative_phase_plan_pov_biography.txt` (Step 3A1)
+- **Hành động:** Clone từ prompt Phase Plan của Tiểu sử và SỬA ĐỔI.
+- **Tại sao phải sửa:** 
+  1. Xóa bỏ Rule 3 của bản gốc (bắt buộc có Hook/Anchor/Twist và End phase) vì POV là chuỗi Level liên tục.
+  2. Bổ sung luật Chronological Mapping để ánh xạ trọn vẹn 6 dạng phase trên (Origin, Foundation, Rise, Peak, Fall, End). Bằng cách này, Prompt sẽ phân bổ sự kiện chính xác theo lộ trình 6 bước chung của mọi nhân vật POV.
+
+#### 2. Tạo `system_validate_sub_key_pov_biography.txt` (Step 3A2)
+- **Nguồn:** Clone từ `system_validate_sub_key_biography.txt`.
+- **Hành động:** Bổ sung luật lọc sự kiện sinh tử. Ưu tiên thăng hạng (promote) các sự kiện có máu, có sự phản bội, có đau đớn thể xác, và có quyết định tàn nhẫn lên thành `main_key_data`.
+
+#### 3. Tạo `system_narrative_outline_pov_biography.txt` (Step 3B)
+- **Nguồn:** Clone từ `system_narrative_outline_biography.txt`.
+- **Hành động:**
+  - Chuyển trọng trách tính Toán "Độ tuổi" và chia "Level" vào bước này. AI sẽ tự động đọc sự kiện và gán số tuổi.
+  - Định nghĩa lại cấu trúc mở đầu mỗi chương. Yêu cầu sườn bài (outline) phải chuẩn bị mẫu câu cố định: *"Level [X]: [Tên Level]. You are [Tuổi]."*
+  - Cập nhật output JSON schema của outline để AI trả về trường `level_name` và `current_age`.
+
+#### 4. Tạo `system_narrative_audit_pov_biography.txt` (Step 3C)
+- **Nguồn:** Clone từ `system_narrative_audit_biography.txt`.
+- **Hành động:** Thêm quy tắc "chấm thi" chết người (fatal rule): Outline bị đánh Fail ngay lập tức nếu thiếu độ tuổi hoặc tên Level.
+
+#### 5. Tạo `system_narrative_write_pov_biography.txt` (Step 3D - BƯỚC CỐT LÕI)
+- **Nguồn:** Clone từ `system_narrative_write_biography.txt` (hoặc battle_v2).
+- **Hành động:**
+  - **Luật đại từ:** Tuyệt đối chỉ dùng góc nhìn thứ 2 (**"You"**). Cấm dùng "He/She".
+  - **Nhịp điệu văn bản (Rhythm):** Yêu cầu viết kiểu **Staccato**. Câu ngắn, cộc lốc, dồn dập. Cấm dùng các từ nối thừa thãi (However, Therefore, Moreover).
+  - **Tả thực (Show, Don't Tell):** Yêu cầu AI miêu tả mùi vị (như "mùi hạnh nhân đắng"), nỗi đau ("cánh tay không cảm giác"). Không diễn giải dông dài.
+  - **Chương cuối (End Chapter):** Bắt buộc câu cuối cùng của kịch bản phải là chính xác dòng chữ *"And now you are history."*
+
+#### 6. Tạo `system_narrative_review_pov_biography.txt` (Step 3E)
+- **Nguồn:** Clone từ `system_narrative_review_biography.txt`.
+- **Hành động:** Chấm điểm bài viết dựa trên luật của Writer POV. Phạt nặng (trừ điểm) nếu phát hiện xưng "He/She", hoặc câu văn quá dài dòng êm ái, mang tính ru ngủ.
+
+### Phase B: Code Wiring (`core/rewriter.py`) cho Step 3
+
+#### 1. Cập nhật Outline Fields
+Trong dict `_NICHE_OUTLINE_FIELDS`, khai báo thêm các biến dành riêng cho POV để code truyền từ Outline sang Writer:
+```python
+    "{level_name}": "level_name",
+    "{current_age}": "current_age",
+```
+
+#### 2. Cập nhật Dispatch Maps
+Trong `_NICHE_PROMPT_MAP`, thêm định danh `"pov_biography"` (hoặc `"pov"`) vào TẤT CẢ các map của Narrative Pipeline:
+- `narrative_phase_plan`
+- `narrative_validate_sub_key`
+- `narrative_outline`
+- `narrative_audit`
+- `narrative_writer`
+- `narrative_review`
+
+---
+
+## User Review Required (Step 3)
+
+> [!WARNING]
+> Kế hoạch Step 3 đã được thêm vào.
+> - Việc sử dụng trường `{current_age}` và `{level_name}` đã đủ đáp ứng yêu cầu của kịch bản tham khảo chưa?
+> - Ở Bước Writer, bạn có muốn bổ sung thêm Rule nào đặc biệt về cách kể chuyện không (Ví dụ: Giới hạn số chữ mỗi câu văn)?
+> 
+> Xin hãy phê duyệt Kế hoạch Step 3, sau đó chúng ta sẽ tiếp tục nối tiếp cho các phần còn lại.

@@ -3,7 +3,7 @@
 *Kế hoạch này được chia nhỏ và thực hiện theo từng bước. Hiện tại chỉ tập trung vào **Bước 1: Research Blueprint**.*
 
 ## Mục tiêu Bước 1
-Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Niche POV Biography. Dựa trên Blueprint của "Tiểu sử", chúng ta sẽ giữ lại gần như toàn bộ sự đồ sộ của dữ liệu để AI có nguyên liệu "Show, Don't Tell", **chỉ loại bỏ 1 trường thừa thãi** theo yêu cầu: `myths_vs_reality`. Trái với đề xuất trước, ta sẽ **GIỮ LẠI** trường `legacy_and_historiography` vì kịch bản có Phase Conclusion (Verdict) cần phân tích di sản.
+Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Niche POV Biography. Dựa trên Blueprint của "Tiểu sử", chúng ta sẽ giữ lại gần như toàn bộ sự đồ sộ của dữ liệu để AI có nguyên liệu "Show, Don't Tell", **chỉ loại bỏ 2 trường thừa thãi** theo yêu cầu: `myths_vs_reality` và `legacy_and_historiography`.
 
 ---
 
@@ -15,18 +15,18 @@ Xây dựng bộ công cụ trích xuất dữ liệu (Blueprint) riêng cho Nic
 - **Nguồn:** Clone từ `system_research_blueprint_biography.txt`.
 - **Hành động:** 
   - Xóa bỏ Field: `myths_vs_reality`.
-  - GIỮ LẠI Field: `legacy_and_historiography`.
+  - Xóa bỏ Field: `legacy_and_historiography`.
   - **Bổ sung luật:** Ép buộc AI phải tìm kiếm và đính kèm **Độ tuổi (Age)** và các **Chi tiết giác quan/tả thực (Sensory details)** vào các sự kiện trong `life_phases` và `conflicts` để phục vụ cho văn phong Cinematic của POV sau này.
 
 #### 2. Tạo `system_audit_pov_biography_blueprint.txt`
 - **Nguồn:** Clone từ `system_audit_biography_blueprint.txt`.
 - **Hành động:** 
-  - Điều chỉnh file schema để khớp với Blueprint mới (chỉ xóa myths_vs_reality).
+  - Điều chỉnh file schema để khớp với Blueprint mới (không còn 2 trường đã xóa).
   - Nghiêm cấm AI nhét dữ liệu rác vào trường `additional_findings` (đưa các chi tiết thừa vào `texture_and_hooks` hoặc loại bỏ).
 
 #### 3. Tạo `system_crossref_pov_biography_blueprint.txt`
 - **Nguồn:** Clone từ `system_crossref_biography_blueprint.txt`.
-- **Hành động:** Chỉnh sửa tương tự Audit, loại bỏ trường myths_vs_reality và đảm bảo việc gộp dữ liệu từ 3 luồng Research diễn ra trơn tru.
+- **Hành động:** Chỉnh sửa tương tự Audit, loại bỏ 2 trường không cần thiết và đảm bảo việc gộp dữ liệu từ 3 luồng Research diễn ra trơn tru.
 
 *(Tùy chọn: `system_enrich_blueprint_pov_biography.txt` nếu cần đào sâu thêm các yếu tố dark_psychology).*
 
@@ -51,7 +51,7 @@ elif "pov_biography" in niche_lower or "pov" in niche_lower:
 
 > [!IMPORTANT]
 > Đây là bản kế hoạch CHỈ dành cho **Bước 1 (Research)**. 
-> - Việc loại bỏ trường `myths_vs_reality` đã được cập nhật (Và giữ lại trường `legacy_and_historiography`).
+> - Việc loại bỏ 2 trường `myths_vs_reality` và `legacy_and_historiography` đã được cập nhật.
 > - Việc ép AI tìm "Độ tuổi" và "Chi tiết tả thực" vào các sự kiện có phù hợp với mong muốn của bạn không?
 > 
 > Xin hãy xem xét và phê duyệt để tôi bắt đầu viết Prompt và Code cho riêng Bước 1 này. Sau khi hoàn thành và test xong Bước 1, chúng ta mới lên kế hoạch cho Bước 2.
@@ -63,14 +63,15 @@ elif "pov_biography" in niche_lower or "pov" in niche_lower:
 *Khắc phục vấn đề nhiều Framework của Tiểu sử bằng cách tạo một JSON duy nhất cho POV.*
 
 ### Tạo `styles/narrative_pov_biography.json`
-- Theo đúng ý bạn: Chỉ có **1 Framework DUY NHẤT** áp dụng cho mọi nhân vật.
-- Framework duy nhất này sẽ sử dụng lộ trình 6 bước liên tục (100% Body Phases), chắt lọc sự khốc liệt từ Lụi Tàn và Bóng Tối nhưng không quá rườm rà:
-  1. **Nguồn Gốc (Origin):** Tuổi thơ, sự kiện tàn khốc định hình bản ngã.
-  2. **Hình Thành (Foundation):** Những bài học máu lạnh đầu đời.
-  3. **Trỗi Dậy (Rise):** Hành trình vươn lên giành quyền lực.
-  4. **Đỉnh Cao (Peak):** Quyền lực tối thượng nhưng đầy cô độc.
-  5. **Sụp Đổ (Fall/Climax):** Sự phản bội, thất bại, hoặc cơ thể tàn tạ.
-  6. **Kết Cục (End):** Cái chết (Kết thúc đột ngột ngay tại khoảnh khắc nhắm mắt/thất bại tột cùng. Tuyệt đối không phân tích di sản hay triết lý rườm rà).
+- Không giống như Tiểu sử nhân vật có 5 Framework rườm rà (Hai Mặt, Sử Thi, Bản Án...), POV Biography sẽ chỉ có **DUY NHẤT 1 FRAMEWORK** mang tên **"Hành Trình Sinh Tồn" (The POV Journey)** áp dụng cho tất cả mọi nhân vật.
+- Framework này sẽ được cấu hình với 5 Steps (Phases) mang tính thời gian liên tục (100% là Body phases):
+  1. **Nguồn Gốc (Purpose: Origin):** Tuổi thơ, sự kiện tàn khốc định hình bản ngã.
+  2. **Hình Thành (Purpose: Foundation):** Những bài học máu lạnh đầu đời.
+  3. **Trỗi Dậy (Purpose: Rise):** Cuộc chiến vươn lên quyền lực.
+  4. **Đỉnh Cao (Purpose: Peak):** Quyền lực tối thượng và những quyết định tàn nhẫn.
+  5. **Sụp Đổ (Purpose: Fall):** Cái chết, sự phản bội, hoặc thất bại.
+
+Việc chỉ có 1 Framework duy nhất trong file JSON của POV sẽ ép hệ thống tự động chọn Framework này cho mọi nhân vật mà không cần phải phân loại rườm rà.
 
 ---
 
@@ -82,9 +83,13 @@ elif "pov_biography" in niche_lower or "pov" in niche_lower:
 
 #### 1. Tạo `system_narrative_phase_plan_pov_biography.txt` (Step 3A1)
 - **Hành động:** Clone từ prompt Phase Plan của Tiểu sử và SỬA ĐỔI.
-- **Tại sao phải sửa:** 
-  1. Xóa bỏ Rule 3 của bản gốc (bắt buộc có Hook/Anchor/Twist và End phase) vì POV là chuỗi Level liên tục.
-  2. Bổ sung luật Chronological Mapping để ánh xạ trọn vẹn 6 dạng phase trên (Origin, Foundation, Rise, Peak, Fall, End). Bằng cách này, Prompt sẽ phân bổ sự kiện chính xác theo lộ trình 6 bước chung của mọi nhân vật POV.
+- **Sửa đổi mấu chốt (Loại bỏ Rule 3):** Tôi đã nhận ra sai lầm! Prompt của Tiểu sử có **Rule 3** ép buộc `First phase = hook phase (Anchor/Twist)` và `Last phase = end phase (callbacks)`. Kịch bản POV **KHÔNG có Hook hay Verdict**, nó là một dòng thời gian liên tục từ lúc sinh ra đến lúc chết (Chỉ có Body phases). Do đó, ta phải xóa bỏ hoàn toàn Rule 3 này.
+- **Chỉ sử dụng 1 dạng Phase duy nhất (Body Phase):** Ta sẽ loại bỏ các phase Hook/Verdict trong JSON, chỉ giữ lại các Phase chuẩn mang tính thời gian:
+  1. **Nguồn Gốc (Origin):** Tuổi thơ.
+  2. **Hình Thành (Foundation):** Bài học đầu đời.
+  3. **Trỗi Dậy (Rise):** Hành trình vươn lên.
+  4. **Đỉnh Cao (Peak):** Quyền lực tối thượng.
+  5. **Sụp Đổ (Fall):** Cái chết/Kết thúc.
 
 #### 2. Tạo `system_validate_sub_key_pov_biography.txt` (Step 3A2)
 - **Nguồn:** Clone từ `system_validate_sub_key_biography.txt`.

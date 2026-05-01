@@ -1,7 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Bản kế hoạch triển khai cho Niche POV Biography (Đã cập nhật). Chỉ tập trung vào Step 1: Research Blueprint theo yêu cầu của user. Kế thừa phần lớn blueprint của Biography, chỉ lược bỏ myths_vs_reality và legacy_and_historiography.",
-  "updatedAt":  "2026-05-01T03:16:26.771816600Z",
-  "version":  "1",
+  "updatedAt":  "2026-05-01T03:43:29.646262400Z",
+  "version":  "2",
   "requestFeedback":  true
 }
