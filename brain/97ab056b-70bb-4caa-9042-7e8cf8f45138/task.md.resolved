@@ -26,7 +26,8 @@
 
 ## Phase C: Verification
 
-- [ ] C1. JSON validation
-- [ ] C2. Dispatch coverage test
-- [ ] C3. Biography regression test
-- [ ] C4. Git commit
+- [x] C1. JSON validation (style JSON valid)
+- [x] C2. Dispatch coverage test (22/22 passed — all POV maps resolve correctly)
+- [x] C3. Biography regression test (all biography maps still resolve to biography prompts)
+- [x] C4. Body structures fix (key renamed from 'pov biography' to 'pov tiểu sử')
+- [x] C5. Git commits (5 total)
