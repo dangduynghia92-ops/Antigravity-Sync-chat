@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Phân tích toàn diện niche POV Biography và so sánh với pipeline biện tại. Bao gồm: (1) phân tích DNA của format POV từ 3 kịch bản mẫu, (2) formula viết chapter, (3) arc 3 giai đoạn, (4) gap analysis pipeline, (5) so sánh định lượng cụ thể: word count per chapter (100-200 vs 400-700), triết lý viết (experiential vs educational), những thứ cần loại bỏ khi implement POV framework mới.",
+  "updatedAt":  "2026-05-01T04:21:06.462066700Z",
+  "version":  "1",
+  "requestFeedback":  true
+}

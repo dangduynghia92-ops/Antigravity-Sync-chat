@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Implementation plan cho POV Biography niche, cấu trúc lại để trả lời rõ ràng câu hỏi: pipeline bước nào giống, bước nào khác biography hiện tại.\n\nBao gồm:\n- Bảng so sánh chi tiết 10 bước pipeline: 4 bước dùng chung code (detect framework, chapter split, merge final, auto-patch), 3 bước clone+adapt prompt (research blueprint, phase plan, outline), 3 bước phải viết mới hoàn toàn (style JSON, writer prompt, supporting prompts)\n- Lý do tại sao writer prompt PHẢI viết mới (675 dòng biography vs 150 dòng POV)\n- Code wiring: chỉ cần thêm niche branches, không sửa code chung\n- So sánh chi tiết từng prompt file: dòng nào giữ, dòng nào bỏ, dòng nào thêm mới\n- 3 Open Questions cho user\n- Verification plan",
+  "updatedAt":  "2026-05-01T04:30:53.425167900Z",
+  "version":  "1",
+  "requestFeedback":  true
+}

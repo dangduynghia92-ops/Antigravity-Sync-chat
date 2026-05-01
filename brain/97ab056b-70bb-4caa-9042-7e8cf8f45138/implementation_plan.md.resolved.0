@@ -1,0 +1,425 @@
+# POV Biography Niche — Implementation Plan
+
+Tạo niche pipeline hoàn chỉnh cho format "POV Biography" — nội dung ngắn gọn, ngôi thứ 2 tuyệt đối, gamification (Level system), tốc độ phim hành động.
+
+## Tại Sao Tạo Niche Mới (Không Phải Framework Mới)?
+
+> [!IMPORTANT]
+> POV Format **không phải** variant của biography hiện tại — nó là **thể loại khác hoàn toàn**.
+> 
+> | Khác biệt | Biography hiện tại | POV Biography |
+> |---|---|---|
+> | **Words/chapter** | 400–700 | **100–200** |
+> | **Ngôi kể** | 3rd person | **2nd person tuyệt đối** |
+> | **Data/chapter** | 2–3 main_key_data + sub | **1 sự kiện chính** |
+> | **Narrator** | Có personality (reaction, question, bridge) | **Không có — pure action** |
+> | **Myth-busting** | Có section riêng | **Không có** |
+> | **Context/background** | Paragraph riêng | **Zero — inline action** |
+> | **Triết lý** | Educational + engaging | **Purely experiential** |
+> 
+> Nếu nhét vào biography style JSON (82KB, 5 frameworks), sẽ phải duplicate/override gần 100% write prompt rules → messy, dễ break existing frameworks.
+> Tạo niche riêng = clean, independent, testable.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1: Ngôn ngữ output?**
+> 3 script mẫu đều là English. Pipeline hiện tại hỗ trợ multi-lang (`{lang}` placeholder).
+> POV niche sẽ viết English, Vietnamese, hay cả hai? Cần biết để viết write prompt.
+
+> [!IMPORTANT]
+> **Q2: Blueprint source?**
+> POV niche sẽ dùng **Research Blueprint** (AI research từ đầu) hay **Extract Blueprint** (từ script gốc có sẵn)?
+> - Nếu research: cần `system_research_blueprint_pov.txt` + research sections
+> - Nếu extract: cần `system_extract_blueprint_pov.txt`
+> - Nếu cả hai: cần cả hai prompts (như biography hiện tại)
+
+> [!IMPORTANT]
+> **Q3: Video target length?**
+> 3 script mẫu đều ~8–12 phút (10–13 chapters × 100–200 words). Có muốn giữ range này hay mở rộng?
+
+---
+
+## Proposed Changes
+
+### Component 1: Niche Registry
+
+#### [NEW] [niches/pov_tiểu_sử.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/niches/pov_tiểu_sử.txt)
+
+Danh sách topic categories cho niche selector UI:
+```
+Nhân vật lịch sử & Chinh phục
+Nhân vật quân sự & Chiến binh
+Nhà khoa học & Phát minh
+Nhân vật chính trị & Lãnh đạo
+Nghệ sĩ & Thiên tài sáng tạo
+Nhân vật tôn giáo & Triết gia
+Nhân vật thời hiện đại
+```
+
+---
+
+### Component 2: Style JSON
+
+#### [NEW] [styles/narrative_pov_tiểu_sử.json](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_pov_tiểu_sử.json)
+
+Style JSON nhẹ hơn biography rất nhiều (~15-20KB vs 82KB). Thiết kế theo DNA từ 3 script mẫu.
+
+**Niche key:** `"pov biography pov_tiểu_sử nhân vật lịch sử level"`
+
+**core_rules** — khác hoàn toàn biography:
+```json
+{
+  "identity": "You are the voice inside the character's head. Every word is what THEY experience — no narrator, no historian, no commentary.",
+  "tone": "Visceral, immediate, cinematic. Like controlling a character in a video game. Every sentence is action or sensation.",
+  "sentence_rhythm": "Staccato-dominant. Short declarative sentences. Max 15 words average. Occasional long sentence for atmospheric weight.",
+  "pov_rules": "ABSOLUTE second person. 'You' is the ONLY POV. NEVER break to 3rd person. NEVER use narrator voice.",
+  "data_density": "MINIMAL. One core event per chapter. No context paragraphs. No background explanations. Action-only.",
+  "voice_over_clarity": "Write for TTS — short sentences, no complex syntax, no nested clauses.",
+  "anti_copy": "Framework provides structure. Every script uses entirely new language.",
+  "anti_framework_leak": "NEVER use framework step names in output."
+}
+```
+
+**1 Framework duy nhất: "Cuộc Đời"** (không cần multi-framework vì POV format chỉ có 1 cách kể):
+
+```json
+{
+  "name": "Cuộc Đời",
+  "use_when": "Always — POV niche has exactly one framework.",
+  "emotional_arc": "Pain → Survival → First Victory → Rising Power → Peak → Cost → Legacy",
+  "structure": {
+    "total_acts": 3,
+    "act_breakdown": "Act 1: ORIGIN OF PAIN (2-3 chapters). Act 2: RISE AGAINST ODDS (5-7 chapters). Act 3: THE COST & LEGACY (2-3 chapters + conclusion)."
+  }
+}
+```
+
+**Framework steps (encode trực tiếp 3-phase arc):**
+
+| Step | Purpose | Lens |
+|---|---|---|
+| Máu | Hook | Cold open — the moment that DEFINED them. No context, pure scene. Age anchor + action. |
+| Đau Khổ | Origin | Childhood trauma / hardship. What made them hard. The COST of existing. |
+| Thử Lửa | Foundation | First test — kill, escape, survive, choose. The moment hesitation died. |
+| Liên Minh | Rise 1 | First alliance / first smart move. Alone → united. Power begins. |
+| Phản Bội | Rise 2 | Betrayal from someone close. Trust destroyed. Lesson learned through blood. |
+| Đỉnh Cao | Peak | Coronation / greatest victory / maximum power. But: "No satisfaction, only distance." |
+| Bộ Máy | Peak 2 | What they BUILT — laws, systems, legacy structures. Cold efficiency. |
+| Chinh Phục | Expansion | Campaign / conquest / expansion. Body starts failing. Stakes grow. |
+| Cái Giá | Decline | Physical/emotional decline. The cost of everything they achieved. |
+| Bầu Trời | End | Death / final moment. Dignity. "You came from nothing. You returned to nothing." |
+
+> [!WARNING]
+> Steps trên là **mẫu tham chiếu** — AI phase plan sẽ chọn subset phù hợp cho từng nhân vật (không phải ai cũng có "Phản Bội" hay "Bộ Máy"). Steps = menu, không phải checklist.
+
+**pipeline_features:**
+```json
+{
+  "phase_plan": true,
+  "validate_sub_keys": false,
+  "research_blueprint": true,
+  "split_threshold": [2, 4],
+  "always_include_keys": ["core_topic", "age_timeline", "physical_state"],
+  "excerpt_fields": ["life_phases", "key_events", "turning_points"]
+}
+```
+
+> [!NOTE]
+> `validate_sub_keys: false` — POV format chỉ có 1 event/chapter, không cần sub_key validation phức tạp.
+> `split_threshold: [2, 4]` — thấp hơn biography (3,6) vì mỗi chapter ngắn, nên nhiều chapter hơn.
+
+**chapter_structures** — giản hóa, chỉ cần 3:
+- `action_scene`: crisis → decision → action → consequence (dùng cho đa số chapters)
+- `transformation_scene`: before-state → catalyst → after-state (dùng cho origin/turning points)
+- `legacy_close`: scorecard → final image → circular callback (dùng cho end chapter)
+
+**closing_types** — giản hóa:
+- `cold_fact`: 1 câu fact lạnh. Im lặng.
+- `paradox`: Nghịch lý — đạt được nhưng mất. "No satisfaction, only distance."
+- `forward_pull`: "You have already decided where you are going next."
+
+---
+
+### Component 3: Research Blueprint Prompt
+
+#### [NEW] [prompts/system_research_blueprint_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_research_blueprint_pov.txt)
+
+Clone từ `system_research_blueprint_biography.txt` nhưng **giảm tải mạnh**:
+
+**Bỏ hoàn toàn:**
+- `myths_vs_reality` — POV không debunk myths
+- `dark_psychology` — POV không phân tích tâm lý
+- `dual_nature` — POV không phân loại light/dark
+- `systemic_opposition` — không cần
+- `personal_profile.cognitive_style`, `personal_profile.behavioral_quirks` — quá chi tiết
+
+**Giữ lại + Adapt:**
+- `core_topic` → tên, thời đại, identity cốt lõi
+- `life_phases` → adapt thành timeline ngắn gọn với **age_at_start** per phase
+- `key_events` → adapt: mỗi event = 1 action scene (crisis + decision + consequence)
+- `turning_points` → giữ nguyên
+- `key_relationships` → giữ nhưng giản hóa (tên + vai trò + kết cục)
+- `legacy` → giữ nguyên
+
+**Thêm mới (đặc thù POV):**
+- `age_timeline`: danh sách `[{age, event_summary}]` — bắt buộc cho age anchoring
+- `physical_state_arc`: mô tả body state thay đổi qua thời gian (quan trọng cho Baldwin-style)
+- `death_scene`: chi tiết cụ thể về cái chết — cần cho end chapter
+
+---
+
+### Component 4: Phase Plan Prompt
+
+#### [NEW] [prompts/system_narrative_phase_plan_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
+
+Clone từ `system_narrative_phase_plan_biography.txt` nhưng thay đổi:
+
+- Phase names = từ framework steps: Đau Khổ, Thử Lửa, Liên Minh, etc.
+- **Mỗi phase chỉ có 1 main_key_data** (POV = 1 event/chapter)
+- `sub_key_data` = details cần weave vào scene (physical state, weather, body sensation) — KHÔNG phải separate events
+- `node_count` thấp hơn (1–3 per phase thay vì 3–6)
+- **Bắt buộc field `age_at_chapter`** per phase
+- **Bắt buộc field `physical_state`** per phase (one-line body status)
+- Last phase = `main_key_data: []` (end chapter = legacy close)
+- **source_map**: Dùng fuzzy search (KHÔNG dùng source_map) — POV blueprint nhẹ, ít overlap
+
+---
+
+### Component 5: Outline Prompt
+
+#### [NEW] [prompts/system_narrative_outline_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pov.txt)
+
+Clone từ `system_narrative_outline_biography.txt` nhưng thay đổi:
+
+**Chapter schema — fields bắt buộc:**
+```json
+{
+  "chapter_number": 1,
+  "chapter_title": "Level 1: [Emotional Label]",
+  "chapter_type": "hook|body|end",
+  "level_number": 1,
+  "age_anchor": "You are 9.",
+  "physical_state": "Your right arm is numb. You cannot feel pain.",
+  "main_key_data": ["ONE core event"],
+  "sub_key_data": ["body sensations", "environmental detail"],
+  "chapter_structure": "action_scene",
+  "closing_type": "paradox",
+  "emotional_beat": "survival",
+  "word_count_target": 150
+}
+```
+
+**Bỏ hoàn toàn so với biography outline:**
+- `myths_debunked` — không dùng
+- `dual_nature_aspect` — không dùng
+- `relationships_featured` — inline vào main_key_data
+- `narrative_techniques` — không cần (POV chỉ dùng 1 technique: action writing)
+- `pacing_texture` — không cần (tốc độ luôn nhanh)
+
+**Chapter title format bắt buộc:** `"Level {N}: {Emotional Label}"`
+**Word count target:** `100–200 words` (enforced)
+
+---
+
+### Component 6: Writer Prompt (Core)
+
+#### [NEW] [prompts/system_narrative_write_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pov.txt)
+
+Đây là file quan trọng nhất — **KHÔNG clone từ biography** mà viết mới từ đầu, rút trực tiếp từ DNA 3 script mẫu.
+
+**Kích thước target: ~150–200 dòng** (vs 675 dòng biography)
+
+**Sections bắt buộc:**
+
+```
+═══ IDENTITY ═══
+You write POV scripts. The viewer IS the character.
+Every word is what THEY experience. No narrator. No historian.
+
+═══ ABSOLUTE RULES ═══
+1. SECOND PERSON ONLY. "You" in every sentence. NEVER "he/she/they".
+2. AGE ANCHOR: First 2 sentences = "Level [N], [emotional label]. You are [X]."
+3. ONE EVENT PER CHAPTER. One crisis, one decision, one consequence.
+4. NO CONTEXT PARAGRAPHS. Zero background. Zero explanation.
+5. NO NARRATOR VOICE. No reactions, no questions, no modern bridges.
+6. SHOW, DON'T LABEL. "You say nothing" NOT "You feel anger."
+7. BODY IS CLOCK. Every chapter mentions a physical state change.
+
+═══ SENTENCE RULES ═══
+- Max 15 words average per sentence
+- Short-short-long rhythm: "You refuse. You ride out. Your arm is already weakening."
+- Action verbs only: grip, slam, ride, pull, burn, scatter
+- Numbers are power: "375 knights slam into 26,000 soldiers"
+- End chapters with paradox: "No satisfaction, only distance."
+
+═══ HOOK CHAPTER ═══
+NO traditional hook structure. POV hook = Chapter 1 = the first Level.
+Start: "Level one, [label]. You are born with..."
+No scorecard. No question. No bridge-out. Just: the first scene of their life.
+
+═══ BODY CHAPTER ═══
+Opening: "Level [N], [label]. You are [age]."
+Middle: ONE scene — action-dense, physical-detail-heavy.
+Ending: 1-2 sentences — fact + emotional weight.
+
+═══ END CHAPTER ═══  
+Opening: "Level [N]. [label]. You are [age]."
+Body: Death/final scene — specific, physical, factual.
+Closing: Scorecard of achievements (numbers) → "You came from nothing. You returned to nothing. And now you are history."
+
+═══ FORBIDDEN ═══
+- Context paragraphs ("Saladin — vị tướng người Kurd đã thống nhất...")
+- Narrator personality ("Think about that for a moment")
+- Myth-busting sections
+- Modern bridges/comparisons
+- Rhetorical questions
+- Academic framing
+- Source citations
+- Bridge sentences between chapters
+- Any word count above 200 per chapter
+
+═══ GOLDEN SAMPLES ═══
+[Include 3 actual excerpts from the reference scripts as examples]
+
+═══ OUTPUT ═══
+Output ONLY the chapter text. No titles, no headers.
+Write in {lang}. Target: {word_count_rule}.
+```
+
+---
+
+### Component 7: Supporting Prompts
+
+#### [NEW] [prompts/system_narrative_audit_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pov.txt)
+- Giản hóa từ biography audit
+- Check: age_anchor present? POV "You" maintained? Word count ≤200?
+
+#### [NEW] [prompts/system_narrative_review_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_pov.txt)
+- Check compliance: 2nd person maintained, no narrator voice leaked, word count met
+
+#### [NEW] [prompts/system_narrative_phase_plan_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
+- (Already described in Component 4)
+
+#### [NEW] [prompts/system_enrich_blueprint_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_enrich_blueprint_pov.txt)
+- Focus: enrich `age_timeline`, `physical_state_arc`, `death_scene` fields
+- Lighter than biography enrich (skip myths, dark_psychology, dual_nature)
+
+#### [NEW] [prompts/system_extract_blueprint_pov.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_extract_blueprint_pov.txt)
+- For rewrite mode — extract from existing POV scripts
+
+#### [NEW] [prompts/system_crossref_pov_blueprint.txt](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_crossref_pov_blueprint.txt)
+- Cross-reference check for POV blueprint accuracy
+
+---
+
+### Component 8: Code Wiring
+
+#### [MODIFY] [rewriter.py](file:///F:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+**B1. Research Sections:**
+```python
+_POV_RESEARCH_SECTION_A = {
+    "name": "Core Identity & Timeline",
+    "fields": ["core_topic", "age_timeline", "life_phases"],
+    "prompt_focus": "..."
+}
+_POV_RESEARCH_SECTION_B = {
+    "name": "Key Events & Turning Points", 
+    "fields": ["key_events", "turning_points", "key_relationships"],
+    "prompt_focus": "..."
+}
+_POV_RESEARCH_SECTION_C = {
+    "name": "Physical Arc & Death",
+    "fields": ["physical_state_arc", "death_scene", "legacy"],
+    "prompt_focus": "..."
+}
+_RESEARCH_SECTIONS_POV = [_POV_RESEARCH_SECTION_A, _POV_RESEARCH_SECTION_B, _POV_RESEARCH_SECTION_C]
+```
+
+**B2. Dispatch Maps** — thêm POV keywords vào TẤT CẢ dispatch maps:
+```python
+# In _get_research_sections():
+"pov":           _RESEARCH_SECTIONS_POV,
+"pov_tiểu_sử":  _RESEARCH_SECTIONS_POV,
+"pov biography": _RESEARCH_SECTIONS_POV,
+"pov_biography": _RESEARCH_SECTIONS_POV,
+
+# In _NICHE_PROMPT_MAP and all narrative dispatch maps:
+"pov":           "system_narrative_write_pov.txt",  # writer
+"pov_tiểu_sử":  "system_narrative_write_pov.txt",
+# ... same pattern for outline, phase_plan, audit, review
+```
+
+**B3. Niche Detection:**
+```python
+_is_pov = any(k in _niche_lower for k in ("pov", "pov_tiểu_sử", "pov_biography", "level"))
+
+# In _extract_chapter_blueprint():
+elif _is_pov:
+    chapter_bp = _extract_chapter_blueprint(...)  # fuzzy search, lightweight
+    
+# Hook strategy:
+elif _is_pov:
+    chapter_bp = _extract_chapter_blueprint(...)  # Filtered (lean) like battle
+
+# In write_from_blueprint():
+elif _is_pov:
+    # Inject age_anchor and physical_state from outline into write prompt
+```
+
+**B4. Outline Fields:**
+```python
+_NICHE_OUTLINE_FIELDS["pov"] = [
+    "level_number", "age_anchor", "physical_state",
+    "main_key_data", "sub_key_data", "chapter_structure",
+    "closing_type", "emotional_beat", "word_count_target"
+]
+```
+
+**B5. Key Normalization:**
+```python
+# Add POV-specific key variants:
+"age_timeline": "age_timeline",
+"physical_state_arc": "physical_state_arc",
+"death_scene": "death_scene",
+```
+
+> [!CAUTION]
+> **ALL changes in rewriter.py MUST use niche branching** (`elif _is_pov:`). 
+> NEVER modify existing `_is_biography` or `_is_battle` branches.
+> After EVERY change, verify biography + battle v2 still work.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+1. **JSON Validation:**
+   ```bash
+   python -c "import json; json.load(open('styles/narrative_pov_tiểu_sử.json', encoding='utf-8'))"
+   ```
+
+2. **Dispatch Coverage:**
+   - Run `python -c "from core.rewriter import _get_research_sections; print(_get_research_sections('pov_tiểu_sử'))"` — must return POV sections
+
+3. **Regression Test:**
+   - Run biography pipeline with test topic (Nikola Tesla) → verify output unchanged
+   - Verify all existing dispatch maps still route correctly
+
+### Manual Verification
+
+4. **Smoke Test — POV Pipeline:**
+   - Run full pipeline with "Genghis Khan" as test topic
+   - Verify research blueprint has `age_timeline` + `physical_state_arc`
+   - Verify phase plan has `age_at_chapter` per phase
+   - Verify outline has `"Level N: [Label]"` chapter titles
+   - Verify written chapters: 100–200 words, 2nd person only, no narrator voice
+   - Compare output to reference script (Genghis Khan original)
+
+5. **Quality Check:**
+   - Read written output aloud — does it have the POV "action movie" feel?
+   - Check: no context paragraphs leaked, no myth-busting sections, no 3rd person
