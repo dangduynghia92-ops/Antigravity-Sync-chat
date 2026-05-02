@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Root cause analysis and fix plan for the validation step bug that incorrectly promotes weak sub_key_data items to main_key_data, causing weak standalone chapters in POV biography mode. Two fixes needed: (1) stricter validation prompt, (2) code safety check to auto-demote items that fail scene test.",
-  "updatedAt":  "2026-05-01T13:15:45.799666300Z",
-  "version":  "14",
+  "summary":  "Implementation plan to convert the POV biography pipeline from phase-based grouping to a flat chronological event timeline. Each event has explicit scene_open/action/close fields, enabling complete chapter content. Covers changes to 3 prompts, 2 code files, with 3 open questions about field granularity, phase labels, and promote mechanics.",
+  "updatedAt":  "2026-05-02T01:33:13.262744Z",
+  "version":  "15",
   "requestFeedback":  true
 }

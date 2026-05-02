@@ -1,52 +1,195 @@
-# Fix: Validation Step Promoting Weak Sub Events to Main
+# Chuyển Phase Plan sang Event Timeline — POV Biography
 
-## Root Cause Analysis
+## Mô tả vấn đề
 
-The pipeline has a **2-layer bug** causing weak events to become standalone chapters:
+Pipeline hiện tại gom events vào 6 life phases (Nguồn Gốc → Kết Thúc), phân loại main_key_data/sub_key_data, rồi outline tách chapters. Kết quả:
+- Events mô tả quá ngắn gọn → AI viết cụt lủn
+- sub_key_data text quá tóm tắt → validator không nhận diện được scene
+- Nhiều bước trung gian → nhiều chỗ mâu thuẫn
 
-### Layer 1: Validation AI promotes/keeps sub_key_data items incorrectly
-- Phase Plan AI correctly classifies "Skin lesions" and "Philip of Flanders" as `sub_key_data`
-- Validation AI evaluates them and outputs `decision: "KEEP_AS_SUB"` — meaning "keep them as sub"
-- BUT for "Trỗi Dậy" phase: "Jacob's Ford" (`action: false, consequence: false`) and "Two-year truce" (`place: false, action: false, consequence: false`) both fail ALL scene tests yet get `decision: "KEEP"` instead of `"DEMOTE"`
+## Phương án mới
 
-### Layer 2: POV chapter splitting rule `1 main = 1 chapter`
-- Standard mode: ≤3 main → 1 chapter (tolerant of weak items)
-- POV mode: every main_key_data = 1 chapter (no tolerance — weak items = weak chapters)
-- When validation promotes/fails-to-demote items, POV creates standalone chapters for them
+Phase Plan → **Event Timeline**: danh sách sự kiện theo tuyến tính thời gian, mỗi event = 1 node đầy đủ (age + scene từ mở đến đóng). Outline map 1:1, chỉ tách khi cùng tuổi có events độc lập.
 
-## Proposed Changes
-
-### 1. Validation Prompt — Strict Scene Test Enforcement
-
-#### [MODIFY] [system_validate_sub_key_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pov.txt)
-
-Add explicit rule: **If an item FAILS the Scene Test (missing place/action/consequence), it MUST be DEMOTE'd — no exceptions except CONNECTIVE PROTECTION.**
-
-Current problem: AI writes `decision: "KEEP"` even when `action: false, consequence: false`.
-
-Changes:
-- Remove `KEEP_AS_SUB` as a valid decision — only `PROMOTE`, `DEMOTE`, `KEEP`
-- Add strict rule: "If place=false OR action=false OR consequence=false → DEMOTE (unless connective protected)"
-- Add rule for "Trỗi Dậy"-type cases: event summaries without POV action MUST be DEMOTE'd
+## Thay đổi cụ thể
 
 ---
 
-### 2. Code — Handle `KEEP_AS_SUB` and enforce Scene Test results
+### Component 1: Phase Plan Prompt
+
+#### [MODIFY] [system_narrative_phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
+
+**Thay đổi cốt lõi**: Output chuyển từ "6 phases với main/sub arrays" sang "flat event timeline".
+
+**Giữ nguyên:**
+- Scene Test (3 requirements)
+- Body State Rule (body state = sub_key_data)
+- Source tracing (_source_map)
+- 6 phase labels (chỉ dùng làm tag, không gom nhóm)
+
+**Thay đổi output format:**
+
+```json
+{
+  "framework_used": "Cuộc Đời Bạn",
+  "biography_subject": "...",
+  "event_timeline": [
+    {
+      "event_id": 1,
+      "age": 9,
+      "phase_label": "Nguồn Gốc",
+      "event_title": "The Numb Arm",
+      "scene_open": "In the courtyard of Jerusalem, noble boys play a game of endurance — digging nails into each other's skin.",
+      "scene_action": "A boy digs his nails into your right arm. Blood beads. You feel nothing. You don't flinch.",
+      "scene_close": "Your tutor William of Tyre crosses the courtyard. He grabs your wrist. He presses a lit candle to your skin. Nothing. His face goes white.",
+      "sub_key_data": ["Born healthy and handsome, resembling father Amalric", "Mother Agnes banished from court", "Early localized numbness — first sign of leprosy"],
+      "physical_state": "Healthy appearance, localized numbness in right arm"
+    },
+    {
+      "event_id": 2,
+      "age": 11,
+      "phase_label": "Nguồn Gốc",
+      "event_title": "The Final Verdict",
+      "scene_open": "A physician examines you in a dark room. He unwraps the linen from your arm.",
+      "scene_action": "He presses a needle into your flesh. You feel nothing.",
+      "scene_close": "He steps back. He doesn't need to say the word. Leprosy.",
+      "sub_key_data": ["No cure in 12th century", "Lepers cast out — you are the heir"],
+      "physical_state": "Patches of numbness spreading, pale skin on arm"
+    }
+  ],
+  "_source_map": { ... }
+}
+```
+
+**Khác biệt so với hiện tại:**
+
+| Hiện tại | Mới |
+|---|---|
+| `phase_chapter_plan[].main_key_data[]` = 1 dòng tóm tắt | `event_timeline[].scene_open/action/close` = 3 dòng chi tiết |
+| Gom theo phase → main/sub arrays lẫn lộn | Flat list theo tuổi → rõ ràng |
+| sub_key_data = text 3-5 từ | sub_key_data = vẫn ngắn (texture) nhưng gắn chặt vào event |
+| Phase label = structural driver | Phase label = tag phân loại pacing |
+
+**Rules mới trong prompt:**
+1. Events **BẮT BUỘC** theo thứ tự tuổi tăng dần
+2. Mỗi event PHẢI có `scene_open`, `scene_action`, `scene_close` — Scene Test built-in
+3. Body state = sub_key_data, NEVER standalone event
+4. Same age + same scene → 1 event. Same age + different scenes → 2 events riêng
+5. Phase labels vẫn giữ 6 phase (Nguồn Gốc...Kết Thúc) nhưng chỉ làm **tag**, không gom nhóm
+
+---
+
+### Component 2: Outline Prompt
+
+#### [MODIFY] [system_narrative_outline_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pov.txt)
+
+**Đơn giản hóa**: Outline nhận `event_timeline` → map 1 event = 1 chapter.
+
+**Thay đổi:**
+- Bỏ section "PHASE → CHAPTER MAPPING" (không còn phase-based)
+- Thay bằng "EVENT → CHAPTER MAPPING": mỗi event_id = 1 chapter
+- Chỉ tách khi AI ghi nhận cùng tuổi + events độc lập (đã xử lý ở phase plan)
+- `main_key_data` trong chapter outline = copy nguyên `scene_open + scene_action + scene_close`
+- `sub_key_data` = copy từ event node
+- Giữ nguyên: Level format, opening_style, closing_type, chapter_structure assignment
+
+**Lợi ích**: Outline prompt ngắn hơn, ít logic hơn, ít chỗ sai hơn.
+
+---
+
+### Component 3: Validate Prompt
+
+#### [MODIFY] [system_validate_sub_key_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pov.txt)
+
+**Thay đổi nhỏ**: Input format khác (event_timeline thay vì phase), nhưng logic Scene Test giữ nguyên.
+
+- Input: event node (với scene_open/action/close) + sub_key_data
+- Validate: sub items có nên promote thành event riêng không?
+- Promote = tạo event_id mới
+- Demote = event thiếu scene test → chuyển content vào sub_key_data của event gần nhất
+
+---
+
+### Component 4: Write Prompt
+
+#### [NO CHANGE] [system_narrative_write_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pov.txt)
+
+Không cần sửa. 3-beat rule đã đúng:
+- BEAT 1 (SCENE) ← `scene_open + scene_action + scene_close` cho AI material đầy đủ
+- BEAT 2 (CONTEXT) ← `sub_key_data` cho texture
+- BEAT 3 (FORWARD TENSION) ← AI tự viết dựa trên event tiếp theo
+
+---
+
+### Component 5: Code — rewriter.py
 
 #### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-In `validate_phase_plan_sub_keys()`, after parsing AI response:
-- Treat `KEEP_AS_SUB` in `demote` array as actual DEMOTE (these are sub items the AI says should stay sub — but if they got promoted somehow, demote them back)  
-- **New safety check**: After all promotions/demotions, scan `main_key_data` for items where the validation log shows `action: false` or `consequence: false` — auto-demote them with a log warning
+**5a. `apply_chapter_splits`** (line 4766)
+- POV path: bỏ phase-based split logic
+- Mới: đọc `event_timeline[]`, mỗi event = 1 chapter. Gán chapter numbers.
+- End event (last) = chapter_type "end"
+- Gán `phase_label` vào `framework_step`
+
+**5b. `validate_phase_plan_sub_keys`** (line 4454)
+- Đổi input: đọc `event_timeline[]` thay vì `phase_chapter_plan[]`
+- Mỗi event = 1 validation call (thay vì mỗi phase)
+- Promote = thêm event mới vào timeline
+- Demote = xóa event, chuyển content vào sub_key_data của event gần nhất
+
+**5c. `write_from_blueprint`** (line 5205+)
+- Chapter outline giờ có `scene_open`, `scene_action`, `scene_close` → truyền vào prompt
+- Thay thế `main_key_data: [1 dòng]` bằng 3 field chi tiết
+
+**5d. `_run_shared_fw_pipeline`** (script_creation_tab.py line 1726+)
+- Đọc `event_timeline` thay vì `phase_chapter_plan` từ phase plan output
+- Truyền event count cho outline prompt
+
+---
+
+### Component 6: Audit & Review Prompts
+
+#### [MINOR] [system_narrative_audit_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pov.txt)
+- Không thay đổi logic — vẫn audit outline structure
+- Chỉ cần nhận biết format mới (event-based thay vì phase-based)
+
+#### [NO CHANGE] [system_narrative_review_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_review_pov.txt)
+- Review chỉ đọc written chapters — không phụ thuộc phase/event structure
+
+---
+
+## Tóm tắt thay đổi
+
+| File | Mức độ | Ghi chú |
+|---|---|---|
+| `system_narrative_phase_plan_pov.txt` | **Major rewrite** | Output format mới: event_timeline |
+| `system_narrative_outline_pov.txt` | **Moderate** | Đơn giản hóa: 1 event = 1 chapter |
+| `system_validate_sub_key_pov.txt` | **Moderate** | Input format mới |
+| `system_narrative_write_pov.txt` | **No change** | 3-beat rule đã đủ |
+| `system_narrative_audit_pov.txt` | **Minor** | Format awareness |
+| `system_narrative_review_pov.txt` | **No change** | |
+| `rewriter.py` | **Moderate** | apply_chapter_splits, validate, write_from_blueprint |
+| `script_creation_tab.py` | **Minor** | Pipeline data flow |
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1**: `scene_open / scene_action / scene_close` — 3 field riêng hay gộp thành 1 field `scene_description` (2-4 câu)? 3 field rõ ràng hơn nhưng tốn tokens. 1 field gọn hơn nhưng AI có thể viết thiếu.
+
+> [!IMPORTANT]
+> **Q2**: Phase labels (Nguồn Gốc, Thử Lửa...) còn cần giữ trong event_timeline không? Hiện tại style JSON dùng nó cho pacing. Nếu bỏ → pacing phải dựa vào vị trí event (đầu/giữa/cuối).
+
+> [!IMPORTANT]
+> **Q3**: Validate step — khi promote 1 sub thành event mới, nó sẽ cần `scene_open/action/close`. AI validator có đủ context để viết 3 field này không? Hay chỉ cần promote rồi để outline prompt bổ sung?
 
 ## Verification Plan
 
 ### Automated Tests
-- Re-run Baldwin IV biography pipeline
-- Check `_phase_plan_validated.json`: node_count for "Thử Lửa" should be 2 (not 4), "Trỗi Dậy" should be 2 (not 4)
-- Check chapter count: should be ~12 instead of 15
-- Check that weak events appear as sub_key_data woven into strong chapters
+- Chạy pipeline Baldwin IV với prompt mới
+- So sánh output: event count, chapter count, word count per chapter
+- Verify: mỗi chapter có Level anchor + 3 beats
 
 ### Manual Verification  
-- Read chapter openings — each should cover a distinct, strong event
-- No chapter should feel "padded" or "stretched"
+- So sánh chapter 1 mới vs reference chapter 1
+- Kiểm tra forward tension ở mỗi chapter ending
+- Kiểm tra body state luôn woven, không standalone
