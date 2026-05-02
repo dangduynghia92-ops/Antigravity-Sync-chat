@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Phân tích 12 vấn đề trong write prompt POV: Level anchor bị hiểu nhầm thành title, physical_state hardcode cho Baldwin, scene_close vs weight line trùng lặp, CLOSING CONTENT RULE mâu thuẫn với PART 4, full outline gửi không cần thiết, và nhiều đoạn thừa/conflict khác.",
+  "updatedAt":  "2026-05-02T11:06:32.703962Z",
+  "requestFeedback":  true
+}
