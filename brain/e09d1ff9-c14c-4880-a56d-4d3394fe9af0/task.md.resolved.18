@@ -1,0 +1,39 @@
+# POV Pipeline Rebuild — Task Tracker
+
+## Step 0: Backup
+- [/] Backup all POV files
+
+## Step 1: Style JSON — Strip to voice-only
+- [ ] Remove outline/structure rules
+- [ ] Remove duplicates (checklist, anti_patterns, chapter_rhythm)
+- [ ] Keep voice rules only
+
+## Step 2: Write Prompt — Clean rewrite
+- [ ] Rewrite to ~120 lines, 4 sections
+- [ ] Level anchor = code-injected note
+- [ ] Merge closing rules into PART 4
+- [ ] Remove full_outline variable
+
+## Step 3: Outline Prompt — Simplify
+- [ ] Remove writer-facing rules
+- [ ] Simplify opening style (no Level anchor positioning)
+- [ ] Add ownership header
+
+## Step 4: Audit Prompt — Restrict scope
+- [ ] Add metadata-only restriction
+- [ ] Remove vocabulary/word count checks
+
+## Step 5: Code — Data injection
+- [ ] Phase plan: remove Style Guide
+- [ ] Outline: replace Style Guide → phase labels
+- [ ] Audit: remove Style Guide + Blueprint
+- [ ] Write: remove full_outline
+- [ ] Model tier: all hardcoded flash → user tier
+
+## Step 6: Code — Level anchor inject
+- [ ] Add _inject_level_anchor() helper
+- [ ] Call after write_from_blueprint output
+
+## Step 7: Verify
+- [ ] Check no biography breakage
+- [ ] Review all files for contradictions

@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete rebuild plan for the POV Biography pipeline addressing 27 rule conflicts, ~81K chars token waste per run, and structural failures. The plan establishes 6 design principles (Single Source of Truth, Stage-Appropriate Data, No Style Leakage, etc.) and proposes changes across 7 components:\n\n1. Style JSON — strip to voice-only rules, remove all structural/outline metadata, unify Level Anchor to always sentence 1\n2. Phase Plan prompt — no prompt changes, code stops sending Style Guide\n3. Chapter Plan prompt — no changes needed\n4. Outline prompt — remove writer-facing rules, simplify opening style definitions\n5. Audit prompt — restrict scope to metadata-only fixes, stop sending Style Guide + Blueprint\n6. Write prompt — full rewrite from 234→120 lines, eliminate all rule duplication, merge closing rules into single PART 4\n7. Code changes — 7 targeted modifications in rewriter.py gated behind _is_pov checks\n\n3 open questions require user decision: opening style redefinition, scene_close vs weight_line separation, and audit model choice.",
-  "updatedAt":  "2026-05-02T11:26:25.341965700Z",
-  "version":  "18",
+  "summary":  "Updated rebuild plan for POV pipeline. Now includes:\n- Q1: Level Anchor injected by code (not AI), removing the #1 source of conflicts\n- Q2: Closing type system explained — 4 rotation types for outline metadata, writer just follows the assigned type\n- Q3: Full model tier map — 3 steps hardcoded flash (validate, chapter_plan, audit), rest user-selected via UI\n- Q4: Anti-duplication architecture with Rule Registry pattern and ownership table\n\nAll 7 components updated. Ready for execution after user approval.",
+  "updatedAt":  "2026-05-02T11:42:33.613064700Z",
+  "version":  "19",
   "requestFeedback":  true
 }

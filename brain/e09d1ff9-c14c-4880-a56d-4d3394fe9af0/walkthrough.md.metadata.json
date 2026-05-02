@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Walkthrough of all changes made to harden the AI animation pipeline: multi-chapter merge, label system, LLM prompt writing, location style isolation, UI folder grouping.",
-  "updatedAt":  "2026-04-28T19:54:59.686856100Z",
-  "version":  "3",
+  "summary":  "Complete walkthrough of the POV pipeline rebuild covering all 7 files changed, the rationale for each change, token savings estimates, and remaining verification steps.",
+  "updatedAt":  "2026-05-02T11:57:03.699826100Z",
+  "version":  "4",
   "requestFeedback":  true
 }

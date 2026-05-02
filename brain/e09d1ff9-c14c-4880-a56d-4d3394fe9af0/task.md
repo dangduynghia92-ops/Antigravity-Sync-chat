@@ -1,26 +1,58 @@
-# Event Timeline Pipeline — Task Tracker
+# POV Pipeline Rebuild — Task Tracker
 
-- [x] Step 0: Backup prompts → `_backup_v1_pov/`
-- [x] Step 1: Rewrite phase plan prompt (event_timeline output)
-- [x] Step 2: Rewrite validate prompt (completeness check)
-- [x] Step 3: Code validate — add `_is_pov` branch + `_validate_event_timeline_pov()`
-- [x] Step 4: Rewrite outline prompt (scene_open/action/close + event_description copy)
-- [x] Step 5: Code apply_chapter_splits — add `_is_pov` branch (1 event = 1 chapter)
-- [x] Step 6: Minor update audit prompt (scene fields check)
-- [x] Step 7: Code write_from_blueprint — pass scene fields in user message
-- [x] Step 8: Code changes:
-  - [x] `generate_narrative_outline()` — route event_timeline for POV
-  - [x] `generate_narrative_phase_plan()` — validate event_timeline for POV
-  - [x] `script_creation_tab.py` — event_timeline fallback + log message
-- [x] Syntax check — both files compile clean
-- [x] **AUDIT — Found & Fixed 4 Bugs:**
-  - [x] BUG 1: `_extract_chapter_blueprint` — source_map missed POV data (no main_key_data)
-    - Fix: add event_description + scene fields to source_map lookup items
-  - [x] BUG 2: Safety error message — showed empty key_data for POV
-    - Fix: show event_description in error hint
-  - [x] BUG 3: `phase_data` saving — POV events use `phase_label`/`event_title` not `phase`
-    - Fix: fallback field names + event-specific summary format
-  - [x] BUG 4: Write prompt — `{main_key_data}` empty for POV, scene fields not in system prompt
-    - Fix: add `{event_description}`, `{scene_open/action/close}` to write prompt + `_NICHE_OUTLINE_FIELDS`
-- [x] Final syntax check — both files compile clean
-- [ ] Step 9: Test Baldwin IV
+## Step 0: Backup
+- [x] Backup all POV files → `_backup_v2_pov_rebuild/`
+
+## Step 1: Style JSON — Strip to voice-only
+- [x] Remove outline/structure rules (checklist, anti_patterns, chapter_rhythm, outline_rules, hook, weight_line_types, technique_emphasis, counter_argument, anti_copy)
+- [x] Remove duplicates
+- [x] Keep voice rules only (identity, tone, rhythm, vocab, POV, language, steps, pacing pattern)
+- [x] JSON validates OK
+
+## Step 2: Write Prompt — Clean rewrite
+- [x] Rewrite to ~130 lines, 5 sections (from 234 lines, 6 sections)
+- [x] Level anchor = "auto-injected by code, do NOT write it"
+- [x] Merge closing rules into PART 4 (single source)
+- [x] Remove {full_outline} variable
+- [x] Add ownership header comment
+- [x] Opening styles follow outline assignment (not duplicated)
+
+## Step 3: Outline Prompt — Simplify
+- [x] Remove writer-facing rules (BEAT references)
+- [x] Simplify opening style (no Level anchor positioning — code handles)
+- [x] Add ownership header comment
+- [x] Add event_cause copy instruction
+
+## Step 4: Audit Prompt — Restrict scope
+- [x] Add metadata-only restriction ("NEVER rewrite content")
+- [x] Remove vocabulary/word count checks
+- [x] Remove blueprint_coverage check (no blueprint sent)
+- [x] Simplify fix actions (only SET + SWAP, no REMOVE/ADD)
+- [x] Add ownership header
+
+## Step 5: Code — Data injection (rewriter.py)
+- [x] Phase plan: remove Style Guide → send phase labels only (POV gated)
+- [x] Outline: replace Style Guide → phase labels only (POV gated)
+- [x] Audit: remove Style Guide + Blueprint (POV gated)
+- [x] Write: remove {full_outline} replacement
+- [x] Model tier: all hardcoded flash → user tier
+  - [x] _validate_event_timeline_pov(): tier param added
+  - [x] validate_phase_plan_sub_keys(): tier param added
+  - [x] plan_chapters_pov(): tier param added
+  - [x] Non-POV validate (closure): tier param used
+  - [x] Audit in script_creation_tab.py: tier=tier
+  - [x] Resume-path validate: tier=tier
+
+## Step 6: Code — Level anchor inject (rewriter.py)
+- [x] Add _extract_phase_labels() helper
+- [x] Add _NUM_WORDS lookup table
+- [x] Add _inject_level_anchor() helper
+- [x] Call after write_from_blueprint output (POV gated)
+- [x] Skip injection if AI already wrote Level anchor
+
+## Step 7: Verify
+- [x] Python syntax check: rewriter.py OK
+- [x] Python syntax check: script_creation_tab.py OK
+- [x] JSON syntax check: style JSON OK
+- [ ] Cross-audit: verify no contradictions remain
+- [ ] Runtime test on Baldwin IV blueprint

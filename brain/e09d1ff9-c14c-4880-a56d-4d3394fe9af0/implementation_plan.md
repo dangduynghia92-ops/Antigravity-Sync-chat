@@ -1,233 +1,352 @@
-# POV Pipeline — Full Rebuild Plan
+# POV Pipeline — Full Rebuild Plan (v2)
 
 ## Problem Statement
 
-Chắp vá liên tục đã tạo ra hệ thống prompt có **27 xung đột** (mâu thuẫn giữa các files), **~81K chars token lãng phí** (~27% input), và output không ổn định. Root cause: mỗi rule được viết ở 3-4 chỗ khác nhau (style JSON + prompt + code inject) → AI đọc conflicting instructions → kết quả ngẫu nhiên.
+27 rule conflicts, ~81K chars token waste/run, unstable output. Root cause: rules duplicated across 3-4 files → AI reads contradictions → random behavior.
 
-**Giải pháp**: Rebuild toàn bộ 4 prompts + style JSON + code injection logic theo nguyên tắc **Single Source of Truth** — mỗi rule chỉ xuất hiện 1 lần, mỗi stage chỉ nhận data cần thiết.
-
-## Design Principles
-
-| # | Principle | Meaning |
-|---|---|---|
-| 1 | **Single Source of Truth** | Mỗi rule chỉ ở 1 nơi duy nhất |
-| 2 | **Stage-Appropriate Data** | Mỗi AI stage chỉ nhận data nó cần |
-| 3 | **No Style Leakage** | Style JSON chỉ gửi cho writer, không gửi cho planner/outliner/auditor |
-| 4 | **Prompt = Structural Rules** | Prompt chứa rules về CẤU TRÚC (format, flow, constraints) |
-| 5 | **Style JSON = Voice Rules** | Style JSON chứa rules về GIỌNG (vocabulary, rhythm, POV, closing types) |
-| 6 | **No Contradictions** | Trước khi viết rule mới → audit toàn bộ pipeline |
+**Solution**: Rebuild toàn bộ theo **Single Source of Truth** + code-injected Level Anchor.
 
 ---
 
-## Current Architecture vs New Architecture
+## User Decisions
 
-### Current (Broken)
+### Q1 — Level Anchor: Code Inject ✅
+
+**Decision**: Code tự prepend `"Level {N}, {label}."` vào output. AI writer KHÔNG cần tạo Level anchor.
+
+**Why**: Level anchor đã là nguyên nhân #1 gây conflict (4 nơi nói khác nhau). Nếu code tự thêm thì:
+- Prompt không cần nói về Level anchor → bỏ được 4 chỗ conflict
+- AI writer chỉ tập trung viết nội dung
+- 100% consistent — không bao giờ bị thiếu
+
+**Implementation**:
+```python
+# In write_from_blueprint() — AFTER receiving AI output
+def _inject_level_anchor(text: str, chapter_outline: dict) -> str:
+    """Prepend Level anchor line if not already present."""
+    level_num = chapter_outline.get("level_number", chapter_outline.get("chapter_number", 1))
+    title = chapter_outline.get("chapter_title", "")
+    # Extract label from "Level 3: The Dead Flesh" → "the dead flesh"
+    label = title.split(":", 1)[1].strip().lower() if ":" in title else ""
+    
+    age = chapter_outline.get("age_anchor", "")
+    
+    anchor = f"Level {_num_to_word(level_num)}, {label}."
+    if age:
+        anchor += f" {age}."
+    
+    # Check if output already starts with "Level"
+    if text.strip().lower().startswith("level"):
+        return text
+    return f"{anchor}\n\n{text}"
+```
+
+**Write prompt change**: REMOVE tất cả instructions về Level anchor. Thay bằng:
+```
+NOTE: The Level anchor line ("Level N, label. You are age.") is 
+automatically prepended by the pipeline. Do NOT write it yourself.
+Start your chapter directly with CAUSE/CONTEXT.
+```
+
+**Opening styles simplified**:
+- STANDARD: Cause/context → scene
+- THESIS: Bold statement → cause → scene  
+- ATMOSPHERE: Physical environment → cause → scene
+- Tất cả đều có Level anchor tự động ở sentence 1 bởi code
+
+---
+
+### Q2 — Closing Types: Tách + Rõ Ràng ✅
+
+**Giải thích hệ thống closing type**:
+
+Hiện tại có **2 layer** dễ nhầm:
+
+| Layer | Owner | What | Example |
+|---|---|---|---|
+| **closing_type** (metadata) | Outline AI assigns | HOW to phrase ending | `cold_fact`, `paradox`, `cost`, `weight`, `echo` |
+| **closing content** (rule) | Write prompt defines | WHAT to express | What changed? What was lost? |
+
+**Cách hoạt động**:
+1. Outline AI gán `closing_type: "cost"` cho chapter 5
+2. Writer AI đọc → biết: kết thúc chapter 5 phải nêu COST (cái gì đã mất)
+3. Writer viết: `"Every Templar in the garrison is dead. The fortress is ash."`
+
+**4 closing types** (rotation — 3 liên tiếp không được trùng):
+
+| Type | Writer instruction | Example |
+|---|---|---|
+| `cold_fact` | 1-2 câu consequence, im lặng. Không bình luận. | `"The body count: 700."` |
+| `paradox` | Mâu thuẫn bộc lộ sự thật. | `"You saved the kingdom. Your hand is dead."` |
+| `cost` | Nêu rõ cái đã MẤT hoặc cái GIÁ phải trả. | `"You will never walk again."` |
+| `weight` | 1-2 câu nặng, consequence qua hành động vật lý. | `"The crown sits on a skull."` |
+| `echo` | Chỉ END chapter. Callback về Level 1. | `"The arm still doesn't feel. It never did."` |
+
+**Tại sao cần rotation?** Nếu 3 chapter liên tiếp đều kết bằng `cold_fact` → monotone, nhàm. Rotation tạo variety.
+
+**scene_close vs weight_line** — giữ tách:
+- `scene_close` = kết quả tức thì của action (Outline AI viết) → writer dùng làm skeleton
+- `weight_line` = closing type applied (Writer tạo) → 1-2 câu cuối cùng của chapter
+
+```
+scene_close: "Saladin retreats without a fight."
+            ↓ writer develops into ↓
+weight_line (cost): "You saved the fortress. But you cannot see the
+victory banner — your eyes are already gone."
+```
+
+**Rule**: scene_close và weight_line KHÔNG ĐƯỢC trùng nội dung. scene_close = what happened. weight_line = what it COST.
+
+---
+
+### Q3 — Model AI Mapping
+
+Từ code analysis, đây là **bảng đầy đủ** các bước và model:
+
+#### POV Pipeline — Model Tier Map
+
+| # | Step | step_label | Tier | Model | Hardcoded? | Source |
+|---|---|---|---|---|---|---|
+| 1 | **Phase Plan** | `phase_plan` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:1802` |
+| 2 | **Validate Timeline** | `validate_event_timeline` | `flash` | Flash | ✅ **YES** | `rewriter.py:4583` |
+| 3 | **Chapter Planning** | `chapter_planning_pov` | `flash` | Flash | ✅ **YES** | `rewriter.py:5026` |
+| 4 | **Outline** | `outline` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:1905` |
+| 5 | **Audit** | `audit` | `flash` | Flash | ✅ **YES** | `script_creation_tab.py:1932` |
+| 6 | **Write** | `write_ch{NN}` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:2151` |
+
+#### Internal Sub-Steps (inside rewriter.py)
+
+| Step | Tier | Hardcoded? | Note |
+|---|---|---|---|
+| Validate sub keys | `flash` | ✅ YES | `rewriter.py:4583` — lightweight JSON fix |
+| Chapter plan (POV) | `flash` | ✅ YES | `rewriter.py:5026` — demote/promote events |
+
+#### `tier` Variable
+
+`tier` = user chọn từ UI dropdown `_combo_tier` (`script_creation_tab.py:2466`). Options: `flash` hoặc `pro`.
+
+**Kết luận**:
+- **3 bước hardcoded flash**: validate, chapter_plan, audit
+- **3 bước user-selected**: phase_plan, outline, write
+- Flash steps là lightweight tasks (JSON fix, metadata check) → hợp lý dùng flash
+- **Audit hardcoded flash là vấn đề** — audit hay rewrite content (vượt scope) vì flash model kém hơn
+
+> [!IMPORTANT]
+> **Recommendation**: Giữ validate + chapter_plan ở flash (lightweight). Audit nên giữ flash nhưng **thắt chặt scope trong prompt** (chỉ reassign metadata, KHÔNG rewrite content). Nếu vẫn overreach → đổi sang user tier.
+
+---
+
+### Q4 — Chống Trùng Lặp / Xung Đột: Rule Ownership Architecture
+
+#### Vấn đề hiện tại
+
+```
+Level anchor rule xuất hiện ở:
+  1. style JSON → core_rules.anti_framework_leak
+  2. style JSON → framework.hook.anchor  
+  3. style JSON → framework.outline_rules.body_chapter_opening
+  4. style JSON → framework.structure.chapter_design
+  5. outline prompt → OPENING STYLE ASSIGNMENT (line 106)
+  6. write prompt → PART 1 LEVEL ANCHOR (line 69-78)
+  7. write prompt → OPENING STYLES (line 120-124)
+  = 7 chỗ, 2 nói "sentence 1", 3 nói "within 2 sentences", 2 nói cả hai
+```
+
+#### Giải pháp: Rule Ownership Table
+
+**Nguyên tắc**: Mỗi rule thuộc về **DÚng 1 file**. Các file khác **KHÔNG ĐƯỢC** lặp lại rule đó, chỉ được nói `"follow the {X} from {source}"`.
+
+| Rule Category | Owner | Other files say |
+|---|---|---|
+| **Level Anchor format** | CODE (inject) | Prompt: "Level anchor is auto-injected. Do NOT write it." |
+| **Opening styles** (standard/thesis/atmosphere) | `outline_pov.txt` | Write prompt: "Follow the opening_style assigned in the outline." |
+| **Closing types** (cold_fact/paradox/cost/weight/echo) | `write_pov.txt` PART 4 | Outline prompt: "Assign closing_type metadata for variety rotation." |
+| **Closing rotation rule** (3 liên tiếp không trùng) | `outline_pov.txt` | Write prompt: DO NOT mention rotation |
+| **POV contract** (you/your/third person) | `write_pov.txt` | Style JSON: brief identity note only |
+| **Sentence rhythm** (staccato/wave/build/stillness) | Style JSON `core_rules.sentence_rhythm` | Write prompt: DO NOT mention |
+| **Vocabulary rules** (action verbs, forbidden words) | Style JSON `core_rules.vocabulary` | Write prompt: DO NOT mention |
+| **Scene test** (place/action/consequence) | `phase_plan_pov.txt` | Chapter plan: reference only |
+| **Event cause** | `chapter_plan_pov.txt` | Outline prompt: "PRESERVE event_cause" |
+| **Scene fields** (open/action/close) | `outline_pov.txt` | Write prompt: "Use scene fields as skeleton" |
+| **Word count** | UI variable `{word_count_rule}` | All prompts: reference only |
+| **Phase labels** | Style JSON `framework.steps` | Phase plan prompt: reference only |
+| **Chapter structure types** (action/transformation/legacy) | `outline_pov.txt` | Write prompt: DO NOT define types |
+| **Physical state** | `phase_plan_pov.txt` generates | Outline: copy. Write: weave into action. |
+| **Zero narrator** | Style JSON `core_rules.zero_narrator_rule` | Write prompt: brief reference |
+| **Anti-framework leak** | `write_pov.txt` CONSTRAINTS | Style JSON: REMOVE |
+| **Special chapters** (Level 1 / End chapter) | `write_pov.txt` | Outline prompt: DO NOT define |
+
+#### Enforcement Pattern — Prompt Header Comment
+
+Mỗi prompt file bắt đầu bằng ownership comment:
+
+```
+# ═══════════════════════════════════════
+# RULE OWNERSHIP — THIS FILE OWNS:
+#   - Scene test (place/action/consequence)
+#   - Event description format
+#   - Same-age independence test  
+#   - Phase labels assignment
+#   - physical_state generation
+#   - _source_map generation
+#
+# THIS FILE DOES NOT OWN (reference only):
+#   - Opening styles → outline_pov.txt
+#   - Closing types → write_pov.txt
+#   - Vocabulary → style JSON
+#   - Level anchor → code injection
+# ═══════════════════════════════════════
+```
+
+#### Cross-Audit Checklist (before any edit)
+
+Khi sửa BẤT KỲ rule nào:
+
+```
+1. Xác định rule thuộc file nào (xem Ownership Table)
+2. Nếu rule KHÔNG thuộc file đang sửa → KHÔNG ĐƯỢC thêm/sửa tại đây
+3. Nếu rule thuộc file đang sửa → sửa tại đây, sau đó:
+   a. Search tất cả file khác có mention rule này không
+   b. Nếu có → xóa/update reference
+   c. Verify không tạo contradiction mới
+4. Update Ownership Table nếu thay đổi ownership
+```
+
+---
+
+## Updated Architecture
 
 ```
 Phase Plan AI receives:
-  SYSTEM: phase_plan_pov.txt (8.9K) — event selection rules
-  USER:   Style Guide (5K) ← UNNECESSARY
-        + Blueprint (40K) ✓
-        + Framework name ✓
-
-Outline AI receives:
-  SYSTEM: outline_pov.txt (8.3K) — outline structure rules
-  USER:   Style Guide (5K) ← MOSTLY UNNECESSARY
-        + Event timeline ✓
-        + Blueprint (40K) ✓
-
-Audit AI receives:
-  SYSTEM: audit_pov.txt (2.7K) — audit checklist
-  USER:   Style Guide (5K) ← UNNECESSARY
-        + Blueprint (40K) ← UNNECESSARY
-        + Outline (35K) ✓
-
-Writer AI receives:
-  SYSTEM: write_pov.txt (11.4K) — writing rules
-        + Style Guide (5K) — voice rules
-        + Filtered Blueprint (varies) ✓
-        + FULL Outline (4K) ← UNNECESSARY
-        + Chapter data ✓
-        + Previous context ✓
-  USER:   Write command (772 chars)
-```
-
-**Total wasted: ~81K chars/run**
-
-### New (Clean)
-
-```
-Phase Plan AI receives:
-  SYSTEM: phase_plan_pov.txt (≤8K) — event selection rules
-  USER:   Blueprint (40K) ✓
-        + Framework name ✓
-        + Phase labels only ✓
-  
+  SYSTEM: phase_plan_pov.txt (8K)
+  USER:   Blueprint (40K) + Framework name + Phase labels
   ❌ NO Style Guide
 
 Outline AI receives:
-  SYSTEM: outline_pov.txt (≤6K) — outline structure rules
-           (contains ONLY metadata rules: opening/closing/structure types)
-  USER:   Event timeline ✓
-        + Blueprint (40K) ✓
-        + Outline metadata rules (extracted from style, ~500 chars) ✓
-
-  ❌ NO full Style Guide
+  SYSTEM: outline_pov.txt (≤6K) — metadata rules only
+  USER:   Event timeline + Blueprint (40K)
+  ❌ NO full Style Guide (only phase label extract)
 
 Audit AI receives:
-  SYSTEM: audit_pov.txt (≤3K) — audit checklist
-  USER:   Outline only (35K) ✓
-
+  SYSTEM: audit_pov.txt (≤3K) — metadata-only checklist
+  USER:   Outline only (35K)
   ❌ NO Style Guide, NO Blueprint
 
 Writer AI receives:
-  SYSTEM: write_pov.txt (≤6K) — structural writing rules ONLY
-        + Style Guide (5K) — voice rules (ONLY place it appears)
-        + Filtered Blueprint (varies) ✓
-        + Chapter data ✓
-        + Previous context ✓
-  USER:   Write command (772 chars)
-
+  SYSTEM: write_pov.txt (≤6K) — structural rules + Style JSON (voice)
+        + Filtered Blueprint + Chapter data + Previous context
+  USER:   Write command
   ❌ NO full outline
+  ✅ Level anchor injected by CODE after AI output
 ```
-
-**Estimated savings: ~80K chars/run (~27%)**
 
 ---
 
-## Proposed Changes
+## Proposed Changes (Updated)
 
-### Component 1: Style JSON — Separation of Concerns
+### Component 1: Style JSON
 
 #### [MODIFY] [narrative_pov_tiểu_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_pov_tiểu_sử.json)
 
-**Goal**: Style JSON = ONLY voice/writing rules. Remove all structural/outline metadata.
+**KEEP** (voice rules for writer):
+- `core_rules.identity`, `tone`, `sentence_rhythm`, `vocabulary`, `voice_over_clarity`, `pov_rules`, `data_density`, `zero_narrator_rule`
+- `framework.pov_strategy`, `language`, `steps`, `emotional_arc`, `tension_curve`
+- `pipeline_features`
 
-**Changes**:
-1. **KEEP** (writer-facing rules):
-   - `core_rules`: identity, tone, sentence_rhythm, vocabulary, voice_over_clarity, pov_rules, data_density, zero_narrator_rule
-   - `framework.pov_strategy`
-   - `framework.language` (metaphor_family, sentence_style, forbidden)
-   - `framework.steps` (phase definitions — for framework context)
-   - `framework.emotional_arc`, `tension_curve`
-   - `pipeline_features` (code-facing config)
-
-2. **REMOVE** (moved to outline prompt or deleted):
-   - `anti_framework_leak` → moved to write prompt CONSTRAINTS section
-   - `chapter_ending_protocol` → moved to write prompt PART 4
-   - `framework.hook` → simplified, merged into write prompt SPECIAL CHAPTERS
-   - `framework.pacing.rule` (hardcoded chapter numbers "1-3, 4-7") → DELETE
-   - `framework.pacing.chapter_rhythm` → moved to write prompt CHAPTER FLOW
-   - `framework.outline_rules` → moved to outline prompt (only place it belongs)
-   - `chapter_rhythm` (top-level) → DELETE (duplicate of outline_rules + chapter_ending_protocol)
-   - `checklist` → DELETE (duplicate of write prompt rules)
-   - `framework.technique_emphasis` → DELETE (redundant with vocabulary/identity)
-   - `framework.counter_argument` → DELETE (useless)
-   - `framework.weight_line_types` → moved to write prompt PART 4
-   - `framework.anti_patterns` → DELETE (duplicates core_rules)
-   - `anti_copy` → DELETE (useless rule)
-
-3. **UNIFY Level Anchor rule** — ONE rule, ONE location:
-   - Style JSON: `"chapter_design"` says "within first 2 sentences"
-   - `hook.anchor` says "FIRST SENTENCE"
-   - `body_chapter_opening` says "within first 2 sentences"
-   - **DECISION**: Level anchor = **ALWAYS sentence 1**. Period. No THESIS/ATMOSPHERE variation.
-   - **NEW rule** (write prompt only): `"Level {N}, {label}. You are {age}."` = first sentence of every chapter. No exceptions.
+**REMOVE** (moved elsewhere or deleted):
+- `core_rules.anti_framework_leak` → moved to write prompt CONSTRAINTS
+- `core_rules.chapter_ending_protocol` → moved to write prompt PART 4
+- `core_rules.anti_copy` → DELETE (useless)
+- `framework.hook` → DELETE (write prompt SPECIAL CHAPTERS owns this)
+- `framework.pacing.rule` → DELETE (hardcoded chapter numbers)
+- `framework.pacing.chapter_rhythm` → DELETE (write prompt owns flow)
+- `framework.outline_rules` → moved to outline prompt
+- `framework.weight_line_types` → moved to write prompt PART 4
+- `framework.technique_emphasis` → DELETE (redundant)
+- `framework.counter_argument` → DELETE (useless)
+- `framework.anti_patterns` → DELETE (duplicates core_rules)
+- `chapter_rhythm` (top-level) → DELETE (duplicate)
+- `checklist` → DELETE (duplicate of write prompt)
+- `framework.structure.chapter_design` → SIMPLIFY (remove Level anchor mention — code handles)
 
 ---
 
-### Component 2: Phase Plan Prompt — Strip to Essentials
+### Component 2: Phase Plan — Code Only
 
-#### [MODIFY] [system_narrative_phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
+#### [KEEP] [system_narrative_phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
 
-**No changes needed to prompt itself** — it's already clean. 
-
-**Code change**: Stop sending Style Guide in USER message.
+Prompt is clean. **Code change only**: stop sending Style Guide.
 
 ---
 
-### Component 3: Chapter Plan Prompt — No Changes
+### Component 3: Chapter Plan — No Changes
 
 #### [KEEP] [system_narrative_chapter_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_chapter_plan_pov.txt)
 
-Already clean. No changes needed.
+Already clean.
 
 ---
 
-### Component 4: Outline Prompt — Remove Writer-Facing Rules
+### Component 4: Outline Prompt — Simplify
 
 #### [MODIFY] [system_narrative_outline_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pov.txt)
 
 **Changes**:
-1. **KEEP**: LEVEL STRUCTURE, SCENE FIELDS, OUTPUT FORMAT, CRITICAL RULES
-2. **SIMPLIFY**: CHAPTER TYPE / CLOSING TYPE / OPENING STYLE — keep definitions but remove examples that conflict with write prompt
-3. **UNIFY opening rule**: "Level anchor = sentence 1 for ALL opening styles"
-4. **REMOVE**: line 59-62 (BEAT references — writer concept, not outliner's job)
-5. **ADD**: `event_cause` field requirement (currently only in chapter_plan, not explicitly in outline)
-
-**Code change**: Stop sending full Style Guide. Only send:
-- Phase labels (6 labels + descriptions) — extracted from style JSON by code
-- Framework name
+1. KEEP: LEVEL STRUCTURE, SCENE FIELDS, OUTPUT FORMAT, CRITICAL RULES
+2. SIMPLIFY opening styles: remove Level anchor positioning (code handles)
+3. REMOVE lines 59-62 (BEAT references — writer concept)
+4. ADD event_cause requirement
+5. ADD ownership header comment
 
 ---
 
-### Component 5: Audit Prompt — Strip Data, Restrict Scope
+### Component 5: Audit Prompt — Restrict Scope
 
 #### [MODIFY] [system_narrative_audit_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pov.txt)
 
 **Changes**:
-1. **ADD explicit scope restriction**: "You may ONLY reassign metadata (opening_style, closing_type, chapter_structure). You MUST NOT rewrite content (scene_open, scene_action, scene_close, summary, event_description)."
-2. **REMOVE**: word count check (not auditor's job — writer handles)
-3. **REMOVE**: vocabulary check (not auditor's job)
-
-**Code change**: Stop sending Style Guide + Blueprint. Only send Outline.
+1. ADD: "You may ONLY reassign metadata. NEVER rewrite content."
+2. REMOVE: word count check, vocabulary check
+3. Code: stop sending Style + Blueprint
 
 ---
 
-### Component 6: Write Prompt — Single Source of Truth Rewrite
+### Component 6: Write Prompt — Clean Rewrite
 
 #### [REWRITE] [system_narrative_write_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pov.txt)
 
-**NEW structure** (each section appears ONCE):
+**NEW structure** (~120 lines):
 
 ```
-HEADER: Identity, variables, chapter data
-  - Style JSON, framework, blueprint, chapter outline
-  - Previous context
-  - ❌ NO full outline
+HEADER: Variables (style_json, blueprint, chapter data, previous_context)
+  ❌ NO {full_outline}
+  ✅ ADD: "Level anchor is auto-injected. Do NOT write it."
 
-SECTION 1 — POV CONTRACT (6 lines)
-  - "You" = subject. Third person = everyone else.
-  - Forbidden voices.
+SECTION 1 — POV CONTRACT (compact, 10 lines)
+  "You" = subject. Third person = others.
+  Forbidden voices (5 examples).
 
-SECTION 2 — CHAPTER STRUCTURE (4 parts)
-  PART 1: LEVEL ANCHOR — "Level N, label. You are age." (FIRST sentence, always)
-  PART 2: CAUSE — Develop event_cause into POV setup (no sentence count limit)
-  PART 3: SCENE — Develop scene_open/action/close. Weave sub_key_data + physical_state.
-  PART 4: WEIGHT LINE — Close with what CHANGED / COST / LEARNED.
-     Closing type (cold_fact/paradox/cost/weight) from outline = HOW to phrase.
-     Content = WHAT to express (change/cost/lesson).
-     ❌ REMOVE "WHAT IS COMING?" (contradicts "no forward tension")
-     ❌ REMOVE sentence count limit ("1-2 sentences")
+SECTION 2 — CHAPTER FLOW (4 parts)
+  PART 1: NOTE — Level anchor auto-injected. Start with CAUSE.
+  PART 2: CAUSE — Develop event_cause. No sentence limit.
+  PART 3: SCENE — Use scene_open/action/close. Weave sub_key_data + physical_state.
+  PART 4: WEIGHT LINE — Follow closing_type from outline.
+    Define 4 types HERE (single source).
+    scene_close ≠ weight_line (scene_close = what happened, weight_line = what it cost).
 
-SECTION 3 — SPECIAL CHAPTERS (Level 1 + End chapter guidance)
+SECTION 3 — SPECIAL CHAPTERS
+  Level 1: viewer IN body, physical omen, hostile world
+  End: death scene + legacy scorecard + echo callback
 
 SECTION 4 — CONSTRAINTS
-  - TTS safety, framework leak ban, output format
-
-❌ DELETED SECTIONS:
-  - Opening styles menu (was redundant — outline already assigns, just follow outline)
-  - CLOSING CONTENT RULE (Section 3 old) — merged into PART 4
-  - Content Principles (redundant with Section 2)
-  - "A chapter with only SCENE = observation report" line (redundant)
+  TTS safety, framework leak ban, output format
 ```
 
-**Key simplifications**:
-- From **234 lines** → target **~120 lines**
-- From **6 sections** → **4 sections**
-- Every rule appears **exactly once**
-- No examples from specific characters (Baldwin, Genghis Khan)
-- `scene_close` vs `weight_line` clarified: scene_close = immediate result, weight_line = what it COST
+**Deleted**:
+- Opening styles menu (outline already assigns)
+- Section 3 CLOSING CONTENT RULE (merged into PART 4)
+- Content Principles (redundant with flow)
+- "WHAT IS COMING?" closing option (contradicts "no forward tension")
 
 ---
 
@@ -235,97 +354,46 @@ SECTION 4 — CONSTRAINTS
 
 #### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-**7 code changes**:
+**7 changes** (all gated behind `_is_pov`):
 
-1. **`generate_narrative_phase_plan()`** (line ~4418):
-   - REMOVE: `f"STYLE GUIDE:\n{compact_style}\n\n"` from `user_content`
-   - KEEP: Blueprint + Framework name
-
-2. **`generate_narrative_outline()`** (line ~5260):
-   - REPLACE: Full Style Guide → extracted phase labels only (~500 chars)
-   - Create helper: `_extract_phase_labels(style_json, framework_name)` → returns only phase definitions
-
-3. **`audit_outline()`** (line ~5327):
-   - REMOVE: Style Guide from `user_content`
-   - REMOVE: Blueprint from `user_content`
-   - KEEP: Only outline JSON
-
-4. **`write_from_blueprint()`** (line ~5667):
-   - REMOVE: `{full_outline}` replacement → replace with empty or delete from template
-   - Style JSON still sent (this is the ONLY place)
-
-5. **Write prompt template** (line 12-13):
-   - REMOVE: `FULL OUTLINE (all chapters...): {full_outline}`
-
-6. **`_extract_style_for_framework()`** — no changes (already extracts relevant framework)
-
-7. **Previous context injection** — verify code doesn't inject fake Level anchors into `previous_context` that weren't in the actual output
-
----
-
-## Open Questions
-
-> [!IMPORTANT]
-> **Q1**: Opening styles (STANDARD / THESIS / ATMOSPHERE) — hiện tại outline AI gán style cho mỗi chapter. Nếu Level anchor LUÔN ở sentence 1, thì THESIS ("bold statement first") và ATMOSPHERE ("physical environment first") có còn hợp lý không?
-> 
-> **Proposal**: Giữ 3 opening styles nhưng redefine:
-> - STANDARD: `Level anchor → cause → scene`
-> - THESIS: `Level anchor → bold statement → cause → scene` (bold statement ở sentence 2, không phải sentence 1)
-> - ATMOSPHERE: `Level anchor → atmosphere sentence → cause → scene`
-> 
-> Tất cả bắt đầu bằng Level anchor. Sự khác biệt là **sentence 2**.
-
-> [!IMPORTANT]
-> **Q2**: `scene_close` vs `weight_line` — gộp thành 1 hay giữ 2?
->
-> **Proposal**: Giữ 2 nhưng rõ ràng:
-> - `scene_close` (từ outline) = **kết quả tức thì** của action ("Saladin retreats")
-> - `weight_line` (writer tạo) = **what it COST** ("But the dead hand hangs at your side")
-> - Writer phải viết cả 2: close the event THEN state the cost.
-
-> [!WARNING]
-> **Q3**: Audit hiện dùng `gemini-3-flash-preview` — nên giữ flash hay đổi sang pro? Flash rẻ hơn nhưng hay rewrite content (vi phạm scope).
->
-> **Proposal**: Giữ flash nhưng thêm scope restriction vào prompt.
+1. **`generate_narrative_phase_plan()`** (~4418): Remove Style Guide from user_content
+2. **`generate_narrative_outline()`** (~5260): Replace full Style Guide → phase labels extract only
+3. **`audit_outline()`** (~5327): Remove Style Guide + Blueprint from user_content
+4. **`write_from_blueprint()`** (~5667): Remove `{full_outline}` replacement
+5. **`write_from_blueprint()`** (after API call): Add `_inject_level_anchor()` post-processing
+6. **New helper**: `_extract_phase_labels(style_json, framework_name)` → compact phase-only extract
+7. **New helper**: `_inject_level_anchor(text, chapter_outline)` → prepend Level line
 
 ---
 
 ## Verification Plan
 
-### Automated Tests
-1. Run pipeline trên King Baldwin IV blueprint → so sánh output trước/sau
-2. Check token count giảm: `SYSTEM + USER` size cho mỗi stage
-3. Verify Level anchor xuất hiện ở sentence 1 của mọi chapter output
-4. Verify `STYLE GUIDE` KHÔNG xuất hiện trong phase_plan + audit debug files
+### Automated
+1. Run pipeline on King Baldwin IV → compare before/after
+2. Token count check: measure SYSTEM+USER size per stage
+3. Verify Level anchor appears in sentence 1 of ALL chapters
+4. Verify `STYLE GUIDE` NOT in phase_plan/audit debug files
+5. Verify biography pipeline NOT affected (run biography test)
 
-### Manual Verification
-1. Đọc chapter output → verify 4-part structure (Anchor → Cause → Scene → Weight)
-2. Đọc audit output → verify KHÔNG rewrite scene content
-3. So sánh chất lượng narrative với biography pipeline
+### Manual
+1. Read chapter output → verify 4-part structure
+2. Read audit output → verify NO content rewrites
+3. Compare quality with biography pipeline
 
 ---
 
 ## Execution Order
 
-```mermaid
-graph TD
-    A["1. Backup current files"] --> B["2. Rewrite Style JSON"]
-    B --> C["3. Rewrite write_pov.txt"]
-    C --> D["4. Simplify outline_pov.txt"]
-    D --> E["5. Update audit_pov.txt"]
-    E --> F["6. Code changes in rewriter.py"]
-    F --> G["7. Run pipeline + verify"]
-```
-
-| Step | File | Risk |
-|---|---|---|
-| 1 | Backup all POV files | None |
-| 2 | `narrative_pov_tiểu_sử.json` | Medium — shared with UI |
-| 3 | `system_narrative_write_pov.txt` | High — core writer prompt |
-| 4 | `system_narrative_outline_pov.txt` | Medium — structural metadata |
-| 5 | `system_narrative_audit_pov.txt` | Low — scope restriction only |
-| 6 | `core/rewriter.py` | High — shared code, must protect biography |
-| 7 | Test run | Verify output quality |
+| Step | File | Risk | Depends On |
+|---|---|---|---|
+| 0 | Backup all POV files | None | — |
+| 1 | `narrative_pov_tiểu_sử.json` | Medium | — |
+| 2 | `system_narrative_write_pov.txt` | High | Step 1 |
+| 3 | `system_narrative_outline_pov.txt` | Medium | Step 1 |
+| 4 | `system_narrative_audit_pov.txt` | Low | — |
+| 5 | `core/rewriter.py` — data injection | High | Steps 1-4 |
+| 6 | `core/rewriter.py` — Level anchor inject | Medium | Step 2 |
+| 7 | Test run + verify | — | All |
 
 > [!CAUTION]
-> **Biography Protection**: All code changes in `rewriter.py` MUST be gated behind `_is_pov` checks. The biography pipeline (`_is_biography`) must NOT be affected. See [Biography Pipeline Protection Rule KI](file:///C:/Users/Admin/.gemini/antigravity/knowledge/biography_protection_rule/artifacts/protection_rules.md).
+> **Biography Protection**: ALL code changes MUST be gated behind `_is_pov` checks. Biography pipeline must NOT be affected.
