@@ -1,0 +1,186 @@
+# Post-Rebuild Issues — Analysis & Fix Plan
+
+## Issue #1: Event Cause Xác Định Sai
+
+### Root Cause
+
+Prompt hiện tại định nghĩa:
+> `event_cause = the EXTERNAL TRIGGER that forces this event to happen`
+
+Ví dụ trong prompt:
+> `"Saladin breaks the truce and marches 26,000 men toward an undefended Jerusalem."`
+
+**Vấn đề**: "EXTERNAL TRIGGER" đang được AI hiểu là **hành động trực tiếp** (Saladin marches) — tức là **WHAT starts the event**. Nhưng ý nghĩa thật sự cần là **WHY it happens** — bối cảnh chính trị/chiến lược **dẫn đến** hành động đó.
+
+### So sánh Reference vs Generated
+
+**Reference script** (chapter 3 → 4 transition):
+```
+Chapter 3 ending (context/cause):
+  "...the most dangerous man alive is unifying the entire Muslim world 
+   under one banner. His name is Saladin. He wants Jerusalem back."
+
+Chapter 4 opening (event begins):
+  "Saladin crosses the border with 26,000 men."
+```
+
+**Generated** (ch05):
+```
+event_cause: "Saladin marches a massive army of 20,000 men toward 
+              an undefended Jerusalem, pillaging the countryside."
+
+scene_open:  "The sands of Montgisard stretch out before you, darkened 
+              by Saladin's twenty thousand soldiers..."
+```
+
+**Trùng lặp**: event_cause và scene_open đều nói cùng 1 thứ — Saladin đang tiến quân. Không có bối cảnh WHY.
+
+### Phân tích sâu
+
+Event cause **đúng** cho Montgisard nên là:
+> "Sau Montgisard chưa xảy ra — nhưng trước đó: Saladin đã thống nhất Ai Cập và Syria, trở thành mối đe dọa lớn nhất. William of Montferrat vừa chết, succession bất ổn. Saladin nhận ra đây là thời điểm để tấn công — kingdom yếu, vua bệnh, không có đồng minh mạnh."
+
+Đây là **STRATEGIC CONTEXT** — không phải trigger trực tiếp.
+
+### Giải pháp đề xuất
+
+**Redefine event_cause** trong `system_narrative_chapter_plan_pov.txt`:
+
+```
+event_cause = BACKGROUND CONTEXT that explains WHY this event happens.
+NOT the immediate trigger (that's scene_open's job).
+NOT what the character does (that's scene_action).
+
+CAUSE = What political/strategic/personal situation FORCED this to happen?
+  → What was building up? What pressure broke? What opportunity appeared?
+  → Think: if someone asks "why did Saladin attack NOW?", the answer is
+    the cause. "Because he marches 26,000 men" is NOT the answer.
+    "Because he unified Egypt and Syria, saw a weakened kingdom with
+    a dying king, and struck at the perfect moment" IS the answer.
+
+FORMAT: 2-4 sentences. Background, not action.
+```
+
+**Updated examples**:
+```
+✓ "Saladin has unified Egypt and Syria under one banner. The Kingdom 
+   of Jerusalem is fractured — its king is a dying leper, William of 
+   Montferrat is dead, and succession is in crisis. Saladin recognizes 
+   this is the perfect moment to strike."
+   → STRATEGIC CONTEXT that explains WHY Saladin attacks NOW
+
+✓ "King Amalric I dies of dysentery during a campaign. The Haute Cour 
+   must crown a new king immediately — the kingdom cannot survive a 
+   power vacuum with Saladin on the border."
+   → POLITICAL CONTEXT that explains WHY coronation happens NOW
+
+✗ "Saladin marches 26,000 men toward Jerusalem."
+   → This is WHAT HAPPENS (immediate trigger), not WHY it happens.
+   → This belongs in scene_open, not event_cause.
+```
+
+**Key distinction**:
+| Field | Answers | Example |
+|---|---|---|
+| `event_cause` | WHY does this event happen? (background) | "Saladin unified the Muslim world. The kingdom is weak." |
+| `scene_open` | WHAT is happening as the scene begins? (immediate) | "26,000 soldiers darken the sands of Montgisard." |
+| `scene_action` | WHAT does the character DO? | "You charge with 375 knights." |
+| `scene_close` | WHAT CHANGED? | "Saladin flees on a camel." |
+
+---
+
+## Issue #2: Level Anchor Bị Strip ✅ ĐÃ FIX
+
+**Root cause**: `script_creation_tab.py` line 2172 (cũ) strip dòng đầu tiên khi save file. Level anchor là dòng đầu → bị xóa.
+
+**Fix đã áp dụng** (line 2172-2179): POV giữ full text, non-POV giữ behavior cũ.
+
+**Trạng thái**: ✅ Fixed. Cần test lại.
+
+---
+
+## Issue #3: physical_state Quá Đặc Thù
+
+### Root Cause
+
+`physical_state` được thiết kế cho Baldwin IV (leprosy progression) rồi đặt thành **mandatory field** ở mọi nơi:
+
+| File | Rule | Vấn đề |
+|---|---|---|
+| `phase_plan_pov.txt` | Output format: mandatory field | AI phải bịa physical_state cho mọi nhân vật |
+| `outline_pov.txt` | Critical rule #6: "MANDATORY for every chapter" | Outline phải có |
+| `audit_pov.txt` | Checklist #3: "body changes MUST show progression" | Audit kiểm tra |
+| `write_pov.txt` | Chapter data template | Writer nhận và phải weave |
+
+**Không phải nhân vật nào cũng có body progression**: Napoleon, Caesar, Alexander — sức khỏe không phải yếu tố chính. Nếu mandatory → AI bịa `"healthy, strong"`, `"still vigorous"` → lãng phí token + gây nhiễu.
+
+### Giải pháp đề xuất
+
+**Nguyên tắc**: physical_state là **data từ blueprint**, không phải requirement cố định. Nếu blueprint có `physical_state_arc` → data tự nhiên đổ vào `sub_key_data`. Nếu không có → không bắt buộc.
+
+**Cụ thể**:
+
+1. **Phase plan**: `physical_state` → xóa khỏi output format (đã làm 1 phần). Body state items nằm trong `sub_key_data` khi blueprint có `physical_state_arc`.
+
+2. **Outline**: 
+   - `physical_state` field → **optional**. Chỉ xuất khi blueprint có `physical_state_arc`.
+   - Critical rule #6: Đổi từ "MANDATORY" → "Include if the blueprint contains physical_state_arc data"
+
+3. **Audit**: 
+   - Checklist #3: Đổi từ "Does every chapter have physical_state?" → "If physical_state appears in any chapter, verify progression is consistent"
+
+4. **Write prompt**: 
+   - `Physical state: {physical_state}` → chỉ inject khi field non-empty
+   - "Weave sub_key_data and physical_state INTO action" → "Weave sub_key_data INTO action" (physical_state là 1 item trong sub_key_data)
+
+5. **Code** (`rewriter.py`):
+   - Khi build chapter data cho writer, nếu `physical_state` có giá trị → thêm vào `sub_key_data` list
+   - Writer prompt không cần field riêng
+
+### Cách lồng ghép khi nhân vật CẦN physical_state
+
+**Blueprint quyết định, không phải prompt**. Nếu nhân vật có body progression:
+
+1. Blueprint research tạo `physical_state_arc` (đã có)
+2. Phase plan AI thấy `physical_state_arc` trong blueprint → tự nhiên đưa body details vào `sub_key_data` (vì rule hiện tại: "body state = ALWAYS sub_key_data")
+3. Outline AI copy `sub_key_data` (bao gồm body details) vào chapter
+4. Writer AI weave `sub_key_data` vào scene — body details xuất hiện tự nhiên trong action
+
+**Ví dụ Baldwin IV**:
+```json
+"sub_key_data": [
+  "Claw hand deformity becoming permanent",
+  "Requires assistance to mount horse",
+  "Saved Jerusalem from immediate conquest"
+]
+```
+Writer weave: *"Your clawed fingers cannot grip the reins — a servant straps the shield to your dead arm."*
+
+**Ví dụ Napoleon** (không có body progression):
+```json
+"sub_key_data": [
+  "Coalition forces outnumber French 2:1",
+  "Supply lines stretched thin"
+]
+```
+Không có body detail → không bịa.
+
+---
+
+## Changes Required
+
+### Files to modify
+
+| File | Change | Risk |
+|---|---|---|
+| `system_narrative_chapter_plan_pov.txt` | Redefine event_cause (lines 54-89) | Medium |
+| `system_narrative_outline_pov.txt` | physical_state → optional | Low |
+| `system_narrative_audit_pov.txt` | physical_state check → conditional | Low |
+| `system_narrative_write_pov.txt` | Remove physical_state field from template | Low |
+| `core/rewriter.py` | Merge physical_state into sub_key_data before inject | Low |
+
+> [!WARNING]
+> Issue #1 (event_cause redefinition) ảnh hưởng đến chất lượng nội dung cốt lõi. Cần kiểm tra lại chapter_plan prompt kỹ vì nó quyết định toàn bộ cause chain.
+
+> [!NOTE]
+> Issue #2 đã fix. Issue #3 chỉ cần xóa mandatory requirement, logic tự nhiên xử lý qua blueprint data.

@@ -1,399 +1,243 @@
-# POV Pipeline — Full Rebuild Plan (v2)
+# Cross-Audit: event_cause + physical_state Changes
 
-## Problem Statement
+## Pipeline Flow Map
 
-27 rule conflicts, ~81K chars token waste/run, unstable output. Root cause: rules duplicated across 3-4 files → AI reads contradictions → random behavior.
+```mermaid
+graph LR
+  A[phase_plan_pov] -->|event_timeline| B[validate_sub_key_pov]
+  B -->|corrected timeline| C[chapter_plan_pov]
+  C -->|curated timeline + event_cause| D[outline_pov]
+  D -->|chapters JSON| E[audit_pov]
+  E -->|audited chapters| F[write_pov]
+```
 
-**Solution**: Rebuild toàn bộ theo **Single Source of Truth** + code-injected Level Anchor.
+Each step passes data to the next. Changes must be consistent across all 6 files.
 
 ---
 
-## User Decisions
+## A. event_cause — Full Audit
 
-### Q1 — Level Anchor: Code Inject ✅
+### Current Definition (chapter_plan_pov.txt, line 58):
+> `event_cause = the EXTERNAL TRIGGER that forces this event to happen.`
 
-**Decision**: Code tự prepend `"Level {N}, {label}."` vào output. AI writer KHÔNG cần tạo Level anchor.
+### Problem:
+"EXTERNAL TRIGGER" → AI writes immediate action (WHAT starts) instead of strategic context (WHY it happens). Result: event_cause ≈ scene_open (trùng lặp).
 
-**Why**: Level anchor đã là nguyên nhân #1 gây conflict (4 nơi nói khác nhau). Nếu code tự thêm thì:
-- Prompt không cần nói về Level anchor → bỏ được 4 chỗ conflict
-- AI writer chỉ tập trung viết nội dung
-- 100% consistent — không bao giờ bị thiếu
+### Where event_cause appears:
 
-**Implementation**:
-```python
-# In write_from_blueprint() — AFTER receiving AI output
-def _inject_level_anchor(text: str, chapter_outline: dict) -> str:
-    """Prepend Level anchor line if not already present."""
-    level_num = chapter_outline.get("level_number", chapter_outline.get("chapter_number", 1))
-    title = chapter_outline.get("chapter_title", "")
-    # Extract label from "Level 3: The Dead Flesh" → "the dead flesh"
-    label = title.split(":", 1)[1].strip().lower() if ":" in title else ""
-    
-    age = chapter_outline.get("age_anchor", "")
-    
-    anchor = f"Level {_num_to_word(level_num)}, {label}."
-    if age:
-        anchor += f" {age}."
-    
-    # Check if output already starts with "Level"
-    if text.strip().lower().startswith("level"):
-        return text
-    return f"{anchor}\n\n{text}"
+| # | File | Location | Current Text | Change Needed |
+|---|---|---|---|---|
+| 1 | `chapter_plan_pov.txt` | Line 54-89 | **DEFINITION + EXAMPLES** (owner) | ✅ REWRITE definition |
+| 2 | `chapter_plan_pov.txt` | Line 102 | Output format: `"event_cause": "WHY..."` | ✅ Update description |
+| 3 | `chapter_plan_pov.txt` | Line 130 | Critical rule 3: "generate event_cause for EVERY surviving event" | ⚪ Keep (still true) |
+| 4 | `outline_pov.txt` | Line 8 (ownership) | "Event cause generation → chapter_plan_pov.txt" | ⚪ Keep (still true) |
+| 5 | `outline_pov.txt` | Line 144 | `"event_cause": "WHY this event happens — the trigger. COPY from event_timeline."` | ✅ Update description |
+| 6 | `write_pov.txt` | Line 33 | `Event cause (WHY this event happens): {event_cause}` | ✅ Update label |
+| 7 | `write_pov.txt` | Line 78-87 | **PART 2 CAUSE/CONTEXT examples** | ✅ Update examples |
+| 8 | `write_pov.txt` | Line 124 | "A chapter with CAUSE + SCENE + WEIGHT LINE = complete" | ⚪ Keep (still true) |
+| 9 | `rewriter.py` | Line 5857 | `_event_cause = chapter_outline.get("event_cause", "")` | ⚪ Keep (data flow) |
+| 10 | `rewriter.py` | Line 5860 | `cause_line = f"CONTEXT (why this event happens):\n  {_event_cause}"` | ⚪ Keep (label already correct) |
+| 11 | `validate_sub_key_pov.txt` | Line 73 | Output format: `"physical_state": "..."` | See Issue #3 |
+| 12 | `phase_plan_pov.txt` | Nowhere | Phase plan does NOT generate event_cause | ⚪ N/A |
+
+### Proposed Changes — event_cause
+
+#### File 1: `chapter_plan_pov.txt` (OWNER — lines 54-89)
+
+```diff
+-event_cause = the EXTERNAL TRIGGER that forces this event to happen.
+-NOT what the character does. NOT a summary of the event.
+-
+-CAUSE = What happened OUTSIDE or BEFORE that made this event inevitable?
+-  → Enemy action, political shift, death, betrayal, treaty, crisis
+-
+-FIND CAUSE in blueprint:
+-  → turning_points[].before_state — what was happening just before
+-  → conflicts[].catalyst — what triggered the conflict
+-  → age_timeline[age-1 or age] — what happened right before this event
+-  → Previous event's consequence — what the last event left behind
+-
+-FORMAT: 1-2 sentences. Subject = the external trigger, NOT "you".
+-
+-EXAMPLES:
+-  ✓ "King Amalric I dies of dysentery. The crown passes to a 13-year-old leper."
+-  ✓ "Saladin breaks the truce and marches 26,000 men toward an undefended Jerusalem."
+-  ✓ "William of Montferrat dies of malaria, leaving Sibylla a widow.
+-     Philip of Flanders crosses the sea to fill the power vacuum."
+-
+-ANTI-PATTERNS (NEVER write these):
+-  ✗ "Seeking to maintain momentum, you intercept Saladin..."
+-  ✗ "With your health failing, you desperately need a protector..."
+-  ✗ "You refuse to remain a puppet of the regency..."
+
++event_cause = the BACKGROUND CONTEXT that explains WHY this event happens.
++NOT the immediate trigger (that belongs in event_description's opening).
++NOT what the character does. NOT a summary of the event.
++
++CAUSE = What political, strategic, or personal SITUATION made this event inevitable?
++  → What was building up? What pressure broke? What opportunity appeared?
++  → Think: "Why does this happen NOW, at THIS moment in history?"
++
++FIND CAUSE in blueprint:
++  → turning_points[].before_state — the situation BEFORE the shift
++  → conflicts[] — the broader conflict driving this event
++  → Previous event's consequence — what the last event left behind
++  → key_relationships — political dynamics that created pressure
++
++FORMAT: 2-3 sentences. Background situation, NOT immediate action.
++
++EXAMPLES:
++  ✓ "Saladin has unified Egypt and Syria under one banner, creating the
++     largest Muslim army since the First Crusade. The Kingdom of Jerusalem
++     is fractured — its king is a dying leper, and William of Montferrat's
++     death has reopened the succession crisis."
++     → STRATEGIC CONTEXT: why Saladin attacks NOW
++
++  ✓ "King Amalric I has died of dysentery during a northern campaign. The
++     kingdom cannot survive a power vacuum — Saladin controls Egypt and
++     Syria, and the Haute Cour needs a crowned king immediately."
++     → POLITICAL CONTEXT: why coronation is urgent
++
++  ✓ "For two years, Raymond of Tripoli has ruled as regent. The barons
++     see a crippled boy on the throne and calculate their odds. Philip of
++     Flanders arrives with fresh knights and dangerous ambition."
++     → POWER DYNAMICS: why the confrontation happens
++
++ANTI-PATTERNS:
++  ✗ "Saladin marches 26,000 men toward Jerusalem."
++     → This is the IMMEDIATE ACTION, not WHY. This belongs in event_description.
++  ✗ "Seeking to maintain momentum, you intercept Saladin..."
++     → This is what the CHARACTER DOES, not the background.
++  ✗ "With your health failing, you desperately need a protector..."
++     → This is the character's MOTIVATION, not the situation.
 ```
 
-**Write prompt change**: REMOVE tất cả instructions về Level anchor. Thay bằng:
-```
-NOTE: The Level anchor line ("Level N, label. You are age.") is 
-automatically prepended by the pipeline. Do NOT write it yourself.
-Start your chapter directly with CAUSE/CONTEXT.
+#### File 2: `outline_pov.txt` (line 144)
+
+```diff
+-"event_cause": "WHY this event happens — the trigger (1-2 sentences). COPY from event_timeline if present.",
++"event_cause": "BACKGROUND CONTEXT — why this event happens (2-3 sentences). COPY from event_timeline if present.",
 ```
 
-**Opening styles simplified**:
-- STANDARD: Cause/context → scene
-- THESIS: Bold statement → cause → scene  
-- ATMOSPHERE: Physical environment → cause → scene
-- Tất cả đều có Level anchor tự động ở sentence 1 bởi code
+#### File 3: `write_pov.txt` (line 33 + lines 78-87)
+
+```diff
+ Line 33:
+-Event cause (WHY this event happens): {event_cause}
++Background context (WHY this event happens): {event_cause}
+
+ Lines 78-87:
+   PART 2 — CAUSE/CONTEXT (the setup):
+-    Develop the event_cause field into POV sentences.
+-    This is WHY this event happens — the trigger, the external force.
++    Develop the event_cause field into POV sentences that SET THE STAGE.
++    This is the background situation that MADE this event inevitable.
+     
+-    ✓ "Your father has just died of dysentery. The crown passes to you —
+-       a 13-year-old leper in a kingdom that devours weak rulers."
+-    ✓ "Saladin's army of 26,000 marches toward Jerusalem. Your scouts
+-       count the fires at night. There are too many."
++    ✓ "The most dangerous man alive has unified the entire Muslim world.
++       His name is Saladin. He wants Jerusalem back. Your kingdom is a
++       thin strip of land, and you — a dying leper — are all that stands
++       in his way."
++    ✓ "Your father is gone. Dysentery took him on a campaign in the north.
++       The kingdom cannot survive without a crowned king — Saladin controls
++       both Egypt and Syria, and the barons are already calculating."
+     ✗ "This chapter covers the coronation." (meta)
+     ✗ "It was a difficult time." (vague)
++    ✗ "Saladin marches 26,000 men toward Jerusalem." (immediate action, not background)
+```
+
+### Conflict Check — event_cause
+
+| Potential Conflict | Status |
+|---|---|
+| chapter_plan generates cause → outline copies → writer develops | ✅ Compatible. Chain preserved. |
+| write_pov PART 2 examples vs chapter_plan examples | ✅ Will align (both rewritten) |
+| write_pov says "trigger" in line 80 | ⚠ Must change to "background situation" |
+| user_msg in rewriter.py says "CONTEXT (why this event happens)" | ✅ Already correct label |
+| scene_open in write_pov says "WHERE the event begins" | ✅ No conflict — scene_open = immediate, event_cause = background |
+| validate_sub_key_pov doesn't mention event_cause | ✅ No conflict |
+| phase_plan_pov doesn't generate event_cause | ✅ No conflict |
 
 ---
 
-### Q2 — Closing Types: Tách + Rõ Ràng ✅
+## B. physical_state — Full Audit
 
-**Giải thích hệ thống closing type**:
+### Where physical_state appears:
 
-Hiện tại có **2 layer** dễ nhầm:
+| # | File | Location | Current Text | Change |
+|---|---|---|---|---|
+| 1 | `phase_plan_pov.txt` | Line 136-144 | Output example: had `physical_state` field | ✅ Already removed |
+| 2 | `phase_plan_pov.txt` | Line 172 | Coverage checklist: "body changes distributed as sub_key_data" | ⚪ Keep (already correct) |
+| 3 | `phase_plan_pov.txt` | Line 34-37 | BODY STATE RULE: "NEVER standalone, ALWAYS sub_key_data" | ⚪ Keep (reinforces change) |
+| 4 | `validate_sub_key_pov.txt` | Line 33-36 | CHECK 4: body state as standalone event → move to sub_key_data | ⚪ Keep |
+| 5 | `validate_sub_key_pov.txt` | Line 73 | Output format: `"physical_state": "..."` | ✅ REMOVE field |
+| 6 | `chapter_plan_pov.txt` | Line 104 | Output format: `"physical_state": "..."` | ✅ REMOVE field |
+| 7 | `outline_pov.txt` | Line 8 | Ownership: "age_anchor, physical_state requirements" | ✅ Remove physical_state |
+| 8 | `outline_pov.txt` | Line 140 | Output: `"physical_state": "Healthy appearance..."` | ✅ REMOVE field |
+| 9 | `outline_pov.txt` | Line 169 | Rule #6: "physical_state is MANDATORY for every chapter" | ✅ REMOVE rule |
+| 10 | `audit_pov.txt` | Line 18 | Scope: "opening_style, closing_type, ..., physical_state" | ✅ REMOVE from list |
+| 11 | `audit_pov.txt` | Line 26 | Checklist #3: "physical_state? Body changes MUST show progression" | ✅ REMOVE check |
+| 12 | `audit_pov.txt` | Line 46 | Output type: includes "physical_state" | ✅ REMOVE from enum |
+| 13 | `write_pov.txt` | Line 43 | Template: `Physical state: {physical_state}` | ✅ REMOVE line |
+| 14 | `write_pov.txt` | Line 97 | "Weave sub_key_data and physical_state INTO action" | ✅ Remove "and physical_state" |
+| 15 | `rewriter.py` | Line 1441 | `_NICHE_OUTLINE_FIELDS`: `"{physical_state}": "physical_state"` | ✅ REMOVE entry |
+| 16 | `style JSON` | N/A | Not present | ⚪ N/A |
 
-| Layer | Owner | What | Example |
-|---|---|---|---|
-| **closing_type** (metadata) | Outline AI assigns | HOW to phrase ending | `cold_fact`, `paradox`, `cost`, `weight`, `echo` |
-| **closing content** (rule) | Write prompt defines | WHAT to express | What changed? What was lost? |
+### How body data still flows (no physical_state field):
 
-**Cách hoạt động**:
-1. Outline AI gán `closing_type: "cost"` cho chapter 5
-2. Writer AI đọc → biết: kết thúc chapter 5 phải nêu COST (cái gì đã mất)
-3. Writer viết: `"Every Templar in the garrison is dead. The fortress is ash."`
+```
+Blueprint has physical_state_arc
+  ↓
+phase_plan_pov: BODY STATE RULE says "ALWAYS sub_key_data" (line 34)
+  → AI puts body details in sub_key_data: ["Claw hand deformity worsening", ...]
+  ↓
+validate: CHECK 4 enforces body state never standalone (line 33)
+  ↓
+chapter_plan: copies sub_key_data through (already includes body data)
+  ↓  
+outline: copies sub_key_data into each chapter
+  ↓
+write_pov: "Weave sub_key_data INTO action" (line 97, updated)
+  → Writer sees "Claw hand deformity worsening" in sub_key_data
+  → Weaves: "Your clawed fingers cannot grip the reins"
+```
 
-**4 closing types** (rotation — 3 liên tiếp không được trùng):
+**For characters WITHOUT body progression**: blueprint lacks `physical_state_arc` → no body items in sub_key_data → writer doesn't receive any → doesn't bịa.
 
-| Type | Writer instruction | Example |
+### Conflict Check — physical_state
+
+| Potential Conflict | Status |
+|---|---|
+| phase_plan BODY STATE RULE says "always sub_key_data" | ✅ Aligned — field removed |
+| validate CHECK 4 says "move body state to sub_key_data" | ✅ Aligned — no field to check |
+| chapter_plan output format has `physical_state` | ⚠ Must remove |
+| validate output format has `physical_state` | ⚠ Must remove |
+| outline generates `physical_state` → writer receives it | ⚠ Must remove from both |
+| audit checks physical_state progression | ⚠ Must remove check |
+| `_NICHE_OUTLINE_FIELDS` maps `{physical_state}` | ⚠ Must remove mapping |
+| write_pov template `{physical_state}` placeholder left unreplaced if removed from FIELDS | ⚠ Must remove from template |
+| `_inject_level_anchor` reads `chapter_outline.get("physical_state")` | ⚪ No — only reads age_anchor |
+
+---
+
+## C. Summary of ALL Changes
+
+### Total: 6 files, 16 edits
+
+| File | Edits | Type |
 |---|---|---|
-| `cold_fact` | 1-2 câu consequence, im lặng. Không bình luận. | `"The body count: 700."` |
-| `paradox` | Mâu thuẫn bộc lộ sự thật. | `"You saved the kingdom. Your hand is dead."` |
-| `cost` | Nêu rõ cái đã MẤT hoặc cái GIÁ phải trả. | `"You will never walk again."` |
-| `weight` | 1-2 câu nặng, consequence qua hành động vật lý. | `"The crown sits on a skull."` |
-| `echo` | Chỉ END chapter. Callback về Level 1. | `"The arm still doesn't feel. It never did."` |
-
-**Tại sao cần rotation?** Nếu 3 chapter liên tiếp đều kết bằng `cold_fact` → monotone, nhàm. Rotation tạo variety.
-
-**scene_close vs weight_line** — giữ tách:
-- `scene_close` = kết quả tức thì của action (Outline AI viết) → writer dùng làm skeleton
-- `weight_line` = closing type applied (Writer tạo) → 1-2 câu cuối cùng của chapter
-
-```
-scene_close: "Saladin retreats without a fight."
-            ↓ writer develops into ↓
-weight_line (cost): "You saved the fortress. But you cannot see the
-victory banner — your eyes are already gone."
-```
-
-**Rule**: scene_close và weight_line KHÔNG ĐƯỢC trùng nội dung. scene_close = what happened. weight_line = what it COST.
-
----
-
-### Q3 — Model AI Mapping
-
-Từ code analysis, đây là **bảng đầy đủ** các bước và model:
-
-#### POV Pipeline — Model Tier Map
-
-| # | Step | step_label | Tier | Model | Hardcoded? | Source |
-|---|---|---|---|---|---|---|
-| 1 | **Phase Plan** | `phase_plan` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:1802` |
-| 2 | **Validate Timeline** | `validate_event_timeline` | `flash` | Flash | ✅ **YES** | `rewriter.py:4583` |
-| 3 | **Chapter Planning** | `chapter_planning_pov` | `flash` | Flash | ✅ **YES** | `rewriter.py:5026` |
-| 4 | **Outline** | `outline` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:1905` |
-| 5 | **Audit** | `audit` | `flash` | Flash | ✅ **YES** | `script_creation_tab.py:1932` |
-| 6 | **Write** | `write_ch{NN}` | `tier` (user) | User-selected | ❌ No | `script_creation_tab.py:2151` |
-
-#### Internal Sub-Steps (inside rewriter.py)
-
-| Step | Tier | Hardcoded? | Note |
-|---|---|---|---|
-| Validate sub keys | `flash` | ✅ YES | `rewriter.py:4583` — lightweight JSON fix |
-| Chapter plan (POV) | `flash` | ✅ YES | `rewriter.py:5026` — demote/promote events |
-
-#### `tier` Variable
-
-`tier` = user chọn từ UI dropdown `_combo_tier` (`script_creation_tab.py:2466`). Options: `flash` hoặc `pro`.
-
-**Kết luận**:
-- **3 bước hardcoded flash**: validate, chapter_plan, audit
-- **3 bước user-selected**: phase_plan, outline, write
-- Flash steps là lightweight tasks (JSON fix, metadata check) → hợp lý dùng flash
-- **Audit hardcoded flash là vấn đề** — audit hay rewrite content (vượt scope) vì flash model kém hơn
+| `chapter_plan_pov.txt` | 3 | event_cause definition + examples + output format |
+| `outline_pov.txt` | 4 | event_cause desc + physical_state field/rule/ownership |
+| `audit_pov.txt` | 3 | physical_state scope/check/output |
+| `write_pov.txt` | 4 | event_cause label/examples + physical_state field/weave |
+| `validate_sub_key_pov.txt` | 1 | physical_state output format |
+| `rewriter.py` | 1 | _NICHE_OUTLINE_FIELDS remove physical_state |
 
 > [!IMPORTANT]
-> **Recommendation**: Giữ validate + chapter_plan ở flash (lightweight). Audit nên giữ flash nhưng **thắt chặt scope trong prompt** (chỉ reassign metadata, KHÔNG rewrite content). Nếu vẫn overreach → đổi sang user tier.
+> Tất cả 16 edits đều chỉ ảnh hưởng POV pipeline. Biography pipeline không có files nào trong danh sách này.
 
----
-
-### Q4 — Chống Trùng Lặp / Xung Đột: Rule Ownership Architecture
-
-#### Vấn đề hiện tại
-
-```
-Level anchor rule xuất hiện ở:
-  1. style JSON → core_rules.anti_framework_leak
-  2. style JSON → framework.hook.anchor  
-  3. style JSON → framework.outline_rules.body_chapter_opening
-  4. style JSON → framework.structure.chapter_design
-  5. outline prompt → OPENING STYLE ASSIGNMENT (line 106)
-  6. write prompt → PART 1 LEVEL ANCHOR (line 69-78)
-  7. write prompt → OPENING STYLES (line 120-124)
-  = 7 chỗ, 2 nói "sentence 1", 3 nói "within 2 sentences", 2 nói cả hai
-```
-
-#### Giải pháp: Rule Ownership Table
-
-**Nguyên tắc**: Mỗi rule thuộc về **DÚng 1 file**. Các file khác **KHÔNG ĐƯỢC** lặp lại rule đó, chỉ được nói `"follow the {X} from {source}"`.
-
-| Rule Category | Owner | Other files say |
-|---|---|---|
-| **Level Anchor format** | CODE (inject) | Prompt: "Level anchor is auto-injected. Do NOT write it." |
-| **Opening styles** (standard/thesis/atmosphere) | `outline_pov.txt` | Write prompt: "Follow the opening_style assigned in the outline." |
-| **Closing types** (cold_fact/paradox/cost/weight/echo) | `write_pov.txt` PART 4 | Outline prompt: "Assign closing_type metadata for variety rotation." |
-| **Closing rotation rule** (3 liên tiếp không trùng) | `outline_pov.txt` | Write prompt: DO NOT mention rotation |
-| **POV contract** (you/your/third person) | `write_pov.txt` | Style JSON: brief identity note only |
-| **Sentence rhythm** (staccato/wave/build/stillness) | Style JSON `core_rules.sentence_rhythm` | Write prompt: DO NOT mention |
-| **Vocabulary rules** (action verbs, forbidden words) | Style JSON `core_rules.vocabulary` | Write prompt: DO NOT mention |
-| **Scene test** (place/action/consequence) | `phase_plan_pov.txt` | Chapter plan: reference only |
-| **Event cause** | `chapter_plan_pov.txt` | Outline prompt: "PRESERVE event_cause" |
-| **Scene fields** (open/action/close) | `outline_pov.txt` | Write prompt: "Use scene fields as skeleton" |
-| **Word count** | UI variable `{word_count_rule}` | All prompts: reference only |
-| **Phase labels** | Style JSON `framework.steps` | Phase plan prompt: reference only |
-| **Chapter structure types** (action/transformation/legacy) | `outline_pov.txt` | Write prompt: DO NOT define types |
-| **Physical state** | `phase_plan_pov.txt` generates | Outline: copy. Write: weave into action. |
-| **Zero narrator** | Style JSON `core_rules.zero_narrator_rule` | Write prompt: brief reference |
-| **Anti-framework leak** | `write_pov.txt` CONSTRAINTS | Style JSON: REMOVE |
-| **Special chapters** (Level 1 / End chapter) | `write_pov.txt` | Outline prompt: DO NOT define |
-
-#### Enforcement Pattern — Prompt Header Comment
-
-Mỗi prompt file bắt đầu bằng ownership comment:
-
-```
-# ═══════════════════════════════════════
-# RULE OWNERSHIP — THIS FILE OWNS:
-#   - Scene test (place/action/consequence)
-#   - Event description format
-#   - Same-age independence test  
-#   - Phase labels assignment
-#   - physical_state generation
-#   - _source_map generation
-#
-# THIS FILE DOES NOT OWN (reference only):
-#   - Opening styles → outline_pov.txt
-#   - Closing types → write_pov.txt
-#   - Vocabulary → style JSON
-#   - Level anchor → code injection
-# ═══════════════════════════════════════
-```
-
-#### Cross-Audit Checklist (before any edit)
-
-Khi sửa BẤT KỲ rule nào:
-
-```
-1. Xác định rule thuộc file nào (xem Ownership Table)
-2. Nếu rule KHÔNG thuộc file đang sửa → KHÔNG ĐƯỢC thêm/sửa tại đây
-3. Nếu rule thuộc file đang sửa → sửa tại đây, sau đó:
-   a. Search tất cả file khác có mention rule này không
-   b. Nếu có → xóa/update reference
-   c. Verify không tạo contradiction mới
-4. Update Ownership Table nếu thay đổi ownership
-```
-
----
-
-## Updated Architecture
-
-```
-Phase Plan AI receives:
-  SYSTEM: phase_plan_pov.txt (8K)
-  USER:   Blueprint (40K) + Framework name + Phase labels
-  ❌ NO Style Guide
-
-Outline AI receives:
-  SYSTEM: outline_pov.txt (≤6K) — metadata rules only
-  USER:   Event timeline + Blueprint (40K)
-  ❌ NO full Style Guide (only phase label extract)
-
-Audit AI receives:
-  SYSTEM: audit_pov.txt (≤3K) — metadata-only checklist
-  USER:   Outline only (35K)
-  ❌ NO Style Guide, NO Blueprint
-
-Writer AI receives:
-  SYSTEM: write_pov.txt (≤6K) — structural rules + Style JSON (voice)
-        + Filtered Blueprint + Chapter data + Previous context
-  USER:   Write command
-  ❌ NO full outline
-  ✅ Level anchor injected by CODE after AI output
-```
-
----
-
-## Proposed Changes (Updated)
-
-### Component 1: Style JSON
-
-#### [MODIFY] [narrative_pov_tiểu_sử.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/narrative_pov_tiểu_sử.json)
-
-**KEEP** (voice rules for writer):
-- `core_rules.identity`, `tone`, `sentence_rhythm`, `vocabulary`, `voice_over_clarity`, `pov_rules`, `data_density`, `zero_narrator_rule`
-- `framework.pov_strategy`, `language`, `steps`, `emotional_arc`, `tension_curve`
-- `pipeline_features`
-
-**REMOVE** (moved elsewhere or deleted):
-- `core_rules.anti_framework_leak` → moved to write prompt CONSTRAINTS
-- `core_rules.chapter_ending_protocol` → moved to write prompt PART 4
-- `core_rules.anti_copy` → DELETE (useless)
-- `framework.hook` → DELETE (write prompt SPECIAL CHAPTERS owns this)
-- `framework.pacing.rule` → DELETE (hardcoded chapter numbers)
-- `framework.pacing.chapter_rhythm` → DELETE (write prompt owns flow)
-- `framework.outline_rules` → moved to outline prompt
-- `framework.weight_line_types` → moved to write prompt PART 4
-- `framework.technique_emphasis` → DELETE (redundant)
-- `framework.counter_argument` → DELETE (useless)
-- `framework.anti_patterns` → DELETE (duplicates core_rules)
-- `chapter_rhythm` (top-level) → DELETE (duplicate)
-- `checklist` → DELETE (duplicate of write prompt)
-- `framework.structure.chapter_design` → SIMPLIFY (remove Level anchor mention — code handles)
-
----
-
-### Component 2: Phase Plan — Code Only
-
-#### [KEEP] [system_narrative_phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
-
-Prompt is clean. **Code change only**: stop sending Style Guide.
-
----
-
-### Component 3: Chapter Plan — No Changes
-
-#### [KEEP] [system_narrative_chapter_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_chapter_plan_pov.txt)
-
-Already clean.
-
----
-
-### Component 4: Outline Prompt — Simplify
-
-#### [MODIFY] [system_narrative_outline_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pov.txt)
-
-**Changes**:
-1. KEEP: LEVEL STRUCTURE, SCENE FIELDS, OUTPUT FORMAT, CRITICAL RULES
-2. SIMPLIFY opening styles: remove Level anchor positioning (code handles)
-3. REMOVE lines 59-62 (BEAT references — writer concept)
-4. ADD event_cause requirement
-5. ADD ownership header comment
-
----
-
-### Component 5: Audit Prompt — Restrict Scope
-
-#### [MODIFY] [system_narrative_audit_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pov.txt)
-
-**Changes**:
-1. ADD: "You may ONLY reassign metadata. NEVER rewrite content."
-2. REMOVE: word count check, vocabulary check
-3. Code: stop sending Style + Blueprint
-
----
-
-### Component 6: Write Prompt — Clean Rewrite
-
-#### [REWRITE] [system_narrative_write_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pov.txt)
-
-**NEW structure** (~120 lines):
-
-```
-HEADER: Variables (style_json, blueprint, chapter data, previous_context)
-  ❌ NO {full_outline}
-  ✅ ADD: "Level anchor is auto-injected. Do NOT write it."
-
-SECTION 1 — POV CONTRACT (compact, 10 lines)
-  "You" = subject. Third person = others.
-  Forbidden voices (5 examples).
-
-SECTION 2 — CHAPTER FLOW (4 parts)
-  PART 1: NOTE — Level anchor auto-injected. Start with CAUSE.
-  PART 2: CAUSE — Develop event_cause. No sentence limit.
-  PART 3: SCENE — Use scene_open/action/close. Weave sub_key_data + physical_state.
-  PART 4: WEIGHT LINE — Follow closing_type from outline.
-    Define 4 types HERE (single source).
-    scene_close ≠ weight_line (scene_close = what happened, weight_line = what it cost).
-
-SECTION 3 — SPECIAL CHAPTERS
-  Level 1: viewer IN body, physical omen, hostile world
-  End: death scene + legacy scorecard + echo callback
-
-SECTION 4 — CONSTRAINTS
-  TTS safety, framework leak ban, output format
-```
-
-**Deleted**:
-- Opening styles menu (outline already assigns)
-- Section 3 CLOSING CONTENT RULE (merged into PART 4)
-- Content Principles (redundant with flow)
-- "WHAT IS COMING?" closing option (contradicts "no forward tension")
-
----
-
-### Component 7: Code Changes
-
-#### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
-
-**7 changes** (all gated behind `_is_pov`):
-
-1. **`generate_narrative_phase_plan()`** (~4418): Remove Style Guide from user_content
-2. **`generate_narrative_outline()`** (~5260): Replace full Style Guide → phase labels extract only
-3. **`audit_outline()`** (~5327): Remove Style Guide + Blueprint from user_content
-4. **`write_from_blueprint()`** (~5667): Remove `{full_outline}` replacement
-5. **`write_from_blueprint()`** (after API call): Add `_inject_level_anchor()` post-processing
-6. **New helper**: `_extract_phase_labels(style_json, framework_name)` → compact phase-only extract
-7. **New helper**: `_inject_level_anchor(text, chapter_outline)` → prepend Level line
-
----
-
-## Verification Plan
-
-### Automated
-1. Run pipeline on King Baldwin IV → compare before/after
-2. Token count check: measure SYSTEM+USER size per stage
-3. Verify Level anchor appears in sentence 1 of ALL chapters
-4. Verify `STYLE GUIDE` NOT in phase_plan/audit debug files
-5. Verify biography pipeline NOT affected (run biography test)
-
-### Manual
-1. Read chapter output → verify 4-part structure
-2. Read audit output → verify NO content rewrites
-3. Compare quality with biography pipeline
-
----
-
-## Execution Order
-
-| Step | File | Risk | Depends On |
-|---|---|---|---|
-| 0 | Backup all POV files | None | — |
-| 1 | `narrative_pov_tiểu_sử.json` | Medium | — |
-| 2 | `system_narrative_write_pov.txt` | High | Step 1 |
-| 3 | `system_narrative_outline_pov.txt` | Medium | Step 1 |
-| 4 | `system_narrative_audit_pov.txt` | Low | — |
-| 5 | `core/rewriter.py` — data injection | High | Steps 1-4 |
-| 6 | `core/rewriter.py` — Level anchor inject | Medium | Step 2 |
-| 7 | Test run + verify | — | All |
-
-> [!CAUTION]
-> **Biography Protection**: ALL code changes MUST be gated behind `_is_pov` checks. Biography pipeline must NOT be affected.
+> [!NOTE]
+> Issue #2 (Level anchor strip) đã được fix. Không cần thay đổi thêm.
