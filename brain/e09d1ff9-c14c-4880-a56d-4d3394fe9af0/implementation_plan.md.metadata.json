@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Final implementation plan (v3) for converting POV biography pipeline from phase-based to event timeline. Includes: (1) Phase plan outputs flat event_timeline with event_description, (2) Validate checks completeness + auto-fixes, (3) Outline builds scene_open/action/close from events + handles chapter splitting, (4) Rollback strategy via backup folder. All changes are POV-only behind _is_pov branching.",
-  "updatedAt":  "2026-05-02T02:02:25.688926700Z",
-  "version":  "17",
+  "summary":  "Complete rebuild plan for the POV Biography pipeline addressing 27 rule conflicts, ~81K chars token waste per run, and structural failures. The plan establishes 6 design principles (Single Source of Truth, Stage-Appropriate Data, No Style Leakage, etc.) and proposes changes across 7 components:\n\n1. Style JSON — strip to voice-only rules, remove all structural/outline metadata, unify Level Anchor to always sentence 1\n2. Phase Plan prompt — no prompt changes, code stops sending Style Guide\n3. Chapter Plan prompt — no changes needed\n4. Outline prompt — remove writer-facing rules, simplify opening style definitions\n5. Audit prompt — restrict scope to metadata-only fixes, stop sending Style Guide + Blueprint\n6. Write prompt — full rewrite from 234→120 lines, eliminate all rule duplication, merge closing rules into single PART 4\n7. Code changes — 7 targeted modifications in rewriter.py gated behind _is_pov checks\n\n3 open questions require user decision: opening style redefinition, scene_close vs weight_line separation, and audit model choice.",
+  "updatedAt":  "2026-05-02T11:26:25.341965700Z",
+  "version":  "18",
   "requestFeedback":  true
 }
