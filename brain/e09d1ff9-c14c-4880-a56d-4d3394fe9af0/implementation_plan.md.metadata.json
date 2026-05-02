@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Updated implementation plan after user feedback. Key changes: (1) Scene fields collapsed to single event_description, (2) Phase plan only lists age milestones + independent events, outline handles chapter splitting, (3) Validate step checks completeness instead of promote/demote. Clearer separation of responsibilities between steps.",
-  "updatedAt":  "2026-05-02T01:46:45.737608900Z",
-  "version":  "16",
+  "summary":  "Final implementation plan (v3) for converting POV biography pipeline from phase-based to event timeline. Includes: (1) Phase plan outputs flat event_timeline with event_description, (2) Validate checks completeness + auto-fixes, (3) Outline builds scene_open/action/close from events + handles chapter splitting, (4) Rollback strategy via backup folder. All changes are POV-only behind _is_pov branching.",
+  "updatedAt":  "2026-05-02T02:02:25.688926700Z",
+  "version":  "17",
   "requestFeedback":  true
 }

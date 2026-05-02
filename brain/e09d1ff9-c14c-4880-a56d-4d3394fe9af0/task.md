@@ -1,10 +1,26 @@
-# Task: Nâng cấp Step 2 Pipeline
+# Event Timeline Pipeline — Task Tracker
 
-- [x] 1. Upgrade Step 2c prompt (World Bible) — factions, heraldry, architecture
-- [x] 2. Upgrade Step 2a prompt (Characters) — 5-item visual_description, fix real_name → original_name
-- [x] 3. Upgrade Step 2b prompt (Locations) — Architecture, Environment, Props, Atmosphere, camera_angle
-- [x] 4. Reorder: 2c → 2a → 2b (code)
-- [x] 5. Inject World Bible into Step 2a code
-- [x] 6. Inject World Bible into Step 2b code
-- [x] 7. Verify _resolve_character_info uses original_name (already correct)
-- [x] 8. Test import — OK
+- [x] Step 0: Backup prompts → `_backup_v1_pov/`
+- [x] Step 1: Rewrite phase plan prompt (event_timeline output)
+- [x] Step 2: Rewrite validate prompt (completeness check)
+- [x] Step 3: Code validate — add `_is_pov` branch + `_validate_event_timeline_pov()`
+- [x] Step 4: Rewrite outline prompt (scene_open/action/close + event_description copy)
+- [x] Step 5: Code apply_chapter_splits — add `_is_pov` branch (1 event = 1 chapter)
+- [x] Step 6: Minor update audit prompt (scene fields check)
+- [x] Step 7: Code write_from_blueprint — pass scene fields in user message
+- [x] Step 8: Code changes:
+  - [x] `generate_narrative_outline()` — route event_timeline for POV
+  - [x] `generate_narrative_phase_plan()` — validate event_timeline for POV
+  - [x] `script_creation_tab.py` — event_timeline fallback + log message
+- [x] Syntax check — both files compile clean
+- [x] **AUDIT — Found & Fixed 4 Bugs:**
+  - [x] BUG 1: `_extract_chapter_blueprint` — source_map missed POV data (no main_key_data)
+    - Fix: add event_description + scene fields to source_map lookup items
+  - [x] BUG 2: Safety error message — showed empty key_data for POV
+    - Fix: show event_description in error hint
+  - [x] BUG 3: `phase_data` saving — POV events use `phase_label`/`event_title` not `phase`
+    - Fix: fallback field names + event-specific summary format
+  - [x] BUG 4: Write prompt — `{main_key_data}` empty for POV, scene fields not in system prompt
+    - Fix: add `{event_description}`, `{scene_open/action/close}` to write prompt + `_NICHE_OUTLINE_FIELDS`
+- [x] Final syntax check — both files compile clean
+- [ ] Step 9: Test Baldwin IV

@@ -1,0 +1,16 @@
+# Event Timeline Pipeline — Task Tracker
+
+- [x] Step 0: Backup prompts → `_backup_v1_pov/`
+- [x] Step 1: Rewrite phase plan prompt (event_timeline output)
+- [x] Step 2: Rewrite validate prompt (completeness check)
+- [x] Step 3: Code validate — add `_is_pov` branch + `_validate_event_timeline_pov()`
+- [x] Step 4: Rewrite outline prompt (scene_open/action/close fields)
+- [x] Step 5: Code apply_chapter_splits — add `_is_pov` branch (1 event = 1 chapter)
+- [x] Step 6: Minor update audit prompt (scene fields check)
+- [x] Step 7: Code write_from_blueprint — pass scene fields in user message
+- [x] Step 8: Code changes:
+  - [x] `generate_narrative_outline()` — route event_timeline for POV
+  - [x] `generate_narrative_phase_plan()` — validate event_timeline for POV
+  - [x] `script_creation_tab.py` — event_timeline fallback + log message
+- [x] Syntax check — both files compile clean
+- [ ] Step 9: Test Baldwin IV

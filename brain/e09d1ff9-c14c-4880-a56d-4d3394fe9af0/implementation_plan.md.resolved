@@ -1,22 +1,40 @@
-# Chuyển Phase Plan sang Event Timeline — POV Biography (v2)
+# Chuyển Phase Plan sang Event Timeline — POV Biography (Final)
 
-## Mô tả vấn đề
+## Tóm tắt
 
-Pipeline hiện tại gom events vào 6 life phases → phân loại main/sub → outline tách chapters.
-Kết quả: events mô tả quá ngắn, AI viết cụt lủn, nhiều bước trung gian gây mâu thuẫn.
+Chuyển pipeline POV từ phase-based grouping sang flat event timeline. Mỗi event có mô tả đầy đủ (mở→đóng). Outline tách/gộp chapters. Validate kiểm tra completeness.
 
-## Phương án mới — Phân rõ trách nhiệm từng bước
+## Rollback Strategy
+
+> [!IMPORTANT]
+> Trước khi sửa bất kỳ file nào, backup toàn bộ version hiện tại.
 
 ```
-PHASE PLAN       → Liệt kê mốc tuổi + sự kiện (tuyến tính, mỗi event mô tả đầu→cuối)
+prompts/_backup_v1_pov/
+  ├── system_narrative_phase_plan_pov.txt     (bản gốc)
+  ├── system_narrative_outline_pov.txt        (bản gốc)
+  ├── system_validate_sub_key_pov.txt         (bản gốc)
+  └── system_narrative_audit_pov.txt          (bản gốc)
+```
+
+- **Prompts**: Restore từ `_backup_v1_pov/`
+- **Code**: Tất cả thay đổi nằm sau `if _is_pov:` → revert chỉ POV paths, các niche khác không ảnh hưởng
+- **Write prompt**: KHÔNG sửa → không cần rollback
+
+---
+
+## Pipeline Flow
+
+```
+PHASE PLAN       → Liệt kê mốc tuổi + sự kiện tuyến tính (event_description 2-4 câu)
        ↓
-VALIDATE         → Kiểm tra: đúng mốc tuổi? sự kiện đầy đủ? sót mốc nào không?
+VALIDATE         → Kiểm tra completeness + auto-fix (tuổi đúng? sót mốc? event đủ mở-đóng?)
        ↓
-OUTLINE          → Map events → chapters. Quyết tách/gộp. Gán opening/closing style.
+OUTLINE          → Map events → chapters. Dựng scene_open/action/close. Quyết tách/gộp.
        ↓
 AUDIT            → Kiểm tra outline structure
        ↓
-WRITE            → Viết nội dung chi tiết
+WRITE            → Viết chapter (nhận scene fields + 3 beats)
 ```
 
 ---
@@ -25,27 +43,27 @@ WRITE            → Viết nội dung chi tiết
 
 ---
 
+### Step 0: Backup
+
+#### [NEW] prompts/_backup_v1_pov/
+
+Copy 4 files hiện tại vào backup folder trước khi sửa.
+
+---
+
 ### Component 1: Phase Plan Prompt
 
 #### [MODIFY] [system_narrative_phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
 
-**Trách nhiệm**: Liệt kê sự kiện theo tuyến tính thời gian. Không quyết chapter count. Không tách chapter.
+**Trách nhiệm**: Liệt kê sự kiện tuyến tính theo tuổi. KHÔNG quyết chapter count/split.
 
 **Giữ nguyên:**
-- Scene Test (3 requirements: Place + Action + Consequence)
-- Body State Rule (body state = sub_key_data, NEVER standalone event)
+- Scene Test (Place + Action + Consequence)
+- Body State Rule (body state = sub_key_data)
 - Source tracing (_source_map)
+- 6 phase labels (Nguồn Gốc → Kết Thúc) — chỉ làm tag
 
-**Thay đổi:**
-
-| Hiện tại | Mới |
-|---|---|
-| Gom events vào 6 phases | Flat list sắp xếp theo tuổi |
-| `main_key_data`: 1 dòng tóm tắt | `event_description`: 2-4 câu mô tả event từ mở đầu đến kết thúc |
-| Phase label = structural driver | Phase label = tag phân loại (giữ cho pacing) |
-| `node_count` per phase | Không cần — mỗi item = 1 event |
-
-**Output format mới:**
+**Output format:**
 
 ```json
 {
@@ -57,37 +75,29 @@ WRITE            → Viết nội dung chi tiết
       "age": 9,
       "phase_label": "Nguồn Gốc",
       "event_title": "The Numb Arm",
-      "event_description": "In the courtyard of Jerusalem, noble boys play a game of endurance — digging nails into each other's skin. A boy digs his nails into your right arm. Blood beads. You feel nothing. Your tutor William of Tyre grabs your wrist and presses a lit candle to your skin. Nothing. His face goes white.",
+      "event_description": "In the courtyard of Jerusalem, noble boys play endurance games. A boy digs nails into your arm — blood beads but you feel nothing. Your tutor grabs your wrist, presses a candle to your skin. Nothing. His face goes white.",
       "sub_key_data": ["Born healthy, resembling father Amalric", "Mother Agnes banished from court"],
       "physical_state": "Healthy appearance, localized numbness in right arm"
-    },
-    {
-      "event_id": 2,
-      "age": 13,
-      "phase_label": "Nguồn Gốc",
-      "event_title": "The Boy King",
-      "event_description": "Your father dies of dysentery. In the Church of the Holy Sepulchre, the Patriarch lowers a gold crown onto your head. Barons kneel — but some are already calculating. You are a 13-year-old leper ruling a kingdom surrounded by enemies.",
-      "sub_key_data": ["Lesions visible at coronation", "Kingdom = thin strip between sea and desert"],
-      "physical_state": "Early lesions on knuckles and jawline"
     }
   ],
   "_source_map": { ... }
 }
 ```
 
-**event_description** — Rules:
-- 2-4 câu, bắt đầu bằng **nơi chốn** (where), kể đến **hành động** (what), kết bằng **hậu quả** (consequence)
-- Phải mô tả event từ **mở đầu đến kết thúc** — không dừng giữa chừng
-- AI tạo từ **blueprint data** (life_phases, turning_points, conflicts, achievements...)
-- KHÔNG phải copy-paste blueprint — mà **synthesize** thành 1 scene mạch lạc
+**event_description rules:**
+- 2-4 câu, tổng hợp từ blueprint (life_phases, turning_points, conflicts...)
+- Bắt đầu bằng WHERE → WHAT happens → CONSEQUENCE
+- Mô tả event **từ mở đầu đến kết thúc** — không dừng giữa chừng
 
-**Phase labels** — giữ 6 labels (Nguồn Gốc → Kết Thúc):
-- Chỉ làm **tag** cho pacing guidance (style JSON dùng labels để phân fast/slow/heavy)
-- KHÔNG gom nhóm events, KHÔNG quyết chapter structure
+**Sự kiện cùng tuổi — 3 tiêu chí INDEPENDENCE:**
 
-**Sự kiện cùng tuổi:**
-- Cùng tuổi + cùng bối cảnh liên tục = **1 event** (event_description kể hết)
-- Cùng tuổi + sự kiện **độc lập** không liên quan nhau = **events riêng** (event_id khác nhau)
+| Tiêu chí | Độc lập → tách | Liên tục → gộp |
+|---|---|---|
+| Nơi chốn | Khác place | Cùng place / chuyển tiếp tự nhiên |
+| Nhân quả | A kết thúc KHÔNG gây ra B | A → trực tiếp dẫn đến B |
+| Đối tượng | Khác actors chính | Cùng actors |
+
+Cả 3 tiêu chí đều phải "độc lập" → mới tách. Bất kỳ 1 tiêu chí "liên tục" → gộp.
 
 ---
 
@@ -95,57 +105,21 @@ WRITE            → Viết nội dung chi tiết
 
 #### [MODIFY] [system_validate_sub_key_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pov.txt)
 
-**Trách nhiệm mới**: Kiểm tra **tính đầy đủ và chính xác** của event_timeline.
+**Trách nhiệm mới**: Kiểm tra tính đầy đủ + chính xác của event_timeline. **Auto-fix tất cả.**
 
-**KHÔNG còn**: promote/demote sub_key_data. Logic cũ bỏ hoàn toàn.
+**Checks + auto-fix:**
 
-**Validate checks:**
+| Check | Phát hiện | Auto-fix |
+|---|---|---|
+| Sai tuổi | age ≠ blueprint `age_timeline` | Sửa age |
+| Event thiếu consequence | event_description không có hậu quả | Bổ sung từ blueprint |
+| Sót mốc tuổi quan trọng | `turning_points` / `key_relationships` (conflict) / `death_and_funeral` không có trong timeline | Tạo event mới, insert đúng vị trí |
+| Body state là standalone event | event_description chỉ mô tả body state, không có action | Chuyển vào sub_key_data của event gần nhất, xóa event |
+| Thứ tự tuổi sai | ages không tăng dần | Sắp xếp lại |
+| Cùng tuổi gộp nhầm | 2 events độc lập bị gộp (3 tiêu chí) | Tách thành 2 events |
+| Cùng tuổi tách nhầm | 2 events liên tục bị tách (nhân quả trực tiếp) | Gộp lại 1 event |
 
-1. **Mốc tuổi đúng không?** — So sánh event ages với `age_timeline` trong blueprint. Sai tuổi → fix.
-
-2. **Event mở và đóng đầy đủ?** — Mỗi event_description có:
-   - Nơi chốn (WHERE)
-   - Hành động (WHAT)
-   - Hậu quả/kết thúc (CONSEQUENCE)
-   - Nếu thiếu → ghi nhận cần bổ sung
-
-3. **Sót mốc tuổi quan trọng?** — So sánh event_timeline với blueprint sections:
-   - `turning_points`: mỗi turning point phải xuất hiện
-   - `key_relationships` với conflict/betrayal: phải có event
-   - `death_and_funeral`: phải có
-   - Nếu sót → ghi nhận mốc cần thêm
-
-4. **Body state là event?** — Nếu event_description chỉ mô tả body state thay đổi mà không có action → flag để chuyển vào sub_key_data
-
-**Output format:**
-
-```json
-{
-  "validation_result": "PASS" | "NEEDS_FIX",
-  "fixes": [
-    {
-      "type": "age_error",
-      "event_id": 3,
-      "current_age": 15,
-      "correct_age": 16,
-      "source": "age_timeline"
-    },
-    {
-      "type": "missing_milestone",
-      "age": 22,
-      "description": "Siege of Kerak — blind king on litter",
-      "source": "turning_points.Siege of Kerak",
-      "insert_after_event_id": 7
-    },
-    {
-      "type": "incomplete_event",
-      "event_id": 5,
-      "missing": "consequence",
-      "suggestion": "Add what happened after the charge"
-    }
-  ]
-}
-```
+**Output**: event_timeline đã fix + validation log (ghi rõ từng fix).
 
 ---
 
@@ -153,21 +127,34 @@ WRITE            → Viết nội dung chi tiết
 
 #### [MODIFY] [system_narrative_outline_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_outline_pov.txt)
 
-**Trách nhiệm**: Nhận event_timeline (đã validate) → tạo chapters.
+**Trách nhiệm**: Nhận event_timeline (đã validate) → tạo chapters + dựng scene fields.
 
-**Mapping rules:**
-- **Mặc định**: 1 event = 1 chapter
-- **Tách chapter**: Chỉ khi cùng tuổi có events **độc lập** (đã tách ở phase plan). Outline giữ nguyên.
-- **Gộp chapter**: Nếu 2 events liền kề (cùng tuổi, cùng bối cảnh) bị tách nhầm ở phase plan → outline gộp lại thành 1 chapter.
+**Mapping**: 1 event = 1 chapter (mặc định). Event_timeline đã xử lý tách/gộp ở validate.
 
-**Outline thêm vào mỗi chapter:**
-- `chapter_title`: "Level N: [Emotional Label]"
-- `opening_style`: standard / callback / thesis / atmosphere
-- `closing_type`: cold_fact / paradox / forward_pull / weight / echo
-- `chapter_structure`: action_scene / transformation_scene / legacy_close
-- `emotional_beat`: dread / awe / weight...
-- `age_anchor`: "You are [age]"
-- Copy `event_description`, `sub_key_data`, `physical_state` từ event_timeline
+**Thêm scene fields** — Outline tách `event_description` thành 3 fields cho writer:
+
+```json
+{
+  "chapter_number": 1,
+  "chapter_title": "Level 1: The Numb Arm",
+  "scene_open": "In the courtyard of Jerusalem, noble boys play endurance games — digging nails into each other's skin.",
+  "scene_action": "A boy digs his nails into your right arm. Blood beads. You feel nothing. You don't flinch.",
+  "scene_close": "Your tutor grabs your wrist, presses a lit candle to your skin. Nothing. His face goes white.",
+  "sub_key_data": ["Born healthy, resembling father Amalric", "Mother Agnes banished"],
+  "physical_state": "Healthy appearance, localized numbness",
+  "age_anchor": "You are 9 years old",
+  "opening_style": "standard",
+  "closing_type": "cold_fact",
+  "chapter_structure": "action_scene",
+  "emotional_beat": "dread"
+}
+```
+
+**Scene fields rules:**
+- `scene_open`: WHERE + setup (1-2 câu)
+- `scene_action`: WHAT the character does/faces (1-2 câu) 
+- `scene_close`: CONSEQUENCE — what changed (1-2 câu)
+- Tổng 3 fields ≈ event_description nhưng structured rõ ràng hơn
 
 **Giữ nguyên**: Level format, rotation rules (3 consecutive ≠ same style/closing), variety constraints.
 
@@ -177,10 +164,7 @@ WRITE            → Viết nội dung chi tiết
 
 #### [NO CHANGE] [system_narrative_write_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_write_pov.txt)
 
-3-beat rule đã đủ:
-- BEAT 1 (SCENE) ← `event_description` giờ có đầy đủ open→action→close
-- BEAT 2 (CONTEXT) ← `sub_key_data` cho texture
-- BEAT 3 (FORWARD TENSION) ← AI tự viết
+3-beat rule đã đủ. Writer nhận scene_open/action/close → viết chapter đầy đủ.
 
 ---
 
@@ -188,26 +172,26 @@ WRITE            → Viết nội dung chi tiết
 
 #### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
 
-**5a. `apply_chapter_splits`** (line 4766)
-- POV path: đọc `event_timeline[]` thay vì `phase_chapter_plan[]`
+**5a. `apply_chapter_splits`** (line 4766) — POV path:
+- Đọc `event_timeline[]` thay vì `phase_chapter_plan[]`
 - Mỗi event = 1 chapter. Gán chapter numbers tuần tự.
-- Last event = chapter_type "end"
+- Last event → chapter_type "end"
 - `phase_label` → `framework_step`
-- Logic đơn giản hơn: không cần merge/split
+- Bỏ merge/split logic cho POV (đã xử lý ở validate)
 
-**5b. `validate_phase_plan_sub_keys`** (line 4454)
-- Đổi tên hàm: `validate_event_timeline` (POV path)
-- Input: `event_timeline[]` + blueprint
-- Output: validation result + fixes (age errors, missing milestones, incomplete events)
-- Auto-apply fixes (sửa age, thêm missing events, bổ sung event description)
-- KHÔNG còn promote/demote logic
+**5b. `validate_phase_plan_sub_keys`** (line 4454) — POV path:
+- Thêm branch `if _is_pov:` → gọi validate mới (completeness check)
+- Nhận `event_timeline[]` + blueprint
+- Auto-fix: sửa age, thêm missing events, bổ sung event description, chuyển body state
+- Return: event_timeline đã fix + validation log
+- Niche khác: giữ nguyên logic promote/demote hiện tại
 
-**5c. `write_from_blueprint`** (line 5205+)
-- Chapter outline giờ có `event_description` (2-4 câu) thay vì `main_key_data: ["1 dòng"]`
-- Truyền vào prompt rõ ràng hơn → AI có material viết chapter đầy đủ
+**5c. `write_from_blueprint`** (line 5205+) — POV path:
+- Chapter outline có `scene_open`, `scene_action`, `scene_close`
+- Truyền 3 fields vào user prompt thay vì `main_key_data: ["1 dòng"]`
 
-**5d. `_extract_chapter_blueprint`** (blueprint filter)
-- Cần nhận `event_description` field để filter blueprint data tương ứng
+**5d. `_extract_chapter_blueprint`** (blueprint filter) — POV path:
+- Sử dụng `event_description` + `sub_key_data` để filter blueprint data
 
 ---
 
@@ -215,33 +199,44 @@ WRITE            → Viết nội dung chi tiết
 
 #### [MINOR] [script_creation_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py)
 
-- Pipeline flow: đọc `event_timeline` thay vì `phase_chapter_plan` từ phase plan output
-- Validate step: call `validate_event_timeline` thay vì `validate_phase_plan_sub_keys` (POV path)
-- Lưu `_phase_plan_validated.json` vẫn giữ tên (backward compat) nhưng content là event_timeline + validation log
+- Pipeline data flow: đọc `event_timeline` thay vì `phase_chapter_plan` cho POV
+- Validate call: route POV → completeness check
+- Save files: `_phase_plan.json` vẫn giữ tên (backward compat), content chứa `event_timeline`
 
 ---
 
-## Tóm tắt thay đổi
+### Component 7: Audit Prompt
 
-| File | Mức độ | Ghi chú |
-|---|---|---|
-| `system_narrative_phase_plan_pov.txt` | **Major rewrite** | Output: event_timeline (flat, chronological) |
-| `system_validate_sub_key_pov.txt` | **Major rewrite** | Completeness check thay vì promote/demote |
-| `system_narrative_outline_pov.txt` | **Moderate** | Nhận event_timeline → map chapters |
-| `system_narrative_write_pov.txt` | **No change** | 3-beat rule đã đủ |
-| `system_narrative_audit_pov.txt` | **Minor** | Format awareness |
-| `rewriter.py` | **Moderate** | apply_chapter_splits, validate, write_from_blueprint |
-| `script_creation_tab.py` | **Minor** | Pipeline data flow |
+#### [MINOR] [system_narrative_audit_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_audit_pov.txt)
+
+- Nhận biết format mới (scene_open/action/close thay vì main_key_data)
+- Logic audit giữ nguyên: check structure, variety, chronological order
+
+---
+
+## Execution Order
+
+1. **Backup** → `prompts/_backup_v1_pov/`
+2. **Phase plan prompt** → rewrite
+3. **Validate prompt** → rewrite  
+4. **Code validate** → thêm `_is_pov` branch
+5. **Outline prompt** → rewrite (thêm scene fields)
+6. **Code apply_chapter_splits** → thêm `_is_pov` branch
+7. **Audit prompt** → minor update
+8. **Code write_from_blueprint** → truyền scene fields
+9. **Code script_creation_tab** → data flow
+10. **Test** → chạy Baldwin IV, so sánh
 
 ## Verification Plan
 
 ### Automated Tests
-- Chạy pipeline Baldwin IV với prompt mới
-- So sánh: event count, chapter count, word count per chapter
-- Verify: mỗi chapter có Level anchor + 3 beats + event từ mở→đóng
+- Chạy pipeline Baldwin IV
+- Verify: event_timeline có đủ mốc tuổi (9, 13, 16, 18, 20, 21, 22, 23)
+- Verify: validate phát hiện + fix issues
+- Verify: mỗi chapter có scene_open/action/close + Level anchor + 3 beats
+- So sánh word count vs reference (149-196 words/chapter)
 
 ### Manual Verification
-- So sánh chapter 1 mới vs reference chapter 1
-- Kiểm tra: event_description có đủ WHERE + WHAT + CONSEQUENCE
-- Kiểm tra: validate phát hiện mốc tuổi sót
-- Kiểm tra: body state không bao giờ là standalone event
+- So sánh chapter 1 mới vs reference ch1
+- Kiểm tra forward tension ở mỗi ending
+- Kiểm tra body state woven, không standalone
