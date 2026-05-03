@@ -1,39 +1,35 @@
-# Fix 3 Issues: Scene Test Nguồn Gốc + Log "?" + Gap Rule
+# Fix 3 Issues: Scene Test Agency + Log "?" + Gap Rule
 
-## Issue #1: Chapter plan demote events Nguồn Gốc (birth, childhood)
+## Issue #1: CRITERION 1 — CHARACTER AGENCY gây demote sai
 
 ### Root Cause
 
-`chapter_plan_pov.txt` có **Scene Test duplicate** (lines 7-53) với 3 tiêu chí:
-- CRITERION 1: CHARACTER AGENCY
-- CRITERION 2: CONFLICT  
-- CRITERION 3: SCENE POTENTIAL
+Scene Test có 3 criteria. CRITERION 1 (CHARACTER AGENCY) yêu cầu nhân vật phải **actively do something**. Nhưng phase Nguồn Gốc **by design** là events xảy ra VỚI nhân vật, không phải nhân vật hành động → mọi event Nguồn Gốc đều fail.
 
-Scene Test này đã được áp dụng ở **phase_plan_pov.txt** (bước trước). Nhưng chapter_plan lại **chạy lại Scene Test lần nữa**, và lần này nó demote cả events Nguồn Gốc (birth, childhood) vì nhân vật chưa có agency.
-
-Dù có Rule #1 (line 129): *"Do NOT demote events from the ORIGINAL phase plan"* — AI vẫn vi phạm vì Scene Test section ở đầu prompt quá mạnh, AI ưu tiên nó hơn rule ở cuối.
+CRITERION 1 tồn tại ở **2 file**:
+- `chapter_plan_pov.txt` lines 13-18
+- `phase_plan_pov.txt` (cũng có Scene Test)
 
 ### Proposed Fix
 
-**Xóa toàn bộ Scene Test section** (lines 7-53) khỏi `chapter_plan_pov.txt`.
+**Xóa CRITERION 1 — CHARACTER AGENCY** khỏi cả 2 file.
 
-Lý do: Phase plan đã chạy Scene Test rồi. Chapter plan chỉ cần:
-- Evaluate events **ADDED by validation step** (dùng logic đơn giản: event có đủ scene material không?)
-- Generate event_cause cho mỗi event
+Scene Test còn lại 2 criteria:
+- **CONFLICT**: Có opposition, stakes, tension không?
+- **SCENE POTENTIAL**: Có thể viết thành chapter với action, detail, consequence không?
 
-Thay toàn bộ Scene Test section bằng instruction ngắn gọn:
+Decision: **BOTH criteria pass → KEEP. ANY fails → DEMOTE.**
 
-```
-Events from the ORIGINAL phase plan have ALREADY passed Scene Test.
-Do NOT re-evaluate or demote them.
+Kiểm chứng với Saladin events:
 
-For events ADDED by the validation step:
-  - If the added event has enough material for a full chapter → KEEP
-  - If the added event is thin (no specific scene, just a time bridge) → DEMOTE to sub_key_data of nearest related event
-```
+| Event | CONFLICT | SCENE | Result |
+|---|---|---|---|
+| Flight in the Dark (age 0) | ✅ Trốn thống đốc | ✅ Vượt sông đêm | **KEEP** ✅ |
+| Scholar of Damascus (age 7) | ❌ Không opposition | ❌ Học hành, thin | **DEMOTE** ✅ |
+| Entering the Service (age 14) | ❌ Routine | ❌ Training, thin | **DEMOTE** ✅ |
+| Siege of Alexandria (age 29) | ✅ Bị bao vây | ✅ 75 ngày chiến đấu | **KEEP** ✅ |
 
-> [!IMPORTANT]
-> Rule #1 (line 129) vẫn giữ nguyên để reinforce.
+→ Kết quả đúng: giữ events có drama, bỏ events thin.
 
 ---
 
@@ -41,79 +37,48 @@ For events ADDED by the validation step:
 
 ### Root Cause
 
-Code ở `rewriter.py` line 4728:
-```python
-log_callback(f"    ➕ Added: event {fix.get('new_event_id')} — age {fix.get('age')}: {fix.get('event_title', '?')}")
-```
+`rewriter.py` line 4728: `fix.get('event_title', '?')` — nhưng validate output **không có `event_title`** trong fixes array. Title nằm trong validated timeline.
 
-Validate prompt trả fixes array với format:
-```json
-{"type": "missing_milestone", "new_event_id": 2, "age": 7, "reason": "..."}
-```
-→ **Không có `event_title` trong fix dict**. Title nằm trong validated timeline, không nằm trong fixes.
+### Fix
 
-### Proposed Fix
-
-Sau khi apply fixes, code đã có validated timeline (`event_timeline`). Lookup title từ timeline bằng `new_event_id`:
-
-```python
-# Lookup title from validated timeline
-title = "?"
-for ev in validated_timeline:
-    if ev.get("event_id") == fix.get("new_event_id"):
-        title = ev.get("event_title", "?")
-        break
-log_callback(f"    ➕ Added: event {fix.get('new_event_id')} — age {fix.get('age')}: {title}")
-```
+Lookup title từ validated timeline bằng `new_event_id`.
 
 ---
 
-## Issue #3: "gap > 10 years" rule
+## Issue #3: "gap > 10 years" rule tạo events rỗng
 
-### Where It Exists
+### Where
 
-1. **`system_validate_sub_key_pov.txt`** line 27:
-   > `d. blueprint.age_timeline → no gap > 10 years without a bridge in sub_key_data`
+- `validate_sub_key_pov.txt` line 27
+- `phase_plan_pov.txt` line 171
 
-2. **`system_narrative_phase_plan_pov.txt`** line 171:
-   > `d. age_timeline: all major ages covered (no gaps > 10 years without bridge in sub_key_data)`
+### Fix
 
-### Why It Was Added
-
-Rule này được thêm trong conversation `9bfa7894` (Establishing New Content Niche) khi port biography framework sang POV. Ý tưởng: tránh time jump quá lớn (0 → 29) khiến viewer mất kết nối. Nhưng thực tế:
-
-- Validate thêm bridging events (age 7, 14) → events này "thin" (không có conflict, không có scene)
-- Chapter plan demote hết → lãng phí bước thêm events
-- Nhiều nhân vật lịch sử có childhood yên lặng (Saladin, Genghis Khan) → gap là **tự nhiên**
-- Time jumps có thể xử lý bằng opening_style ("At twenty-seven, you mount your first warhorse...")
-
-### Proposed Fix
-
-**Xóa rule gap > 10 years** ở cả 2 file. Giữ lại các check khác (turning_points, death_and_funeral, key_relationships).
-
-> [!WARNING]
-> Nếu xóa rule này, sẽ có trường hợp nhân vật nhảy từ birth (age 0) thẳng đến tuổi trưởng thành. Nhưng đây là **đúng** — nếu childhood không có event đáng kể thì không cần ép thêm chapter rỗng.
+**Xóa** dòng `d. age_timeline → no gap > 10 years...` ở cả 2 file.
 
 ---
 
 ## Files Changed
 
 ### [MODIFY] [chapter_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_chapter_plan_pov.txt)
-- Xóa Scene Test section (lines 7-53)
-- Thay bằng instruction ngắn: original events already passed, only evaluate ADDED events
-
-### [MODIFY] [validate_sub_key_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pov.txt)
-- Xóa line 27: `d. blueprint.age_timeline → no gap > 10 years...`
+- Xóa CRITERION 1 — CHARACTER AGENCY (lines 13-18)
+- Cập nhật DECISION: 2 criteria (CONFLICT + SCENE POTENTIAL)
+- Renumber criterion 2 → 1, criterion 3 → 2
+- Cập nhật demote examples (xóa agency-based examples)
 
 ### [MODIFY] [phase_plan_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_narrative_phase_plan_pov.txt)
-- Xóa line 171: `d. age_timeline: all major ages covered (no gaps > 10 years...)`
+- Xóa CRITERION 1 — CHARACTER AGENCY
+- Xóa gap > 10 years rule (line 171)
+
+### [MODIFY] [validate_sub_key_pov.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_validate_sub_key_pov.txt)
+- Xóa gap > 10 years rule (line 27)
 
 ### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
-- Line 4728: Lookup event_title từ validated timeline thay vì fix dict
+- Line 4728: Lookup event_title từ validated timeline
 
 ## Verification
 
-Chạy lại pipeline Saladin sau khi fix, kiểm tra:
-- Event "Flight in the Dark" KHÔNG bị demote
-- Không có bridging events "thin" được thêm vào
+Chạy lại pipeline Saladin, kiểm tra:
+- "Flight in the Dark" được giữ → chapter 1 từ age 0
+- Không có bridging events "thin" (age 7, 14) vì gap rule đã xóa
 - Log hiện đúng event title

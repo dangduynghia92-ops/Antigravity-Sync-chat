@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to fix 3 issues found in Saladin pipeline run:\n1. Remove duplicate Scene Test from chapter_plan_pov.txt (causes Nguồn Gốc events to be incorrectly demoted)\n2. Fix log '?' by looking up event_title from validated timeline instead of fix dict\n3. Remove 'gap > 10 years' rule from validate and phase_plan prompts (creates thin bridging events that get demoted anyway)",
-  "updatedAt":  "2026-05-03T10:57:03.586018200Z",
-  "version":  "22",
+  "summary":  "Updated plan: Remove CHARACTER AGENCY criterion from Scene Test (both chapter_plan and phase_plan), fix log '?' title lookup, remove gap > 10 years rule.",
+  "updatedAt":  "2026-05-03T11:02:41.816790400Z",
+  "version":  "23",
   "requestFeedback":  true
 }
