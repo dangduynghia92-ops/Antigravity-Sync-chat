@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete cross-audit of all POV pipeline files for event_cause and physical_state changes. Maps every mention across 6 files (5 prompts + code), identifies potential conflicts for each change, and proposes exact edits per file with consistency verification.",
-  "updatedAt":  "2026-05-02T13:28:35.558776600Z",
-  "version":  "21",
+  "summary":  "Plan to fix 3 issues found in Saladin pipeline run:\n1. Remove duplicate Scene Test from chapter_plan_pov.txt (causes Nguồn Gốc events to be incorrectly demoted)\n2. Fix log '?' by looking up event_title from validated timeline instead of fix dict\n3. Remove 'gap > 10 years' rule from validate and phase_plan prompts (creates thin bridging events that get demoted anyway)",
+  "updatedAt":  "2026-05-03T10:57:03.586018200Z",
+  "version":  "22",
   "requestFeedback":  true
 }
