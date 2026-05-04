@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Complete walkthrough of the POV pipeline rebuild covering all 7 files changed, the rationale for each change, token savings estimates, and remaining verification steps.",
-  "updatedAt":  "2026-05-02T11:57:03.699826100Z",
-  "version":  "4",
+  "summary":  "Complete walkthrough of all POV pipeline changes made in this session: event_cause redefinition, physical_state removal, Level anchor with age, metaphor reduction, echo→reflection closing, Nguồn Gốc Scene Test exception, gap rule removal, and log title fix.",
+  "updatedAt":  "2026-05-04T18:25:34.314851200Z",
+  "version":  "5",
   "requestFeedback":  true
 }

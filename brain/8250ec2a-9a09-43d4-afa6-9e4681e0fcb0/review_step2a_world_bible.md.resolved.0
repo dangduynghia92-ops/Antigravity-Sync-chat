@@ -1,0 +1,163 @@
+# Review: Step 2a — World Bible
+
+## Tổng quan
+
+Step 2a là bước **đầu tiên** trong cụm Step 2 (Global Context Analysis). Nó chạy **trước** Step 2b (Characters) và Step 2c (Locations), tạo ra một "bộ từ điển hình ảnh" cho toàn bộ thời kỳ lịch sử trong script.
+
+### Luồng dữ liệu
+
+```mermaid
+graph LR
+    S1["Step 1: Sequences"] -->|sequence_id + full_text| S2a["Step 2a: World Bible"]
+    S2a -->|factions, armor, heraldry| S2b["Step 2b: Characters"]
+    S2a -->|architecture, era, geography| S2c["Step 2c: Locations"]
+    S2b -->|character labels + visual_desc| S3["Step 3: Storyboard"]
+    S2c -->|location labels + bible_desc| S3
+```
+
+---
+
+## 1. Input — Cái gì đi vào Step 2a?
+
+[video_pipeline.py:901-905](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py#L901-L905)
+
+```python
+seq_data = [{"sequence_id": s["sequence_id"],
+             "full_text": s.get("full_text", "")}
+            for s in self.sequences]
+user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+```
+
+**Input chỉ gồm `sequence_id` + `full_text`** — không có timing, không có location_shift, không có characters. Đây là thiết kế đúng vì World Bible cần nhìn **tổng thể câu chuyện** để xác định thời đại, không cần chi tiết phân cảnh.
+
+> [!NOTE]
+> Không gửi `cleaned_text` (plain text liền mạch) mà gửi **mảng JSON các sequences**. Điều này cho phép LLM đọc toàn bộ nội dung script nhưng dưới dạng có cấu trúc.
+
+---
+
+## 2. System Prompt — Yêu cầu LLM làm gì?
+
+[video_pipeline.py:255-303](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py#L255-L303)
+
+World Bible prompt yêu cầu LLM trả về JSON với schema:
+
+| Field | Mô tả | Ví dụ |
+|---|---|---|
+| `era` | Thời kỳ + năm | `"Crusader States Period, 1174-1185 AD"` |
+| `geography` | Vùng địa lý | `"Kingdom of Jerusalem, Levant, Egypt"` |
+| `factions[]` | Danh sách phe phái | Mỗi faction có heraldry, primary_colors, armor, weapons |
+| `factions[].crowd_archetypes` | 6 mẫu nhân vật quần chúng | soldier, civilian_man/woman, child, noble, clergy |
+| `architecture{}` | Phong cách kiến trúc | Materials + features cho từng style |
+| `props{}` | Đồ vật tiêu biểu | Theo danh mục |
+
+### Đánh giá prompt hiện tại
+
+#### ✅ Điểm mạnh
+1. **Crowd archetypes** — Rất thông minh. Cho phép Step 3 mô tả nhân vật nền chính xác
+2. **Distinct primary_colors** — Ép mỗi phe có bảng màu riêng, tránh nhầm lẫn
+3. **Flexible** — "If no military factions, use social groups" → hoạt động cho cả biography
+
+#### ⚠️ Vấn đề phát hiện
+
+**Vấn đề 1: Prompt không inject Style Art nào cả**
+
+Step 2b inject style summary:
+```python
+# Step 2b (line 950-951):
+if self.style_summary:
+    sys_prompt += f"\n\n=== VISUAL ART STYLE ===\n..."
+```
+
+Nhưng Step 2a **KHÔNG inject style** — World Bible hoàn toàn "mù" về art style đang dùng. Điều này có thể dẫn tới World Bible mô tả realistic ("chainmail with riveted links, burnished bronze greaves") trong khi Style là **Chibi Storybook** (white faces, thick outlines, flat cel-shading).
+
+> [!IMPORTANT]
+> **Tuy nhiên, đây có thể KHÔNG phải lỗi.** World Bible về bản chất nên là **factual/historical reference**, không phải stylized prompt. Step 2b và Step 4 mới là nơi style được áp dụng. Nếu inject style vào World Bible, nó có thể "bẻ cong" mô tả lịch sử (ví dụ: viết "simplified flat armor" thay vì "lorica segmentata" đúng sử).
+
+**→ Kết luận: Giữ nguyên, ĐÚNG thiết kế. World Bible = sự thật lịch sử thuần tuý.**
+
+---
+
+**Vấn đề 2: Không có cơ chế verify sau khi tạo**
+
+Bạn đã có file [verify_bible_prompt.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/prompts/verify_bible_prompt.txt) — một prompt fact-check cực kỳ chi tiết (kiểm tra headwear, outfit, weapon, banner, architecture theo đúng năm). **NHƯNG** trong code `_run_step2a()`, KHÔNG có bước gọi verify sau khi tạo World Bible.
+
+```python
+# Step 2a hiện tại (line 882-928):
+def _run_step2a(self) -> bool:
+    # ... gọi LLM tạo World Bible ...
+    # ... save checkpoint ...
+    # ❌ KHÔNG có bước verify!
+    return True
+```
+
+Verify prompt kiểm tra 7 loại sai lịch sử (headwear, outfit, weapon, banner, architecture, props, civilian clothing) nhưng không được gọi ở đâu trong pipeline.
+
+> [!WARNING]
+> **Đây là GAP lớn nhất.** World Bible sai → Characters sai → Locations sai → Video sai. Toàn bộ pipeline ăn sai từ gốc.
+
+---
+
+**Vấn đề 3: Không retry khi JSON lỗi**
+
+Step 1 có retry 2 lần (`for attempt in range(2)`). Step 2a **chỉ gọi 1 lần**, nếu thất bại thì return False ngay.
+
+```python
+# Step 2a (line 907-918):
+raw = self._send_llm(...)
+if not raw:
+    return False  # ← chỉ 1 lần, không retry
+parsed = _try_parse_json(raw)
+if not parsed:
+    return False  # ← chỉ 1 lần, không retry
+```
+
+---
+
+**Vấn đề 4: `civilian_clothing` trong faction có thể trùng lặp với `crowd_archetypes`**
+
+Schema hiện tại có cả:
+- `faction.civilian_clothing`: "Typical civilian garments for this faction"
+- `faction.crowd_archetypes.civilian_man/woman`: "Visual description of common civilian"
+
+Hai field này dễ bị LLM hiểu nhầm và viết content trùng hoặc mâu thuẫn.
+
+---
+
+## 3. Output — World Bible được dùng ở đâu?
+
+| Bước tiêu thụ | Cách inject | Data lấy |
+|---|---|---|
+| **Step 2b (Characters)** | Inject toàn bộ `world_bible` JSON vào system prompt | Faction colors, heraldry, armor, weapons → costume accuracy |
+| **Step 2c (Locations)** | Inject `architecture` + `era` + `geography` | Architecture style & materials → location accuracy |
+| **Step 3 (Storyboard)** | Inject `crowd_archetypes` vào system prompt Rule 7 | Background people rendered correctly per faction |
+| **Step 4 (Prompt Writing)** | Inject `mini_bible` (condensed version) vào user template | Visual reference for flat_prompt generation |
+
+> [!TIP]
+> World Bible đóng vai trò **Single Source of Truth** cho toàn bộ visual consistency. Nếu nó sai, tất cả downstream đều sai theo.
+
+---
+
+## 4. Checkpoint & Resume
+
+- Checkpoint file: `{srt_name}_step2_world_bible.json`
+- Nếu file tồn tại → skip hoàn toàn, load từ disk
+- **Không có cơ chế invalidate** khi Step 1 thay đổi (nếu re-run Step 1 với sequences khác, Step 2a vẫn dùng checkpoint cũ)
+
+---
+
+## 5. Tóm tắt đánh giá
+
+| Tiêu chí | Rating | Ghi chú |
+|---|---|---|
+| **Schema thiết kế** | ⭐⭐⭐⭐ | Đầy đủ: era, factions, crowd archetypes, architecture |
+| **Data flow** | ⭐⭐⭐⭐⭐ | Inject downstream đúng vị trí (2b, 2c, 3, 4) |
+| **Prompt quality** | ⭐⭐⭐⭐ | Rõ ràng, có rules, có examples |
+| **Error handling** | ⭐⭐ | Không retry, không verify |
+| **Historical accuracy** | ⭐⭐⭐ | Phụ thuộc LLM, verify_bible_prompt chưa tích hợp |
+
+## 6. Đề xuất cải thiện (nếu muốn)
+
+1. **Tích hợp verify_bible_prompt** — Sau khi tạo xong World Bible, gọi thêm 1 API call verify. Nếu có corrections → tự động patch vào JSON trước khi save checkpoint.
+2. **Thêm retry** — Giống Step 1, retry 2 lần khi JSON parse fail.
+3. **Loại bỏ `civilian_clothing` trùng** — Gộp vào `crowd_archetypes` hoặc xoá 1 trong 2.
+4. **Checkpoint invalidation** — Hash Step 1 output, nếu hash thay đổi thì xoá checkpoint Step 2a.
