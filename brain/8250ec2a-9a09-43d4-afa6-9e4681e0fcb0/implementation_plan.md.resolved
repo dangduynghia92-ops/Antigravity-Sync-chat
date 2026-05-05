@@ -1,291 +1,139 @@
-# FINAL Plan: World Bible Upgrade
+# Step 0 Overhaul: SRT + TXT Alignment
 
----
+## Problem
 
-## Phần 1: AUDIT — Vấn đề phát hiện trong code hiện tại
+Khi input là file SRT (từ TTS), script narration thường **không có dấu chấm câu** → parser hiện tại gộp tất cả SRT cues thành 1 sentence duy nhất (92s) → Step 1 nhận 1 câu → tạo sequences trùng lặp.
 
-### ❌ Issue 1: Backward compat fallbacks — VI PHẠM policy
-**Vị trí:** Lines 1116-1123, 1180-1183, 1290-1294, 1498-1500
-**Vấn đề:** Code fallback đọc `era` từ top-level khi `historical_context` trống. Theo user policy: nếu lỗi thì dừng, không fallback.
-**Fix:** Xoá tất cả backward compat. Nếu checkpoint cũ → xóa file, chạy lại.
+Ngoài ra SRT từ TTS có thể **sai chính tả** tên riêng (ví dụ "Najmad Dina Yub" thay vì "Najm ad-Din Ayyub").
 
-### ⚠️ Issue 2: `STEP2A_DESCRIBE_PROMPT` hiện tại SẼ BỊ THAY THẾ
-**Vấn đề:** Prompt hiện tại sẽ bị thay bằng 2 prompt mới (PEOPLE + WORLD). Prompt cũ phải xoá sạch.
+## Thực tế Input
 
-### ⚠️ Issue 3: `_build_visual_reference()` — crowd_archetypes render lỗi nếu value là array
-**Vị trí:** Lines 1312-1317
-**Vấn đề:** Code hiện tại dùng `crowd.items()` rồi `f"[{role}]: {desc}"`. 
-Nếu crowd_archetypes chuyển sang **pre-composed variants** (value = array thay vì string), `desc` sẽ là `['variant1', 'variant2']` → render thành `[soldier]: ['...', '...']` — SAI.
-**Fix:** Phải check `isinstance(desc, list)` → render từng variant.
-
-### ⚠️ Issue 4: `_build_mini_bible()` — không inject crowd_archetypes
-**Vị trí:** Lines 1496-1504
-**Vấn đề:** Mini bible chỉ inject `primary_colors + armor` compact. Không truyền crowd_archetypes xuống Step 4.
-**Kết luận:** OK — Step 4 nhận `crowd_description` từ Step 3 (đã chọn variant cụ thể). Không cần inject lại crowd vào Step 4.
-
-### ⚠️ Issue 5: `_run_step2a()` — cleaned_text fallback
-**Vị trí:** Lines 991-996
-**Vấn đề:** Nếu `cleaned_text` trống → fallback build từ sequences. Theo policy: không fallback.
-**Fix:** Nếu `cleaned_text` trống → fail và log rõ nguyên nhân "cleaned_text is empty — Step 0 may have failed".
-
-### ⚠️ Issue 6: Merge kết quả 3 calls — thiếu domain mới
-**Vị trí:** Lines 1070-1080
-**Vấn đề:** Merge hiện tại chỉ lấy `factions`, `architecture`, `props` từ Call 2. Cần tách Call 2 (PEOPLE) và Call 3 (WORLD), merge đúng domains.
-
-### ⚠️ Issue 7: Step 2b/2c inject — thiếu ANCHOR instruction  
-**Vị trí:** Lines 1128, 1188
-**Vấn đề:** Inject message chỉ nói "Use faction colors..." nhưng KHÔNG nói rõ downstream step ĐƯỢC thêm chi tiết ngoài World Bible.
-**Fix:** Thêm ANCHOR instruction.
-
-### ⚠️ Issue 8: `architecture.lighting` sẽ bị xoá
-**Vấn đề:** Theo quyết định bỏ lighting domain. Architecture schema mới không cần field `lighting`. Cần xoá khỏi prompt và rendering code.
-
----
-
-## Phần 2: THIẾT KẾ — 3 API Calls
-
-### Call 1: IDENTIFY (giữ nguyên)
+Folder input **luôn có cặp** TXT + SRT cùng tên:
 ```
-Input: cleaned_text
-Output: { era, date_range, geography, factions[] }
-Retry: 2 lần
-Validate: phải có "era" và "factions"
+ch_01_Level_1__Vulnerability.txt   ← Script gốc (đúng chính tả, có dấu câu)
+ch_01_Level_1__Vulnerability.srt   ← TTS timing (có thể sai chính tả, không dấu câu)
 ```
 
-### Call 2: PEOPLE (MỚI — thay STEP2A_DESCRIBE_PROMPT)
+### Các dạng SRT đã gặp
+
+| Dạng | Ví dụ | Đặc điểm |
+|---|---|---|
+| **Standard SRT** | `1\n00:00:00,000 --> 00:00:02,800\nblack water rushes...` | Timing per cue, text không dấu câu |
+| **Transcript + inline timecodes** (TXT) | `(0:00) Level one, the blood clot. You are born...` | Inline `(M:SS)`, có dấu câu |
+
+### Dạng TXT gốc
+
+Script gốc luôn có **dấu câu đầy đủ** (`.` `,` `!` `?`) và **chính tả đúng**. Format: paragraphs thuần text, không có timecodes.
+
+## Proposed Solution
+
+### Hybrid approach: LLM fix text → Code assign timing
+
 ```
-Input: cleaned_text + Call 1 context (era, factions summary)
-Output: { factions[] }
-  - Mỗi faction: heraldry, primary_colors, armor, weapons,
-    role_variants{}, crowd_archetypes{}
-  - crowd_archetypes: soldier/civilian_man/civilian_woman = ARRAY 3 variants
-    child/noble/clergy = STRING 1 mô tả
-Retry: 2 lần
-Validate: phải có "factions" với ít nhất 1 entry
+┌─────────┐   ┌─────────┐
+│ SRT     │   │ TXT     │
+│ (timing)│   │ (text)  │
+└────┬────┘   └────┬────┘
+     │              │
+     └──────┬───────┘
+            ▼
+   LLM: Corrected SRT
+   (đúng chính tả + có dấu câu,
+    giữ nguyên cue structure)
+            │
+            ▼
+   Code: Parse & interpolate
+   (tách sentence bằng punctuation,
+    timing từ SRT cues)
+            │
+            ▼
+   Output: Sentences[]
+   (text đúng + timing đúng)
 ```
 
-### Call 3: WORLD (MỚI)
+### Chi tiết 2 bước:
+
+#### Bước A: LLM Correct SRT (1 API call per chapter)
+
+**Input cho LLM:**
 ```
-Input: cleaned_text + Call 1 context (era, factions summary)
-Output: { architecture[], landscape{}, props{}, transport{}, cultural_markers{} }
-  - Architecture: exterior, facade, interior, street (KHÔNG lighting)
-  - Landscape: terrain, vegetation, water, sky_palette
-  - Props: military, household, religious, marketplace, dining, writing
-  - Transport: riding, vehicles, pack_animals
-  - Cultural_markers: symbols, decorative_motifs, status_indicators
-Retry: 2 lần
-Validate: phải có "architecture" với ít nhất 1 entry
-Rule: "Only describe domains RELEVANT to the script"
+=== ORIGINAL SCRIPT ===
+Black water rushes beneath a makeshift raft. The wind off the Tigris...
+
+=== SRT TRANSCRIPT ===
+1|00:00:00.000|00:00:02.800|black water rushes beneath a makeshift raft
+2|00:00:03.166|00:00:05.266|the wind off the Tigris River is freezing
+...
 ```
 
----
+**LLM task:** So sánh SRT với TXT gốc → sửa chính tả mỗi cue + thêm dấu câu từ bản gốc. **Giữ nguyên số cue, KHÔNG gộp hay tách cue.**
 
-## Phần 3: OUTPUT SCHEMA — Checkpoint cuối cùng
-
+**Output JSON:**
 ```json
-{
-  "historical_context": {
-    "era": "...",
-    "date_range": "...",
-    "geography": "..."
-  },
-  "factions": [
-    {
-      "name": "...",
-      "heraldry": "...",
-      "primary_colors": ["...", "..."],
-      "armor": "Head: ... Body: ... Shield: ... Feet: ...",
-      "weapons": ["weapon1 — details", "weapon2 — details"],
-      "role_variants": {
-        "commander": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
-        "noble": "...",
-        "priest": "...",
-        "merchant": "...",
-        "servant": "..."
-      },
-      "crowd_archetypes": {
-        "soldier": ["Legionary — Head:...", "Auxiliary — Head:...", "Veteran — Head:..."],
-        "civilian_man": ["Laborer — ...", "Craftsman — ...", "Townsman — ..."],
-        "civilian_woman": ["Common — ...", "Market woman — ...", "Wealthy — ..."],
-        "child": "Head: ... (single string)",
-        "noble": "Head: ... (single string)",
-        "clergy": "Head: ... (single string)"
-      }
-    }
-  ],
-  "architecture": [
-    {
-      "name": "...",
-      "exterior": "...",
-      "facade": "...",
-      "interior": "...",
-      "street": "..."
-    }
-  ],
-  "landscape": {
-    "terrain": "...",
-    "vegetation": "...",
-    "water": "...",
-    "sky_palette": "..."
-  },
-  "props": {
-    "military": "...",
-    "household": "...",
-    "religious": "...",
-    "marketplace": "...",
-    "dining": "...",
-    "writing": "..."
-  },
-  "transport": {
-    "riding": "...",
-    "vehicles": "...",
-    "pack_animals": "..."
-  },
-  "cultural_markers": {
-    "symbols": "...",
-    "decorative_motifs": "...",
-    "status_indicators": "..."
-  }
-}
+[
+  {"id": 1, "start": 0.0, "end": 2.8, "text": "Black water rushes beneath a makeshift raft."},
+  {"id": 2, "start": 3.166, "end": 5.266, "text": "The wind off the Tigris River is freezing,"},
+  {"id": 3, "start": 5.266, "end": 8.4, "text": "biting through the damp wool wrapped around your fragile frame."}
+]
 ```
+
+> [!IMPORTANT]
+> LLM **KHÔNG thay đổi timing** — chỉ copy timing từ SRT. Timing vẫn do code xử lý ở bước sau.
+
+#### Bước B: Code Parse (existing logic, no changes)
+
+Corrected SRT → `_merge_srt_to_raw_text()` → `_split_into_sentences()` → Sentences with interpolated timing.
+
+Giờ punctuation tồn tại → `_SENTENCE_END` regex hoạt động đúng → tách ~15-25 sentences thay vì 1.
 
 ---
 
-## Phần 4: DOWNSTREAM FILTERING
+## Proposed Changes
 
-### Step 2b (Characters) — nhận PEOPLE only
-```python
-wb_for_2b = {
-    "historical_context": wb["historical_context"],
-    "factions": [{
-        "name": f["name"], "heraldry": f["heraldry"],
-        "primary_colors": f["primary_colors"], "armor": f["armor"],
-        "weapons": f["weapons"], "role_variants": f["role_variants"]
-    } for f in wb["factions"]]
-}
-```
-**ANCHOR instruction:** "Use this as your ANCHOR. You MUST follow faction colors, armor types, and era constraints. You MAY add period-appropriate details not listed here (scars, unique jewelry, personal items) as long as they do NOT contradict this reference and are accurate to {date_range}."
+### Step 0 Pre-processing
 
-### Step 2c (Locations) — nhận WORLD only
-```python
-wb_for_2c = {
-    "historical_context": wb["historical_context"],
-    "architecture": wb["architecture"],
-    "landscape": wb["landscape"],
-    "props": wb["props"],
-    "transport": wb["transport"]
-}
-```
-**ANCHOR instruction:** "Use this as your ANCHOR for materials, architectural style, and props. You MAY add scene-specific details (unique decorations, weather marks, battle damage) as long as they match {date_range} and {geography}."
+#### [MODIFY] [srt_sentence_parser.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_sentence_parser.py)
 
-### Step 3 (Storyboard) — nhận crowd_archetypes + compact world
-```python
-wb_for_3 = {
-    "era": wb["historical_context"]["era"],
-    "factions_visual": [{
-        "name": f["name"], 
-        "primary_colors": f["primary_colors"],
-        "crowd_archetypes": f["crowd_archetypes"],
-        "role_variants": f["role_variants"]
-    } for f in wb["factions"]],
-    "landscape": wb.get("landscape", {}),
-    "props_summary": wb.get("props", {})
-}
-```
+Thêm function mới `correct_srt_with_txt()`:
+- Input: SRT file path + TXT file path + api_client + tier
+- Parse SRT → list cues (id, start, end, text)
+- Read TXT → raw text
+- Build LLM prompt: compare & correct
+- Parse LLM response → corrected cues
+- Convert corrected cues → `List[SRTSegment]` (same format as `parse_srt_file()`)
+- Return: corrected segments (để `parse_srt_to_sentences()` xử lý tiếp như cũ)
 
-### Step 4 (Prompt) — mini_bible compact (giữ nguyên format hiện tại)
-Không thay đổi lớn — chỉ update field paths.
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py) — Step 0
+
+Sửa `_run_step0()`:
+- Khi gặp file `.srt`: tìm file `.txt` cùng tên trong cùng folder
+  - **Nếu tìm thấy TXT pair** → gọi `correct_srt_with_txt()` → dùng corrected segments
+  - **Nếu KHÔNG có TXT** → fallback: parse SRT như cũ (hiện tại) + fallback merge cues bằng lowercase heuristic
+- Khi gặp file `.txt`: parse như cũ (đã có punctuation + inline timecodes)
 
 ---
 
-## Phần 5: CODE CHANGES
+## User Review Required
 
-### 1. XOÁ `STEP2A_DESCRIBE_PROMPT` — thay bằng 2 prompt mới
+> [!IMPORTANT]
+> **Scan logic thay đổi**: Hiện tại khi scan folder, tool add CẢ `.srt` VÀ `.txt` vào danh sách (line 327). Nếu folder có cặp `ch_01.srt` + `ch_01.txt`, cả 2 đều được add → pipeline xử lý mỗi file 1 lần → **bị duplicate**.
+>
+> Cần quyết định: Khi folder có cả 2, scan nên **chỉ add SRT** (vì SRT có timing, TXT sẽ được tự động pair trong Step 0)?
 
-| Prompt | Task |
-|---|---|
-| `STEP2A_PEOPLE_PROMPT` | Faction visual: armor, weapons, crowd_archetypes (3 variants), role_variants |
-| `STEP2A_WORLD_PROMPT` | Architecture, landscape, props, transport, cultural_markers |
+> [!WARNING]  
+> **API cost**: Mỗi chapter thêm 1 API call (Flash tier). 15 chapters = 15 calls thêm ở Step 0. Chấp nhận được?
 
-### 2. `_run_step2a()` — 3 calls, NO fallback
+## Open Questions
 
-```
-Flow:
-1. cleaned_text trống? → FAIL (không fallback)
-2. Call 1: IDENTIFY → parse → validate era + factions
-3. Call 2: PEOPLE → parse → validate factions array
-4. Call 3: WORLD → parse → validate architecture array
-5. Merge tất cả → save checkpoint
-```
+1. **Fallback khi LLM fail**: Nếu LLM correct fail → dùng SRT raw (không dấu câu) + merge cues bằng code, hay dừng pipeline?
+2. **Caching**: Corrected SRT nên save checkpoint (tránh re-call LLM khi re-run)?
 
-### 3. `_run_step2b()` inject — xoá backward compat, thêm ANCHOR
+## Verification Plan
 
-```python
-# XOÁ backward compat block (lines 1116-1123)
-if self.world_bible:
-    ctx = self.world_bible["historical_context"]
-    wb_for_chars = {
-        "historical_context": ctx,
-        "factions": [... selective fields ...]
-    }
-    sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE (ANCHOR) ===\n..."
-    sys_prompt += f"\nYou MUST follow faction colors and armor. You MAY add period-appropriate details accurate to {ctx['date_range']}."
-```
+### Test Cases
+1. **SRT + TXT pair** (Saladin ch_01): Verify output có ~15-25 sentences (không phải 1), text khớp TXT gốc, timing khớp SRT
+2. **TXT only** (15 chapters Saladin): Verify hoạt động như cũ (không regression)
+3. **SRT only** (không có TXT): Verify fallback hoạt động
 
-### 4. `_run_step2c()` inject — xoá backward compat, thêm landscape/transport
-
-### 5. `_build_visual_reference()` — crowd_archetypes array support + new domains
-
-```python
-# crowd_archetypes: handle both string and array
-crowd = faction.get("crowd_archetypes", {})
-if crowd:
-    parts.append("    --- Crowd Archetypes ---")
-    for role, desc in crowd.items():
-        if isinstance(desc, list):
-            for variant in desc:
-                parts.append(f"    [{role}]: {variant}")
-        else:
-            parts.append(f"    [{role}]: {desc}")
-
-# New domains
-landscape = self.world_bible.get("landscape", {})
-if landscape:
-    parts.append("\n=== LANDSCAPE ===")
-    for k, v in landscape.items():
-        parts.append(f"  {k}: {v}")
-
-# Architecture: remove lighting field
-```
-
-### 6. `_build_mini_bible()` — update compact format
-
-### 7. Step 3 Rule 7 — hướng dẫn chọn variant
-
-```
-Use the `crowd_archetypes` from the WORLD BIBLE to describe extras.
-When an archetype has MULTIPLE VARIANTS (array), choose the variant 
-that BEST MATCHES the scene context:
-- Market scene → use civilian "Townsman" or "Market woman" variant
-- Farm scene → use civilian "Laborer" variant  
-- Battle camp → use soldier "Veteran" variant
-Write the SPECIFIC chosen variant description — NOT all variants.
-```
-
----
-
-## Phần 6: VALIDATION CHECKLIST
-
-Sau khi code xong, kiểm tra:
-
-| Check | Mục đích |
-|---|---|
-| `python -c "import ast; ..."` | Syntax check |
-| Tìm `"era"` access trực tiếp | Phải luôn qua `historical_context` |
-| Tìm `backward compat` / `fallback` / `or self.world_bible.get` | Phải = 0 |
-| Tìm `civilian_clothing` | Phải = 0 |
-| Tìm `STEP2A_DESCRIBE_PROMPT` | Phải = 0 (đã thay) |
-| Tìm `architecture.*lighting` trong schema | Phải = 0 (đã xoá) |
-| Tìm `materials.*structural_elements` | Phải = 0 (schema cũ) |
-| Verify crowd render handles `isinstance(desc, list)` | Array support |
-| Verify new domains render: landscape, transport, cultural_markers | Có render |
+### Manual Check
+- So sánh `_step0_sentences.json` trước/sau → verify sentence count, text correctness, timing accuracy

@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "FINAL implementation plan for World Bible upgrade. Includes: (1) Complete audit of current code identifying 8 specific issues - backward compat fallbacks, data duplication, crowd_archetypes rendering bugs when array vs string. (2) 3-call architecture with PEOPLE and WORLD prompts. (3) Pre-composed variants for crowds. (4) New domains: landscape, transport, cultural_markers. (5) ANCHOR instruction for downstream steps. (6) Remove all backward compat fallbacks per user policy. (7) Exact code changes for each function with line numbers.",
-  "updatedAt":  "2026-05-05T04:17:32.573189600Z",
-  "version":  "4",
+  "summary":  "Implementation plan for Step 0 SRT+TXT alignment overhaul. Uses LLM to correct SRT spelling and add punctuation from original TXT script, then code to parse and assign timing. Covers scan logic changes, fallback strategies, and verification plan.",
+  "updatedAt":  "2026-05-05T15:53:53.331622100Z",
+  "version":  "5",
   "requestFeedback":  true
 }
