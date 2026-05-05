@@ -1,5 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to upgrade Step 2a World Bible: split into 2 API calls (Identify→Describe), use cleaned_text as input, add role_variants, restructure architecture, selective downstream injection, add retry. All changes in video_pipeline.py only.",
-  "updatedAt":  "2026-05-04T19:52:43.150277Z"
+  "summary":  "FINAL implementation plan for World Bible upgrade. Includes: (1) Complete audit of current code identifying 8 specific issues - backward compat fallbacks, data duplication, crowd_archetypes rendering bugs when array vs string. (2) 3-call architecture with PEOPLE and WORLD prompts. (3) Pre-composed variants for crowds. (4) New domains: landscape, transport, cultural_markers. (5) ANCHOR instruction for downstream steps. (6) Remove all backward compat fallbacks per user policy. (7) Exact code changes for each function with line numbers.",
+  "updatedAt":  "2026-05-05T04:17:32.573189600Z",
+  "version":  "4",
+  "requestFeedback":  true
 }
