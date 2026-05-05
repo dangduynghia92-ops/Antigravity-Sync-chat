@@ -1,53 +1,71 @@
-# Step 0 Overhaul: SRT + TXT Alignment
+# Step 0: SRT + TXT Alignment Pre-processor
 
-## Problem
+## Mục tiêu
 
-SRT từ TTS thường **không có dấu câu** + **sai chính tả** tên riêng → parser gộp toàn bộ thành 1 sentence → Step 1 fail.
+Step 0 là **bước tiền xử lý độc lập**: nhận SRT + TXT → output ra **file kết quả** (corrected SRT) lưu trong folder riêng → các bước sau đọc file này.
 
-Giải pháp: Dùng **TXT gốc** (text đúng) + **SRT** (timing đúng) → LLM merge → code verify.
+```
+Input:                          Output (folder aligned/):
+  ch_01.srt  +  ch_01.txt  →     ch_01.srt   ← corrected: text đúng + timing đúng + có dấu câu
+  ch_02.srt  +  ch_02.txt  →     ch_02.srt
+  ch_03.srt  +  ch_03.txt  →     ch_03.srt
+```
 
 > [!IMPORTANT]
-> **Chỉ chạy pipeline khi có CẢ SRT + TXT pair.** Không có fallback. Không có callback.
+> - Chỉ chạy khi có CẢ SRT + TXT pair
+> - Output là file SRT chuẩn (text đúng + timing từ SRT gốc + dấu câu từ TXT)
+> - Chapter nào pass verify → save vào `aligned/` → không chạy lại
+> - Re-run chỉ xử lý chapters chưa có trong `aligned/`
 
 ---
 
-## Phase 1: UI — Scan & Pair Files
+## Phase 1: UI — Scan & Pair
 
 ### [MODIFY] [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
 
-#### Scan Logic mới
+#### Tree Widget: 4 cột mới
 
 ```
-User clicks "Scan Folder"
-    ↓
-1. Scan tất cả *.srt trong folder (recursive)
-2. Với mỗi .srt → tìm .txt cùng basename trong cùng folder
-3. Hiển thị trong tree widget
+| Chapter Name                    | SRT         | TXT         | Status      |
+|---------------------------------|-------------|-------------|-------------|
+| ch_01_Level_1__Vulnerability    | ✅ .srt     | ✅ .txt     | Ready       |
+| ch_02_Level_2__Resignation      | ✅ .srt     | ❌ missing  | Missing TXT |
+| ch_03_Level_3__Endurance        | ✅ .srt     | ✅ .txt     | Ready       |
 ```
 
-#### Tree Widget Columns mới
+- Bỏ cột **Style** (dùng combo ở config area)
+- Bỏ cột **Progress** (dùng log)
+- Bỏ buttons **Apply Style**, **Apply All**
 
-| Chapter | SRT File | TXT File | Status |
-|---|---|---|---|
-| ch_01_Level_1__Vulnerability | ✅ ch_01...srt | ✅ ch_01...txt | Ready |
-| ch_02_Level_2__Resignation | ✅ ch_02...srt | ❌ _(missing)_ | **Missing TXT** |
-| ch_03_Level_3__Endurance | ✅ ch_03...srt | ✅ ch_03...txt | Ready |
-
-- **Cột 1**: SRT file (luôn có — đây là file scan chính)
-- **Cột 2**: TXT file (auto-match bằng tên, nếu không có → hiện trống/đỏ)
-- **Status**: `Ready` khi có cả 2, `Missing TXT` khi thiếu
-
-#### Run validation
-
-Trước khi chạy pipeline:
-- Kiểm tra TẤT CẢ rows có cả SRT + TXT
-- Nếu bất kỳ row nào thiếu → **hiện lỗi, KHÔNG cho chạy**
-- Message: `"Cannot run: X chapter(s) missing TXT pair file"`
-
-#### Data structure truyền vào pipeline
+#### Scan Logic
 
 ```python
-# Mỗi chapter giờ là dict chứa cả 2 paths
+def _scan_folder(self):
+    # 1. Scan tất cả *.srt
+    srt_files = {basename: path for *.srt in folder}
+    
+    # 2. Với mỗi SRT, tìm *.txt cùng basename
+    for basename, srt_path in srt_files:
+        txt_path = srt_path.replace('.srt', '.txt')
+        has_txt = os.path.exists(txt_path)
+        
+        # 3. Thêm vào tree
+        add_row(basename, srt="✅", txt="✅" or "❌", status="Ready" or "Missing TXT")
+```
+
+#### Run Validation
+
+```python
+def _run_all(self):
+    missing = [row for row in rows if not row.has_txt]
+    if missing:
+        log(f"Cannot run: {len(missing)} chapter(s) missing TXT pair")
+        return  # KHÔNG chạy
+```
+
+#### Data truyền vào pipeline
+
+```python
 chapter_pairs = [
     {"srt_path": "ch_01.srt", "txt_path": "ch_01.txt"},
     {"srt_path": "ch_02.srt", "txt_path": "ch_02.txt"},
@@ -55,216 +73,241 @@ chapter_pairs = [
 ]
 ```
 
-Thay vì `srt_paths: List[str]` → chuyển sang `chapter_pairs: List[dict]`.
-
 ---
 
-## Phase 2: LLM Correct SRT Text (Step 0.5)
+## Phase 2: LLM Correct (per-chapter)
 
 ### [MODIFY] [srt_sentence_parser.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_sentence_parser.py)
 
-Thêm function `correct_srt_with_txt()`:
+Thêm function `correct_srt_with_txt(srt_cues, txt_content, api_client, tier)`:
 
-#### Input
+#### LLM Input
 
 ```
-SRT cues:
-  1|00:00:00.000|00:00:02.800|black water rushes beneath a makeshift raft
-  2|00:00:03.166|00:00:05.266|the wind off the Tigris River is freezing
-  ...
+=== ORIGINAL SCRIPT (correct spelling, has punctuation) ===
+Black water rushes beneath a makeshift raft. The wind off the Tigris River
+is freezing, biting through the damp wool wrapped around your fragile frame...
 
-TXT gốc:
-  Black water rushes beneath a makeshift raft. The wind off the Tigris River
-  is freezing, biting through the damp wool wrapped around your fragile frame...
-```
+=== SRT CUES (correct timing, may have wrong spelling, no punctuation) ===
+1|0.000|2.800|black water rushes beneath a makeshift raft
+2|3.166|5.266|the wind off the Tigris River is freezing
+3|5.266|8.400|biting through the damp wool wrapped around your fragile frame
+...
 
-#### LLM Task
+=== TASK ===
+For each SRT cue:
+1. Fix spelling to match the ORIGINAL SCRIPT
+2. Add punctuation (. , ! ?) from the ORIGINAL SCRIPT at correct positions
+3. Fix capitalization to match the ORIGINAL SCRIPT
+Return ONLY corrected text per cue. Keep SAME number of cues. Do NOT merge or split cues.
 
-Prompt yêu cầu LLM:
-1. So sánh từng SRT cue với TXT gốc
-2. **Fix chính tả** mỗi cue cho khớp TXT (ví dụ "Najmad Dina Yub" → "Najm ad-Din Ayyub")
-3. **Thêm dấu câu** từ TXT gốc vào đúng vị trí trong mỗi cue (`. , ! ?`)
-4. **KHÔNG thay đổi số cue**, KHÔNG gộp/tách cue
-5. **KHÔNG thay đổi timing** — copy nguyên từ SRT
-
-#### LLM Output (JSON)
-
-```json
+Return JSON array:
 [
   {"id": 1, "text": "Black water rushes beneath a makeshift raft."},
   {"id": 2, "text": "The wind off the Tigris River is freezing,"},
-  {"id": 3, "text": "biting through the damp wool wrapped around your fragile frame."}
+  ...
 ]
 ```
-
-> [!NOTE]
-> LLM **chỉ trả text đã sửa**. Timing giữ nguyên từ SRT — code sẽ ghép lại.
 
 #### Code ghép timing
 
 ```python
-# SRT cues giữ timing gốc
-corrected_segments = []
-for original_cue, llm_result in zip(srt_cues, llm_output):
-    corrected_segments.append(SRTSegment(
+for original_cue, llm_item in zip(srt_cues, llm_output):
+    corrected = SRTSegment(
         index=original_cue.index,
-        start_time=original_cue.start_time,   # ← từ SRT
-        end_time=original_cue.end_time,         # ← từ SRT
-        text=llm_result["text"],                 # ← từ LLM (text đúng)
-    ))
+        start_time=original_cue.start_time,   # ← giữ nguyên từ SRT
+        end_time=original_cue.end_time,         # ← giữ nguyên từ SRT
+        text=llm_item["text"],                   # ← text đã sửa từ LLM
+    )
 ```
-
-→ Sau đó gọi `parse_srt_to_sentences()` hiện tại với corrected segments. Giờ punctuation có → tách sentence đúng.
 
 ---
 
-## Phase 3: Code Verification (Step 0.7)
+## Phase 3: Code Verify
 
 ### [MODIFY] [srt_sentence_parser.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_sentence_parser.py)
 
-Thêm function `verify_corrected_srt()` — **100% code, không dùng LLM**:
+Thêm function `verify_corrected_srt(corrected_cues, original_srt_cues, txt_content)`:
 
-#### Check 1: Cue Count Match
+#### Check 1: Cue count
 ```python
-assert len(corrected_cues) == len(original_srt_cues), "Cue count mismatch"
+if len(corrected) != len(original):
+    return VerifyResult(ok=False, error="cue_count", 
+                        detail=f"Expected {len(original)}, got {len(corrected)}")
 ```
 
-#### Check 2: Timecode Integrity
+#### Check 2: Timecode integrity
 ```python
-for cue in corrected_cues:
-    assert cue.start_time < cue.end_time, f"Cue {cue.id}: negative duration"
-    assert cue.start_time >= 0, f"Cue {cue.id}: negative start"
-
-# Monotonically increasing
-for i in range(1, len(corrected_cues)):
-    assert corrected_cues[i].start_time >= corrected_cues[i-1].start_time, \
-        f"Cue {i}: time goes backward"
+for cue in corrected:
+    if cue.end_time <= cue.start_time:
+        return VerifyResult(ok=False, error="bad_timing", detail=f"Cue {cue.id}")
 ```
 
-#### Check 3: Text Coverage
+#### Check 3: Text coverage (word count ratio ±10%)
 ```python
-# Gộp tất cả corrected text → normalize → so sánh word count vs TXT gốc
-corrected_words = normalize(join(all corrected texts))
-original_words = normalize(txt_content)
-
-# Word count tolerance: ±10%
-ratio = len(corrected_words) / len(original_words)
-assert 0.9 <= ratio <= 1.1, f"Word count mismatch: {ratio:.0%}"
+corrected_words = count_words(join(all corrected texts))
+original_words = count_words(txt_content)
+ratio = corrected_words / original_words
+if not (0.9 <= ratio <= 1.1):
+    return VerifyResult(ok=False, error="word_count", 
+                        detail=f"Ratio {ratio:.0%}, expected ~100%")
 ```
 
-#### Check 4: No Missing Sentences
+#### Check 4: Key name preservation
 ```python
-# Tách TXT gốc thành sentences bằng punctuation
-# Với mỗi TXT sentence → check tồn tại (fuzzy) trong corrected text
-for txt_sentence in original_sentences:
-    key_words = extract_key_words(txt_sentence)  # tên riêng, số, v.v.
-    assert any(kw in corrected_full_text for kw in key_words), \
-        f"Missing sentence: {txt_sentence[:50]}..."
+# Lấy tên riêng từ TXT (viết hoa, > 1 từ)
+proper_nouns = extract_proper_nouns(txt_content)  # ["Shirkuh", "Najm ad-Din Ayyub", ...]
+corrected_full = join(all corrected texts)
+missing = [name for name in proper_nouns if name not in corrected_full]
+if missing:
+    return VerifyResult(ok=False, error="missing_names", detail=missing)
 ```
 
-#### Kết quả verification
+### Verify Fail → LLM Retry
 
-- **PASS** → tiếp tục pipeline
-- **FAIL** → log chi tiết lỗi gì + dừng pipeline
+```
+Verify fail
+    ↓
+Gửi LẠI cho LLM: kết quả cũ + danh sách lỗi cụ thể
+    ↓
+"Here is your previous output and the errors found:
+ - Cue 15 missing: expected 33 cues, got 32
+ - Name 'Shirkuh' not found in output
+ Please fix ONLY the problematic cues and return the corrected JSON."
+    ↓
+LLM trả partial fix → Code merge vào kết quả cũ
+    ↓
+Re-verify
+    ↓
+Pass → save  |  Fail lần 2 → DỪNG pipeline + log chi tiết
+```
 
 ---
 
-## Phase 4: Pipeline Integration
+## Phase 4: Output & Checkpoint
 
-### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+### Output folder structure
 
-#### Constructor
-
-```python
-def __init__(self, ..., chapter_pairs: List[dict] = None, ...):
-    # chapter_pairs = [{"srt_path": "...", "txt_path": "..."}, ...]
-    self.chapter_pairs = chapter_pairs or []
+```
+project_folder/
+├── ch_01.srt                    ← input SRT gốc
+├── ch_01.txt                    ← input TXT gốc
+├── ch_02.srt
+├── ch_02.txt
+├── ...
+└── aligned/                     ← OUTPUT folder
+    ├── ch_01.srt                ← corrected SRT (text đúng + timing đúng)
+    ├── ch_02.srt
+    ├── ch_03.srt
+    └── ...
 ```
 
-#### Step 0 Flow mới
+#### File corrected SRT format (chuẩn SRT):
+```
+1
+00:00:00,000 --> 00:00:02,800
+Black water rushes beneath a makeshift raft.
+
+2
+00:00:03,166 --> 00:00:05,266
+The wind off the Tigris River is freezing,
+
+3
+00:00:05,266 --> 00:00:08,400
+biting through the damp wool wrapped around your fragile frame.
+```
+
+#### Per-chapter checkpoint logic
 
 ```python
 def _run_step0(self):
-    for chapter in self.chapter_pairs:
-        srt_path = chapter["srt_path"]
-        txt_path = chapter["txt_path"]
-
-        # 1. Parse SRT → raw cues
-        srt_cues = parse_srt_file(srt_path)
-
-        # 2. LLM correct text (1 API call)
-        corrected_cues = correct_srt_with_txt(
-            srt_cues, txt_path,
-            api_client=self.api_client,
-            tier=self.tier_user,
-        )
-
-        # 3. Code verify
-        verify_corrected_srt(corrected_cues, srt_cues, txt_path)
-
-        # 4. Parse corrected cues → Sentences
-        sentences = parse_corrected_to_sentences(corrected_cues)
-
-        all_sentences.extend(sentences)
-```
-
-#### Checkpoint
-
-Corrected SRT sẽ **save checkpoint** (tránh re-call LLM khi re-run):
-```
-_step0_corrected_ch01.json
-_step0_corrected_ch02.json
-...
+    aligned_dir = os.path.join(project_folder, "aligned")
+    
+    for chapter in chapter_pairs:
+        basename = os.path.splitext(os.path.basename(chapter["srt_path"]))[0]
+        output_path = os.path.join(aligned_dir, f"{basename}.srt")
+        
+        # Skip nếu đã có file aligned
+        if os.path.exists(output_path):
+            self._log(f"[Step 0] ⏭ {basename}: already aligned")
+            continue
+        
+        # Process: LLM correct → verify → save
+        corrected = correct_srt_with_txt(...)
+        result = verify_corrected_srt(...)
+        
+        if result.ok:
+            save_as_srt(corrected, output_path)
+            self._log(f"[Step 0] ✅ {basename}: saved to aligned/")
+        else:
+            # Retry logic...
+    
+    # Sau khi tất cả chapters aligned → pipeline đọc từ aligned/ folder
+    aligned_files = sorted(glob(aligned_dir + "/*.srt"))
+    # Parse aligned SRTs → sentences (giờ có punctuation → tách đúng)
 ```
 
 ---
 
-## Summary: Complete Step 0 Flow
+## Phase 5: Pipeline Integration
+
+### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+
+#### Constructor mới
+
+```python
+def __init__(self, ..., chapter_pairs: List[dict] = None, ...):
+    self.chapter_pairs = chapter_pairs or []
+    # chapter_pairs = [{"srt_path": "...", "txt_path": "..."}, ...]
+```
+
+#### Step 0 Flow
 
 ```
-User scans folder
-    ↓
-UI: Match SRT ↔ TXT pairs (hiển thị cả 2 cột)
-    ↓
-User confirms all pairs ready → Click Run
-    ↓
-Step 0 (per chapter):
-    ├── Parse SRT → raw cues (timing)
-    ├── Read TXT → original text
-    ├── LLM: Fix spelling + add punctuation (1 call)
-    ├── Code: Ghép timing SRT + text LLM → corrected cues
-    ├── Code: Verify (cue count, timecodes, text coverage)
-    └── Code: Split sentences by punctuation + interpolate timing
-    ↓
-Output: sentences[] (text đúng + timing đúng)
-    ↓
-Step 1, 2, 3, 4... (unchanged)
+1. Tạo aligned/ folder
+2. Per-chapter:
+   a. Check aligned/ đã có → skip
+   b. Parse SRT gốc → cues
+   c. Read TXT gốc → clean text
+   d. LLM correct (1 API call, tier_user)
+   e. Code verify
+   f. Fail → LLM retry with error details → re-verify
+   g. Pass → save corrected SRT to aligned/
+3. Đọc TẤT CẢ aligned/*.srt → parse_srt_to_sentences() (existing code)
+4. Output: self.sentences, self.cleaned_text (giống hiện tại)
 ```
+
+> [!NOTE]
+> Từ bước 3 trở đi, flow **hoàn toàn giống hiện tại**. `parse_srt_to_sentences()` nhận corrected SRT (có punctuation) → tách sentences đúng. Steps 1-5 không thay đổi.
 
 ---
 
 ## Files Modified
 
-| File | Changes |
+| File | Thay đổi |
 |---|---|
-| `ui/video_prompt_tab.py` | Scan logic, tree columns, pair validation, constructor params |
-| `core/srt_sentence_parser.py` | `correct_srt_with_txt()`, `verify_corrected_srt()`, `parse_corrected_to_sentences()` |
-| `core/video_pipeline.py` | Constructor (`chapter_pairs`), `_run_step0()` flow |
+| `ui/video_prompt_tab.py` | Tree 4 cột mới, scan logic pair SRT↔TXT, bỏ Style column/buttons, validation trước run |
+| `core/srt_sentence_parser.py` | Thêm `correct_srt_with_txt()`, `verify_corrected_srt()`, `save_as_srt()` |
+| `core/video_pipeline.py` | Constructor nhận `chapter_pairs`, Step 0 flow mới (aligned/ folder + per-chapter checkpoint) |
 
 ## Verification Plan
 
-### Test 1: UI Pairing
-- Scan folder có 3 SRT + 2 TXT → verify 1 row hiện "Missing TXT"
-- Click Run → verify bị chặn
+### Test 1: UI
+- Scan folder có 3 SRT + 2 TXT → 1 row hiện "Missing TXT" → Run bị chặn
 
-### Test 2: Correction Quality
-- Chạy ch_01 (Saladin) SRT+TXT → verify:
-  - "Najmad Dina Yub" → "Najm ad-Din Ayyub"
-  - Dấu câu xuất hiện đúng vị trí
-  - ~15-25 sentences (không phải 1)
+### Test 2: Alignment
+- Ch_01 Saladin SRT+TXT → verify aligned/ch_01.srt có:
+  - "Najm ad-Din Ayyub" (không phải "Najmad Dina Yub")
+  - Dấu câu đúng vị trí
+  - 33 cues giữ nguyên
+  - Timing giữ nguyên
 
-### Test 3: Verification Catches Errors
-- Mock LLM trả về thiếu 1 cue → verify pipeline dừng + log lỗi
+### Test 3: Verify Retry
+- Nếu LLM trả 32 cues → retry gửi lỗi lên → LLM fix → 33 cues → pass
 
-### Test 4: Full Pipeline
-- Chạy full 15 chapters Saladin → verify Step 1 nhận đúng ~488 sentences thay vì 15
+### Test 4: Checkpoint
+- Chạy 15 chapters, fail ở ch_08 → aligned/ có 7 files
+- Re-run → skip 7 files đã có, chỉ chạy 8-15
+
+### Test 5: Full Pipeline
+- Aligned/ 15 files → Step 1 nhận ~488 sentences (không phải 15) → pipeline hoàn thành

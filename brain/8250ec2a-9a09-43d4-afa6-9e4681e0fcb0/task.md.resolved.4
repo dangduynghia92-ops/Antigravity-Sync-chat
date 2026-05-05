@@ -1,0 +1,23 @@
+# Step 0: SRT + TXT Alignment — Task Tracker
+
+## Phase 1: Core Functions (srt_sentence_parser.py)
+- [ ] `save_as_srt()` — write corrected segments to SRT file
+- [ ] `correct_srt_with_txt()` — LLM correction (text fix + punctuation)
+- [ ] `verify_corrected_srt()` — code-based verification
+- [ ] LLM retry logic on verify fail
+
+## Phase 2: Pipeline Integration (video_pipeline.py)
+- [ ] Constructor: accept `chapter_pairs`
+- [ ] Step 0 flow: aligned/ folder + per-chapter checkpoint
+- [ ] Parse aligned SRTs → sentences (existing parser)
+
+## Phase 3: UI (video_prompt_tab.py)
+- [ ] Tree: 4 columns [Chapter | SRT | TXT | Status]
+- [ ] Scan: SRT first → auto-pair TXT
+- [ ] Validation: block run if missing TXT
+- [ ] Remove Style column/buttons
+- [ ] Update `_get_projects()` data structure
+
+## Phase 4: Verify
+- [ ] Test with Saladin ch_01 SRT+TXT
+- [ ] Syntax check all modified files

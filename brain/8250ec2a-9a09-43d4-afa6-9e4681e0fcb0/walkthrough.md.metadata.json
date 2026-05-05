@@ -1,5 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Summary of all changes made to upgrade Step 2a World Bible in video_pipeline.py. Covers 2-call architecture, new schema, selective injection, retry logic, and backward compatibility.",
-  "updatedAt":  "2026-05-04T19:56:16.429562600Z"
+  "summary":  "Walkthrough summarizing all changes made for Step 0 SRT+TXT alignment: core functions, pipeline integration, and UI overhaul.",
+  "updatedAt":  "2026-05-05T16:34:23.451234800Z",
+  "version":  "2"
 }

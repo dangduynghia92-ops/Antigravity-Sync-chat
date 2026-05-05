@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete implementation plan for Step 0 SRT+TXT alignment overhaul. Includes: (1) UI scan redesign with SRT↔TXT pairing columns, (2) LLM-based text correction, (3) code-based timing assignment, (4) code-based verification step for the final output. Only SRT+TXT pairs are supported.",
-  "updatedAt":  "2026-05-05T16:11:00.213078800Z",
-  "version":  "6",
+  "summary":  "Redesigned Step 0 as standalone pre-processing: SRT+TXT in → corrected SRT files out (saved to aligned/ folder). Per-chapter checkpointing, LLM retry on verify fail, clean UI with SRT↔TXT pairing columns. Output files are input for existing pipeline Step 1+.",
+  "updatedAt":  "2026-05-05T16:26:03.559770600Z",
+  "version":  "7",
   "requestFeedback":  true
 }
