@@ -1,0 +1,3947 @@
+# Walkthrough: World Bible Final Upgrade
+
+## Tổng kết thay đổi
+
+### 1. Kiến trúc API: 2 calls → 3 calls
+
+| Trước | Sau |
+|---|---|
+| Call 1: IDENTIFY (era, factions) | Call 1: IDENTIFY (era, factions) — giữ nguyên |
+| Call 2: DESCRIBE (tất cả trong 1 call) | Call 2: PEOPLE (factions, trang phục, crowd) |
+| | Call 3: WORLD (kiến trúc, cảnh quan, đồ vật) |
+
+### 2. Crowd Archetypes: 1 mô tả → 3 variants
+
+```diff
+- "civilian_man": "A man wearing a tunic"
++ "civilian_man": [
++   "Laborer — Head: bare... Upper: undyed hemp tunic...",
++   "Craftsman — Head: cloth cap... Upper: brown wool tunic, apron...",
++   "Townsman — Head: neat hair... Upper: olive linen tunic..."
++ ]
+```
+Áp dụng cho: `soldier`, `civilian_man`, `civilian_woman` (3 variants mỗi loại)
+Giữ nguyên: `child`, `noble`, `clergy` (1 mô tả)
+
+### 3. Bốn domain mới trong World Bible
+
+| Domain | Nội dung |
+|---|---|
+| `landscape` | terrain, vegetation, water, sky_palette |
+| `transport` | riding (yên ngựa), vehicles, pack_animals |
+| `cultural_markers` | symbols, decorative_motifs, status_indicators |
+| `props` expanded | + dining (bát đĩa, thức ăn) + writing (sách, bút) |
+
+### 4. Architecture: bỏ lighting
+
+Field `lighting` đã xoá khỏi architecture schema — để Step 3 tự quyết ánh sáng theo time_of_day.
+
+### 5. ANCHOR instruction cho downstream steps
+
+Step 2b/2c giờ nhận ANCHOR instruction:
+```
+You MUST follow faction colors, armor types, and era constraints.
+You MAY add period-appropriate details as long as they are accurate to {date_range} 
+and do NOT contradict this reference.
+```
+
+### 6. Xoá toàn bộ backward compat
+
+- Không còn fallback đọc `era` từ top-level
+- Không còn fallback `cleaned_text` → sequences
+- Truy cập trực tiếp `world_bible["historical_context"]` thay vì `.get()`
+- Checkpoint cũ sẽ cần xoá để tạo mới
+
+## File thay đổi
+
+```diff:video_pipeline.py
+"""
+Video Prompt Pipeline — Main Orchestrator
+4-step pipeline: SRT Parse → Semantic Chunking → Global Context → Storyboarding → Assembly
+All intermediate data flows through JSON checkpoints for resume capability.
+"""
+import json
+import os
+import re
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional
+
+from core.api_client import APIClient
+from core.prompt_generator import load_style_content
+from core.srt_sentence_parser import parse_srt_to_sentences, parse_txt_to_sentences
+
+
+# ═══════════════ Pipeline State ═══════════════
+
+class PipelineState:
+    IDLE = "idle"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    DONE = "done"
+    ERROR = "error"
+
+
+@dataclass
+class StepStatus:
+    """Status of a single pipeline step."""
+    step: str
+    status: str = "pending"  # pending, running, done, failed, skipped
+    message: str = ""
+    file_path: str = ""
+
+
+# ═══════════════ JSON Utils ═══════════════
+
+def _try_parse_json(raw: str) -> Optional[dict | list]:
+    """Parse JSON from LLM response, stripping markdown fences if present."""
+    if not raw:
+        return None
+
+    # Strip markdown code fences
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', raw.strip())
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    cleaned = cleaned.strip()
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Try to find JSON array or object within the text
+        for pattern in [r'\[[\s\S]*\]', r'\{[\s\S]*\}']:
+            match = re.search(pattern, cleaned)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    continue
+        return None
+
+
+def _save_checkpoint(filepath: str, data) -> None:
+    """Save JSON checkpoint."""
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def _load_checkpoint(filepath: str):
+    """Load JSON checkpoint if it exists."""
+    if not os.path.isfile(filepath):
+        return None
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _parse_style_section(style_name: str, styles_dir: str, section_name: str) -> str:
+    """Extract a === SECTION NAME === block from a style .txt file."""
+    if not style_name or not styles_dir:
+        return ""
+    style_path = os.path.join(styles_dir, f"{style_name}.txt")
+    if not os.path.isfile(style_path):
+        return ""
+    try:
+        content = load_style_content(style_path)
+        if not content:
+            return ""
+        pattern = rf'===\s*{re.escape(section_name)}\s*===\s*\n(.+?)(?:\n===|\nMandatory\s+Style|\nNegative\s+Prompt|$)'
+        m = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+        return m.group(1).strip() if m else ""
+    except Exception:
+        return ""
+
+
+def _parse_style_summary(style_name: str, styles_dir: str) -> str:
+    """Extract === STYLE SUMMARY === section from a style .txt file."""
+    return _parse_style_section(style_name, styles_dir, "STYLE SUMMARY")
+
+
+def _parse_location_style(style_name: str, styles_dir: str) -> str:
+    """Extract === LOCATION STYLE === section from a style .txt file."""
+    return _parse_style_section(style_name, styles_dir, "LOCATION STYLE")
+
+
+# ═══════════════ System Prompts ═══════════════
+
+STEP1_SYSTEM_PROMPT = """You are a Script Segmentation Expert. Your task is to group a list of sentences into logical SEQUENCES for video production.
+
+## INPUT
+You receive a JSON array of sentences, each with: sentence_id, text, duration (seconds), chapter_id (integer).
+
+## RULES
+1. **Chapter Boundary (HIGHEST PRIORITY):** NEVER merge sentences from different chapter_ids into the same Sequence. When chapter_id changes, you MUST start a new Sequence.
+2. **Location & Time:** Cut into a new Sequence when the setting changes (location, time of day, time period).
+3. **Subject Shift:** Cut when the focal point shifts between a group/crowd vs an individual character.
+4. **Max Duration 25s:** If a sequence exceeds 25 seconds → split it. No minimum duration.
+5. **Semantic Boundary:** Cuts MUST fall between sentences (never split mid-sentence).
+6. **Skip Meta Sentences:** If a sentence is a chapter title (e.g. "Chapter 3", "Part 2"), a ranking number (e.g. "Number 5", "#3"), or a short structural label with no narrative content — EXCLUDE it from all sequences entirely.
+
+## LOCATION SHIFT RULE (CRITICAL)
+`location_shift` MUST be a PHYSICAL, FILMABLE PLACE — a specific room, field, building, or outdoor setting where a camera could be placed.
+FORBIDDEN: abstract concepts as locations ("Jerusalem history", "inner conflict", "the future", "the legacy").
+If the text is narration, metaphor, or abstract commentary with no clear physical place, KEEP the same `location_shift` as the PREVIOUS sequence.
+Do NOT create a new sequence just because the text becomes abstract — abstract narration is NOT a location change.
+
+## CHARACTER IDENTIFICATION
+For each sequence, list all NAMED or TITLED characters mentioned.
+Format each character using this formula (fill in parts that are available):
+
+  Has a proper NAME:     [age_stage] [Name], [title/role]
+  NO proper name:        [age_stage] [Anchor]'s [relationship/role]
+
+- age_stage is OPTIONAL — only include if age is stated or clearly implied in the text
+- Use the SAME name consistently for the same person across ALL sequences
+- "Anchor" = the known character this person relates to (e.g. "Baldwin's mother")
+- Do NOT list unnamed crowds, armies, or generic groups
+
+### AGE CLASSIFICATION (exact thresholds):
+  child:        0-12, or described as "boy/girl/child"
+  teen:         13-17, or "young man/youth"
+  young_adult:  18-30, or "young warrior/young king"
+  mature_adult: 31-55, or "seasoned/experienced/middle-aged"
+  elder:        56+, or "old/grey-haired/aged"
+  → If age is unclear, omit age_stage entirely
+
+## OUTPUT
+Return a JSON array. Each element:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "sentence_ids": [1, 2, 3],
+  "location_shift": "descriptive physical location name",
+  "main_subject": "brief description of what happens visually",
+  "characters": ["child Baldwin, prince", "Baldwin's tutor"],
+  "full_text": "concatenated text of all sentences in this sequence",
+  "total_duration": 12.5
+}
+```
+
+Return ONLY the JSON array, no explanation."""
+
+STEP2_CHARACTERS_SYSTEM_PROMPT = """You are a Visual Character Analyst for historical video production. You receive a list of sequences (from script segmentation) and must extract ALL unique characters.
+
+## INPUT
+A JSON array of sequences, each with: sequence_id, characters (list of character mentions), full_text.
+A WORLD BIBLE reference may be provided with faction details — use it for costume accuracy.
+
+## CHARACTERS
+For each unique character found across all sequences:
+- **label**: A unique reference label using format "Role-Descriptor-Letter" (e.g., "Roman-Commander-A", "Persian-King-A"). NO real names.
+- **original_name**: The character's actual name from the script.
+- **group**: "PROTAGONIST" or "NAMED"
+- **age_stage**: One of: "child", "teen", "young_adult", "mature_adult", "elder"
+- **visual_description**: A DETAILED description that MUST include ALL 5 items:
+  1. BODY: height relative to art style, build, skin tone, hair style + color
+  2. FACE: distinguishing features (scar, beard, expression, eye shape)
+  3. COSTUME (MAIN): primary garment with EXACT colors and faction emblems (from World Bible if available)
+  4. COSTUME (DETAIL): belt, boots, gloves, cape, accessories, headwear
+  5. IDENTIFYING MARK: one unique WORN or VISIBLE feature that distinguishes this character (e.g., a specific scar, a distinctive brooch, a tattoo, a mask, a unique belt buckle). Do NOT list held weapons or hand-held props — those are assigned per scene.
+  
+  BAD example: "A mature man in crusader armor"
+  BAD example: "Carries a broadsword on left hip" (NO held items in character sheet)
+  GOOD example: "A tall, broad-shouldered man with short brown hair and a thick handlebar mustache. Wears a white surcoat with a gold Jerusalem cross over chain mail hauberk, brown leather belt with lion-head buckle, tall brown riding boots. Has a distinctive diagonal scar across right cheek."
+
+- **body_language**: Typical posture and movement style.
+- **sheet_prompt**: A character reference sheet prompt: "Character reference sheet on clean white background. Bold text '[label]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. [visual_description]."
+
+### AGE CLASSIFICATION (exact thresholds):
+  child:        0-12, or described as "boy/girl/child"
+  teen:         13-17, or "young man/youth"
+  young_adult:  18-30, or "young warrior/young king"
+  mature_adult: 31-55, or "seasoned/experienced/middle-aged"
+  elder:        56+, or "old/grey-haired/aged"
+
+### AGE VARIANT RULE (CRITICAL)
+If the script covers a character's life across MULTIPLE age stages, you MUST create SEPARATE entries for EACH stage. Each entry gets a UNIQUE label with an age suffix:
+- `Roman-Commander-A-Child` (age_stage: "child")
+- `Roman-Commander-A-Teen` (age_stage: "teen")
+- `Roman-Commander-A-YoungAdult` (age_stage: "young_adult")
+- `Roman-Commander-A-MatureAdult` (age_stage: "mature_adult")
+- `Roman-Commander-A-Elder` (age_stage: "elder")
+
+Each variant MUST have its own visual_description and sheet_prompt reflecting that life stage.
+If a character appears at only ONE age, use just one entry with no age suffix.
+
+## OUTPUT
+Return a JSON object:
+```json
+{
+  "characters": [...]
+}
+```
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2_LOCATIONS_SYSTEM_PROMPT = """You are a Visual Location Analyst for historical video production. You receive a list of sequences (from script segmentation) and must extract ALL significant locations.
+
+## INPUT
+A JSON array of sequences, each with: sequence_id, location_shift, full_text.
+A WORLD BIBLE reference may be provided with architecture details — use it for historical accuracy.
+
+## LOCATIONS
+For each unique location found across all sequences:
+- **label**: A concise, unique location name.
+- **bible_description**: A DETAILED description that MUST include ALL 4 sections:
+  1. ARCHITECTURE: building style, materials (stone, wood, marble), structural elements (arches, columns, vaults), matching the historical era from the World Bible
+  2. ENVIRONMENT: landscape, terrain, vegetation, indoor/outdoor, spatial scale (vast hall vs cramped cell)
+  3. KEY PROPS: furniture, decorations, objects typically found in this setting (torches, banners, market stalls, weapons racks)
+  4. ATMOSPHERE: typical weather, lighting quality, time of day, mood (solemn, chaotic, peaceful)
+  
+  BAD example: "A throne room in a castle."
+  GOOD example: "A grand Romanesque stone hall with high ribbed-vault ceiling supported by thick limestone columns. Pointed arch windows with iron-framed glass let in dusty shafts of sunlight. A raised stone dais at the far end holds a carved wooden throne with faded velvet cushions. Iron candelabras line the walls between faded tapestries showing battle scenes. Banners with gold Jerusalem cross hang from ceiling beams. The floor is worn flagstone. Atmosphere is dim, solemn, with warm amber torchlight mixing with cool daylight."
+
+- **default_lighting**: Specific lighting description (e.g., "warm torchlight from iron sconces on stone walls" NOT just "indoor lighting")
+- **camera_angle**: Always set to "wide establishing shot, eye-level, 16:9 aspect ratio"
+
+## OUTPUT
+Return a JSON object:
+```json
+{
+  "locations": [...]
+}
+```
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2_WORLD_BIBLE_PROMPT = """You are a Historical Visual Consultant. You receive a list of sequences from a historical script and must create a WORLD BIBLE — a comprehensive visual reference guide for the historical period.
+
+## INPUT
+A JSON array of sequences, each with: sequence_id, full_text.
+
+## OUTPUT
+Analyze the script to identify the historical era, geography, and all factions/groups involved. Then describe visual elements with EXACT colors, materials, and designs.
+
+Return a JSON object:
+```json
+{
+  "era": "Name of historical era and approximate years (e.g., 'Crusader States Period, 1174-1185 AD')",
+  "geography": "Primary regions and countries (e.g., 'Kingdom of Jerusalem, Levant, Egypt')",
+  "factions": [
+    {
+      "name": "Full faction name (e.g., 'Kingdom of Jerusalem')",
+      "heraldry": "Emblem description (e.g., 'Gold Jerusalem cross on white field')",
+      "primary_colors": ["color1", "color2", "color3"],
+      "armor": "Detailed armor description with colors and materials",
+      "civilian_clothing": "Typical civilian garments for this faction",
+      "weapons": ["weapon1", "weapon2", "weapon3"],
+      "crowd_archetypes": {
+        "soldier": "Visual description of a generic soldier (armor, colors, weapons, posture)",
+        "civilian_man": "Visual description of a common male civilian",
+        "civilian_woman": "Visual description of a common female civilian",
+        "child": "Visual description of children in this faction",
+        "noble": "Visual description of court nobles and advisors",
+        "clergy": "Visual description of religious figures (priests, monks, imams)"
+      }
+    }
+  ],
+  "architecture": {
+    "style_name": "Detailed description of architectural style, materials, and key features"
+  },
+  "props": {
+    "category": "Description of typical objects and items"
+  }
+}
+```
+
+## RULES
+- All descriptions must be VISUALLY SPECIFIC (exact colors, materials, shapes, patterns)
+- Historically accurate to the identified era
+- Each faction MUST have distinct, non-overlapping primary_colors
+- If the script has no military factions (e.g., biography of a scientist), use "factions" for social groups with distinct clothing styles
+- Architecture MUST specify building materials (limestone, sandstone, marble, wood) and structural elements (arches, columns, domes)
+- Cover ALL groups, factions, and architectural styles mentioned or implied in the script
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP3_SYSTEM_PROMPT = """You are a Cinematic Director for AI video generation. You break a narrative sequence into camera shots (1-{SCENE_MAX} seconds each).
+
+## CRITICAL: 2-PHASE THINKING PROCESS
+
+### Phase 1 — Visual Event Synthesis
+Read the ENTIRE `full_text` of the sequence. Summarize it into ONE visual event.
+If the text contains a montage (multiple brief actions), pick the 1-2 STRONGEST visual moments.
+Write this in the `visual_event` field BEFORE creating scenes.
+
+### Phase 2 — Camera Cuts
+Based on your `visual_event`, create CAMERA ANGLES of the SAME event (enough to fill total_sequence_duration with scenes of 1-{SCENE_MAX}s each).
+Each angle = 1 scene.
+
+### ANTI 1:1 RULE
+- FORBIDDEN to create one scene per sentence
+- Scenes must be DIFFERENT CAMERA ANGLES of the same event, NOT illustrations of individual sentences
+- `audio_sync` only marks where the voiceover is reading — it does NOT dictate visual content
+
+## 7 RULES
+
+### Rule 1: Label Lock (CRITICAL)
+You MUST use ONLY the EXACT labels provided in === AVAILABLE LABELS ===.
+Do NOT create, rename, or abbreviate labels. Copy-paste them exactly.
+`character_labels` must match character labels.
+`locked_location` must match a location label.
+
+
+### Rule 2: Time Math
+- `sum(scene.duration)` MUST EQUAL `total_sequence_duration` (tolerance: ±10%)
+- Each scene: 1.0s — {SCENE_MAX}s
+- **SHORT SEQUENCE EXCEPTION**: If `total_sequence_duration` < {SCENE_MAX}s, create EXACTLY 1 scene with `duration` = `total_sequence_duration`.
+
+### Rule 3: A-Roll / B-Roll
+- **A-Roll**: Character action/expression driving the story
+- **B-Roll**: Environment, objects, establishing shots
+
+### Rule 4: Shot Types (ALLOWED LIST)
+Only these 3 shot types are permitted:
+- **Wide Shot**: Full environment + characters
+- **Medium Shot**: Character from waist up
+- **Close-up**: Face or hands, shoulders up
+
+FORBIDDEN: Extreme Close-up, Extreme Wide Shot, or any other shot type. The CLOSEST you can go is Close-up.
+
+### Rule 5: Physical Action Only
+FORBIDDEN: abstract words (defeated, sad). REQUIRED: visible physical events (knees sinking into mud, hand wiping eyes).
+
+### Rule 6: Costume Note (REQUIRED)
+For EACH scene, describe what the characters are WEARING in this specific scene.
+This may differ from their default costume in the character sheet (e.g., battle armor vs royal robes).
+Write this in the `costume_note` field.
+
+### Rule 7: Background & Extras
+REQUIRED: describe background people or environmental motion.
+**ALL human figures — including unnamed extras, crowds, and background people — MUST be described using the SAME art style as main characters** (same face shape, same body proportions, same level of stylization).
+Use the `crowd_archetypes` from the WORLD BIBLE to describe extras accurately:
+- Court scene → use `[noble]` and `[clergy]` archetypes from the relevant faction
+- Battle scene → use `[soldier]` archetypes
+- Street scene → use `[civilian_man]`, `[civilian_woman]`, `[child]` archetypes
+Write the SPECIFIC archetype description in `background_and_extras` — NOT generic phrases like "a group of people".
+
+### Rule 8: Camera Motion
+Default: `Static`. Only 3 exceptions:
+
+| Situation | Shot Size | Motion |
+|---|---|---|
+| OPENING scene of new sequence | Wide | Slow Pan |
+| Character MOVING (running, riding) | Medium | Slow Tracking |
+| CLIMACTIC emotion (discovery, rage) | Medium/Close-up | Extreme Slow Zoom In |
+
+FORBIDDEN: Pan on Close-up. FORBIDDEN: Two opposing motions adjacent.
+
+### Rule 9: Visual Translation Strategy (CRITICAL)
+The narration (audio) and the visual (scene) are TWO SEPARATE LAYERS. Do NOT illustrate the narration literally.
+
+| Text type | Strategy | Example |
+|---|---|---|
+| **Clear physical action** ("grabs your arm") | → Direct illustration | Show hands grabbing arm |
+| **Metaphor/philosophy** ("your kingdom is a sand castle") | → **Character reaction**: show the CHARACTER's body language (clenched fists, slumped shoulders, tightened jaw) | NOT a literal sand castle |
+| **Future/past commentary** ("2 years later he will lose...") | → **Atmospheric B-Roll**: still environment, light/shadow, dust, empty spaces | NOT a literal battlefield scene |
+| **Abstract concept** ("something growing inside your body") | → **Visual symbol**: a concrete OBJECT that represents the concept (pale skin patch, trembling hand, a flickering candle) | NOT an abstract glow or aura |
+
+FORBIDDEN: Illustrating words literally when they are metaphorical.
+FORBIDDEN: Creating a scene that looks like it belongs in a DIFFERENT location just to match the narration.
+The visual must ALWAYS feel grounded in the `locked_location`.
+
+### Rule 10: Content Safety (CRITICAL)
+`physical_action` and all visual descriptions must be SAFE for AI image generation APIs.
+FORBIDDEN in physical_action:
+- Blood, wounds, bleeding, red lines on skin, open cuts
+- Self-harm actions (digging nails, cutting, scratching skin to bleed)
+- Graphic injury to children (needles piercing skin, burns on body)
+- Torture, execution, or graphic death scenes
+- Weapons directly contacting or piercing human bodies
+
+INSTEAD USE indirect/implied techniques:
+- "examines the arm carefully" instead of "digs nails into skin drawing red lines"
+- "presses a small metal tool near the forearm" instead of "pushes hot needle into skin"
+- "a pale, discolored patch visible on the skin" instead of "wound bleeding"
+- "collapses motionless" instead of graphic death descriptions
+- Show CHARACTER REACTIONS (grimacing face, clenched jaw, turned-away gaze) instead of the injury itself
+
+ALL fields MUST be in ENGLISH. `audio_sync` keeps the original script language.
+
+## OUTPUT FORMAT
+Return a JSON object for this ONE sequence:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "total_sequence_duration": 14.0,
+  "locked_location": "exact location label",
+  "visual_event": "One-sentence summary of the visual event",
+  "scenes": [
+    {
+      "global_scene_id": "SEQ_01_SCN_01",
+      "duration": 4.0,
+      "audio_sync": "original text this scene covers",
+      "character_labels": [],
+      "shot_type": "Wide Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Slow Pan",
+      "time_of_day": "dawn / morning / midday / afternoon / dusk / night",
+      "costume_note": "specific clothing/armor for this scene",
+      "lighting_and_atmosphere": "... (must match time_of_day)",
+      "background_and_extras": "...",
+      "physical_action": "..."
+    }
+  ]
+}
+```
+
+Return ONLY the JSON object, no explanation."""
+
+
+# Step 4: Prompt Writing — LLM writes natural flat_prompt per sequence
+# System prompt = full style file content (loaded at runtime)
+# This constant is the user message template
+STEP4_USER_TEMPLATE = """=== VISUAL REFERENCE ===
+{mini_bible}
+=== END REFERENCE ===
+
+=== SCENES TO WRITE PROMPTS FOR ===
+Sequence: {sequence_id} | Chapter: {chapter_info}
+Location: [{location}]
+Visual Event: {visual_event}
+
+{scenes_data}
+=== END SCENES ===
+
+=== CONTEXT ===
+{context}
+=== END CONTEXT ===
+
+Write a structured JSON for EACH scene above. You MUST fill ALL thinking fields BEFORE writing flat_prompt.
+
+RULES:
+- Use [Label] brackets for ALL characters and locations (e.g., [Jerusalem-King-A-Child], [Jerusalem Palace Courtyard])
+- flat_prompt MUST contain the [Location-Label] from the sequence — NEVER omit it
+- flat_prompt MUST mention the time_of_day (dawn/morning/midday/afternoon/dusk/night) from the scene data to set correct lighting
+- Include the specific COSTUME for this scene (from costume_note), NOT the default from reference
+- Follow the art style rules in the system prompt
+- Do NOT include "Mandatory Style:" or "Negative Prompt:" — they are appended automatically
+- flat_prompt must be a SINGLE paragraph, 2-4 sentences, weaving ALL thinking fields into natural prose
+- CONTENT SAFETY: NEVER describe blood, wounds, self-harm, needles piercing skin, or graphic injury. Use indirect descriptions: "examines the arm", "a pale patch on skin", "recoils in pain" instead of graphic details.
+- CROWD/EXTRAS CONSISTENCY: When describing background people, extras, or crowds, ALWAYS repeat the art style features (e.g., "identical stylized boys with oversized round pure white faces, dot eyes, no noses"). NEVER leave extras without style description — the image generator will default to realistic faces.
+
+Return a JSON array:
+```json
+[
+  {{
+    "scene_id": "SEQ_01_SCN_01",
+    "character_blocking": "where each character is positioned in the frame (center, left foreground, right background, etc.)",
+    "emotion": "FACIAL expression only: eyebrow shape, mouth shape, eye state (do NOT repeat physical_action or body movement — those are already in Step 3)",
+    "key_props": ["specific OBJECTS visible in the scene that are NOT already in background_and_extras"],
+    "camera_angle": "eye-level / low-angle / high-angle / dutch-angle",
+    "effects": "PARTICLE and atmospheric effects ONLY: dust motes, smoke wisps, light rays, heat haze, falling leaves (do NOT repeat lighting — that is already in lighting_and_atmosphere from Step 3). Write 'none' if no effects.",
+    "crowd_description": "ART STYLE enforcement for background people: take the crowd from background_and_extras and ADD explicit art style features (face shape, proportions, stylization). Write 'none' if no crowd.",
+    "flat_prompt": "Complete prompt paragraph weaving Step 3 data + ALL thinking fields above into natural flowing prose"
+  }}
+]
+```
+
+IMPORTANT: flat_prompt must INCLUDE information from ALL thinking fields above AND the Step 3 input data (shot_type, camera_motion, physical_action, costume_note, lighting_and_atmosphere). Do not leave out any element.
+
+Return ONLY the JSON array, no explanation."""
+
+
+# ═══════════════ Main Pipeline Class ═══════════════
+
+class VideoPipeline:
+    """
+    Orchestrates the 4-step video prompt pipeline.
+    All steps produce checkpoint files for resume capability.
+    """
+
+    def __init__(
+        self,
+        api_client: APIClient,
+        srt_path: str = "",
+        srt_paths: Optional[List[str]] = None,
+        output_dir: str = "",
+        style_name: str = "",
+        styles_dir: str = "",
+        tier_step2: str = "Pro",
+        tier_step13: str = "Flash",
+        threads: int = 2,
+        scene_max: int = 6,
+        constraints: Optional[dict] = None,
+        log_api: bool = False,
+        on_log: Optional[Callable] = None,
+        on_step_updated: Optional[Callable] = None,
+        on_all_failed: Optional[Callable] = None,
+    ):
+        self.api_client = api_client
+        # Multi-file: prefer srt_paths, fallback to single srt_path
+        if srt_paths and len(srt_paths) > 0:
+            self.srt_paths = srt_paths
+        elif srt_path:
+            self.srt_paths = [srt_path]
+        else:
+            self.srt_paths = []
+        self.srt_path = self.srt_paths[0] if self.srt_paths else ""  # backward compat
+        self.output_dir = output_dir
+        self.style_name = style_name
+        self.styles_dir = styles_dir
+        self.tier_step2 = tier_step2
+        self.tier_step13 = tier_step13
+        self.threads = threads
+        self.scene_max = scene_max
+        self.constraints = constraints or {}
+        self.log_api = log_api
+        self.on_log = on_log
+        self.on_step_updated = on_step_updated
+        self.on_all_failed = on_all_failed
+
+        # Style data (loaded once)
+        self.style_summary = ""
+        self.style_content = ""       # Full style file for Step 4
+        self.location_style = ""      # Background-only style for location refs
+
+        # Debug dump
+        self._dump_counter = 0
+        self._dump_lock = threading.Lock()
+        self._debug_dir = ""
+
+        self.state = PipelineState.IDLE
+        self._stop_event = threading.Event()
+
+        # Step statuses
+        self.steps: Dict[str, StepStatus] = {
+            "step0": StepStatus(step="Step 0: Parse + Merge"),
+            "step1": StepStatus(step="Step 1: Semantic Chunking"),
+            "step2a": StepStatus(step="Step 2a: World Bible"),
+            "step2b": StepStatus(step="Step 2b: Characters"),
+            "step2c": StepStatus(step="Step 2c: Locations"),
+            "step3": StepStatus(step="Step 3: Scene Design"),
+            "step4": StepStatus(step="Step 4: Prompt Writing"),
+            "step5": StepStatus(step="Step 5: Export"),
+        }
+
+        # Data holders
+        self.sentences = []
+        self.cleaned_text = ""
+        self.sequences = []
+        self.characters_data = {}
+        self.locations_data = {}
+        self.world_bible = {}
+        self.valid_labels = {"characters": [], "locations": []}
+        self.scenes_data = []
+        self.final_prompts = []
+
+
+    # ── Helpers ──
+
+    def _log(self, msg: str):
+        if self.on_log:
+            try:
+                self.on_log(msg)
+            except Exception:
+                pass
+
+    def _update_step(self, key: str, status: str, message: str = ""):
+        step = self.steps[key]
+        step.status = status
+        step.message = message
+        if self.on_step_updated:
+            try:
+                self.on_step_updated(key, step)
+            except Exception:
+                pass
+
+    def _is_stopped(self) -> bool:
+        return self._stop_event.is_set()
+
+    def _checkpoint_path(self, filename: str) -> str:
+        base = os.path.splitext(os.path.basename(self.srt_path))[0]
+        return os.path.join(self.output_dir, f"{base}{filename}")
+
+    def _init_debug_dir(self):
+        """Create debug dump directory."""
+        base = os.path.splitext(os.path.basename(self.srt_path))[0]
+        self._debug_dir = os.path.join(self.output_dir, f"{base}_debug")
+        os.makedirs(self._debug_dir, exist_ok=True)
+        self._dump_counter = 0
+
+    def _dump(self, step: str, label: str, data, ext: str = "txt"):
+        """Dump data to debug folder."""
+        if not self._debug_dir:
+            return
+        try:
+            with self._dump_lock:
+                self._dump_counter += 1
+                counter = self._dump_counter
+            filename = f"{counter:03d}_{step}_{label}.{ext}"
+            filepath = os.path.join(self._debug_dir, filename)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                if isinstance(data, (dict, list)):
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                else:
+                    f.write(str(data))
+        except Exception:
+            pass
+
+    def _send_llm(self, system_prompt: str, user_message: str, tier: str = "Flash",
+                  max_tokens: int = 16384, step_label: str = "") -> Optional[str]:
+        """Send request to LLM via api_client. Dumps all data to debug folder."""
+        # Dump input
+        call_label = step_label or "llm"
+        self._dump(call_label, "system_prompt", system_prompt)
+        self._dump(call_label, "user_message", user_message)
+
+        self.api_client.log_api = self.log_api
+        result = self.api_client.send_request(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            tier=tier,
+            temperature=0.4,
+            max_tokens=max_tokens,
+            log_callback=self.on_log,
+            on_all_failed=self.on_all_failed,
+        )
+
+        # Dump raw response
+        self._dump(call_label, "raw_response", result or "(empty)")
+        return result
+
+    # ══════════════ Step 0: Parse + Merge ══════════════
+
+    def _run_step0(self) -> bool:
+        """Parse SRT/TXT files → merged sentences with chapter markers."""
+        self._update_step("step0", "running")
+
+        ckpt = self._checkpoint_path("_step0_sentences.json")
+        clean_path = self._checkpoint_path("_cleaned_script.txt")
+
+        # Resume: check checkpoint
+        existing = _load_checkpoint(ckpt)
+        if existing and os.path.isfile(clean_path):
+            self.sentences = existing
+            with open(clean_path, 'r', encoding='utf-8') as f:
+                self.cleaned_text = f.read()
+            self._update_step("step0", "done", f"{len(existing)} sentences loaded from checkpoint")
+            self._log(f"[Step 0] ⏭ Loaded from checkpoint: {len(existing)} sentences")
+            return True
+
+        # Parse each file and merge
+        try:
+            from core.srt_sentence_parser import Sentence
+
+            all_sentences = []
+            all_cleaned_parts = []
+            time_offset = 0.0
+            global_id = 0
+
+            for chapter_idx, file_path in enumerate(self.srt_paths, start=1):
+                ext = os.path.splitext(file_path)[1].lower()
+                chapter_name = os.path.splitext(os.path.basename(file_path))[0]
+
+                if ext == '.srt':
+                    self._log(f"[Step 0] Parsing SRT: {os.path.basename(file_path)}")
+                    sentence_objs, cleaned = parse_srt_to_sentences(file_path)
+                elif ext in ('.txt', '.text'):
+                    self._log(f"[Step 0] Parsing TXT: {os.path.basename(file_path)}")
+                    sentence_objs, cleaned = parse_txt_to_sentences(file_path)
+                else:
+                    self._log(f"[Step 0] ⚠ Skipping unsupported: {os.path.basename(file_path)}")
+                    continue
+
+                if not sentence_objs:
+                    self._log(f"[Step 0] ⚠ No sentences in: {os.path.basename(file_path)}")
+                    continue
+
+                # Add chapter header to cleaned text
+                all_cleaned_parts.append(f"\n--- Chapter {chapter_idx}: {chapter_name} ---\n{cleaned}")
+
+                # Merge with chapter markers and timing offset
+                for s in sentence_objs:
+                    global_id += 1
+                    d = s.to_full_dict()
+                    d["sentence_id"] = global_id
+                    d["chapter_id"] = chapter_idx
+                    d["chapter_name"] = chapter_name
+                    d["start_time"] = round(d["start_time"] + time_offset, 3)
+                    d["end_time"] = round(d["end_time"] + time_offset, 3)
+                    all_sentences.append(d)
+
+                # Offset next chapter's timing
+                if sentence_objs:
+                    last = sentence_objs[-1]
+                    time_offset += last.end_time + 0.5  # small gap between chapters
+
+            if not all_sentences:
+                self._update_step("step0", "failed", "No sentences found in any file")
+                return False
+
+            self.sentences = all_sentences
+            self.cleaned_text = "\n".join(all_cleaned_parts)
+
+            # Word count check
+            word_count = len(self.cleaned_text.split())
+            if word_count > 10000:
+                self._update_step("step0", "failed",
+                                  f"Script too long: {word_count} words (max 10000)")
+                self._log(f"[Step 0] ⚠ STOPPED: Script has {word_count} words (max 10000)")
+                return False
+
+            # Save checkpoints
+            _save_checkpoint(ckpt, self.sentences)
+            with open(clean_path, 'w', encoding='utf-8') as f:
+                f.write(self.cleaned_text)
+
+            total_dur = round(sum(s["duration"] for s in self.sentences), 1)
+            n_chapters = len(self.srt_paths)
+            self._update_step("step0", "done",
+                              f"{len(self.sentences)} sentences from {n_chapters} file(s), {total_dur}s, {word_count} words")
+            self._log(f"[Step 0] ✅ {len(self.sentences)} sentences from {n_chapters} file(s), {total_dur}s, {word_count} words")
+            self._dump("step0", "sentences", self.sentences, "json")
+            self._dump("step0", "cleaned_text", self.cleaned_text)
+            return True
+
+        except Exception as e:
+            self._update_step("step0", "failed", str(e))
+            self._log(f"[Step 0] ❌ Error: {e}")
+            return False
+
+
+    # ══════════════ Step 1: Semantic Chunking ══════════════
+
+    def _process_chapter_step1(self, chapter_id: int, chapter_sentences: list,
+                                ch_idx: int, total_chapters: int) -> list:
+        """Process ONE chapter through Step 1 (sequence chunking)."""
+        if self._is_stopped():
+            return []
+
+        # Build API payload (keep chapter_id for context)
+        api_sentences = [
+            {"sentence_id": s["sentence_id"], "text": s["text"], "duration": s["duration"],
+             "chapter_id": s.get("chapter_id", chapter_id)}
+            for s in chapter_sentences
+        ]
+
+        chapter_name = chapter_sentences[0].get("chapter_name", f"Chapter {chapter_id}") if chapter_sentences else f"Chapter {chapter_id}"
+        self._log(f"  [{ch_idx+1}/{total_chapters}] {chapter_name} ({len(api_sentences)} sentences)")
+
+        user_msg = json.dumps(api_sentences, ensure_ascii=False, indent=2)
+
+        for attempt in range(2):
+            raw = self._send_llm(STEP1_SYSTEM_PROMPT, user_msg, tier=self.tier_step13,
+                                 step_label=f"step1_ch{ch_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if parsed and isinstance(parsed, list):
+                return parsed
+            self._log(f"  [{ch_idx+1}] Retry {attempt+1}: JSON parse failed")
+
+        self._log(f"  [{ch_idx+1}] ❌ Failed after 2 attempts")
+        return []
+
+    def _run_step1(self) -> bool:
+        """LLM groups sentences into Sequences — per-chapter processing."""
+        self._update_step("step1", "running")
+
+        ckpt = self._checkpoint_path("_step1_sequences.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.sequences = existing
+            self._update_step("step1", "done", f"{len(existing)} sequences loaded")
+            self._log(f"[Step 1] ⏭ Loaded: {len(existing)} sequences")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        # Group sentences by chapter_id
+        from collections import OrderedDict
+        chapters = OrderedDict()
+        for s in self.sentences:
+            ch_id = s.get("chapter_id", 1)
+            chapters.setdefault(ch_id, []).append(s)
+
+        total_chapters = len(chapters)
+        self._log(f"[Step 1] Processing {total_chapters} chapters ({len(self.sentences)} sentences)...")
+
+        # Process each chapter
+        all_chapter_results = []
+        if self.threads <= 1:
+            for ch_idx, (ch_id, ch_sents) in enumerate(chapters.items()):
+                if self._is_stopped():
+                    return False
+                results = self._process_chapter_step1(ch_id, ch_sents, ch_idx, total_chapters)
+                all_chapter_results.append((ch_id, results))
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {}
+                for ch_idx, (ch_id, ch_sents) in enumerate(chapters.items()):
+                    f = pool.submit(self._process_chapter_step1, ch_id, ch_sents, ch_idx, total_chapters)
+                    futures[f] = (ch_idx, ch_id)
+
+                indexed = [None] * total_chapters
+                for future in as_completed(futures):
+                    ch_idx, ch_id = futures[future]
+                    try:
+                        indexed[ch_idx] = (ch_id, future.result())
+                    except Exception as e:
+                        self._log(f"  [Chapter {ch_idx+1}] ❌ Error: {e}")
+                        indexed[ch_idx] = (ch_id, [])
+                all_chapter_results = [r for r in indexed if r]
+
+        # Merge all chapter results into one continuous list
+        sentence_map = {s["sentence_id"]: s for s in self.sentences}
+        all_sequences = []
+        for ch_id, chapter_seqs in all_chapter_results:
+            for seq in chapter_seqs:
+                # Reconstruct full_text, total_duration, start/end from sentence data
+                ids = seq.get("sentence_ids", [])
+                texts = []
+                total_dur = 0.0
+                for sid in ids:
+                    s = sentence_map.get(sid)
+                    if s:
+                        texts.append(s["text"])
+                        total_dur += s["duration"]
+                seq["full_text"] = " ".join(texts)
+                seq["total_duration"] = round(total_dur, 2)
+
+                # Ensure characters field exists
+                seq.setdefault("characters", [])
+
+                # Tag with chapter info
+                seq["chapter_id"] = ch_id
+                if ids:
+                    first_s = sentence_map.get(ids[0])
+                    if first_s:
+                        seq["chapter_name"] = first_s.get("chapter_name", f"Chapter {ch_id}")
+
+                all_sequences.append(seq)
+
+        if not all_sequences:
+            self._update_step("step1", "failed", "No sequences generated")
+            return False
+
+        # Re-number sequence IDs continuously
+        for i, seq in enumerate(all_sequences):
+            seq["sequence_id"] = f"SEQ_{i+1:02d}"
+
+        self.sequences = all_sequences
+        _save_checkpoint(ckpt, all_sequences)
+
+        self._update_step("step1", "done", f"{len(all_sequences)} sequences")
+        self._log(f"[Step 1] ✅ {len(all_sequences)} sequences from {total_chapters} chapters")
+        self._dump("step1", "sequences_parsed", all_sequences, "json")
+        return True
+
+    # ══════════════ Step 2: Global Context ══════════════
+
+    def _run_step2a(self) -> bool:
+        """LLM generates World Bible (historical period visual references)."""
+        self._update_step("step2a", "running")
+
+        ckpt = self._checkpoint_path("_step2_world_bible.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.world_bible = existing
+            era = existing.get("era", "unknown")
+            factions = len(existing.get("factions", []))
+            self._update_step("step2a", "done", f"{era} ({factions} factions)")
+            self._log(f"[Step 2a] ⏭ Loaded: {era}")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2a] Generating World Bible (Pro model)...")
+
+        # Build input from Step 1 sequences
+        seq_data = [{"sequence_id": s["sequence_id"],
+                     "full_text": s.get("full_text", "")}
+                    for s in self.sequences]
+        user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+
+        raw = self._send_llm(
+            STEP2_WORLD_BIBLE_PROMPT, user_msg,
+            tier=self.tier_step2, max_tokens=16384, step_label="step2a",
+        )
+        if not raw:
+            self._update_step("step2a", "failed", "No response from LLM")
+            return False
+
+        parsed = _try_parse_json(raw)
+        if not parsed or not isinstance(parsed, dict):
+            self._update_step("step2a", "failed", "Invalid JSON response")
+            return False
+
+        self.world_bible = parsed
+        _save_checkpoint(ckpt, parsed)
+
+        era = parsed.get("era", "unknown")
+        factions = len(parsed.get("factions", []))
+        self._update_step("step2a", "done", f"{era} ({factions} factions)")
+        self._log(f"[Step 2a] ✅ World Bible: {era}")
+        self._dump("step2a", "world_bible", parsed, "json")
+        return True
+
+    def _run_step2b(self) -> bool:
+        """LLM extracts characters from sequences."""
+        self._update_step("step2b", "running")
+
+        ckpt = self._checkpoint_path("_step2_characters.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.characters_data = existing
+            chars = len(existing.get("characters", []))
+            self._update_step("step2b", "done", f"{chars} characters")
+            self._log(f"[Step 2b] ⏭ Loaded: {chars} characters")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2b] Analyzing characters (Pro model)...")
+
+        # Inject style summary so character descriptions match the art style
+        sys_prompt = STEP2_CHARACTERS_SYSTEM_PROMPT
+        if self.style_summary:
+            sys_prompt += f"\n\n=== VISUAL ART STYLE ===\nAll visual_description and sheet_prompt MUST follow this art style:\n{self.style_summary}\nDo NOT describe realistic human features if the style forbids them."
+
+        # Inject World Bible so character costumes match historical factions
+        if self.world_bible:
+            sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE ===\n{json.dumps(self.world_bible, ensure_ascii=False)}\nUse faction colors, heraldry, armor types, and weapons from this reference for each character's visual_description."
+
+        # Build input from Step 1 sequences
+        seq_data = [{"sequence_id": s["sequence_id"],
+                     "characters": s.get("characters", []),
+                     "full_text": s.get("full_text", "")}
+                    for s in self.sequences]
+        user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+
+        raw = self._send_llm(
+            sys_prompt, user_msg,
+            tier=self.tier_step2, max_tokens=32768, step_label="step2b",
+        )
+        if not raw:
+            self._update_step("step2b", "failed", "No response from LLM")
+            return False
+
+        parsed = _try_parse_json(raw)
+        if not parsed or not isinstance(parsed, dict):
+            self._update_step("step2b", "failed", "Invalid JSON response")
+            return False
+
+        self.characters_data = parsed
+        _save_checkpoint(ckpt, parsed)
+
+        chars = len(parsed.get("characters", []))
+        self._update_step("step2b", "done", f"{chars} characters")
+        self._log(f"[Step 2b] ✅ {chars} characters")
+        self._dump("step2b", "characters_parsed", parsed, "json")
+        return True
+
+    def _run_step2c(self) -> bool:
+        """LLM extracts locations from sequences."""
+        self._update_step("step2c", "running")
+
+        ckpt = self._checkpoint_path("_step2_visual_bible.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.locations_data = existing
+            locs = len(existing.get("locations", []))
+            self._update_step("step2c", "done", f"{locs} locations")
+            self._log(f"[Step 2c] ⏭ Loaded: {locs} locations")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2c] Analyzing locations (Pro model)...")
+
+        # Inject World Bible so locations match historical architecture
+        sys_prompt = STEP2_LOCATIONS_SYSTEM_PROMPT
+        if self.world_bible:
+            arch_ref = self.world_bible.get("architecture", {})
+            era = self.world_bible.get("era", "")
+            geo = self.world_bible.get("geography", "")
+            sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE ===\nEra: {era}\nGeography: {geo}\nArchitecture: {json.dumps(arch_ref, ensure_ascii=False)}\nAll locations MUST use architecture styles and materials from this reference."
+
+        # Build input from Step 1 sequences
+        seq_data = [{"sequence_id": s["sequence_id"],
+                     "location_shift": s.get("location_shift", ""),
+                     "full_text": s.get("full_text", "")}
+                    for s in self.sequences]
+        user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+
+        raw = self._send_llm(
+            sys_prompt, user_msg,
+            tier=self.tier_step2, max_tokens=16384, step_label="step2c",
+        )
+        if not raw:
+            self._update_step("step2c", "failed", "No response from LLM")
+            return False
+
+        parsed = _try_parse_json(raw)
+        if not parsed or not isinstance(parsed, dict):
+            self._update_step("step2c", "failed", "Invalid JSON response")
+            return False
+
+        self.locations_data = parsed
+        _save_checkpoint(ckpt, parsed)
+
+        locs = len(parsed.get("locations", []))
+        self._update_step("step2c", "done", f"{locs} locations")
+        self._log(f"[Step 2c] ✅ {locs} locations")
+        self._dump("step2c", "locations_parsed", parsed, "json")
+        return True
+
+    # ══════════════ Label Management ══════════════
+
+    def _extract_valid_labels(self):
+        """Extract valid labels from Step 2 output as source of truth."""
+        self.valid_labels = {
+            "characters": [c.get("label", "") for c in self.characters_data.get("characters", []) if c.get("label")],
+            "locations": [l.get("label", "") for l in self.locations_data.get("locations", []) if l.get("label")],
+        }
+        self._log(f"[Labels] {len(self.valid_labels['characters'])} chars, "
+                  f"{len(self.valid_labels['locations'])} locations")
+
+    def _build_labels_block(self) -> str:
+        """Build AVAILABLE LABELS block for Step 3/4 prompts."""
+        parts = ["=== AVAILABLE LABELS (USE EXACTLY AS WRITTEN) ==="]
+        if self.valid_labels["characters"]:
+            parts.append(f"Characters: {', '.join(self.valid_labels['characters'])}")
+        if self.valid_labels["locations"]:
+            parts.append(f"Locations: {', '.join(self.valid_labels['locations'])}")
+        parts.append("RULES: Use ONLY labels from this list. Do NOT create new labels.")
+        parts.append("=== END LABELS ===")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _fuzzy_match(name: str, valid_set: list) -> str:
+        """Find closest match for a label using simple substring matching."""
+        name_lower = name.lower().strip()
+        for v in valid_set:
+            if v.lower() == name_lower:
+                return v
+        # Substring match
+        for v in valid_set:
+            if name_lower in v.lower() or v.lower() in name_lower:
+                return v
+        return ""
+
+    def _validate_scene_labels(self, scene: dict):
+        """Validate and fix labels in a scene dict."""
+        # Fix character labels
+        fixed_chars = []
+        for char in scene.get("character_labels", []):
+            if char in self.valid_labels["characters"]:
+                fixed_chars.append(char)
+            else:
+                closest = self._fuzzy_match(char, self.valid_labels["characters"])
+                if closest:
+                    self._log(f"  ⚠ Fixed char label: '{char}' → '{closest}'")
+                    fixed_chars.append(closest)
+                else:
+                    self._log(f"  ⚠ Unknown char label: '{char}' — skipped")
+        scene["character_labels"] = fixed_chars
+
+        # Fix location
+        loc = scene.get("locked_location", "") or ""
+        if loc and loc not in self.valid_labels["locations"]:
+            closest = self._fuzzy_match(loc, self.valid_labels["locations"])
+            if closest:
+                scene["locked_location"] = closest
+
+    # ══════════════ Step 3: Scene Design (1 call per sequence) ══════════════
+
+    def _build_visual_reference(self) -> str:
+        """Build VISUAL REFERENCE section for Step 3 prompt."""
+        parts = []
+        parts.append("=== VISUAL REFERENCE: CHARACTERS ===")
+        for c in self.characters_data.get("characters", []):
+            parts.append(f"- [{c.get('group', 'NAMED')}] {c.get('label', '?')}: {c.get('visual_description', '')}")
+        parts.append("\n=== VISUAL REFERENCE: LOCATIONS ===")
+        for loc in self.locations_data.get("locations", []):
+            parts.append(f"- {loc.get('label', '?')}: {loc.get('bible_description', '')} Lighting: {loc.get('default_lighting', '')}")
+        # World Bible
+        if self.world_bible:
+            parts.append("\n=== WORLD BIBLE ===")
+            parts.append(f"Era: {self.world_bible.get('era', 'unknown')}")
+            parts.append(f"Geography: {self.world_bible.get('geography', 'unknown')}")
+            for faction in self.world_bible.get("factions", []):
+                parts.append(f"  Faction: {faction.get('name', '?')}")
+                parts.append(f"    Heraldry: {faction.get('heraldry', '')}")
+                parts.append(f"    Colors: {', '.join(faction.get('primary_colors', []))}")
+                parts.append(f"    Armor: {faction.get('armor', '')}")
+                parts.append(f"    Weapons: {', '.join(faction.get('weapons', []))}")
+                # Crowd archetypes
+                crowd = faction.get("crowd_archetypes", {})
+                if crowd:
+                    parts.append(f"    --- Crowd Archetypes ---")
+                    for role, desc in crowd.items():
+                        parts.append(f"    [{role}]: {desc}")
+            for style_name, style_desc in self.world_bible.get("architecture", {}).items():
+                parts.append(f"  Architecture/{style_name}: {style_desc}")
+        return "\n".join(parts)
+
+    def _validate_scenes(self, seq_data: dict, scenes: list) -> list:
+        """Validate scene timing and apply Tail Correction."""
+        target_dur = seq_data.get("total_sequence_duration", 0) or seq_data.get("total_duration", 0)
+        if not target_dur or not scenes:
+            return scenes
+        actual_dur = sum(s.get("duration", 0) for s in scenes)
+        diff = target_dur - actual_dur
+        error_pct = abs(diff) / target_dur * 100 if target_dur > 0 else 0
+        if error_pct <= 10:
+            if abs(diff) > 0.01:
+                last = scenes[-1]
+                new_dur = last["duration"] + diff
+                if new_dur > float(self.scene_max) or new_dur < 1.0:
+                    n = min(3, len(scenes))
+                    per_scene = diff / n
+                    for s in scenes[-n:]:
+                        s["duration"] = round(s["duration"] + per_scene, 2)
+                else:
+                    last["duration"] = round(new_dur, 2)
+                self._log(f"  [Tail] {seq_data.get('sequence_id', '?')}: fixed {round(diff, 2)}s ({round(error_pct, 1)}%)")
+            return scenes
+        else:
+            self._log(f"  ⚠ {seq_data.get('sequence_id', '?')}: timing error {round(error_pct, 1)}% > 10% — REJECTED")
+            return []
+
+    def _process_sequence_step3(self, seq: dict, seq_idx: int, total: int) -> dict:
+        """Process ONE sequence through Step 3 (scene design)."""
+        if self._is_stopped():
+            return {}
+
+        labels_block = self._build_labels_block()
+        visual_ref = self._build_visual_reference()
+
+
+        user_msg = f"{labels_block}\n\n{visual_ref}\n\n"
+        if self.style_summary:
+            user_msg += f"=== STYLE SUMMARY ===\n{self.style_summary}\n\n"
+        user_msg += f"=== SEQUENCE TO STORYBOARD ===\n{json.dumps(seq, ensure_ascii=False, indent=2)}"
+
+        self._log(f"  [{seq_idx+1}/{total}] {seq.get('sequence_id', '?')} ({round(seq.get('total_duration', 0), 1)}s)")
+
+        # Inject dynamic scene_max into prompt
+        step3_prompt = STEP3_SYSTEM_PROMPT.replace("{SCENE_MAX}", str(self.scene_max))
+
+        for attempt in range(2):
+            raw = self._send_llm(step3_prompt, user_msg, tier=self.tier_step13,
+                                 max_tokens=16384, step_label=f"step3_seq{seq_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if not parsed or not isinstance(parsed, dict):
+                self._log(f"  [{seq_idx+1}] Retry {attempt+1}: JSON parse failed")
+                continue
+
+            scenes = parsed.get("scenes", [])
+            # Validate labels in each scene
+            for scene in scenes:
+                scene["locked_location"] = parsed.get("locked_location", "")
+                self._validate_scene_labels(scene)
+
+            validated = self._validate_scenes(parsed, scenes)
+            if validated:
+                parsed["scenes"] = validated
+                return parsed
+
+        self._log(f"  [{seq_idx+1}] ❌ Failed after 2 attempts")
+        return {}
+
+    def _run_step3(self) -> bool:
+        """Scene design: 1 LLM call per sequence."""
+        self._update_step("step3", "running")
+
+        ckpt = self._checkpoint_path("_step3_scenes.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.scenes_data = existing
+            total_scenes = sum(len(s.get("scenes", [])) for s in existing)
+            self._update_step("step3", "done", f"{total_scenes} scenes loaded")
+            self._log(f"[Step 3] ⏭ Loaded: {total_scenes} scenes")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        total = len(self.sequences)
+        self._log(f"[Step 3] Processing {total} sequences (1 call each)...")
+
+        all_results = []
+        if self.threads <= 1:
+            for i, seq in enumerate(self.sequences):
+                if self._is_stopped():
+                    return False
+                result = self._process_sequence_step3(seq, i, total)
+                if result:
+                    all_results.append(result)
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {pool.submit(self._process_sequence_step3, seq, i, total): i
+                           for i, seq in enumerate(self.sequences)}
+                indexed = [None] * total
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    try:
+                        indexed[idx] = future.result()
+                    except Exception as e:
+                        self._log(f"  [{idx+1}] ❌ Error: {e}")
+                all_results = [r for r in indexed if r]
+
+        if not all_results:
+            self._update_step("step3", "failed", "No scenes generated")
+            return False
+
+        # Enrich with full_text from Step 1
+        seq_lookup = {s.get("sequence_id", ""): s for s in self.sequences}
+        for seq_result in all_results:
+            sid = seq_result.get("sequence_id", "")
+            if sid in seq_lookup:
+                seq_result.setdefault("full_text", seq_lookup[sid].get("full_text", ""))
+                seq_result.setdefault("total_duration", seq_lookup[sid].get("total_duration", 0))
+
+        self.scenes_data = all_results
+        _save_checkpoint(ckpt, all_results)
+
+        total_scenes = sum(len(s.get("scenes", [])) for s in all_results)
+        self._update_step("step3", "done", f"{total_scenes} scenes")
+        self._log(f"[Step 3] ✅ {total_scenes} scenes across {len(all_results)} sequences")
+        self._dump("step3", "all_scenes", all_results, "json")
+        return True
+
+
+    # ══════════════ Step 4: Prompt Writing (LLM) ══════════════
+
+    def _build_mini_bible(self, seq_data: dict, prev_seq: dict = None, next_seq: dict = None) -> str:
+        """Build mini-bible containing only characters/locations used in this sequence + neighbors."""
+        needed_chars = set()
+        needed_locs = set()
+
+        for src in [seq_data, prev_seq, next_seq]:
+            if not src:
+                continue
+            needed_locs.add(src.get("locked_location", ""))
+            for scene in src.get("scenes", []):
+                needed_chars.update(scene.get("character_labels", []))
+                needed_locs.add(scene.get("locked_location", ""))
+
+        parts = []
+        # Characters
+        for c in self.characters_data.get("characters", []):
+            if c.get("label") in needed_chars:
+                parts.append(f"[{c['label']}]: {c.get('visual_description', '')}. "
+                             f"Default costume: {c.get('default_costume', c.get('visual_description', ''))}")
+        # Locations
+        for loc in self.locations_data.get("locations", []):
+            if loc.get("label") in needed_locs:
+                parts.append(f"[{loc['label']}]: {loc.get('bible_description', '')}. "
+                             f"Lighting: {loc.get('default_lighting', '')}")
+        # World Bible (compact)
+        if self.world_bible and self.world_bible.get("factions"):
+            wb_parts = [f"World: {self.world_bible.get('era', '')}"]
+            for faction in self.world_bible.get("factions", []):
+                wb_parts.append(f"  {faction.get('name', '?')}: colors={', '.join(faction.get('primary_colors', []))}, armor={faction.get('armor', '')}")
+            parts.append(" | ".join(wb_parts))
+
+        return "\n".join(parts) if parts else "(no references needed)"
+
+    def _build_scene_context(self, seq_idx: int) -> str:
+        """Build prev/next sequence context for Step 4."""
+        parts = []
+        if seq_idx > 0:
+            prev = self.scenes_data[seq_idx - 1]
+            prev_scenes = prev.get("scenes", [])
+            if prev_scenes:
+                last_scene = prev_scenes[-1]
+                parts.append(f"PREVIOUS: {last_scene.get('shot_type', '')} — "
+                             f"{last_scene.get('physical_action', '')}")
+        else:
+            parts.append("PREVIOUS: (start of video)")
+
+        if seq_idx < len(self.scenes_data) - 1:
+            next_ = self.scenes_data[seq_idx + 1]
+            next_scenes = next_.get("scenes", [])
+            if next_scenes:
+                first_scene = next_scenes[0]
+                parts.append(f"NEXT: {first_scene.get('shot_type', '')} — "
+                             f"{first_scene.get('physical_action', '')}")
+        else:
+            parts.append("NEXT: (end of video)")
+
+        return "\n".join(parts)
+
+    def _resolve_character_info(self, labels: list) -> str:
+        """Map character labels to original name + description for Excel readability."""
+        if not labels or not self.characters_data:
+            return ""
+        char_map = {}
+        for c in self.characters_data.get("characters", []):
+            lbl = c.get("label", "")
+            if lbl:
+                name = c.get("original_name", "")
+                desc = c.get("visual_description", "")
+                char_map[lbl] = f"{name}: {desc}" if name else desc
+        infos = []
+        for lbl in labels:
+            info = char_map.get(lbl, "")
+            if info:
+                infos.append(f"[{lbl}] = {info}")
+            else:
+                infos.append(f"[{lbl}]")
+        return "\n".join(infos)
+
+    def _process_sequence_step4(self, seq_data: dict, seq_idx: int, total: int) -> list:
+        """Process ONE sequence through Step 4 (prompt writing)."""
+        if self._is_stopped():
+            return []
+
+        seq_id = seq_data.get("sequence_id", f"SEQ_{seq_idx+1:02d}")
+        scenes = seq_data.get("scenes", [])
+        if not scenes:
+            return []
+
+        # Determine chapter info
+        chapter_info = "N/A"
+        if self.sequences:
+            for orig_seq in self.sequences:
+                if orig_seq.get("sequence_id") == seq_id:
+                    # Find chapter from sentence_ids
+                    sids = orig_seq.get("sentence_ids", [])
+                    if sids:
+                        sent_map = {s["sentence_id"]: s for s in self.sentences}
+                        first_sent = sent_map.get(sids[0], {})
+                        chapter_info = first_sent.get("chapter_name", "N/A")
+                    break
+
+        # Build scenes data text
+        scenes_text_parts = []
+        for i, scene in enumerate(scenes):
+            scenes_text_parts.append(
+                f"Scene {i+1}: {scene.get('global_scene_id', '')}\n"
+                f"  Shot: {scene.get('shot_type', '')} | Camera: {scene.get('camera_motion', 'Static')} | "
+                f"Duration: {scene.get('duration', 0)}s | Roll: {scene.get('roll_type', 'A-Roll')}\n"
+                f"  Time: {scene.get('time_of_day', 'midday')}\n"
+                f"  Characters: {', '.join(scene.get('character_labels', []))}\n"
+                f"  Action: {scene.get('physical_action', '')}\n"
+                f"  Costume: {scene.get('costume_note', 'default')}\n"
+                f"  Background: {scene.get('background_and_extras', '')}\n"
+                f"  Lighting: {scene.get('lighting_and_atmosphere', '')}"
+            )
+
+        prev_seq = self.scenes_data[seq_idx - 1] if seq_idx > 0 else None
+        next_seq = self.scenes_data[seq_idx + 1] if seq_idx < len(self.scenes_data) - 1 else None
+
+        user_msg = STEP4_USER_TEMPLATE.format(
+            mini_bible=self._build_mini_bible(seq_data, prev_seq, next_seq),
+            sequence_id=seq_id,
+            chapter_info=chapter_info,
+            location=seq_data.get("locked_location", ""),
+            visual_event=seq_data.get("visual_event", ""),
+            scenes_data="\n\n".join(scenes_text_parts),
+            context=self._build_scene_context(seq_idx),
+        )
+
+        self._log(f"  [{seq_idx+1}/{total}] {seq_id} ({len(scenes)} scenes)")
+
+        for attempt in range(2):
+            raw = self._send_llm(self.style_content, user_msg, tier=self.tier_step13,
+                                 max_tokens=16384, step_label=f"step4_seq{seq_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if not parsed or not isinstance(parsed, list):
+                self._log(f"  [{seq_idx+1}] Retry {attempt+1}: JSON parse failed")
+                continue
+
+            # Match flat_prompts to scenes
+            prompt_map = {p.get("scene_id", ""): p for p in parsed}
+            results = []
+            for scene in scenes:
+                scene_id = scene.get("global_scene_id", "")
+                prompt_data = prompt_map.get(scene_id, {})
+                if not prompt_data:
+                    # Try by index
+                    idx_in_seq = scenes.index(scene)
+                    if idx_in_seq < len(parsed):
+                        prompt_data = parsed[idx_in_seq]
+
+                flat_prompt = prompt_data.get("flat_prompt", "") if isinstance(prompt_data, dict) else ""
+
+                results.append({
+                    "global_scene_id": scene_id,
+                    "duration": scene.get("duration", 0),
+                    "characters": ", ".join(scene.get("character_labels", [])),
+                    "character_info": self._resolve_character_info(scene.get("character_labels", [])),
+                    "location": seq_data.get("locked_location", ""),
+                    "chapter": chapter_info,
+                    "character_blocking": prompt_data.get("character_blocking", "") if isinstance(prompt_data, dict) else "",
+                    "emotion": prompt_data.get("emotion", "") if isinstance(prompt_data, dict) else "",
+                    "key_props": prompt_data.get("key_props", []) if isinstance(prompt_data, dict) else [],
+                    "camera_angle": prompt_data.get("camera_angle", "") if isinstance(prompt_data, dict) else "",
+                    "effects": prompt_data.get("effects", "") if isinstance(prompt_data, dict) else "",
+                    "crowd_description": prompt_data.get("crowd_description", "") if isinstance(prompt_data, dict) else "",
+                    "flat_prompt": flat_prompt,
+                })
+            return results
+
+        self._log(f"  [{seq_idx+1}] ❌ Failed after 2 attempts")
+        return []
+
+    def _run_step4(self) -> bool:
+        """Prompt writing: LLM writes flat_prompt for each sequence's scenes."""
+        self._update_step("step4", "running")
+
+        ckpt = self._checkpoint_path("_step4_prompts.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.final_prompts = existing
+            self._update_step("step4", "done", f"{len(existing)} prompts loaded")
+            self._log(f"[Step 4] ⏭ Loaded: {len(existing)} prompts")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        # Load full style content for system prompt
+        if self.style_name and self.styles_dir:
+            style_path = os.path.join(self.styles_dir, f"{self.style_name}.txt")
+            self.style_content = load_style_content(style_path)
+
+        if not self.style_content:
+            self._log("[Step 4] ⚠ No style content loaded, using generic prompt")
+            self.style_content = "You are a visual prompt expert for AI video generation."
+
+        # Inject video-specific constraints (Safety, Quality, Historical)
+        # Insert BEFORE Mandatory Style / Negative Prompt to avoid regex contamination
+        constraint_parts = []
+        active_constraints = []
+        prompts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
+        constraint_map = {
+            "safety": "video_constraint_safety.txt",
+            "quality": "video_constraint_quality.txt",
+            "historical": "video_constraint_historical.txt",
+        }
+        for key, filename in constraint_map.items():
+            if self.constraints.get(key):
+                fpath = os.path.join(prompts_dir, filename)
+                if os.path.isfile(fpath):
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        txt = f.read().strip()
+                    if txt:
+                        constraint_parts.append(txt)
+                        active_constraints.append(key)
+        if constraint_parts:
+            # Find Mandatory Style or Negative Prompt marker and insert before it
+            constraint_block = "\n\n" + "\n\n".join(constraint_parts)
+            insert_match = re.search(r'\n(?=Mandatory\s+Style|Negative\s+Prompt)', self.style_content, re.IGNORECASE)
+            if insert_match:
+                pos = insert_match.start()
+                self.style_content = self.style_content[:pos] + constraint_block + self.style_content[pos:]
+            else:
+                self.style_content += constraint_block
+            self._log(f"[Step 4] Constraints injected: {', '.join(active_constraints)}")
+
+        total = len(self.scenes_data)
+        self._log(f"[Step 4] Writing prompts for {total} sequences...")
+
+        all_prompts = []
+        if self.threads <= 1:
+            for i, seq in enumerate(self.scenes_data):
+                if self._is_stopped():
+                    return False
+                results = self._process_sequence_step4(seq, i, total)
+                all_prompts.extend(results)
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {pool.submit(self._process_sequence_step4, seq, i, total): i
+                           for i, seq in enumerate(self.scenes_data)}
+                indexed = [None] * total
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    try:
+                        indexed[idx] = future.result()
+                    except Exception as e:
+                        self._log(f"  [{idx+1}] ❌ Error: {e}")
+                        indexed[idx] = []
+                for batch in indexed:
+                    if batch:
+                        all_prompts.extend(batch)
+
+        if not all_prompts:
+            self._update_step("step4", "failed", "No prompts generated")
+            return False
+
+        # Append mandatory style suffix + negative prompt
+        mandatory_style = ""
+        negative_prompt = ""
+        if self.style_content:
+            ms = re.search(r'Mandatory\s+Style[:\s]*(.+?)(?:Negative|$)', self.style_content, re.DOTALL | re.IGNORECASE)
+            if ms:
+                mandatory_style = ms.group(1).strip()
+            np_m = re.search(r'Negative\s+Prompt[:\s]*(.+?)$', self.style_content, re.DOTALL | re.IGNORECASE)
+            if np_m:
+                negative_prompt = np_m.group(1).strip()
+
+        for i, p in enumerate(all_prompts):
+            p["index"] = i + 1
+            if mandatory_style and p.get("flat_prompt"):
+                p["flat_prompt"] = f"{p['flat_prompt']} {mandatory_style}"
+            p["negative_prompt"] = negative_prompt
+
+        self.final_prompts = all_prompts
+        _save_checkpoint(ckpt, all_prompts)
+
+        self._update_step("step4", "done", f"{len(all_prompts)} prompts")
+        self._log(f"[Step 4] ✅ {len(all_prompts)} prompts written by LLM")
+        self._dump("step4", "final_prompts", all_prompts, "json")
+        return True
+
+
+    # ══════════════ Step 5: Export ══════════════
+
+    def _run_step5(self) -> bool:
+        """Export final prompts to Excel."""
+        self._update_step("step5", "running")
+        self._export_excel(self.final_prompts)
+        self._update_step("step5", "done", f"Excel exported")
+        return True
+
+    def _export_excel(self, prompts: list):
+        """Export prompts to Excel file with Reference Images sheet."""
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+            wb = Workbook()
+
+            # ── Shared styles ──
+            header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
+            header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+            data_font = Font(name="Segoe UI", size=10)
+            wrap_align = Alignment(wrap_text=True, vertical="top")
+            center_align = Alignment(horizontal="center", vertical="top")
+            thin_border = Border(
+                left=Side(style="thin", color="4B5563"),
+                right=Side(style="thin", color="4B5563"),
+                top=Side(style="thin", color="4B5563"),
+                bottom=Side(style="thin", color="4B5563"),
+            )
+
+            def _write_headers(ws, headers):
+                for col_idx, h in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col_idx, value=h)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+
+            # ══════════ Sheet 1: Video Prompts ══════════
+            ws1 = wb.active
+            ws1.title = "Video Prompts"
+
+            _write_headers(ws1, ["#", "Chapter", "Scene ID", "Duration", "Characters", "Character Info", "Location", "Flat Prompt", "Negative Prompt"])
+
+            for row_idx, p in enumerate(prompts, 2):
+                ws1.cell(row=row_idx, column=1, value=p.get("index", row_idx - 1)).alignment = center_align
+                ws1.cell(row=row_idx, column=2, value=p.get("chapter", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=3, value=p.get("global_scene_id", "")).alignment = center_align
+                ws1.cell(row=row_idx, column=4, value=p.get("duration", "")).alignment = center_align
+                ws1.cell(row=row_idx, column=5, value=p.get("characters", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=6, value=p.get("character_info", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=7, value=p.get("location", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=8, value=p.get("flat_prompt", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=9, value=p.get("negative_prompt", "")).alignment = wrap_align
+                for col_idx in range(1, 10):
+                    ws1.cell(row=row_idx, column=col_idx).font = data_font
+                    ws1.cell(row=row_idx, column=col_idx).border = thin_border
+
+            ws1.column_dimensions["A"].width = 5
+            ws1.column_dimensions["B"].width = 25
+            ws1.column_dimensions["C"].width = 18
+            ws1.column_dimensions["D"].width = 9
+            ws1.column_dimensions["E"].width = 25
+            ws1.column_dimensions["F"].width = 40
+            ws1.column_dimensions["G"].width = 20
+            ws1.column_dimensions["H"].width = 80
+            ws1.column_dimensions["I"].width = 40
+            ws1.freeze_panes = "A2"
+
+            # ══════════ Sheet 2: Reference Images ══════════
+            ws2 = wb.create_sheet("Reference Images")
+            _write_headers(ws2, ["#", "Type", "Label", "Original Name", "Description", "Prompt (gen ảnh tham chiếu)", "Negative Prompt"])
+
+            # Get style sections
+            mandatory_style = ""
+            negative_prompt = ""
+            loc_style = self.location_style or ""
+            if self.style_name and self.styles_dir:
+                style_path = os.path.join(self.styles_dir, f"{self.style_name}.txt")
+                sc = load_style_content(style_path)
+                if sc:
+                    ms = re.search(r'Mandatory\s+Style[:\s]*(.+?)(?:Negative|$)', sc, re.DOTALL | re.IGNORECASE)
+                    if ms:
+                        mandatory_style = ms.group(1).strip()
+                    np_m = re.search(r'Negative\s+Prompt[:\s]*(.+?)$', sc, re.DOTALL | re.IGNORECASE)
+                    if np_m:
+                        negative_prompt = np_m.group(1).strip()
+
+            row = 2
+            # Characters
+            for c in self.characters_data.get("characters", []):
+                label = c.get("label", "")
+                original_name = c.get("original_name", "")
+                visual_desc = c.get("visual_description", "")
+                sheet_prompt = c.get("sheet_prompt", "")
+                if not sheet_prompt:
+                    desc = c.get("visual_description", "")
+                    sheet_prompt = f"Character reference sheet on clean white background. Three neutral standing views: front view, 3/4 angle, side profile. {desc}. Label '{label}'."
+                flat = f"{mandatory_style}. {sheet_prompt}" if mandatory_style else sheet_prompt
+
+                ws2.cell(row=row, column=1, value=row - 1).alignment = center_align
+                ws2.cell(row=row, column=2, value="Character").alignment = center_align
+                ws2.cell(row=row, column=3, value=label).alignment = wrap_align
+                ws2.cell(row=row, column=4, value=original_name).alignment = wrap_align
+                ws2.cell(row=row, column=5, value=visual_desc).alignment = wrap_align
+                ws2.cell(row=row, column=6, value=flat).alignment = wrap_align
+                ws2.cell(row=row, column=7, value=negative_prompt).alignment = wrap_align
+                for col_idx in range(1, 8):
+                    ws2.cell(row=row, column=col_idx).font = data_font
+                    ws2.cell(row=row, column=col_idx).border = thin_border
+                row += 1
+
+            # Locations — use LOCATION STYLE (no character appearance)
+            for loc in self.locations_data.get("locations", []):
+                label = loc.get("label", "")
+                desc = loc.get("bible_description", "")
+                lighting = loc.get("default_lighting", "")
+                loc_prompt = f"Wide establishing shot, eye-level perspective, centered composition. {desc}. {lighting}." if lighting else f"Wide establishing shot, eye-level perspective, centered composition. {desc}."
+                # Use location_style instead of mandatory_style
+                if loc_style:
+                    flat = f"{loc_style} {loc_prompt}"
+                else:
+                    flat = loc_prompt
+
+                ws2.cell(row=row, column=1, value=row - 1).alignment = center_align
+                ws2.cell(row=row, column=2, value="Location").alignment = center_align
+                ws2.cell(row=row, column=3, value=label).alignment = wrap_align
+                ws2.cell(row=row, column=4, value="").alignment = wrap_align
+                ws2.cell(row=row, column=5, value=desc).alignment = wrap_align
+                ws2.cell(row=row, column=6, value=flat).alignment = wrap_align
+                ws2.cell(row=row, column=7, value=negative_prompt).alignment = wrap_align
+                for col_idx in range(1, 8):
+                    ws2.cell(row=row, column=col_idx).font = data_font
+                    ws2.cell(row=row, column=col_idx).border = thin_border
+                row += 1
+
+            ws2.column_dimensions["A"].width = 5
+            ws2.column_dimensions["B"].width = 12
+            ws2.column_dimensions["C"].width = 30
+            ws2.column_dimensions["D"].width = 25
+            ws2.column_dimensions["E"].width = 40
+            ws2.column_dimensions["F"].width = 100
+            ws2.column_dimensions["G"].width = 40
+            ws2.freeze_panes = "A2"
+
+            # Save
+            base = os.path.splitext(os.path.basename(self.srt_path))[0]
+            xlsx_path = os.path.join(self.output_dir, f"{base}_video_prompts.xlsx")
+            wb.save(xlsx_path)
+            self._log(f"[Step 5] 📊 Excel: {xlsx_path}")
+            self._log(f"         Sheet 1: Video Prompts ({len(prompts)} rows)")
+            self._log(f"         Sheet 2: Reference Images ({row - 2} items)")
+
+        except Exception as e:
+            self._log(f"[Step 5] ⚠ Excel export failed: {e}")
+
+    # ══════════════ Main Run ══════════════
+
+    def run(self):
+        """Execute the full pipeline (called in background thread)."""
+        self.state = PipelineState.RUNNING
+        self._stop_event.clear()
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        # Load style data once
+        self.style_summary = _parse_style_summary(self.style_name, self.styles_dir)
+        self.location_style = _parse_location_style(self.style_name, self.styles_dir)
+
+        # Init debug dump directory
+        self._init_debug_dir()
+
+        # Define step sequence with label extraction between Step 2b and Step 3
+        self._log("=" * 50)
+        n_files = len(self.srt_paths)
+        self._log(f"🎬 Video Pipeline Start: {n_files} file(s)")
+        for fp in self.srt_paths:
+            self._log(f"   📄 {os.path.basename(fp)}")
+        self._log(f"   Output: {self.output_dir}")
+        self._log(f"   Style: {self.style_name}")
+        if self.style_summary:
+            self._log(f"   Style Summary: loaded ({len(self.style_summary)} chars)")
+        if self.location_style:
+            self._log(f"   Location Style: loaded ({len(self.location_style)} chars)")
+        self._log(f"   Tier Step2={self.tier_step2}, Step3/4={self.tier_step13}, Threads={self.threads}, SceneMax={self.scene_max}s")
+        self._log("=" * 50)
+
+        steps = [
+            ("step0", self._run_step0),
+            ("step1", self._run_step1),
+            ("step2a", self._run_step2a),   # World Bible
+            ("step2b", self._run_step2b),   # Characters
+            ("step2c", self._run_step2c),   # Locations
+            ("_labels", lambda: (self._extract_valid_labels(), True)[1]),  # Extract labels after Step 2
+            ("step3", self._run_step3),
+            ("step4", self._run_step4),
+            ("step5", self._run_step5),
+        ]
+
+        for key, step_fn in steps:
+            if self._is_stopped():
+                self._log("⏹ Pipeline stopped by user")
+                self.state = PipelineState.STOPPED
+                return
+
+            if key.startswith("_"):
+                # Internal step (no UI update)
+                step_fn()
+                continue
+
+            try:
+                success = step_fn()
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                self._log(f"❌ EXCEPTION at {self.steps[key].step}: {e}")
+                self._log(f"   Traceback:\n{tb}")
+                self._update_step(key, "failed", str(e)[:100])
+                self.state = PipelineState.ERROR
+                return
+            if not success:
+                self._log(f"❌ Pipeline failed at {self.steps[key].step}")
+                self.state = PipelineState.ERROR
+                return
+
+        self.state = PipelineState.DONE
+        self._log("=" * 50)
+        self._log(f"🎬 Pipeline COMPLETE: {len(self.final_prompts)} video prompts ready")
+        self._log("=" * 50)
+
+    def stop(self):
+        """Signal pipeline to stop."""
+        self._stop_event.set()
+        self.state = PipelineState.STOPPED
+
+    def start_async(self):
+        """Start pipeline in a background thread."""
+        t = threading.Thread(target=self.run, daemon=True)
+        t.start()
+        return t
+===
+"""
+Video Prompt Pipeline — Main Orchestrator
+4-step pipeline: SRT Parse → Semantic Chunking → Global Context → Storyboarding → Assembly
+All intermediate data flows through JSON checkpoints for resume capability.
+"""
+import json
+import os
+import re
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional
+
+from core.api_client import APIClient
+from core.prompt_generator import load_style_content
+from core.srt_sentence_parser import parse_srt_to_sentences, parse_txt_to_sentences
+
+
+# ═══════════════ Pipeline State ═══════════════
+
+class PipelineState:
+    IDLE = "idle"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    DONE = "done"
+    ERROR = "error"
+
+
+@dataclass
+class StepStatus:
+    """Status of a single pipeline step."""
+    step: str
+    status: str = "pending"  # pending, running, done, failed, skipped
+    message: str = ""
+    file_path: str = ""
+
+
+# ═══════════════ JSON Utils ═══════════════
+
+def _try_parse_json(raw: str) -> Optional[dict | list]:
+    """Parse JSON from LLM response, stripping markdown fences if present."""
+    if not raw:
+        return None
+
+    # Strip markdown code fences
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', raw.strip())
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    cleaned = cleaned.strip()
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Try to find JSON array or object within the text
+        for pattern in [r'\[[\s\S]*\]', r'\{[\s\S]*\}']:
+            match = re.search(pattern, cleaned)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    continue
+        return None
+
+
+def _save_checkpoint(filepath: str, data) -> None:
+    """Save JSON checkpoint."""
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def _load_checkpoint(filepath: str):
+    """Load JSON checkpoint if it exists."""
+    if not os.path.isfile(filepath):
+        return None
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _parse_style_section(style_name: str, styles_dir: str, section_name: str) -> str:
+    """Extract a === SECTION NAME === block from a style .txt file."""
+    if not style_name or not styles_dir:
+        return ""
+    style_path = os.path.join(styles_dir, f"{style_name}.txt")
+    if not os.path.isfile(style_path):
+        return ""
+    try:
+        content = load_style_content(style_path)
+        if not content:
+            return ""
+        pattern = rf'===\s*{re.escape(section_name)}\s*===\s*\n(.+?)(?:\n===|\nMandatory\s+Style|\nNegative\s+Prompt|$)'
+        m = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+        return m.group(1).strip() if m else ""
+    except Exception:
+        return ""
+
+
+def _parse_style_summary(style_name: str, styles_dir: str) -> str:
+    """Extract === STYLE SUMMARY === section from a style .txt file."""
+    return _parse_style_section(style_name, styles_dir, "STYLE SUMMARY")
+
+
+def _parse_location_style(style_name: str, styles_dir: str) -> str:
+    """Extract === LOCATION STYLE === section from a style .txt file."""
+    return _parse_style_section(style_name, styles_dir, "LOCATION STYLE")
+
+
+# ═══════════════ System Prompts ═══════════════
+
+STEP1_SYSTEM_PROMPT = """You are a Script Segmentation Expert. Your task is to group a list of sentences into logical SEQUENCES for video production.
+
+## INPUT
+You receive a JSON array of sentences, each with: sentence_id, text, duration (seconds), chapter_id (integer).
+
+## RULES
+1. **Chapter Boundary (HIGHEST PRIORITY):** NEVER merge sentences from different chapter_ids into the same Sequence. When chapter_id changes, you MUST start a new Sequence.
+2. **Location & Time:** Cut into a new Sequence when the setting changes (location, time of day, time period).
+3. **Subject Shift:** Cut when the focal point shifts between a group/crowd vs an individual character.
+4. **Max Duration 25s:** If a sequence exceeds 25 seconds → split it. No minimum duration.
+5. **Semantic Boundary:** Cuts MUST fall between sentences (never split mid-sentence).
+6. **Skip Meta Sentences:** If a sentence is a chapter title (e.g. "Chapter 3", "Part 2"), a ranking number (e.g. "Number 5", "#3"), or a short structural label with no narrative content — EXCLUDE it from all sequences entirely.
+
+## LOCATION SHIFT RULE (CRITICAL)
+`location_shift` MUST be a PHYSICAL, FILMABLE PLACE — a specific room, field, building, or outdoor setting where a camera could be placed.
+FORBIDDEN: abstract concepts as locations ("Jerusalem history", "inner conflict", "the future", "the legacy").
+If the text is narration, metaphor, or abstract commentary with no clear physical place, KEEP the same `location_shift` as the PREVIOUS sequence.
+Do NOT create a new sequence just because the text becomes abstract — abstract narration is NOT a location change.
+
+## CHARACTER IDENTIFICATION
+For each sequence, list all NAMED or TITLED characters mentioned.
+Format each character using this formula (fill in parts that are available):
+
+  Has a proper NAME:     [age_stage] [Name], [title/role]
+  NO proper name:        [age_stage] [Anchor]'s [relationship/role]
+
+- age_stage is OPTIONAL — only include if age is stated or clearly implied in the text
+- Use the SAME name consistently for the same person across ALL sequences
+- "Anchor" = the known character this person relates to (e.g. "Baldwin's mother")
+- Do NOT list unnamed crowds, armies, or generic groups
+
+### AGE CLASSIFICATION (exact thresholds):
+  child:        0-12, or described as "boy/girl/child"
+  teen:         13-17, or "young man/youth"
+  young_adult:  18-30, or "young warrior/young king"
+  mature_adult: 31-55, or "seasoned/experienced/middle-aged"
+  elder:        56+, or "old/grey-haired/aged"
+  → If age is unclear, omit age_stage entirely
+
+## OUTPUT
+Return a JSON array. Each element:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "sentence_ids": [1, 2, 3],
+  "location_shift": "descriptive physical location name",
+  "main_subject": "brief description of what happens visually",
+  "characters": ["child Baldwin, prince", "Baldwin's tutor"],
+  "full_text": "concatenated text of all sentences in this sequence",
+  "total_duration": 12.5
+}
+```
+
+Return ONLY the JSON array, no explanation."""
+
+STEP2_CHARACTERS_SYSTEM_PROMPT = """You are a Visual Character Analyst for historical video production. You receive a list of sequences (from script segmentation) and must extract ALL unique characters.
+
+## INPUT
+A JSON array of sequences, each with: sequence_id, characters (list of character mentions), full_text.
+A WORLD BIBLE reference may be provided with faction details — use it for costume accuracy.
+
+## CHARACTERS
+For each unique character found across all sequences:
+- **label**: A unique reference label using format "Role-Descriptor-Letter" (e.g., "Roman-Commander-A", "Persian-King-A"). NO real names.
+- **original_name**: The character's actual name from the script.
+- **group**: "PROTAGONIST" or "NAMED"
+- **age_stage**: One of: "child", "teen", "young_adult", "mature_adult", "elder"
+- **visual_description**: A DETAILED description that MUST include ALL 5 items:
+  1. BODY: height relative to art style, build, skin tone, hair style + color
+  2. FACE: distinguishing features (scar, beard, expression, eye shape)
+  3. COSTUME (MAIN): primary garment with EXACT colors and faction emblems (from World Bible if available)
+  4. COSTUME (DETAIL): belt, boots, gloves, cape, accessories, headwear
+  5. IDENTIFYING MARK: one unique WORN or VISIBLE feature that distinguishes this character (e.g., a specific scar, a distinctive brooch, a tattoo, a mask, a unique belt buckle). Do NOT list held weapons or hand-held props — those are assigned per scene.
+  
+  BAD example: "A mature man in crusader armor"
+  BAD example: "Carries a broadsword on left hip" (NO held items in character sheet)
+  GOOD example: "A tall, broad-shouldered man with short brown hair and a thick handlebar mustache. Wears a white surcoat with a gold Jerusalem cross over chain mail hauberk, brown leather belt with lion-head buckle, tall brown riding boots. Has a distinctive diagonal scar across right cheek."
+
+- **body_language**: Typical posture and movement style.
+- **sheet_prompt**: A character reference sheet prompt: "Character reference sheet on clean white background. Bold text '[label]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. [visual_description]."
+
+### AGE CLASSIFICATION (exact thresholds):
+  child:        0-12, or described as "boy/girl/child"
+  teen:         13-17, or "young man/youth"
+  young_adult:  18-30, or "young warrior/young king"
+  mature_adult: 31-55, or "seasoned/experienced/middle-aged"
+  elder:        56+, or "old/grey-haired/aged"
+
+### AGE VARIANT RULE (CRITICAL)
+If the script covers a character's life across MULTIPLE age stages, you MUST create SEPARATE entries for EACH stage. Each entry gets a UNIQUE label with an age suffix:
+- `Roman-Commander-A-Child` (age_stage: "child")
+- `Roman-Commander-A-Teen` (age_stage: "teen")
+- `Roman-Commander-A-YoungAdult` (age_stage: "young_adult")
+- `Roman-Commander-A-MatureAdult` (age_stage: "mature_adult")
+- `Roman-Commander-A-Elder` (age_stage: "elder")
+
+Each variant MUST have its own visual_description and sheet_prompt reflecting that life stage.
+If a character appears at only ONE age, use just one entry with no age suffix.
+
+## OUTPUT
+Return a JSON object:
+```json
+{
+  "characters": [...]
+}
+```
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2_LOCATIONS_SYSTEM_PROMPT = """You are a Visual Location Analyst for historical video production. You receive a list of sequences (from script segmentation) and must extract ALL significant locations.
+
+## INPUT
+A JSON array of sequences, each with: sequence_id, location_shift, full_text.
+A WORLD BIBLE reference may be provided with architecture details — use it for historical accuracy.
+
+## LOCATIONS
+For each unique location found across all sequences:
+- **label**: A concise, unique location name.
+- **bible_description**: A DETAILED description that MUST include ALL 4 sections:
+  1. ARCHITECTURE: building style, materials (stone, wood, marble), structural elements (arches, columns, vaults), matching the historical era from the World Bible
+  2. ENVIRONMENT: landscape, terrain, vegetation, indoor/outdoor, spatial scale (vast hall vs cramped cell)
+  3. KEY PROPS: furniture, decorations, objects typically found in this setting (torches, banners, market stalls, weapons racks)
+  4. ATMOSPHERE: typical weather, lighting quality, time of day, mood (solemn, chaotic, peaceful)
+  
+  BAD example: "A throne room in a castle."
+  GOOD example: "A grand Romanesque stone hall with high ribbed-vault ceiling supported by thick limestone columns. Pointed arch windows with iron-framed glass let in dusty shafts of sunlight. A raised stone dais at the far end holds a carved wooden throne with faded velvet cushions. Iron candelabras line the walls between faded tapestries showing battle scenes. Banners with gold Jerusalem cross hang from ceiling beams. The floor is worn flagstone. Atmosphere is dim, solemn, with warm amber torchlight mixing with cool daylight."
+
+- **default_lighting**: Specific lighting description (e.g., "warm torchlight from iron sconces on stone walls" NOT just "indoor lighting")
+- **camera_angle**: Always set to "wide establishing shot, eye-level, 16:9 aspect ratio"
+
+## OUTPUT
+Return a JSON object:
+```json
+{
+  "locations": [...]
+}
+```
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2A_IDENTIFY_PROMPT = """You are a Historical Period Analyst. You receive a script and must identify the EXACT historical setting.
+
+## TASK
+Read the script carefully. Identify:
+1. The EXACT historical era with SPECIFIC date range (not general period names)
+2. The geographic regions where events take place
+3. ALL distinct factions, groups, or sides involved
+
+## CRITICAL: DATE PRECISION
+- "Roman Republic" is NOT specific enough → specify "Late Roman Republic, 82-44 BC"
+- "Crusades" is NOT specific enough → specify "Third Crusade, 1189-1192 AD"
+- "World War 2" is NOT specific enough → specify "Eastern Front, 1942-1943"
+- Armor, weapons, and clothing CHANGE within the same era. The EXACT date range determines which version is correct.
+
+## OUTPUT
+Return a JSON object:
+```json
+{
+  "era": "Specific period name with exact years (e.g., 'Late Roman Republic, 82-44 BC')",
+  "date_range": "Start-End (e.g., '82-44 BC')",
+  "geography": "Specific regions (e.g., 'Rome, coastal Italy, Spain, Egypt')",
+  "factions": [
+    {
+      "name": "Full faction name",
+      "role": "Brief role in the story (e.g., 'ruling military dictatorship', 'resistance faction')",
+      "allegiance": "Which side they fight for or support"
+    }
+  ]
+}
+```
+
+## RULES
+- List ALL factions/groups — including civilian groups, religious orders, foreign powers
+- If the script has no military factions (e.g., biography of a scientist), use social/political groups
+- "factions" means ANY visually distinct group — armies, noble houses, religious orders, social classes
+- Be as SPECIFIC as possible with dates — use your historical knowledge to narrow the range
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2A_PEOPLE_PROMPT = """You are a Historical Visual Consultant. Create the PEOPLE section of a World Bible.
+
+## CONTEXT
+Era: {era}
+Date range: {date_range}
+Geography: {geography}
+Factions identified: {factions_summary}
+
+## MANDATORY: 5-Layer Description Format
+For EVERY person description, you MUST describe ALL 5 layers in this ORDER:
+1. **Head**: hair style, headwear/helmet (shape, material, decorations)
+2. **Upper body**: garment name, fabric type, color, fit, patterns/embroidery
+3. **Lower body**: garment name (trousers, skirt, robe length), fabric, color
+4. **Footwear**: exact shoe/sandal/boot type, material — or "barefoot"
+5. **Accessories**: belt, jewelry, pouches, religious items, tools
+
+Example: "Head: bronze Montefortino helmet with red horsehair crest. Upper: iron chain mail (lorica hamata) over red wool tunic. Lower: tunic to mid-thigh. Feet: leather caligae with hobnailed soles. Acc: leather balteus belt, small pouch."
+
+## OUTPUT
+Return a JSON object:
+```json
+{{
+  "factions": [
+    {{
+      "name": "Full faction name (must match factions above)",
+      "heraldry": "Physical object: shape, material, how carried/displayed",
+      "primary_colors": ["color1", "color2", "color3"],
+      "armor": "Head: [helmet]. Body: [armor]. Shield: [type]. Limbs: [protection]. Feet: [footwear].",
+      "weapons": ["weapon1 — shape, length, material", "weapon2 — shape, length, material"],
+      "role_variants": {{
+        "commander": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "noble": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "priest": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "merchant": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "servant": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ..."
+      }},
+      "crowd_archetypes": {{
+        "soldier": [
+          "Type1 — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Type2 — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Type3 — Head: ... Upper: ... Lower: ... Feet: ... Acc: ..."
+        ],
+        "civilian_man": [
+          "Laborer — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Craftsman — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Townsman — Head: ... Upper: ... Lower: ... Feet: ... Acc: ..."
+        ],
+        "civilian_woman": [
+          "Common — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Market woman — Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+          "Wealthy — Head: ... Upper: ... Lower: ... Feet: ... Acc: ..."
+        ],
+        "child": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "noble": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+        "clergy": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ..."
+      }}
+    }}
+  ]
+}}
+```
+
+## RULES
+- ALL descriptions MUST follow 5-layer format: Head → Upper → Lower → Feet → Acc
+- soldier, civilian_man, civilian_woman: MUST be ARRAYS of 3 COMPLETE variant descriptions
+- child, noble, clergy: single string description
+- Each variant label describes occupation/status (e.g., "Laborer", "Craftsman", "Townsman")
+- ALL items must match BOTH {date_range} AND {geography}
+- Adapt clothing to LOCAL climate and culture
+- Each faction MUST have distinct primary_colors
+- NEVER use vague terms ("simple clothing", "typical armor") — EVERY item needs type, material, color
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP2A_WORLD_PROMPT = """You are a Historical Visual Consultant. Create the WORLD section of a World Bible.
+
+## CONTEXT
+Era: {era}
+Date range: {date_range}
+Geography: {geography}
+Factions identified: {factions_summary}
+
+## TASK
+Describe the PHYSICAL WORLD: architecture, landscape, objects, transport, and cultural markers. Only describe domains RELEVANT to the script. Leave irrelevant fields as empty string "".
+
+## OUTPUT
+Return a JSON object:
+```json
+{{
+  "architecture": [
+    {{
+      "name": "Specific name (e.g., 'Roman Republic Urban Domus')",
+      "exterior": "Wall material, roof type/material, building height, overall shape",
+      "facade": "Door style (material, hardware), window style, decorative elements (carvings, mosaics, paint)",
+      "interior": "Floor material, wall treatment (frescoes, plaster, bare stone), ceiling, furniture style",
+      "street": "Road surface (cobblestone, packed earth, flagstone), drainage, market stalls, courtyard/garden"
+    }}
+  ],
+  "landscape": {{
+    "terrain": "Ground type, surface (sand, rock, grass, soil), farm roads, hills/plains",
+    "vegetation": "Characteristic trees and plants for this region and climate",
+    "water": "Rivers, seas, wells, aqueducts — color, flow, crossing structures",
+    "sky_palette": "Typical sky colors and light quality for this geography"
+  }},
+  "props": {{
+    "military": "Camp equipment, standards, drums, training items — with materials",
+    "household": "Furniture, cooking items, writing tools, containers — with materials",
+    "religious": "Altars, ceremonial objects, offerings, shrines — with materials",
+    "marketplace": "Stalls, goods, currency, food displays — with materials",
+    "dining": "Plates, cups, bowls (material: ceramic/bronze/wood), typical foods, drink vessels",
+    "writing": "Writing surfaces (wax tablet/papyrus/parchment), pens, ink, seals"
+  }},
+  "transport": {{
+    "riding": "Saddle type (with/without stirrups), reins, bit material, blanket",
+    "vehicles": "Cart/chariot/wagon/litter — material, size, who uses it",
+    "pack_animals": "Animals used for carrying goods, their equipment"
+  }},
+  "cultural_markers": {{
+    "symbols": "Religious and political symbols commonly displayed",
+    "decorative_motifs": "Characteristic patterns, carvings, textile designs",
+    "status_indicators": "Visual markers of social class (clothing colors, jewelry, accessories)"
+  }}
+}}
+```
+
+## RULES
+- ALL items must match BOTH {date_range} AND {geography}
+- Architecture: use LOCAL building materials (limestone in Levant, marble in Rome, wood in Northern Europe)
+- Include MULTIPLE architecture entries if different building types appear in the script
+- Props: include material AND visual appearance for each item
+- Transport: specify whether stirrups exist (they don't before ~6th century AD)
+- Leave irrelevant domains as empty string "" (e.g., "writing": "" if no study scenes in script)
+- NEVER use vague terms — EVERY item needs specific type, material, color
+
+Return ONLY the JSON, no explanation."""
+
+
+STEP3_SYSTEM_PROMPT = """You are a Cinematic Director for AI video generation. You break a narrative sequence into camera shots (1-{SCENE_MAX} seconds each).
+
+## CRITICAL: 2-PHASE THINKING PROCESS
+
+### Phase 1 — Visual Event Synthesis
+Read the ENTIRE `full_text` of the sequence. Summarize it into ONE visual event.
+If the text contains a montage (multiple brief actions), pick the 1-2 STRONGEST visual moments.
+Write this in the `visual_event` field BEFORE creating scenes.
+
+### Phase 2 — Camera Cuts
+Based on your `visual_event`, create CAMERA ANGLES of the SAME event (enough to fill total_sequence_duration with scenes of 1-{SCENE_MAX}s each).
+Each angle = 1 scene.
+
+### ANTI 1:1 RULE
+- FORBIDDEN to create one scene per sentence
+- Scenes must be DIFFERENT CAMERA ANGLES of the same event, NOT illustrations of individual sentences
+- `audio_sync` only marks where the voiceover is reading — it does NOT dictate visual content
+
+## 7 RULES
+
+### Rule 1: Label Lock (CRITICAL)
+You MUST use ONLY the EXACT labels provided in === AVAILABLE LABELS ===.
+Do NOT create, rename, or abbreviate labels. Copy-paste them exactly.
+`character_labels` must match character labels.
+`locked_location` must match a location label.
+
+
+### Rule 2: Time Math
+- `sum(scene.duration)` MUST EQUAL `total_sequence_duration` (tolerance: ±10%)
+- Each scene: 1.0s — {SCENE_MAX}s
+- **SHORT SEQUENCE EXCEPTION**: If `total_sequence_duration` < {SCENE_MAX}s, create EXACTLY 1 scene with `duration` = `total_sequence_duration`.
+
+### Rule 3: A-Roll / B-Roll
+- **A-Roll**: Character action/expression driving the story
+- **B-Roll**: Environment, objects, establishing shots
+
+### Rule 4: Shot Types (ALLOWED LIST)
+Only these 3 shot types are permitted:
+- **Wide Shot**: Full environment + characters
+- **Medium Shot**: Character from waist up
+- **Close-up**: Face or hands, shoulders up
+
+FORBIDDEN: Extreme Close-up, Extreme Wide Shot, or any other shot type. The CLOSEST you can go is Close-up.
+
+### Rule 5: Physical Action Only
+FORBIDDEN: abstract words (defeated, sad). REQUIRED: visible physical events (knees sinking into mud, hand wiping eyes).
+
+### Rule 6: Costume Note (REQUIRED)
+For EACH scene, describe what the characters are WEARING in this specific scene.
+This may differ from their default costume in the character sheet (e.g., battle armor vs royal robes).
+Write this in the `costume_note` field.
+
+### Rule 7: Background & Extras
+REQUIRED: describe background people or environmental motion.
+**ALL human figures — including unnamed extras, crowds, and background people — MUST be described using the SAME art style as main characters** (same face shape, same body proportions, same level of stylization).
+Use the `crowd_archetypes` from the WORLD BIBLE to describe extras accurately:
+- Court scene → use `[noble]` and `[clergy]` archetypes from the relevant faction
+- Battle scene → use `[soldier]` archetypes
+- Street scene → use `[civilian_man]`, `[civilian_woman]`, `[child]` archetypes
+When an archetype has MULTIPLE VARIANTS (listed as an array), choose the variant that BEST MATCHES the scene context:
+- Market/trade scene → use "Townsman" or "Market woman" variant
+- Farm/labor scene → use "Laborer" variant
+- Craft workshop → use "Craftsman" variant
+- Military camp → use different soldier variants for variety
+Write the SPECIFIC chosen variant description in `background_and_extras` — NOT generic phrases like "a group of people".
+
+### Rule 8: Camera Motion
+Default: `Static`. Only 3 exceptions:
+
+| Situation | Shot Size | Motion |
+|---|---|---|
+| OPENING scene of new sequence | Wide | Slow Pan |
+| Character MOVING (running, riding) | Medium | Slow Tracking |
+| CLIMACTIC emotion (discovery, rage) | Medium/Close-up | Extreme Slow Zoom In |
+
+FORBIDDEN: Pan on Close-up. FORBIDDEN: Two opposing motions adjacent.
+
+### Rule 9: Visual Translation Strategy (CRITICAL)
+The narration (audio) and the visual (scene) are TWO SEPARATE LAYERS. Do NOT illustrate the narration literally.
+
+| Text type | Strategy | Example |
+|---|---|---|
+| **Clear physical action** ("grabs your arm") | → Direct illustration | Show hands grabbing arm |
+| **Metaphor/philosophy** ("your kingdom is a sand castle") | → **Character reaction**: show the CHARACTER's body language (clenched fists, slumped shoulders, tightened jaw) | NOT a literal sand castle |
+| **Future/past commentary** ("2 years later he will lose...") | → **Atmospheric B-Roll**: still environment, light/shadow, dust, empty spaces | NOT a literal battlefield scene |
+| **Abstract concept** ("something growing inside your body") | → **Visual symbol**: a concrete OBJECT that represents the concept (pale skin patch, trembling hand, a flickering candle) | NOT an abstract glow or aura |
+
+FORBIDDEN: Illustrating words literally when they are metaphorical.
+FORBIDDEN: Creating a scene that looks like it belongs in a DIFFERENT location just to match the narration.
+The visual must ALWAYS feel grounded in the `locked_location`.
+
+### Rule 10: Content Safety (CRITICAL)
+`physical_action` and all visual descriptions must be SAFE for AI image generation APIs.
+FORBIDDEN in physical_action:
+- Blood, wounds, bleeding, red lines on skin, open cuts
+- Self-harm actions (digging nails, cutting, scratching skin to bleed)
+- Graphic injury to children (needles piercing skin, burns on body)
+- Torture, execution, or graphic death scenes
+- Weapons directly contacting or piercing human bodies
+
+INSTEAD USE indirect/implied techniques:
+- "examines the arm carefully" instead of "digs nails into skin drawing red lines"
+- "presses a small metal tool near the forearm" instead of "pushes hot needle into skin"
+- "a pale, discolored patch visible on the skin" instead of "wound bleeding"
+- "collapses motionless" instead of graphic death descriptions
+- Show CHARACTER REACTIONS (grimacing face, clenched jaw, turned-away gaze) instead of the injury itself
+
+ALL fields MUST be in ENGLISH. `audio_sync` keeps the original script language.
+
+## OUTPUT FORMAT
+Return a JSON object for this ONE sequence:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "total_sequence_duration": 14.0,
+  "locked_location": "exact location label",
+  "visual_event": "One-sentence summary of the visual event",
+  "scenes": [
+    {
+      "global_scene_id": "SEQ_01_SCN_01",
+      "duration": 4.0,
+      "audio_sync": "original text this scene covers",
+      "character_labels": [],
+      "shot_type": "Wide Shot",
+      "roll_type": "B-Roll",
+      "camera_motion": "Slow Pan",
+      "time_of_day": "dawn / morning / midday / afternoon / dusk / night",
+      "costume_note": "specific clothing/armor for this scene",
+      "lighting_and_atmosphere": "... (must match time_of_day)",
+      "background_and_extras": "...",
+      "physical_action": "..."
+    }
+  ]
+}
+```
+
+Return ONLY the JSON object, no explanation."""
+
+
+# Step 4: Prompt Writing — LLM writes natural flat_prompt per sequence
+# System prompt = full style file content (loaded at runtime)
+# This constant is the user message template
+STEP4_USER_TEMPLATE = """=== VISUAL REFERENCE ===
+{mini_bible}
+=== END REFERENCE ===
+
+=== SCENES TO WRITE PROMPTS FOR ===
+Sequence: {sequence_id} | Chapter: {chapter_info}
+Location: [{location}]
+Visual Event: {visual_event}
+
+{scenes_data}
+=== END SCENES ===
+
+=== CONTEXT ===
+{context}
+=== END CONTEXT ===
+
+Write a structured JSON for EACH scene above. You MUST fill ALL thinking fields BEFORE writing flat_prompt.
+
+RULES:
+- Use [Label] brackets for ALL characters and locations (e.g., [Jerusalem-King-A-Child], [Jerusalem Palace Courtyard])
+- flat_prompt MUST contain the [Location-Label] from the sequence — NEVER omit it
+- flat_prompt MUST mention the time_of_day (dawn/morning/midday/afternoon/dusk/night) from the scene data to set correct lighting
+- Include the specific COSTUME for this scene (from costume_note), NOT the default from reference
+- Follow the art style rules in the system prompt
+- Do NOT include "Mandatory Style:" or "Negative Prompt:" — they are appended automatically
+- flat_prompt must be a SINGLE paragraph, 2-4 sentences, weaving ALL thinking fields into natural prose
+- CONTENT SAFETY: NEVER describe blood, wounds, self-harm, needles piercing skin, or graphic injury. Use indirect descriptions: "examines the arm", "a pale patch on skin", "recoils in pain" instead of graphic details.
+- CROWD/EXTRAS CONSISTENCY: When describing background people, extras, or crowds, ALWAYS repeat the art style features (e.g., "identical stylized boys with oversized round pure white faces, dot eyes, no noses"). NEVER leave extras without style description — the image generator will default to realistic faces.
+
+Return a JSON array:
+```json
+[
+  {{
+    "scene_id": "SEQ_01_SCN_01",
+    "character_blocking": "where each character is positioned in the frame (center, left foreground, right background, etc.)",
+    "emotion": "FACIAL expression only: eyebrow shape, mouth shape, eye state (do NOT repeat physical_action or body movement — those are already in Step 3)",
+    "key_props": ["specific OBJECTS visible in the scene that are NOT already in background_and_extras"],
+    "camera_angle": "eye-level / low-angle / high-angle / dutch-angle",
+    "effects": "PARTICLE and atmospheric effects ONLY: dust motes, smoke wisps, light rays, heat haze, falling leaves (do NOT repeat lighting — that is already in lighting_and_atmosphere from Step 3). Write 'none' if no effects.",
+    "crowd_description": "ART STYLE enforcement for background people: take the crowd from background_and_extras and ADD explicit art style features (face shape, proportions, stylization). Write 'none' if no crowd.",
+    "flat_prompt": "Complete prompt paragraph weaving Step 3 data + ALL thinking fields above into natural flowing prose"
+  }}
+]
+```
+
+IMPORTANT: flat_prompt must INCLUDE information from ALL thinking fields above AND the Step 3 input data (shot_type, camera_motion, physical_action, costume_note, lighting_and_atmosphere). Do not leave out any element.
+
+Return ONLY the JSON array, no explanation."""
+
+
+# ═══════════════ Main Pipeline Class ═══════════════
+
+class VideoPipeline:
+    """
+    Orchestrates the 4-step video prompt pipeline.
+    All steps produce checkpoint files for resume capability.
+    """
+
+    def __init__(
+        self,
+        api_client: APIClient,
+        srt_path: str = "",
+        srt_paths: Optional[List[str]] = None,
+        output_dir: str = "",
+        style_name: str = "",
+        styles_dir: str = "",
+        tier_step2: str = "Pro",
+        tier_step13: str = "Flash",
+        threads: int = 2,
+        scene_max: int = 6,
+        constraints: Optional[dict] = None,
+        log_api: bool = False,
+        on_log: Optional[Callable] = None,
+        on_step_updated: Optional[Callable] = None,
+        on_all_failed: Optional[Callable] = None,
+    ):
+        self.api_client = api_client
+        # Multi-file: prefer srt_paths, fallback to single srt_path
+        if srt_paths and len(srt_paths) > 0:
+            self.srt_paths = srt_paths
+        elif srt_path:
+            self.srt_paths = [srt_path]
+        else:
+            self.srt_paths = []
+        self.srt_path = self.srt_paths[0] if self.srt_paths else ""  # backward compat
+        self.output_dir = output_dir
+        self.style_name = style_name
+        self.styles_dir = styles_dir
+        self.tier_step2 = tier_step2
+        self.tier_step13 = tier_step13
+        self.threads = threads
+        self.scene_max = scene_max
+        self.constraints = constraints or {}
+        self.log_api = log_api
+        self.on_log = on_log
+        self.on_step_updated = on_step_updated
+        self.on_all_failed = on_all_failed
+
+        # Style data (loaded once)
+        self.style_summary = ""
+        self.style_content = ""       # Full style file for Step 4
+        self.location_style = ""      # Background-only style for location refs
+
+        # Debug dump
+        self._dump_counter = 0
+        self._dump_lock = threading.Lock()
+        self._debug_dir = ""
+
+        self.state = PipelineState.IDLE
+        self._stop_event = threading.Event()
+
+        # Step statuses
+        self.steps: Dict[str, StepStatus] = {
+            "step0": StepStatus(step="Step 0: Parse + Merge"),
+            "step1": StepStatus(step="Step 1: Semantic Chunking"),
+            "step2a": StepStatus(step="Step 2a: World Bible"),
+            "step2b": StepStatus(step="Step 2b: Characters"),
+            "step2c": StepStatus(step="Step 2c: Locations"),
+            "step3": StepStatus(step="Step 3: Scene Design"),
+            "step4": StepStatus(step="Step 4: Prompt Writing"),
+            "step5": StepStatus(step="Step 5: Export"),
+        }
+
+        # Data holders
+        self.sentences = []
+        self.cleaned_text = ""
+        self.sequences = []
+        self.characters_data = {}
+        self.locations_data = {}
+        self.world_bible = {}
+        self.valid_labels = {"characters": [], "locations": []}
+        self.scenes_data = []
+        self.final_prompts = []
+
+
+    # ── Helpers ──
+
+    def _log(self, msg: str):
+        if self.on_log:
+            try:
+                self.on_log(msg)
+            except Exception:
+                pass
+
+    def _update_step(self, key: str, status: str, message: str = ""):
+        step = self.steps[key]
+        step.status = status
+        step.message = message
+        if self.on_step_updated:
+            try:
+                self.on_step_updated(key, step)
+            except Exception:
+                pass
+
+    def _is_stopped(self) -> bool:
+        return self._stop_event.is_set()
+
+    def _checkpoint_path(self, filename: str) -> str:
+        base = os.path.splitext(os.path.basename(self.srt_path))[0]
+        return os.path.join(self.output_dir, f"{base}{filename}")
+
+    def _init_debug_dir(self):
+        """Create debug dump directory."""
+        base = os.path.splitext(os.path.basename(self.srt_path))[0]
+        self._debug_dir = os.path.join(self.output_dir, f"{base}_debug")
+        os.makedirs(self._debug_dir, exist_ok=True)
+        self._dump_counter = 0
+
+    def _dump(self, step: str, label: str, data, ext: str = "txt"):
+        """Dump data to debug folder."""
+        if not self._debug_dir:
+            return
+        try:
+            with self._dump_lock:
+                self._dump_counter += 1
+                counter = self._dump_counter
+            filename = f"{counter:03d}_{step}_{label}.{ext}"
+            filepath = os.path.join(self._debug_dir, filename)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                if isinstance(data, (dict, list)):
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                else:
+                    f.write(str(data))
+        except Exception:
+            pass
+
+    def _send_llm(self, system_prompt: str, user_message: str, tier: str = "Flash",
+                  max_tokens: int = 16384, step_label: str = "") -> Optional[str]:
+        """Send request to LLM via api_client. Dumps all data to debug folder."""
+        # Dump input
+        call_label = step_label or "llm"
+        self._dump(call_label, "system_prompt", system_prompt)
+        self._dump(call_label, "user_message", user_message)
+
+        self.api_client.log_api = self.log_api
+        result = self.api_client.send_request(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            tier=tier,
+            temperature=0.4,
+            max_tokens=max_tokens,
+            log_callback=self.on_log,
+            on_all_failed=self.on_all_failed,
+        )
+
+        # Dump raw response
+        self._dump(call_label, "raw_response", result or "(empty)")
+        return result
+
+    # ══════════════ Step 0: Parse + Merge ══════════════
+
+    def _run_step0(self) -> bool:
+        """Parse SRT/TXT files → merged sentences with chapter markers."""
+        self._update_step("step0", "running")
+
+        ckpt = self._checkpoint_path("_step0_sentences.json")
+        clean_path = self._checkpoint_path("_cleaned_script.txt")
+
+        # Resume: check checkpoint
+        existing = _load_checkpoint(ckpt)
+        if existing and os.path.isfile(clean_path):
+            self.sentences = existing
+            with open(clean_path, 'r', encoding='utf-8') as f:
+                self.cleaned_text = f.read()
+            self._update_step("step0", "done", f"{len(existing)} sentences loaded from checkpoint")
+            self._log(f"[Step 0] ⏭ Loaded from checkpoint: {len(existing)} sentences")
+            return True
+
+        # Parse each file and merge
+        try:
+            from core.srt_sentence_parser import Sentence
+
+            all_sentences = []
+            all_cleaned_parts = []
+            time_offset = 0.0
+            global_id = 0
+
+            for chapter_idx, file_path in enumerate(self.srt_paths, start=1):
+                ext = os.path.splitext(file_path)[1].lower()
+                chapter_name = os.path.splitext(os.path.basename(file_path))[0]
+
+                if ext == '.srt':
+                    self._log(f"[Step 0] Parsing SRT: {os.path.basename(file_path)}")
+                    sentence_objs, cleaned = parse_srt_to_sentences(file_path)
+                elif ext in ('.txt', '.text'):
+                    self._log(f"[Step 0] Parsing TXT: {os.path.basename(file_path)}")
+                    sentence_objs, cleaned = parse_txt_to_sentences(file_path)
+                else:
+                    self._log(f"[Step 0] ⚠ Skipping unsupported: {os.path.basename(file_path)}")
+                    continue
+
+                if not sentence_objs:
+                    self._log(f"[Step 0] ⚠ No sentences in: {os.path.basename(file_path)}")
+                    continue
+
+                # Add chapter header to cleaned text
+                all_cleaned_parts.append(f"\n--- Chapter {chapter_idx}: {chapter_name} ---\n{cleaned}")
+
+                # Merge with chapter markers and timing offset
+                for s in sentence_objs:
+                    global_id += 1
+                    d = s.to_full_dict()
+                    d["sentence_id"] = global_id
+                    d["chapter_id"] = chapter_idx
+                    d["chapter_name"] = chapter_name
+                    d["start_time"] = round(d["start_time"] + time_offset, 3)
+                    d["end_time"] = round(d["end_time"] + time_offset, 3)
+                    all_sentences.append(d)
+
+                # Offset next chapter's timing
+                if sentence_objs:
+                    last = sentence_objs[-1]
+                    time_offset += last.end_time + 0.5  # small gap between chapters
+
+            if not all_sentences:
+                self._update_step("step0", "failed", "No sentences found in any file")
+                return False
+
+            self.sentences = all_sentences
+            self.cleaned_text = "\n".join(all_cleaned_parts)
+
+            # Word count check
+            word_count = len(self.cleaned_text.split())
+            if word_count > 10000:
+                self._update_step("step0", "failed",
+                                  f"Script too long: {word_count} words (max 10000)")
+                self._log(f"[Step 0] ⚠ STOPPED: Script has {word_count} words (max 10000)")
+                return False
+
+            # Save checkpoints
+            _save_checkpoint(ckpt, self.sentences)
+            with open(clean_path, 'w', encoding='utf-8') as f:
+                f.write(self.cleaned_text)
+
+            total_dur = round(sum(s["duration"] for s in self.sentences), 1)
+            n_chapters = len(self.srt_paths)
+            self._update_step("step0", "done",
+                              f"{len(self.sentences)} sentences from {n_chapters} file(s), {total_dur}s, {word_count} words")
+            self._log(f"[Step 0] ✅ {len(self.sentences)} sentences from {n_chapters} file(s), {total_dur}s, {word_count} words")
+            self._dump("step0", "sentences", self.sentences, "json")
+            self._dump("step0", "cleaned_text", self.cleaned_text)
+            return True
+
+        except Exception as e:
+            self._update_step("step0", "failed", str(e))
+            self._log(f"[Step 0] ❌ Error: {e}")
+            return False
+
+
+    # ══════════════ Step 1: Semantic Chunking ══════════════
+
+    def _process_chapter_step1(self, chapter_id: int, chapter_sentences: list,
+                                ch_idx: int, total_chapters: int) -> list:
+        """Process ONE chapter through Step 1 (sequence chunking)."""
+        if self._is_stopped():
+            return []
+
+        # Build API payload (keep chapter_id for context)
+        api_sentences = [
+            {"sentence_id": s["sentence_id"], "text": s["text"], "duration": s["duration"],
+             "chapter_id": s.get("chapter_id", chapter_id)}
+            for s in chapter_sentences
+        ]
+
+        chapter_name = chapter_sentences[0].get("chapter_name", f"Chapter {chapter_id}") if chapter_sentences else f"Chapter {chapter_id}"
+        self._log(f"  [{ch_idx+1}/{total_chapters}] {chapter_name} ({len(api_sentences)} sentences)")
+
+        user_msg = json.dumps(api_sentences, ensure_ascii=False, indent=2)
+
+        for attempt in range(2):
+            raw = self._send_llm(STEP1_SYSTEM_PROMPT, user_msg, tier=self.tier_step13,
+                                 step_label=f"step1_ch{ch_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if parsed and isinstance(parsed, list):
+                return parsed
+            self._log(f"  [{ch_idx+1}] Retry {attempt+1}: JSON parse failed")
+
+        self._log(f"  [{ch_idx+1}] ❌ Failed after 2 attempts")
+        return []
+
+    def _run_step1(self) -> bool:
+        """LLM groups sentences into Sequences — per-chapter processing."""
+        self._update_step("step1", "running")
+
+        ckpt = self._checkpoint_path("_step1_sequences.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.sequences = existing
+            self._update_step("step1", "done", f"{len(existing)} sequences loaded")
+            self._log(f"[Step 1] ⏭ Loaded: {len(existing)} sequences")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        # Group sentences by chapter_id
+        from collections import OrderedDict
+        chapters = OrderedDict()
+        for s in self.sentences:
+            ch_id = s.get("chapter_id", 1)
+            chapters.setdefault(ch_id, []).append(s)
+
+        total_chapters = len(chapters)
+        self._log(f"[Step 1] Processing {total_chapters} chapters ({len(self.sentences)} sentences)...")
+
+        # Process each chapter
+        all_chapter_results = []
+        if self.threads <= 1:
+            for ch_idx, (ch_id, ch_sents) in enumerate(chapters.items()):
+                if self._is_stopped():
+                    return False
+                results = self._process_chapter_step1(ch_id, ch_sents, ch_idx, total_chapters)
+                all_chapter_results.append((ch_id, results))
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {}
+                for ch_idx, (ch_id, ch_sents) in enumerate(chapters.items()):
+                    f = pool.submit(self._process_chapter_step1, ch_id, ch_sents, ch_idx, total_chapters)
+                    futures[f] = (ch_idx, ch_id)
+
+                indexed = [None] * total_chapters
+                for future in as_completed(futures):
+                    ch_idx, ch_id = futures[future]
+                    try:
+                        indexed[ch_idx] = (ch_id, future.result())
+                    except Exception as e:
+                        self._log(f"  [Chapter {ch_idx+1}] ❌ Error: {e}")
+                        indexed[ch_idx] = (ch_id, [])
+                all_chapter_results = [r for r in indexed if r]
+
+        # Merge all chapter results into one continuous list
+        sentence_map = {s["sentence_id"]: s for s in self.sentences}
+        all_sequences = []
+        for ch_id, chapter_seqs in all_chapter_results:
+            for seq in chapter_seqs:
+                # Reconstruct full_text, total_duration, start/end from sentence data
+                ids = seq.get("sentence_ids", [])
+                texts = []
+                total_dur = 0.0
+                for sid in ids:
+                    s = sentence_map.get(sid)
+                    if s:
+                        texts.append(s["text"])
+                        total_dur += s["duration"]
+                seq["full_text"] = " ".join(texts)
+                seq["total_duration"] = round(total_dur, 2)
+
+                # Ensure characters field exists
+                seq.setdefault("characters", [])
+
+                # Tag with chapter info
+                seq["chapter_id"] = ch_id
+                if ids:
+                    first_s = sentence_map.get(ids[0])
+                    if first_s:
+                        seq["chapter_name"] = first_s.get("chapter_name", f"Chapter {ch_id}")
+
+                all_sequences.append(seq)
+
+        if not all_sequences:
+            self._update_step("step1", "failed", "No sequences generated")
+            return False
+
+        # Re-number sequence IDs continuously
+        for i, seq in enumerate(all_sequences):
+            seq["sequence_id"] = f"SEQ_{i+1:02d}"
+
+        self.sequences = all_sequences
+        _save_checkpoint(ckpt, all_sequences)
+
+        self._update_step("step1", "done", f"{len(all_sequences)} sequences")
+        self._log(f"[Step 1] ✅ {len(all_sequences)} sequences from {total_chapters} chapters")
+        self._dump("step1", "sequences_parsed", all_sequences, "json")
+        return True
+
+    # ══════════════ Step 2: Global Context ══════════════
+
+    def _run_step2a(self) -> bool:
+        """LLM generates World Bible in 3 calls: Identify → People → World."""
+        self._update_step("step2a", "running")
+
+        ckpt = self._checkpoint_path("_step2_world_bible.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.world_bible = existing
+            era = existing.get("historical_context", {}).get("era", "unknown")
+            factions = len(existing.get("factions", []))
+            self._update_step("step2a", "done", f"{era} ({factions} factions)")
+            self._log(f"[Step 2a] ⏭ Loaded: {era}")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        # Input = cleaned_text — NO fallback
+        if not self.cleaned_text:
+            self._update_step("step2a", "failed", "cleaned_text is empty — Step 0 may have failed")
+            return False
+        user_msg = self.cleaned_text
+
+        # ── Call 1/3: IDENTIFY era + factions ──
+        self._log(f"[Step 2a] Call 1/3: Identifying era and factions...")
+
+        identify_result = None
+        for attempt in range(2):
+            if self._is_stopped():
+                return False
+            raw = self._send_llm(
+                STEP2A_IDENTIFY_PROMPT, user_msg,
+                tier=self.tier_step2, max_tokens=4096, step_label="step2a_identify",
+            )
+            if not raw:
+                self._log(f"[Step 2a] Call 1 attempt {attempt+1}: No response")
+                continue
+            parsed = _try_parse_json(raw)
+            if parsed and isinstance(parsed, dict) and parsed.get("era") and parsed.get("factions"):
+                identify_result = parsed
+                break
+            self._log(f"[Step 2a] Call 1 attempt {attempt+1}: JSON parse failed or missing 'era'/'factions'")
+
+        if not identify_result:
+            self._update_step("step2a", "failed", "Call 1 IDENTIFY failed after 2 attempts")
+            return False
+
+        era = identify_result["era"]
+        date_range = identify_result.get("date_range", "")
+        geography = identify_result.get("geography", "")
+        factions_list = identify_result.get("factions", [])
+
+        factions_summary = "; ".join(
+            f"{f.get('name', '?')} ({f.get('role', '')})"
+            for f in factions_list
+        )
+
+        self._log(f"[Step 2a] ✓ Call 1: {era} | {len(factions_list)} factions")
+        self._dump("step2a", "call1_identify", identify_result, "json")
+
+        # Shared context for Call 2 and Call 3
+        call_context = dict(
+            era=era, date_range=date_range,
+            geography=geography, factions_summary=factions_summary,
+        )
+
+        # ── Call 2/3: PEOPLE (factions visual details) ──
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2a] Call 2/3: Describing people (factions, costumes, crowd)...")
+
+        people_prompt = STEP2A_PEOPLE_PROMPT.format(**call_context)
+
+        people_result = None
+        for attempt in range(2):
+            if self._is_stopped():
+                return False
+            raw = self._send_llm(
+                people_prompt, user_msg,
+                tier=self.tier_step2, max_tokens=16384, step_label="step2a_people",
+            )
+            if not raw:
+                self._log(f"[Step 2a] Call 2 attempt {attempt+1}: No response")
+                continue
+            parsed = _try_parse_json(raw)
+            if parsed and isinstance(parsed, dict) and parsed.get("factions"):
+                people_result = parsed
+                break
+            self._log(f"[Step 2a] Call 2 attempt {attempt+1}: JSON parse failed or missing 'factions'")
+
+        if not people_result:
+            self._update_step("step2a", "failed", "Call 2 PEOPLE failed after 2 attempts")
+            return False
+
+        self._log(f"[Step 2a] ✓ Call 2: {len(people_result['factions'])} factions described")
+        self._dump("step2a", "call2_people", people_result, "json")
+
+        # ── Call 3/3: WORLD (architecture, landscape, props, transport, cultural) ──
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2a] Call 3/3: Describing world (architecture, landscape, props)...")
+
+        world_prompt = STEP2A_WORLD_PROMPT.format(**call_context)
+
+        world_result = None
+        for attempt in range(2):
+            if self._is_stopped():
+                return False
+            raw = self._send_llm(
+                world_prompt, user_msg,
+                tier=self.tier_step2, max_tokens=16384, step_label="step2a_world",
+            )
+            if not raw:
+                self._log(f"[Step 2a] Call 3 attempt {attempt+1}: No response")
+                continue
+            parsed = _try_parse_json(raw)
+            if parsed and isinstance(parsed, dict) and parsed.get("architecture"):
+                world_result = parsed
+                break
+            self._log(f"[Step 2a] Call 3 attempt {attempt+1}: JSON parse failed or missing 'architecture'")
+
+        if not world_result:
+            self._update_step("step2a", "failed", "Call 3 WORLD failed after 2 attempts")
+            return False
+
+        self._log(f"[Step 2a] ✓ Call 3: {len(world_result.get('architecture', []))} architecture entries")
+        self._dump("step2a", "call3_world", world_result, "json")
+
+        # ── Merge all 3 calls into unified World Bible ──
+        world_bible = {
+            "historical_context": {
+                "era": era,
+                "date_range": date_range,
+                "geography": geography,
+            },
+            "factions": people_result.get("factions", []),
+            "architecture": world_result.get("architecture", []),
+            "landscape": world_result.get("landscape", {}),
+            "props": world_result.get("props", {}),
+            "transport": world_result.get("transport", {}),
+            "cultural_markers": world_result.get("cultural_markers", {}),
+        }
+
+        self.world_bible = world_bible
+        _save_checkpoint(ckpt, world_bible)
+
+        n_factions = len(world_bible["factions"])
+        self._update_step("step2a", "done", f"{era} ({n_factions} factions)")
+        self._log(f"[Step 2a] ✅ World Bible: {era} | {n_factions} factions")
+        self._dump("step2a", "world_bible_merged", world_bible, "json")
+        return True
+
+    def _run_step2b(self) -> bool:
+        """LLM extracts characters from sequences."""
+        self._update_step("step2b", "running")
+
+        ckpt = self._checkpoint_path("_step2_characters.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.characters_data = existing
+            chars = len(existing.get("characters", []))
+            self._update_step("step2b", "done", f"{chars} characters")
+            self._log(f"[Step 2b] ⏭ Loaded: {chars} characters")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2b] Analyzing characters (Pro model)...")
+
+        # Inject style summary so character descriptions match the art style
+        sys_prompt = STEP2_CHARACTERS_SYSTEM_PROMPT
+        if self.style_summary:
+            sys_prompt += f"\n\n=== VISUAL ART STYLE ===\nAll visual_description and sheet_prompt MUST follow this art style:\n{self.style_summary}\nDo NOT describe realistic human features if the style forbids them."
+
+        # Inject World Bible (selective: historical_context + factions — NOT architecture/props)
+        if self.world_bible:
+            ctx = self.world_bible["historical_context"]
+            wb_for_chars = {
+                "historical_context": ctx,
+                "factions": [{
+                    "name": f["name"], "heraldry": f.get("heraldry", ""),
+                    "primary_colors": f.get("primary_colors", []),
+                    "armor": f.get("armor", ""), "weapons": f.get("weapons", []),
+                    "role_variants": f.get("role_variants", {})
+                } for f in self.world_bible.get("factions", [])],
+            }
+            sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE (ANCHOR) ===\n{json.dumps(wb_for_chars, ensure_ascii=False)}\nYou MUST follow faction colors, armor types, and era constraints from this reference.\nYou MAY add period-appropriate details (scars, unique jewelry, personal items) as long as they are accurate to {ctx['date_range']} and do NOT contradict this reference."
+
+        # Build input from Step 1 sequences
+        seq_data = [{"sequence_id": s["sequence_id"],
+                     "characters": s.get("characters", []),
+                     "full_text": s.get("full_text", "")}
+                    for s in self.sequences]
+        user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+
+        raw = self._send_llm(
+            sys_prompt, user_msg,
+            tier=self.tier_step2, max_tokens=32768, step_label="step2b",
+        )
+        if not raw:
+            self._update_step("step2b", "failed", "No response from LLM")
+            return False
+
+        parsed = _try_parse_json(raw)
+        if not parsed or not isinstance(parsed, dict):
+            self._update_step("step2b", "failed", "Invalid JSON response")
+            return False
+
+        self.characters_data = parsed
+        _save_checkpoint(ckpt, parsed)
+
+        chars = len(parsed.get("characters", []))
+        self._update_step("step2b", "done", f"{chars} characters")
+        self._log(f"[Step 2b] ✅ {chars} characters")
+        self._dump("step2b", "characters_parsed", parsed, "json")
+        return True
+
+    def _run_step2c(self) -> bool:
+        """LLM extracts locations from sequences."""
+        self._update_step("step2c", "running")
+
+        ckpt = self._checkpoint_path("_step2_visual_bible.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.locations_data = existing
+            locs = len(existing.get("locations", []))
+            self._update_step("step2c", "done", f"{locs} locations")
+            self._log(f"[Step 2c] ⏭ Loaded: {locs} locations")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        self._log(f"[Step 2c] Analyzing locations (Pro model)...")
+
+        # Inject World Bible (selective: historical_context + architecture + landscape + props + transport — NOT factions)
+        sys_prompt = STEP2_LOCATIONS_SYSTEM_PROMPT
+        if self.world_bible:
+            ctx = self.world_bible["historical_context"]
+            wb_for_locs = {
+                "historical_context": ctx,
+                "architecture": self.world_bible.get("architecture", []),
+                "landscape": self.world_bible.get("landscape", {}),
+                "props": self.world_bible.get("props", {}),
+                "transport": self.world_bible.get("transport", {}),
+            }
+            sys_prompt += f"\n\n=== WORLD BIBLE REFERENCE (ANCHOR) ===\n{json.dumps(wb_for_locs, ensure_ascii=False)}\nYou MUST follow architecture styles, materials, and landscape from this reference.\nYou MAY add scene-specific details (unique decorations, weather marks, battle damage) as long as they match {ctx['date_range']} and {ctx['geography']}."
+
+        # Build input from Step 1 sequences
+        seq_data = [{"sequence_id": s["sequence_id"],
+                     "location_shift": s.get("location_shift", ""),
+                     "full_text": s.get("full_text", "")}
+                    for s in self.sequences]
+        user_msg = json.dumps(seq_data, ensure_ascii=False, indent=2)
+
+        raw = self._send_llm(
+            sys_prompt, user_msg,
+            tier=self.tier_step2, max_tokens=16384, step_label="step2c",
+        )
+        if not raw:
+            self._update_step("step2c", "failed", "No response from LLM")
+            return False
+
+        parsed = _try_parse_json(raw)
+        if not parsed or not isinstance(parsed, dict):
+            self._update_step("step2c", "failed", "Invalid JSON response")
+            return False
+
+        self.locations_data = parsed
+        _save_checkpoint(ckpt, parsed)
+
+        locs = len(parsed.get("locations", []))
+        self._update_step("step2c", "done", f"{locs} locations")
+        self._log(f"[Step 2c] ✅ {locs} locations")
+        self._dump("step2c", "locations_parsed", parsed, "json")
+        return True
+
+    # ══════════════ Label Management ══════════════
+
+    def _extract_valid_labels(self):
+        """Extract valid labels from Step 2 output as source of truth."""
+        self.valid_labels = {
+            "characters": [c.get("label", "") for c in self.characters_data.get("characters", []) if c.get("label")],
+            "locations": [l.get("label", "") for l in self.locations_data.get("locations", []) if l.get("label")],
+        }
+        self._log(f"[Labels] {len(self.valid_labels['characters'])} chars, "
+                  f"{len(self.valid_labels['locations'])} locations")
+
+    def _build_labels_block(self) -> str:
+        """Build AVAILABLE LABELS block for Step 3/4 prompts."""
+        parts = ["=== AVAILABLE LABELS (USE EXACTLY AS WRITTEN) ==="]
+        if self.valid_labels["characters"]:
+            parts.append(f"Characters: {', '.join(self.valid_labels['characters'])}")
+        if self.valid_labels["locations"]:
+            parts.append(f"Locations: {', '.join(self.valid_labels['locations'])}")
+        parts.append("RULES: Use ONLY labels from this list. Do NOT create new labels.")
+        parts.append("=== END LABELS ===")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _fuzzy_match(name: str, valid_set: list) -> str:
+        """Find closest match for a label using simple substring matching."""
+        name_lower = name.lower().strip()
+        for v in valid_set:
+            if v.lower() == name_lower:
+                return v
+        # Substring match
+        for v in valid_set:
+            if name_lower in v.lower() or v.lower() in name_lower:
+                return v
+        return ""
+
+    def _validate_scene_labels(self, scene: dict):
+        """Validate and fix labels in a scene dict."""
+        # Fix character labels
+        fixed_chars = []
+        for char in scene.get("character_labels", []):
+            if char in self.valid_labels["characters"]:
+                fixed_chars.append(char)
+            else:
+                closest = self._fuzzy_match(char, self.valid_labels["characters"])
+                if closest:
+                    self._log(f"  ⚠ Fixed char label: '{char}' → '{closest}'")
+                    fixed_chars.append(closest)
+                else:
+                    self._log(f"  ⚠ Unknown char label: '{char}' — skipped")
+        scene["character_labels"] = fixed_chars
+
+        # Fix location
+        loc = scene.get("locked_location", "") or ""
+        if loc and loc not in self.valid_labels["locations"]:
+            closest = self._fuzzy_match(loc, self.valid_labels["locations"])
+            if closest:
+                scene["locked_location"] = closest
+
+    # ══════════════ Step 3: Scene Design (1 call per sequence) ══════════════
+
+    def _build_visual_reference(self) -> str:
+        """Build VISUAL REFERENCE section for Step 3 prompt."""
+        parts = []
+        parts.append("=== VISUAL REFERENCE: CHARACTERS ===")
+        for c in self.characters_data.get("characters", []):
+            parts.append(f"- [{c.get('group', 'NAMED')}] {c.get('label', '?')}: {c.get('visual_description', '')}")
+        parts.append("\n=== VISUAL REFERENCE: LOCATIONS ===")
+        for loc in self.locations_data.get("locations", []):
+            parts.append(f"- {loc.get('label', '?')}: {loc.get('bible_description', '')} Lighting: {loc.get('default_lighting', '')}")
+        # World Bible
+        if self.world_bible:
+            ctx = self.world_bible["historical_context"]
+            parts.append("\n=== WORLD BIBLE ===")
+            parts.append(f"Era: {ctx['era']}")
+            parts.append(f"Date Range: {ctx.get('date_range', '')}")
+            parts.append(f"Geography: {ctx.get('geography', '')}")
+            for faction in self.world_bible.get("factions", []):
+                parts.append(f"  Faction: {faction.get('name', '?')}")
+                parts.append(f"    Heraldry: {faction.get('heraldry', '')}")
+                parts.append(f"    Colors: {', '.join(faction.get('primary_colors', []))}")
+                parts.append(f"    Armor: {faction.get('armor', '')}")
+                parts.append(f"    Weapons: {', '.join(faction.get('weapons', []))}")
+                # Role variants
+                role_vars = faction.get("role_variants", {})
+                if role_vars:
+                    parts.append(f"    --- Role Variants ---")
+                    for role, desc in role_vars.items():
+                        parts.append(f"    [{role}]: {desc}")
+                # Crowd archetypes (value can be string or array of variants)
+                crowd = faction.get("crowd_archetypes", {})
+                if crowd:
+                    parts.append(f"    --- Crowd Archetypes ---")
+                    for role, desc in crowd.items():
+                        if isinstance(desc, list):
+                            for variant in desc:
+                                parts.append(f"    [{role}]: {variant}")
+                        else:
+                            parts.append(f"    [{role}]: {desc}")
+            # Architecture
+            for arch in self.world_bible.get("architecture", []):
+                if isinstance(arch, dict):
+                    name = arch.get('name', '?')
+                    parts.append(f"  Architecture/{name}:")
+                    parts.append(f"    Exterior: {arch.get('exterior', '')}")
+                    parts.append(f"    Facade: {arch.get('facade', '')}")
+                    parts.append(f"    Interior: {arch.get('interior', '')}")
+                    parts.append(f"    Street: {arch.get('street', '')}")
+            # Landscape
+            landscape = self.world_bible.get("landscape", {})
+            if landscape:
+                parts.append("\n=== LANDSCAPE ===")
+                for k, v in landscape.items():
+                    if v:
+                        parts.append(f"  {k}: {v}")
+            # Transport
+            transport = self.world_bible.get("transport", {})
+            if transport:
+                parts.append("\n=== TRANSPORT ===")
+                for k, v in transport.items():
+                    if v:
+                        parts.append(f"  {k}: {v}")
+            # Cultural markers
+            markers = self.world_bible.get("cultural_markers", {})
+            if markers:
+                parts.append("\n=== CULTURAL MARKERS ===")
+                for k, v in markers.items():
+                    if v:
+                        parts.append(f"  {k}: {v}")
+        return "\n".join(parts)
+
+    def _validate_scenes(self, seq_data: dict, scenes: list) -> list:
+        """Validate scene timing and apply Tail Correction."""
+        target_dur = seq_data.get("total_sequence_duration", 0) or seq_data.get("total_duration", 0)
+        if not target_dur or not scenes:
+            return scenes
+        actual_dur = sum(s.get("duration", 0) for s in scenes)
+        diff = target_dur - actual_dur
+        error_pct = abs(diff) / target_dur * 100 if target_dur > 0 else 0
+        if error_pct <= 10:
+            if abs(diff) > 0.01:
+                last = scenes[-1]
+                new_dur = last["duration"] + diff
+                if new_dur > float(self.scene_max) or new_dur < 1.0:
+                    n = min(3, len(scenes))
+                    per_scene = diff / n
+                    for s in scenes[-n:]:
+                        s["duration"] = round(s["duration"] + per_scene, 2)
+                else:
+                    last["duration"] = round(new_dur, 2)
+                self._log(f"  [Tail] {seq_data.get('sequence_id', '?')}: fixed {round(diff, 2)}s ({round(error_pct, 1)}%)")
+            return scenes
+        else:
+            self._log(f"  ⚠ {seq_data.get('sequence_id', '?')}: timing error {round(error_pct, 1)}% > 10% — REJECTED")
+            return []
+
+    def _process_sequence_step3(self, seq: dict, seq_idx: int, total: int) -> dict:
+        """Process ONE sequence through Step 3 (scene design)."""
+        if self._is_stopped():
+            return {}
+
+        labels_block = self._build_labels_block()
+        visual_ref = self._build_visual_reference()
+
+
+        user_msg = f"{labels_block}\n\n{visual_ref}\n\n"
+        if self.style_summary:
+            user_msg += f"=== STYLE SUMMARY ===\n{self.style_summary}\n\n"
+        user_msg += f"=== SEQUENCE TO STORYBOARD ===\n{json.dumps(seq, ensure_ascii=False, indent=2)}"
+
+        self._log(f"  [{seq_idx+1}/{total}] {seq.get('sequence_id', '?')} ({round(seq.get('total_duration', 0), 1)}s)")
+
+        # Inject dynamic scene_max into prompt
+        step3_prompt = STEP3_SYSTEM_PROMPT.replace("{SCENE_MAX}", str(self.scene_max))
+
+        for attempt in range(2):
+            raw = self._send_llm(step3_prompt, user_msg, tier=self.tier_step13,
+                                 max_tokens=16384, step_label=f"step3_seq{seq_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if not parsed or not isinstance(parsed, dict):
+                self._log(f"  [{seq_idx+1}] Retry {attempt+1}: JSON parse failed")
+                continue
+
+            scenes = parsed.get("scenes", [])
+            # Validate labels in each scene
+            for scene in scenes:
+                scene["locked_location"] = parsed.get("locked_location", "")
+                self._validate_scene_labels(scene)
+
+            validated = self._validate_scenes(parsed, scenes)
+            if validated:
+                parsed["scenes"] = validated
+                return parsed
+
+        self._log(f"  [{seq_idx+1}] ❌ Failed after 2 attempts")
+        return {}
+
+    def _run_step3(self) -> bool:
+        """Scene design: 1 LLM call per sequence."""
+        self._update_step("step3", "running")
+
+        ckpt = self._checkpoint_path("_step3_scenes.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.scenes_data = existing
+            total_scenes = sum(len(s.get("scenes", [])) for s in existing)
+            self._update_step("step3", "done", f"{total_scenes} scenes loaded")
+            self._log(f"[Step 3] ⏭ Loaded: {total_scenes} scenes")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        total = len(self.sequences)
+        self._log(f"[Step 3] Processing {total} sequences (1 call each)...")
+
+        all_results = []
+        if self.threads <= 1:
+            for i, seq in enumerate(self.sequences):
+                if self._is_stopped():
+                    return False
+                result = self._process_sequence_step3(seq, i, total)
+                if result:
+                    all_results.append(result)
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {pool.submit(self._process_sequence_step3, seq, i, total): i
+                           for i, seq in enumerate(self.sequences)}
+                indexed = [None] * total
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    try:
+                        indexed[idx] = future.result()
+                    except Exception as e:
+                        self._log(f"  [{idx+1}] ❌ Error: {e}")
+                all_results = [r for r in indexed if r]
+
+        if not all_results:
+            self._update_step("step3", "failed", "No scenes generated")
+            return False
+
+        # Enrich with full_text from Step 1
+        seq_lookup = {s.get("sequence_id", ""): s for s in self.sequences}
+        for seq_result in all_results:
+            sid = seq_result.get("sequence_id", "")
+            if sid in seq_lookup:
+                seq_result.setdefault("full_text", seq_lookup[sid].get("full_text", ""))
+                seq_result.setdefault("total_duration", seq_lookup[sid].get("total_duration", 0))
+
+        self.scenes_data = all_results
+        _save_checkpoint(ckpt, all_results)
+
+        total_scenes = sum(len(s.get("scenes", [])) for s in all_results)
+        self._update_step("step3", "done", f"{total_scenes} scenes")
+        self._log(f"[Step 3] ✅ {total_scenes} scenes across {len(all_results)} sequences")
+        self._dump("step3", "all_scenes", all_results, "json")
+        return True
+
+
+    # ══════════════ Step 4: Prompt Writing (LLM) ══════════════
+
+    def _build_mini_bible(self, seq_data: dict, prev_seq: dict = None, next_seq: dict = None) -> str:
+        """Build mini-bible containing only characters/locations used in this sequence + neighbors."""
+        needed_chars = set()
+        needed_locs = set()
+
+        for src in [seq_data, prev_seq, next_seq]:
+            if not src:
+                continue
+            needed_locs.add(src.get("locked_location", ""))
+            for scene in src.get("scenes", []):
+                needed_chars.update(scene.get("character_labels", []))
+                needed_locs.add(scene.get("locked_location", ""))
+
+        parts = []
+        # Characters
+        for c in self.characters_data.get("characters", []):
+            if c.get("label") in needed_chars:
+                parts.append(f"[{c['label']}]: {c.get('visual_description', '')}. "
+                             f"Default costume: {c.get('default_costume', c.get('visual_description', ''))}")
+        # Locations
+        for loc in self.locations_data.get("locations", []):
+            if loc.get("label") in needed_locs:
+                parts.append(f"[{loc['label']}]: {loc.get('bible_description', '')}. "
+                             f"Lighting: {loc.get('default_lighting', '')}")
+        # World Bible (compact)
+        if self.world_bible and self.world_bible.get("factions"):
+            ctx = self.world_bible["historical_context"]
+            wb_parts = [f"World: {ctx['era']}"]
+            for faction in self.world_bible.get("factions", []):
+                wb_parts.append(f"  {faction.get('name', '?')}: colors={', '.join(faction.get('primary_colors', []))}, armor={faction.get('armor', '')}")
+            parts.append(" | ".join(wb_parts))
+
+        return "\n".join(parts) if parts else "(no references needed)"
+
+    def _build_scene_context(self, seq_idx: int) -> str:
+        """Build prev/next sequence context for Step 4."""
+        parts = []
+        if seq_idx > 0:
+            prev = self.scenes_data[seq_idx - 1]
+            prev_scenes = prev.get("scenes", [])
+            if prev_scenes:
+                last_scene = prev_scenes[-1]
+                parts.append(f"PREVIOUS: {last_scene.get('shot_type', '')} — "
+                             f"{last_scene.get('physical_action', '')}")
+        else:
+            parts.append("PREVIOUS: (start of video)")
+
+        if seq_idx < len(self.scenes_data) - 1:
+            next_ = self.scenes_data[seq_idx + 1]
+            next_scenes = next_.get("scenes", [])
+            if next_scenes:
+                first_scene = next_scenes[0]
+                parts.append(f"NEXT: {first_scene.get('shot_type', '')} — "
+                             f"{first_scene.get('physical_action', '')}")
+        else:
+            parts.append("NEXT: (end of video)")
+
+        return "\n".join(parts)
+
+    def _resolve_character_info(self, labels: list) -> str:
+        """Map character labels to original name + description for Excel readability."""
+        if not labels or not self.characters_data:
+            return ""
+        char_map = {}
+        for c in self.characters_data.get("characters", []):
+            lbl = c.get("label", "")
+            if lbl:
+                name = c.get("original_name", "")
+                desc = c.get("visual_description", "")
+                char_map[lbl] = f"{name}: {desc}" if name else desc
+        infos = []
+        for lbl in labels:
+            info = char_map.get(lbl, "")
+            if info:
+                infos.append(f"[{lbl}] = {info}")
+            else:
+                infos.append(f"[{lbl}]")
+        return "\n".join(infos)
+
+    def _process_sequence_step4(self, seq_data: dict, seq_idx: int, total: int) -> list:
+        """Process ONE sequence through Step 4 (prompt writing)."""
+        if self._is_stopped():
+            return []
+
+        seq_id = seq_data.get("sequence_id", f"SEQ_{seq_idx+1:02d}")
+        scenes = seq_data.get("scenes", [])
+        if not scenes:
+            return []
+
+        # Determine chapter info
+        chapter_info = "N/A"
+        if self.sequences:
+            for orig_seq in self.sequences:
+                if orig_seq.get("sequence_id") == seq_id:
+                    # Find chapter from sentence_ids
+                    sids = orig_seq.get("sentence_ids", [])
+                    if sids:
+                        sent_map = {s["sentence_id"]: s for s in self.sentences}
+                        first_sent = sent_map.get(sids[0], {})
+                        chapter_info = first_sent.get("chapter_name", "N/A")
+                    break
+
+        # Build scenes data text
+        scenes_text_parts = []
+        for i, scene in enumerate(scenes):
+            scenes_text_parts.append(
+                f"Scene {i+1}: {scene.get('global_scene_id', '')}\n"
+                f"  Shot: {scene.get('shot_type', '')} | Camera: {scene.get('camera_motion', 'Static')} | "
+                f"Duration: {scene.get('duration', 0)}s | Roll: {scene.get('roll_type', 'A-Roll')}\n"
+                f"  Time: {scene.get('time_of_day', 'midday')}\n"
+                f"  Characters: {', '.join(scene.get('character_labels', []))}\n"
+                f"  Action: {scene.get('physical_action', '')}\n"
+                f"  Costume: {scene.get('costume_note', 'default')}\n"
+                f"  Background: {scene.get('background_and_extras', '')}\n"
+                f"  Lighting: {scene.get('lighting_and_atmosphere', '')}"
+            )
+
+        prev_seq = self.scenes_data[seq_idx - 1] if seq_idx > 0 else None
+        next_seq = self.scenes_data[seq_idx + 1] if seq_idx < len(self.scenes_data) - 1 else None
+
+        user_msg = STEP4_USER_TEMPLATE.format(
+            mini_bible=self._build_mini_bible(seq_data, prev_seq, next_seq),
+            sequence_id=seq_id,
+            chapter_info=chapter_info,
+            location=seq_data.get("locked_location", ""),
+            visual_event=seq_data.get("visual_event", ""),
+            scenes_data="\n\n".join(scenes_text_parts),
+            context=self._build_scene_context(seq_idx),
+        )
+
+        self._log(f"  [{seq_idx+1}/{total}] {seq_id} ({len(scenes)} scenes)")
+
+        for attempt in range(2):
+            raw = self._send_llm(self.style_content, user_msg, tier=self.tier_step13,
+                                 max_tokens=16384, step_label=f"step4_seq{seq_idx}")
+            if not raw:
+                continue
+            parsed = _try_parse_json(raw)
+            if not parsed or not isinstance(parsed, list):
+                self._log(f"  [{seq_idx+1}] Retry {attempt+1}: JSON parse failed")
+                continue
+
+            # Match flat_prompts to scenes
+            prompt_map = {p.get("scene_id", ""): p for p in parsed}
+            results = []
+            for scene in scenes:
+                scene_id = scene.get("global_scene_id", "")
+                prompt_data = prompt_map.get(scene_id, {})
+                if not prompt_data:
+                    # Try by index
+                    idx_in_seq = scenes.index(scene)
+                    if idx_in_seq < len(parsed):
+                        prompt_data = parsed[idx_in_seq]
+
+                flat_prompt = prompt_data.get("flat_prompt", "") if isinstance(prompt_data, dict) else ""
+
+                results.append({
+                    "global_scene_id": scene_id,
+                    "duration": scene.get("duration", 0),
+                    "characters": ", ".join(scene.get("character_labels", [])),
+                    "character_info": self._resolve_character_info(scene.get("character_labels", [])),
+                    "location": seq_data.get("locked_location", ""),
+                    "chapter": chapter_info,
+                    "character_blocking": prompt_data.get("character_blocking", "") if isinstance(prompt_data, dict) else "",
+                    "emotion": prompt_data.get("emotion", "") if isinstance(prompt_data, dict) else "",
+                    "key_props": prompt_data.get("key_props", []) if isinstance(prompt_data, dict) else [],
+                    "camera_angle": prompt_data.get("camera_angle", "") if isinstance(prompt_data, dict) else "",
+                    "effects": prompt_data.get("effects", "") if isinstance(prompt_data, dict) else "",
+                    "crowd_description": prompt_data.get("crowd_description", "") if isinstance(prompt_data, dict) else "",
+                    "flat_prompt": flat_prompt,
+                })
+            return results
+
+        self._log(f"  [{seq_idx+1}] ❌ Failed after 2 attempts")
+        return []
+
+    def _run_step4(self) -> bool:
+        """Prompt writing: LLM writes flat_prompt for each sequence's scenes."""
+        self._update_step("step4", "running")
+
+        ckpt = self._checkpoint_path("_step4_prompts.json")
+        existing = _load_checkpoint(ckpt)
+        if existing:
+            self.final_prompts = existing
+            self._update_step("step4", "done", f"{len(existing)} prompts loaded")
+            self._log(f"[Step 4] ⏭ Loaded: {len(existing)} prompts")
+            return True
+
+        if self._is_stopped():
+            return False
+
+        # Load full style content for system prompt
+        if self.style_name and self.styles_dir:
+            style_path = os.path.join(self.styles_dir, f"{self.style_name}.txt")
+            self.style_content = load_style_content(style_path)
+
+        if not self.style_content:
+            self._log("[Step 4] ⚠ No style content loaded, using generic prompt")
+            self.style_content = "You are a visual prompt expert for AI video generation."
+
+        # Inject video-specific constraints (Safety, Quality, Historical)
+        # Insert BEFORE Mandatory Style / Negative Prompt to avoid regex contamination
+        constraint_parts = []
+        active_constraints = []
+        prompts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
+        constraint_map = {
+            "safety": "video_constraint_safety.txt",
+            "quality": "video_constraint_quality.txt",
+            "historical": "video_constraint_historical.txt",
+        }
+        for key, filename in constraint_map.items():
+            if self.constraints.get(key):
+                fpath = os.path.join(prompts_dir, filename)
+                if os.path.isfile(fpath):
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        txt = f.read().strip()
+                    if txt:
+                        constraint_parts.append(txt)
+                        active_constraints.append(key)
+        if constraint_parts:
+            # Find Mandatory Style or Negative Prompt marker and insert before it
+            constraint_block = "\n\n" + "\n\n".join(constraint_parts)
+            insert_match = re.search(r'\n(?=Mandatory\s+Style|Negative\s+Prompt)', self.style_content, re.IGNORECASE)
+            if insert_match:
+                pos = insert_match.start()
+                self.style_content = self.style_content[:pos] + constraint_block + self.style_content[pos:]
+            else:
+                self.style_content += constraint_block
+            self._log(f"[Step 4] Constraints injected: {', '.join(active_constraints)}")
+
+        total = len(self.scenes_data)
+        self._log(f"[Step 4] Writing prompts for {total} sequences...")
+
+        all_prompts = []
+        if self.threads <= 1:
+            for i, seq in enumerate(self.scenes_data):
+                if self._is_stopped():
+                    return False
+                results = self._process_sequence_step4(seq, i, total)
+                all_prompts.extend(results)
+        else:
+            with ThreadPoolExecutor(max_workers=self.threads) as pool:
+                futures = {pool.submit(self._process_sequence_step4, seq, i, total): i
+                           for i, seq in enumerate(self.scenes_data)}
+                indexed = [None] * total
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    try:
+                        indexed[idx] = future.result()
+                    except Exception as e:
+                        self._log(f"  [{idx+1}] ❌ Error: {e}")
+                        indexed[idx] = []
+                for batch in indexed:
+                    if batch:
+                        all_prompts.extend(batch)
+
+        if not all_prompts:
+            self._update_step("step4", "failed", "No prompts generated")
+            return False
+
+        # Append mandatory style suffix + negative prompt
+        mandatory_style = ""
+        negative_prompt = ""
+        if self.style_content:
+            ms = re.search(r'Mandatory\s+Style[:\s]*(.+?)(?:Negative|$)', self.style_content, re.DOTALL | re.IGNORECASE)
+            if ms:
+                mandatory_style = ms.group(1).strip()
+            np_m = re.search(r'Negative\s+Prompt[:\s]*(.+?)$', self.style_content, re.DOTALL | re.IGNORECASE)
+            if np_m:
+                negative_prompt = np_m.group(1).strip()
+
+        for i, p in enumerate(all_prompts):
+            p["index"] = i + 1
+            if mandatory_style and p.get("flat_prompt"):
+                p["flat_prompt"] = f"{p['flat_prompt']} {mandatory_style}"
+            p["negative_prompt"] = negative_prompt
+
+        self.final_prompts = all_prompts
+        _save_checkpoint(ckpt, all_prompts)
+
+        self._update_step("step4", "done", f"{len(all_prompts)} prompts")
+        self._log(f"[Step 4] ✅ {len(all_prompts)} prompts written by LLM")
+        self._dump("step4", "final_prompts", all_prompts, "json")
+        return True
+
+
+    # ══════════════ Step 5: Export ══════════════
+
+    def _run_step5(self) -> bool:
+        """Export final prompts to Excel."""
+        self._update_step("step5", "running")
+        self._export_excel(self.final_prompts)
+        self._update_step("step5", "done", f"Excel exported")
+        return True
+
+    def _export_excel(self, prompts: list):
+        """Export prompts to Excel file with Reference Images sheet."""
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+            wb = Workbook()
+
+            # ── Shared styles ──
+            header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
+            header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+            data_font = Font(name="Segoe UI", size=10)
+            wrap_align = Alignment(wrap_text=True, vertical="top")
+            center_align = Alignment(horizontal="center", vertical="top")
+            thin_border = Border(
+                left=Side(style="thin", color="4B5563"),
+                right=Side(style="thin", color="4B5563"),
+                top=Side(style="thin", color="4B5563"),
+                bottom=Side(style="thin", color="4B5563"),
+            )
+
+            def _write_headers(ws, headers):
+                for col_idx, h in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col_idx, value=h)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+
+            # ══════════ Sheet 1: Video Prompts ══════════
+            ws1 = wb.active
+            ws1.title = "Video Prompts"
+
+            _write_headers(ws1, ["#", "Chapter", "Scene ID", "Duration", "Characters", "Character Info", "Location", "Flat Prompt", "Negative Prompt"])
+
+            for row_idx, p in enumerate(prompts, 2):
+                ws1.cell(row=row_idx, column=1, value=p.get("index", row_idx - 1)).alignment = center_align
+                ws1.cell(row=row_idx, column=2, value=p.get("chapter", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=3, value=p.get("global_scene_id", "")).alignment = center_align
+                ws1.cell(row=row_idx, column=4, value=p.get("duration", "")).alignment = center_align
+                ws1.cell(row=row_idx, column=5, value=p.get("characters", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=6, value=p.get("character_info", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=7, value=p.get("location", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=8, value=p.get("flat_prompt", "")).alignment = wrap_align
+                ws1.cell(row=row_idx, column=9, value=p.get("negative_prompt", "")).alignment = wrap_align
+                for col_idx in range(1, 10):
+                    ws1.cell(row=row_idx, column=col_idx).font = data_font
+                    ws1.cell(row=row_idx, column=col_idx).border = thin_border
+
+            ws1.column_dimensions["A"].width = 5
+            ws1.column_dimensions["B"].width = 25
+            ws1.column_dimensions["C"].width = 18
+            ws1.column_dimensions["D"].width = 9
+            ws1.column_dimensions["E"].width = 25
+            ws1.column_dimensions["F"].width = 40
+            ws1.column_dimensions["G"].width = 20
+            ws1.column_dimensions["H"].width = 80
+            ws1.column_dimensions["I"].width = 40
+            ws1.freeze_panes = "A2"
+
+            # ══════════ Sheet 2: Reference Images ══════════
+            ws2 = wb.create_sheet("Reference Images")
+            _write_headers(ws2, ["#", "Type", "Label", "Original Name", "Description", "Prompt (gen ảnh tham chiếu)", "Negative Prompt"])
+
+            # Get style sections
+            mandatory_style = ""
+            negative_prompt = ""
+            loc_style = self.location_style or ""
+            if self.style_name and self.styles_dir:
+                style_path = os.path.join(self.styles_dir, f"{self.style_name}.txt")
+                sc = load_style_content(style_path)
+                if sc:
+                    ms = re.search(r'Mandatory\s+Style[:\s]*(.+?)(?:Negative|$)', sc, re.DOTALL | re.IGNORECASE)
+                    if ms:
+                        mandatory_style = ms.group(1).strip()
+                    np_m = re.search(r'Negative\s+Prompt[:\s]*(.+?)$', sc, re.DOTALL | re.IGNORECASE)
+                    if np_m:
+                        negative_prompt = np_m.group(1).strip()
+
+            row = 2
+            # Characters
+            for c in self.characters_data.get("characters", []):
+                label = c.get("label", "")
+                original_name = c.get("original_name", "")
+                visual_desc = c.get("visual_description", "")
+                sheet_prompt = c.get("sheet_prompt", "")
+                if not sheet_prompt:
+                    desc = c.get("visual_description", "")
+                    sheet_prompt = f"Character reference sheet on clean white background. Three neutral standing views: front view, 3/4 angle, side profile. {desc}. Label '{label}'."
+                flat = f"{mandatory_style}. {sheet_prompt}" if mandatory_style else sheet_prompt
+
+                ws2.cell(row=row, column=1, value=row - 1).alignment = center_align
+                ws2.cell(row=row, column=2, value="Character").alignment = center_align
+                ws2.cell(row=row, column=3, value=label).alignment = wrap_align
+                ws2.cell(row=row, column=4, value=original_name).alignment = wrap_align
+                ws2.cell(row=row, column=5, value=visual_desc).alignment = wrap_align
+                ws2.cell(row=row, column=6, value=flat).alignment = wrap_align
+                ws2.cell(row=row, column=7, value=negative_prompt).alignment = wrap_align
+                for col_idx in range(1, 8):
+                    ws2.cell(row=row, column=col_idx).font = data_font
+                    ws2.cell(row=row, column=col_idx).border = thin_border
+                row += 1
+
+            # Locations — use LOCATION STYLE (no character appearance)
+            for loc in self.locations_data.get("locations", []):
+                label = loc.get("label", "")
+                desc = loc.get("bible_description", "")
+                lighting = loc.get("default_lighting", "")
+                loc_prompt = f"Wide establishing shot, eye-level perspective, centered composition. {desc}. {lighting}." if lighting else f"Wide establishing shot, eye-level perspective, centered composition. {desc}."
+                # Use location_style instead of mandatory_style
+                if loc_style:
+                    flat = f"{loc_style} {loc_prompt}"
+                else:
+                    flat = loc_prompt
+
+                ws2.cell(row=row, column=1, value=row - 1).alignment = center_align
+                ws2.cell(row=row, column=2, value="Location").alignment = center_align
+                ws2.cell(row=row, column=3, value=label).alignment = wrap_align
+                ws2.cell(row=row, column=4, value="").alignment = wrap_align
+                ws2.cell(row=row, column=5, value=desc).alignment = wrap_align
+                ws2.cell(row=row, column=6, value=flat).alignment = wrap_align
+                ws2.cell(row=row, column=7, value=negative_prompt).alignment = wrap_align
+                for col_idx in range(1, 8):
+                    ws2.cell(row=row, column=col_idx).font = data_font
+                    ws2.cell(row=row, column=col_idx).border = thin_border
+                row += 1
+
+            ws2.column_dimensions["A"].width = 5
+            ws2.column_dimensions["B"].width = 12
+            ws2.column_dimensions["C"].width = 30
+            ws2.column_dimensions["D"].width = 25
+            ws2.column_dimensions["E"].width = 40
+            ws2.column_dimensions["F"].width = 100
+            ws2.column_dimensions["G"].width = 40
+            ws2.freeze_panes = "A2"
+
+            # Save
+            base = os.path.splitext(os.path.basename(self.srt_path))[0]
+            xlsx_path = os.path.join(self.output_dir, f"{base}_video_prompts.xlsx")
+            wb.save(xlsx_path)
+            self._log(f"[Step 5] 📊 Excel: {xlsx_path}")
+            self._log(f"         Sheet 1: Video Prompts ({len(prompts)} rows)")
+            self._log(f"         Sheet 2: Reference Images ({row - 2} items)")
+
+        except Exception as e:
+            self._log(f"[Step 5] ⚠ Excel export failed: {e}")
+
+    # ══════════════ Main Run ══════════════
+
+    def run(self):
+        """Execute the full pipeline (called in background thread)."""
+        self.state = PipelineState.RUNNING
+        self._stop_event.clear()
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        # Load style data once
+        self.style_summary = _parse_style_summary(self.style_name, self.styles_dir)
+        self.location_style = _parse_location_style(self.style_name, self.styles_dir)
+
+        # Init debug dump directory
+        self._init_debug_dir()
+
+        # Define step sequence with label extraction between Step 2b and Step 3
+        self._log("=" * 50)
+        n_files = len(self.srt_paths)
+        self._log(f"🎬 Video Pipeline Start: {n_files} file(s)")
+        for fp in self.srt_paths:
+            self._log(f"   📄 {os.path.basename(fp)}")
+        self._log(f"   Output: {self.output_dir}")
+        self._log(f"   Style: {self.style_name}")
+        if self.style_summary:
+            self._log(f"   Style Summary: loaded ({len(self.style_summary)} chars)")
+        if self.location_style:
+            self._log(f"   Location Style: loaded ({len(self.location_style)} chars)")
+        self._log(f"   Tier Step2={self.tier_step2}, Step3/4={self.tier_step13}, Threads={self.threads}, SceneMax={self.scene_max}s")
+        self._log("=" * 50)
+
+        steps = [
+            ("step0", self._run_step0),
+            ("step1", self._run_step1),
+            ("step2a", self._run_step2a),   # World Bible
+            ("step2b", self._run_step2b),   # Characters
+            ("step2c", self._run_step2c),   # Locations
+            ("_labels", lambda: (self._extract_valid_labels(), True)[1]),  # Extract labels after Step 2
+            ("step3", self._run_step3),
+            ("step4", self._run_step4),
+            ("step5", self._run_step5),
+        ]
+
+        for key, step_fn in steps:
+            if self._is_stopped():
+                self._log("⏹ Pipeline stopped by user")
+                self.state = PipelineState.STOPPED
+                return
+
+            if key.startswith("_"):
+                # Internal step (no UI update)
+                step_fn()
+                continue
+
+            try:
+                success = step_fn()
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                self._log(f"❌ EXCEPTION at {self.steps[key].step}: {e}")
+                self._log(f"   Traceback:\n{tb}")
+                self._update_step(key, "failed", str(e)[:100])
+                self.state = PipelineState.ERROR
+                return
+            if not success:
+                self._log(f"❌ Pipeline failed at {self.steps[key].step}")
+                self.state = PipelineState.ERROR
+                return
+
+        self.state = PipelineState.DONE
+        self._log("=" * 50)
+        self._log(f"🎬 Pipeline COMPLETE: {len(self.final_prompts)} video prompts ready")
+        self._log("=" * 50)
+
+    def stop(self):
+        """Signal pipeline to stop."""
+        self._stop_event.set()
+        self.state = PipelineState.STOPPED
+
+    def start_async(self):
+        """Start pipeline in a background thread."""
+        t = threading.Thread(target=self.run, daemon=True)
+        t.start()
+        return t
+```
+
+## Audit Results
+
+| Check | Result |
+|---|---|
+| Syntax | ✅ OK |
+| Old STEP2A_DESCRIBE_PROMPT removed | ✅ |
+| New prompts exist | ✅ |
+| No backward compat fallbacks | ✅ (1 false positive: srt_path, unrelated) |
+| No cleaned_text fallback | ✅ |
+| No lighting in prompts | ✅ |
+| New domains in code | ✅ landscape, transport, cultural_markers |
+| Array crowd support | ✅ isinstance(desc, list) |
+| ANCHOR instructions | ✅ Lines 1202, 1262 |
+| 3-call structure | ✅ Call 1/3, 2/3, 3/3 |
+| Old refs removed | ✅ civilian_clothing, structural_elements |
+| Direct historical_context access | ✅ 4 locations |
+
+## Lưu ý quan trọng
+
+> [!WARNING]
+> Checkpoint cũ (`_step2_world_bible.json`) PHẢI XOÁ trước khi chạy lại pipeline. 
+> Schema mới không tương thích ngược — code sẽ crash nếu đọc checkpoint cũ thiếu `historical_context`.
