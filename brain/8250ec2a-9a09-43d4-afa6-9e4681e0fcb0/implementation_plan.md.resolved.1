@@ -1,0 +1,184 @@
+# Plan: World Bible Data Diversity
+
+## Vấn đề hiện tại
+
+Mỗi archetype trả về **1 mô tả duy nhất**:
+
+```json
+"civilian_man": "Head: bare. Upper: undyed wool tunic. Feet: leather sandals..."
+```
+
+**Hệ quả:** Mọi "civilian_man" trong mọi scene → **trông giống hệt nhau**. Không thực tế.
+
+Trong thực tế lịch sử, "civilian man" ở Roman Republic có thể là:
+- Nông dân: áo vải thô nâu/không nhuộm, chân đất
+- Thợ thủ công: áo tunic nhuộm xanh/nâu, tạp dề da, sandal
+- Thương nhân: áo tốt hơn, thắt lưng da có ví tiền, giày da
+- Công dân tự do: tunic trắng sạch, sandal da, có thể mang toga khi ra ngoài
+
+**Tất cả đều là "civilian_man" nhưng trông hoàn toàn khác nhau** — về màu sắc, chất liệu, phụ kiện, giày dép.
+
+---
+
+## Pipeline flow: Data đi đâu?
+
+```
+World Bible crowd_archetypes
+    ↓
+Step 3 (Rule 7): LLM viết background_and_extras cho từng scene
+    → "A crowd of [soldier] archetypes line the courtyard walls"
+    → LLM COPY mô tả từ World Bible → mọi scene dùng CÙNG 1 mô tả
+    ↓
+Step 4: LLM viết crowd_description (style enforcement)
+    → Lặp lại mô tả từ Step 3
+    ↓
+flat_prompt: "...background soldiers in chain mail with red tunics..."
+    → Mọi frame có lính → giống nhau
+```
+
+> [!IMPORTANT]
+> Nếu World Bible chỉ cho 1 kết quả, thì **dù Step 3/4 có muốn tạo variety cũng không có nguyên liệu** để chọn.
+
+---
+
+## 3 Phương án — So sánh
+
+### Option A: Multiple variants (mỗi archetype có 3 sub-types)
+
+```json
+"civilian_man": [
+  {"context": "laborer", "description": "Head: bare, dirty. Upper: rough undyed hemp tunic..."},
+  {"context": "craftsman", "description": "Head: cloth cap. Upper: dyed blue wool tunic, leather apron..."},
+  {"context": "merchant", "description": "Head: felt cap. Upper: fine linen tunic, leather belt with coin pouch..."}
+]
+```
+
+| Ưu | Nhược |
+|---|---|
+| Rất cụ thể, LLM dễ chọn | JSON tăng 3-5x kích thước |
+| Variety rõ ràng | Prompt Call 2 cần output 6000-10000 tokens |
+| | Step 3 phải biết chọn variant nào cho context nào |
+
+### Option B: Base + Palette (mô tả gốc + bảng màu/chất liệu/phụ kiện)
+
+```json
+"civilian_man": {
+  "silhouette": "Head: bare or simple cloth cap. Upper: tunic to knees. Lower: no separate garment. Feet: leather sandals or barefoot.",
+  "color_options": ["undyed cream", "dark brown", "muted olive", "faded blue"],
+  "fabric_options": ["rough hemp", "coarse wool", "plain linen"],
+  "accessory_pool": ["rope belt", "leather belt with iron buckle", "small pouch", "wooden stick", "woven basket", "clay jug"]
+}
+```
+
+| Ưu | Nhược |
+|---|---|
+| Compact — chỉ tăng ~50% token | Step 3/4 LLM phải tự chọn combo |
+| Tạo combinatorial variety lớn | Cần guide Step 3 cách chọn |
+| Rõ ràng: cái gì FIX (silhouette) vs cái gì VARY (color, fabric) | |
+| Dễ mở rộng thêm options sau | |
+
+### Option C: Single description với slash notation
+
+```json
+"civilian_man": "Head: bare / simple cloth cap / straw hat. Upper: tunic to knees in undyed cream / dark brown / olive wool or hemp. Feet: leather sandals / barefoot (laborers). Accessories: rope belt / leather belt, occasionally small pouch / wooden stick."
+```
+
+| Ưu | Nhược |
+|---|---|
+| Đơn giản nhất, không đổi schema | Khó parse programmatically |
+| LLM tự nhiên hiểu "/" = lựa chọn | Ít structured |
+| Không tăng JSON size | Step 3 LLM có thể bỏ qua variety |
+
+---
+
+## Đề xuất: Option B (Base + Palette)
+
+**Lý do:**
+
+1. **Tách rõ "cái gì cố định" vs "cái gì biến đổi"** — silhouette (hình dáng tổng thể) cố định theo thời kỳ, nhưng màu/chất liệu/phụ kiện thay đổi theo cá nhân
+2. **Compact** — không bùng nổ token như Option A
+3. **Dễ consume**: Step 3/4 LLM đọc palette → chọn combo khác nhau cho mỗi scene
+4. **Mở rộng tự nhiên**: thêm option chỉ cần thêm vào array
+5. **Đúng với thực tế lịch sử**: mọi người cùng thời kỳ mặc CÙNG kiểu dáng (tunic, toga) nhưng KHÁC màu, chất liệu, phụ kiện
+
+### Schema mới cho crowd_archetypes:
+
+```json
+"crowd_archetypes": {
+  "soldier": {
+    "silhouette": "Head: bronze Montefortino helmet with crest. Upper: iron chain mail over wool tunic. Lower: tunic to mid-thigh. Feet: leather caligae sandals.",
+    "color_options": ["red tunic", "undyed tunic", "dark brown tunic"],
+    "accessory_pool": ["rectangular scutum shield", "two pila javelins", "leather balteus belt", "small rations bag"]
+  },
+  "civilian_man": {
+    "silhouette": "Head: bare or simple cloth cap. Upper: tunic to knees with belt. Lower: no separate garment. Feet: leather sandals or barefoot.",
+    "color_options": ["undyed cream", "dark brown", "muted olive green", "faded blue"],
+    "fabric_options": ["rough hemp (poor)", "coarse wool (common)", "plain linen (better off)"],
+    "accessory_pool": ["rope belt", "leather belt with iron buckle", "small leather pouch", "wooden walking stick", "woven basket", "clay water jug", "leather tool bag"]
+  },
+  "civilian_woman": {
+    "silhouette": "Head: hair pinned up or covered with palla shawl. Upper: long stola over tunica interior. Lower: stola reaches ankles. Feet: leather sandals or soft shoes.",
+    "color_options": ["muted earth tones (ochre, brown)", "pale blue", "dusty rose", "undyed cream"],
+    "fabric_options": ["wool (common)", "linen (middle class)", "silk edges (wealthy)"],
+    "accessory_pool": ["palla draped over shoulder", "bronze fibula brooch", "simple bead necklace", "woven basket for market", "terracotta oil lamp"]
+  }
+}
+```
+
+### Schema cho role_variants — tương tự nhưng nhấn mạnh insignia:
+
+```json
+"role_variants": {
+  "commander/general": {
+    "silhouette": "Head: helmet with transverse crest. Upper: muscled cuirass over tunic. Lower: military tunic and pteruges. Feet: leather caligae.",
+    "rank_markers": ["red paludamentum cloak", "gold arm bands", "decorated scabbard"],
+    "color_options": ["polished bronze cuirass", "silver-inlaid cuirass", "iron cuirass with gold trim"]
+  }
+}
+```
+
+---
+
+## Thay đổi cần thực hiện
+
+### 1. Cập nhật `STEP2A_DESCRIBE_PROMPT`
+- Đổi schema cho crowd_archetypes: mỗi archetype từ **string** → **object** với `silhouette`, `color_options`, `fabric_options`, `accessory_pool`
+- Đổi schema cho role_variants: tương tự
+
+### 2. Cập nhật `_build_visual_reference()` 
+- Render archetype object thay vì string
+- Format: `[soldier] Silhouette: ... | Colors: red/undyed/brown | Accessories: shield, javelin, belt`
+
+### 3. Cập nhật `_build_mini_bible()`
+- Compact format cho archetype objects
+
+### 4. Cập nhật Step 3 prompt Rule 7
+- Hướng dẫn LLM CHỌN từ palette khi viết `background_and_extras`
+- Ví dụ: "For a market scene, choose civilian_man in olive with basket. For a tavern, choose civilian_man in brown with clay jug."
+
+### 5. Không cần thay đổi Step 4
+- Step 4 nhận `background_and_extras` từ Step 3 (đã chọn sẵn variant)
+
+---
+
+## Token impact
+
+| Hiện tại | Sau khi đổi | Tăng |
+|---|---|---|
+| ~6 archetypes × 1 string mỗi cái | ~6 archetypes × 1 object (silhouette + 3 arrays) | ~60-80% |
+| ~5 role_variants × 1 string | ~5 role_variants × 1 object | ~40-50% |
+| **Tổng Call 2 output: ~2500 tokens** | **~4000-5000 tokens** | **Vẫn trong budget 16K** |
+
+> [!NOTE]
+> Tăng token output nhưng vẫn nằm thoải mái trong `max_tokens=16384` đã set cho Call 2.
+
+---
+
+## Tổng kết
+
+| Thay đổi | File | Effort |
+|---|---|---|
+| Đổi schema prompt Call 2 | video_pipeline.py (STEP2A_DESCRIBE_PROMPT) | Trung bình |
+| Update `_build_visual_reference()` | video_pipeline.py | Nhỏ |
+| Update `_build_mini_bible()` | video_pipeline.py | Nhỏ |
+| Update Step 3 Rule 7 hướng dẫn chọn palette | video_pipeline.py (STEP3_SYSTEM_PROMPT) | Nhỏ |

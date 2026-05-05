@@ -1,0 +1,263 @@
+# Final Plan: World Bible Upgrade — Phương án cuối
+
+---
+
+## Quyết định đã chốt
+
+| Quyết định | Kết luận |
+|---|---|
+| Ánh sáng chi tiết | ❌ Bỏ — để Step 3 tự xử lý theo time_of_day + location |
+| Palette approach | ❌ Thay bằng **Pre-composed Variants** — chất lượng cao hơn, Step 3 dễ dùng hơn |
+| Chia API calls | ✅ 3 calls — tách People vs World để mỗi call tập trung |
+
+---
+
+## 1. Tại sao bỏ Palette, dùng Pre-composed Variants?
+
+**Vấn đề của Palette:**
+```json
+"civilian_man": {
+  "silhouette": "tunic to knees...",
+  "color_options": ["cream", "brown", "olive"],
+  "fabric_options": ["hemp", "wool", "linen"],
+  "accessory_pool": ["rope belt", "leather belt", "pouch"]
+}
+```
+→ Step 3 LLM phải **tự lắp ráp** từ silhouette + chọn color + chọn fabric + chọn accessory
+→ Rủi ro: LLM có thể bỏ qua palette, chỉ dùng silhouette, hoặc lắp sai
+
+**Pre-composed Variants — mỗi variant là MÔ TẢ HOÀN CHỈNH, sẵn dùng:**
+```json
+"civilian_man": [
+  "Laborer — Head: bare, rough hair. Upper: undyed hemp tunic, dirt-stained. Feet: barefoot. Acc: rope belt.",
+  "Craftsman — Head: cloth cap. Upper: brown wool tunic, leather apron. Feet: sandals. Acc: tool pouch.",
+  "Townsman — Head: neat hair. Upper: olive linen tunic. Feet: leather shoes. Acc: woven belt, coin pouch."
+]
+```
+→ Step 3 chỉ cần **CHỌN 1** variant phù hợp context (market scene → townsman, farm → laborer)
+→ Không cần lắp ráp, không bỏ sót chi tiết
+
+---
+
+## 2. Cấu trúc 3 API Calls
+
+```
+Call 1: IDENTIFY ──→ era, date_range, geography, faction names
+        │              ~500 tokens output | Tier: Pro
+        │
+        ├─→ Call 2: PEOPLE ──→ faction visuals (armor, weapons, crowd, role_variants)
+        │              ~3000 tokens output | Tier: Pro
+        │              Input: cleaned_text + Call 1 context
+        │
+        └─→ Call 3: WORLD ──→ architecture, landscape, props, transport, cultural_markers  
+                       ~1500 tokens output | Tier: Pro
+                       Input: cleaned_text + Call 1 context
+```
+
+> [!IMPORTANT]
+> **Nhất quán:** Call 2 và Call 3 đều nhận **cùng Call 1 context** (era, date_range, geography, faction names) nên mô tả sẽ nhất quán về thời kỳ + khu vực.
+
+### Tại sao không chạy Call 2 và Call 3 song song?
+Có thể chạy song song (ThreadPoolExecutor) vì chúng độc lập — cùng input, khác output domain. Nhưng để đơn giản, chạy tuần tự trước.
+
+---
+
+## 3. Output JSON Schema — Checkpoint cuối cùng
+
+```json
+{
+  "historical_context": {
+    "era": "Late Roman Republic, 82-44 BC",
+    "date_range": "82-44 BC",
+    "geography": "Rome, coastal Italy, Spain, Egypt"
+  },
+
+  "factions": [
+    {
+      "name": "Sullan Loyalists (Optimates)",
+      "heraldry": "Bronze eagle aquila on wooden pole with red vexillum",
+      "primary_colors": ["crimson red", "bronze", "dark brown"],
+      "armor": "Head: bronze Montefortino helmet, red horsehair crest. Body: iron lorica hamata (chain mail) over red wool tunic. Shield: rectangular scutum, red leather cover, bronze boss. Limbs: no greaves (Republic era). Feet: leather caligae with hobnails.",
+      "weapons": [
+        "Gladius hispaniensis — short 60cm double-edged iron sword, wooden grip",
+        "Pilum — 2m heavy javelin, iron pyramidal tip on wooden shaft",
+        "Pugio — 25cm iron dagger, leaf-shaped blade"
+      ],
+      "role_variants": {
+        "commander": "Head: silver helmet with transverse red horsehair crest. Upper: polished bronze muscled cuirass over white tunic, red paludamentum cloak pinned at shoulder. Feet: red leather calcei boots. Acc: gold arm bands, decorated gladius scabbard.",
+        "noble": "Head: bare, oiled hair. Upper: white wool toga praetexta with broad purple border, over linen tunica. Feet: red leather calcei shoes. Acc: gold signet ring, ivory-handled walking stick.",
+        "priest": "Head: covered with toga (capite velato). Upper: white wool toga drawn over head, linen tunica underneath. Feet: leather sandals. Acc: patera libation dish, laurel branch.",
+        "merchant": "Head: felt pilleus cap. Upper: dark-dyed wool tunic, leather belt. Feet: leather carbatinae shoes. Acc: leather satchel, bronze balance scale, coin pouch.",
+        "servant": "Head: bare, short hair. Upper: rough undyed short tunic, no belt. Feet: barefoot or wooden clogs. Acc: none or carrying tray/amphora."
+      },
+      "crowd_archetypes": {
+        "soldier": [
+          "Legionary — Head: bronze helmet, red crest. Upper: chain mail over red tunic. Feet: hobnailed caligae. Acc: scutum shield, two pila, leather belt.",
+          "Auxiliary — Head: iron Coolus helmet, no crest. Upper: chain mail over brown tunic. Feet: leather boots. Acc: oval shield, spear, leather satchel.",
+          "Veteran — Head: dented bronze helmet, faded crest. Upper: worn chain mail, patched tunic. Feet: worn caligae. Acc: gladius with wrapped grip, scratched shield."
+        ],
+        "civilian_man": [
+          "Laborer — Head: bare, rough hair. Upper: undyed rough hemp tunic, dirt-stained. Feet: barefoot. Acc: rope belt, calloused hands.",
+          "Craftsman — Head: simple cloth cap. Upper: brown-dyed coarse wool tunic, leather apron. Feet: leather sandals. Acc: leather belt with iron buckle, tool pouch.",
+          "Townsman — Head: bare, neat hair. Upper: olive-green linen tunic, cleaner. Feet: leather shoes. Acc: woven sash belt, small coin pouch."
+        ],
+        "civilian_woman": [
+          "Common — Head: hair tied back, no covering. Upper: plain undyed stola over brown tunica. Feet: leather sandals. Acc: woven basket, wooden hairpin.",
+          "Market woman — Head: palla shawl over hair. Upper: ochre-dyed wool stola. Feet: leather sandals. Acc: market basket, bronze fibula brooch.",
+          "Wealthy — Head: elaborate pinned hair with bone pins. Upper: pale blue linen stola with embroidered hem. Feet: soft leather shoes. Acc: gold earrings, glass bead necklace."
+        ],
+        "child": "Head: bare, messy hair. Upper: short undyed tunic to knees. Feet: barefoot. Acc: cloth ball or stick toy.",
+        "noble": "Head: oiled and styled hair. Upper: fine white toga with narrow purple stripe over linen tunic. Feet: leather calcei shoes. Acc: gold ring, writing stylus.",
+        "clergy": "Head: laurel wreath or bare. Upper: pure white toga. Feet: leather sandals. Acc: curved lituus staff (augur) or patera dish (priest)."
+      }
+    }
+  ],
+
+  "architecture": [
+    {
+      "name": "Roman Republic Urban Domus",
+      "exterior": "Thick travertine limestone walls, terracotta tile roof, 1-2 stories, windowless street-facing wall",
+      "facade": "Heavy wooden double doors with iron studs, no street windows (privacy), painted stucco above door",
+      "interior": "Mosaic tile floors, painted frescoes on plastered walls, wooden beam ceiling, stone benches, bronze oil lamp stands",
+      "street": "Volcanic basalt flagstone roads, raised stone sidewalks, open drainage channels, wooden market stalls along main streets"
+    },
+    {
+      "name": "Roman Republic Temple",
+      "exterior": "Raised stone podium with frontal steps, Corinthian marble columns, triangular pediment with carved relief",
+      "facade": "Tall bronze double doors, sculpted tympanum above showing deity scenes, marble column capitals with acanthus leaves",
+      "interior": "Single cella room, large cult statue at far end, marble floors, stone altar, hanging bronze oil lamps",
+      "street": "Open forum plaza in front, stone steps, surrounding colonnade with merchant stalls"
+    }
+  ],
+
+  "landscape": {
+    "terrain": "Rolling hills with dry grass, volcanic soil, rocky outcrops, packed-earth farm roads",
+    "vegetation": "Mediterranean: olive groves, grapevines on wooden trellises, cypress trees, umbrella pines, wild rosemary bushes",
+    "water": "Tiber river — muddy brown-green, stone bridge crossings. Aqueduct channels carrying clear water. Public fountains at street corners.",
+    "sky_palette": "Bright Mediterranean blue, golden-warm sunlight, occasional dramatic clouds at sunset"
+  },
+
+  "props": {
+    "military": "Iron-tipped pilum javelins, wooden training swords (rudis), leather marching packs, bronze military trumpets (cornu, tuba)",
+    "household": "Bronze oil lamps (lucernae), ceramic amphorae for wine/oil, wooden writing tablets with iron stylus, bronze hand mirrors, terracotta cooking pots",
+    "religious": "Stone altar with carved reliefs, bronze patera libation dish, incense burner (turibulum), small painted terracotta household shrine (lararium)",
+    "marketplace": "Wooden stalls with canvas shade, ceramic bowls of olives and grain, hanging dried meats, bronze scales, stacked amphorae, woven baskets of fruit",
+    "dining": "Terracotta plates and cups, bronze mixing bowls (krater), wooden spoons, bread loaves, grapes, cheese rounds, diluted wine in ceramic jugs",
+    "writing": "Wax tablets with iron stylus, papyrus scrolls, reed pens (calamus), black ink (atramentum) in ceramic inkwell"
+  },
+
+  "transport": {
+    "riding": "Roman military saddle (4-horned, no stirrups), leather reins, bronze bit, woolen saddle blanket in faction colors",
+    "vehicles": "Two-wheeled wooden cart (plaustrum) pulled by oxen, four-wheeled covered wagon (carpentum) for nobles, wooden litter (lectica) carried by 4-8 slaves",
+    "pack_animals": "Mules with wooden pack frames and leather straps, donkeys with woven saddlebags"
+  },
+
+  "cultural_markers": {
+    "symbols": "SPQR inscription on military standards, fasces (bundle of rods with axe) carried before magistrates, laurel wreath for victory",
+    "decorative_motifs": "Greek key (meander) pattern on borders, acanthus leaf carvings, wave scroll patterns, egg-and-dart molding on columns",
+    "status_indicators": "Purple toga border = senator, gold ring = equestrian class, iron ring = common citizen, shaved head = slave"
+  }
+}
+```
+
+---
+
+## 4. Downstream Filtering — Bước nào nhận data gì?
+
+```
+                    ┌─────────────────────────┐
+                    │     World Bible JSON     │
+                    │  (1 checkpoint file)     │
+                    └──────────┬──────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+    ┌─────▼──────┐      ┌─────▼──────┐      ┌─────▼──────┐
+    │  Step 2b   │      │  Step 2c   │      │  Step 3    │
+    │ Characters │      │ Locations  │      │ Storyboard │
+    └────────────┘      └────────────┘      └────────────┘
+    
+    NHẬN:               NHẬN:               NHẬN:
+    • historical_ctx    • historical_ctx    • factions[].crowd_archetypes
+    • factions[]:       • architecture[]    • factions[].role_variants  
+      - heraldry        • landscape         • factions[].primary_colors
+      - primary_colors  • props             • architecture[] (compact)
+      - armor           • transport         • landscape (compact)
+      - weapons                             • props (compact)
+      - role_variants
+    
+    KHÔNG NHẬN:         KHÔNG NHẬN:         KHÔNG NHẬN:
+    • architecture      • factions          • weapons chi tiết
+    • landscape         • crowd_archetypes  • transport
+    • props             • weapons
+    • transport
+```
+
+```python
+# Step 2b: inject only PEOPLE data
+wb_for_2b = {
+    "historical_context": wb["historical_context"],
+    "factions": [{
+        "name": f["name"], "heraldry": f["heraldry"],
+        "primary_colors": f["primary_colors"], "armor": f["armor"],
+        "weapons": f["weapons"], "role_variants": f["role_variants"]
+    } for f in wb["factions"]]
+}
+
+# Step 2c: inject only WORLD data  
+wb_for_2c = {
+    "historical_context": wb["historical_context"],
+    "architecture": wb["architecture"],
+    "landscape": wb["landscape"],
+    "props": wb["props"],
+    "transport": wb["transport"]
+}
+
+# Step 3: inject crowd + compact world
+wb_for_3 = {
+    "era": wb["historical_context"]["era"],
+    "factions_visual": [{
+        "name": f["name"], "primary_colors": f["primary_colors"],
+        "crowd_archetypes": f["crowd_archetypes"],
+        "role_variants": f["role_variants"]
+    } for f in wb["factions"]],
+    "architecture_names": [a["name"] for a in wb["architecture"]],
+    "landscape": wb["landscape"],
+    "props_summary": wb["props"]
+}
+```
+
+---
+
+## 5. Cấu trúc API Calls
+
+### Call 1: IDENTIFY (~500 tokens) — Giữ nguyên
+Không đổi. Output: era, date_range, geography, factions list.
+
+### Call 2: PEOPLE (~3000 tokens) — MỚI
+- Input: `cleaned_text` + Call 1 context
+- Output: `factions[]` với full visual details
+- Mỗi archetype phổ biến (soldier, civilian_man, civilian_woman) = **3 variants**
+- Mỗi archetype ít phổ biến (child, noble, clergy) = **1 description**
+- Role variants = **1 description** mỗi loại (đã đủ chi tiết)
+
+### Call 3: WORLD (~1500 tokens) — MỚI  
+- Input: `cleaned_text` + Call 1 context
+- Output: `architecture[]`, `landscape`, `props`, `transport`, `cultural_markers`
+- Rule: "Only describe domains RELEVANT to the script"
+
+---
+
+## 6. Thay đổi code cần thực hiện
+
+### [MODIFY] video_pipeline.py
+
+| Thay đổi | Chi tiết |
+|---|---|
+| `STEP2A_DESCRIBE_PROMPT` | Tách thành `STEP2A_PEOPLE_PROMPT` + `STEP2A_WORLD_PROMPT` |
+| `_run_step2a()` | 3 calls: identify → people → world, merge kết quả |
+| `_run_step2b()` | Selective inject: chỉ historical_context + factions (không architecture) |
+| `_run_step2c()` | Selective inject: chỉ historical_context + architecture + landscape + props |
+| `_build_visual_reference()` | Render crowd variants (array) + new domains (landscape, transport) |
+| `_build_mini_bible()` | Compact format cho schema mới |
+| Step 3 Rule 7 | Hướng dẫn CHỌN variant phù hợp context |

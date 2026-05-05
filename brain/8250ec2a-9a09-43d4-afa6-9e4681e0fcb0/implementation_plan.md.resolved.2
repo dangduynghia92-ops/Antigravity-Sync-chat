@@ -1,0 +1,175 @@
+# Plan: World Bible — Bản đồ toàn bộ Visual Domain
+
+## Câu hỏi cốt lõi
+
+> Trong một scene video lịch sử, những gì HIỂN THỊ trên màn hình? World Bible cần bao phủ TẤT CẢ.
+
+---
+
+## 1. Phân tích: Mọi thứ có thể xuất hiện trong 1 frame
+
+| Tần suất | Domain | Ví dụ | Hiện tại |
+|---|---|---|---|
+| **Mọi scene** | Con người (trang phục) | Lính, dân, quý tộc | ✅ crowd_archetypes |
+| **Mọi scene** | Kiến trúc | Nhà, cung điện, pháo đài | ✅ architecture |
+| **Mọi scene** | Cảnh quan / Địa hình | Đất, cây, bầu trời, mặt nước | ❌ THIẾU |
+| **Mọi scene** | Ánh sáng / Bầu không khí | Đuốc, nến, ánh nắng, sương | ⚠️ Chỉ trong architecture.lighting |
+| **Phần lớn** | Vũ khí / Quân sự | Kiếm, giáp, xe chiến, trại lính | ⚠️ Chỉ list tên trong faction.weapons |
+| **Phần lớn** | Phương tiện / Động vật | Ngựa, xe kéo, thuyền, lạc đà | ⚠️ Chỉ 1 dòng trong props.transport |
+| **Thường xuyên** | Đồ ăn / Bàn tiệc | Thức ăn, bình rượu, bát đĩa | ❌ THIẾU |
+| **Thường xuyên** | Biểu tượng / Trang trí | Tượng, tranh tường, biểu tượng tôn giáo | ❌ Nằm rải rác |
+| **Đôi khi** | Âm nhạc / Giải trí | Nhạc cụ, sân khấu, trò chơi | ❌ THIẾU |
+| **Đôi khi** | Chữ viết / Sách | Bảng sáp, cuộn giấy, bản đồ | ❌ THIẾU |
+
+### Kết luận: **Thiếu 4 domain quan trọng**
+
+1. **Cảnh quan** — mọi scene đều có background nhưng World Bible KHÔNG mô tả terrain, vegetation, sky
+2. **Động vật** — ngựa xuất hiện trong hầu hết script lịch sử nhưng không mô tả loại yên, dây cương
+3. **Đồ ăn / Bàn tiệc** — banquet scenes phổ biến, cần biết ăn gì, dùng bát đĩa gì
+4. **Ánh sáng chi tiết** — hiện chỉ nằm trong architecture, nhưng outdoor scenes cũng cần (mặt trời vùng Địa Trung Hải khác Bắc Âu)
+
+---
+
+## 2. Đề xuất: 5 Domain chính
+
+### Domain 1: PEOPLE (Con người) — ĐÃ CÓ, cần upgrade palette
+
+```
+factions[]
+├── heraldry, primary_colors
+├── armor (silhouette + color_options)
+├── weapons[] (chi tiết hình dạng, vật liệu)
+├── role_variants{} (palette approach)
+└── crowd_archetypes{} (palette approach)
+```
+
+### Domain 2: PLACES (Không gian)
+
+```
+architecture[]  ← ĐÃ CÓ, cần thêm variety
+├── name, exterior, facade, interior, street, lighting
+└── color_palette (đá nâu/trắng/xám, gỗ sáng/tối)
+
+landscape  ← MỚI
+├── terrain: "loại đất, bề mặt (cát, đá cuội, đất nện, cỏ)"
+├── vegetation: "loại cây cối đặc trưng (ô liu, cọ, thông, tre, không cây)"
+├── water: "sông, biển, giếng, bể nước — màu nước, sóng"
+├── sky_palette: ["Mediterranean clear blue", "hazy golden", "overcast grey"]
+└── season_notes: "mùa nào chủ đạo, ảnh hưởng tới cảnh (tuyết, lá vàng, nắng gắt)"
+```
+
+### Domain 3: OBJECTS (Đồ vật)
+
+```
+weapons  ← NÂNG CẤP (từ list → structured)
+├── melee[]: {name, length, material, blade_shape, grip}
+├── ranged[]: {name, range, material, ammunition}
+├── siege[]: {name, description} (nếu có chiến trận)
+└── defensive[]: {shield_type, armor_type} (tóm tắt từ faction)
+
+transport  ← MỚI (riêng khỏi props)
+├── riding: "loại yên ngựa, dây cương, trang trí — hoặc cưỡi không yên"
+├── vehicles: "xe kéo, xe chiến, kiệu — vật liệu, kích thước"
+├── watercraft: "loại thuyền/tàu — nếu script có scenes trên nước"
+└── pack_animals: "lừa, lạc đà, bò kéo — trang bị mang hàng"
+
+props  ← ĐÃ CÓ, tách rõ hơn
+├── military: "trại lính, cọc rào, trống lệnh, cờ hiệu"
+├── household: "nội thất, dụng cụ nấu ăn, bình chứa"
+├── religious: "bàn thờ, lư hương, vật cúng tế"
+├── marketplace: "quầy hàng, tiền xu, giỏ hàng, cân đo"
+├── dining: "loại bát đĩa (gốm/đồng/gỗ), thức ăn đặc trưng, bình rượu" ← MỚI
+├── writing: "bảng sáp, cuộn giấy, mực/bút — vật liệu cụ thể" ← MỚI
+└── music: "nhạc cụ đặc trưng thời kỳ (lyre, tiêu, trống)" ← MỚI
+```
+
+### Domain 4: ATMOSPHERE (Bầu không khí) — MỚI
+
+```
+lighting
+├── indoor: "loại đèn + chất liệu (đèn dầu đồng, nến mỡ, đuốc gỗ thông)"
+├── outdoor_day: "đặc điểm ánh sáng vùng này (nắng gắt Mediterranean, mờ ảo Bắc Âu)"
+├── outdoor_night: "nguồn sáng ngoài trời (đuốc đường phố, lửa trại, ánh trăng)"
+└── color_temperature: "tông màu ánh sáng đặc trưng (vàng ấm Trung Đông, xanh lạnh Bắc Âu)"
+```
+
+### Domain 5: CULTURAL MARKERS (Dấu ấn văn hóa) — MỚI
+
+```
+symbols
+├── religious: "biểu tượng tôn giáo phổ biến (thập giá, trăng lưỡi liềm, đại bàng...)"
+├── decorative_motifs: "hoạ tiết trang trí đặc trưng (hoa văn Hy Lạp, arabesque, Celtic knot)"
+└── status_symbols: "vật thể thể hiện quyền lực/giai cấp (vương miện, nhẫn, ấn triện)"
+```
+
+---
+
+## 3. So sánh: Hiện tại vs Đề xuất
+
+| Domain | Hiện tại | Đề xuất | Thay đổi |
+|---|---|---|---|
+| **People** | 6 archetypes × 1 string | 6 archetypes × palette object | Upgrade |
+| **Architecture** | Array of {exterior, facade, interior, street, lighting} | Giữ nguyên + thêm color_palette | Upgrade nhẹ |
+| **Landscape** | ❌ Không có | terrain, vegetation, water, sky, season | **MỚI** |
+| **Weapons** | List tên trong faction | Structured: melee, ranged, defensive | Upgrade |
+| **Transport** | 1 dòng trong props | Structured: riding, vehicles, watercraft | **MỚI** |
+| **Props** | 4 categories | 7 categories (thêm dining, writing, music) | Upgrade |
+| **Lighting** | Chỉ trong architecture | Tách riêng: indoor, outdoor_day, outdoor_night | **MỚI** |
+| **Cultural markers** | Nằm rải rác | Tập trung: symbols, motifs, status | **MỚI** |
+
+---
+
+## 4. Token budget thực tế
+
+| Domain | Ước tính tokens output |
+|---|---|
+| People (6 archetypes × palette + 5 role_variants × palette) | ~2500 |
+| Architecture (2-3 entries) | ~600 |
+| Landscape | ~300 |
+| Weapons (structured) | ~400 |
+| Transport | ~200 |
+| Props (7 categories) | ~500 |
+| Lighting/atmosphere | ~200 |
+| Cultural markers | ~200 |
+| **Tổng** | **~5000 tokens** |
+
+> [!NOTE]
+> 5000 tokens output vẫn thoải mái trong `max_tokens=16384`. Nhưng đây là output lớn hơn trước (~2500 tokens) đáng kể. Có 2 cách xử lý:
+> 
+> **Cách 1:** Vẫn 2 calls (Call 1: Identify, Call 2: Describe ALL) — đơn giản, output ~5000 tokens vẫn OK cho Pro model
+> 
+> **Cách 2:** Chia Call 2 thành 2 sub-calls (People + Objects, Places + Atmosphere) — nếu thấy chất lượng giảm ở cuối output
+
+---
+
+## 5. Về việc có nên thêm TẤT CẢ hay không?
+
+> [!IMPORTANT]  
+> **Không phải script nào cũng cần tất cả domains.** 
+> 
+> - Script về trận chiến → cần weapons, transport, military props → KHÔNG cần dining, music
+> - Script về tiểu sử nhà bác học → cần writing, household → KHÔNG cần siege weapons
+> - Script về hành trình → cần landscape, transport → KHÔNG cần architecture chi tiết
+> 
+> **Đề xuất:** Giữ TẤT CẢ fields trong schema nhưng thêm rule trong prompt: *"Only describe domains that are RELEVANT to the script content. Leave irrelevant categories as empty string."*
+> 
+> Như vậy LLM tự quyết script chiến trận → bỏ qua dining/music. Script cung đình → bỏ qua siege weapons.
+
+---
+
+## 6. Tổng kết — Cần làm gì?
+
+### Thay đổi Prompt Call 2 (STEP2A_DESCRIBE_PROMPT):
+1. Upgrade `crowd_archetypes` + `role_variants` → palette approach
+2. Thêm domain `landscape` 
+3. Tách `transport` ra khỏi `props`
+4. Thêm domain `lighting` (tách khỏi architecture)  
+5. Thêm domain `cultural_markers`
+6. Mở rộng `props` thêm 3 categories: dining, writing, music
+7. Upgrade `weapons` → structured (chuyển từ list string → objects)
+8. Thêm rule: "Only describe RELEVANT domains"
+
+### Thay đổi Code:
+1. `_build_visual_reference()` — render palette objects + new domains
+2. `_build_mini_bible()` — compact format cho new domains
+3. Step 3 Rule 7 — hướng dẫn chọn từ palette
