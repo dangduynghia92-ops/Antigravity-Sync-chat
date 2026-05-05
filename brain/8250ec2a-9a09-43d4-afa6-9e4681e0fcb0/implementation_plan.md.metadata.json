@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Plan to upgrade Step 2a World Bible: split into 2 API calls (Identify→Describe), use cleaned_text as input, add role_variants, restructure architecture, selective downstream injection, add retry. All changes in video_pipeline.py only.",
+  "updatedAt":  "2026-05-04T19:52:43.150277Z"
+}

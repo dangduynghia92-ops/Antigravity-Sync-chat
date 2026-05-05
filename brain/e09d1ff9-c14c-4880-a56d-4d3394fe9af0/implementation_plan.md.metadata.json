@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Updated plan: Remove CHARACTER AGENCY criterion from Scene Test (both chapter_plan and phase_plan), fix log '?' title lookup, remove gap > 10 years rule.",
-  "updatedAt":  "2026-05-03T11:02:41.816790400Z",
-  "version":  "23",
+  "summary":  "Plan to upgrade Coverage Checklist in phase_plan_pov.txt: replace hardcoded field checks with a generic cross-reference rule that uses Scene Test as filter. Also update validate_sub_key_pov.txt CHECK 3 to match.",
+  "updatedAt":  "2026-05-05T01:01:53.387399600Z",
+  "version":  "24",
   "requestFeedback":  true
 }

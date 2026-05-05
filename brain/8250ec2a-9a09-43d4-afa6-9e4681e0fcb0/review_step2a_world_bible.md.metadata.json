@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Detailed review of Step 2a (World Bible) in the Video Pipeline focusing on historical accuracy. Identifies 6 key problems: LLM guesses era without verification, prompt is too vague about accuracy requirements, architecture/props schemas are too loose, no retry mechanism, duplicate civilian_clothing field. Proposes 5 prioritized improvements (P0-P4) including exact date enforcement, historical_note fields, structured architecture schema, retry logic, and field deduplication.",
-  "updatedAt":  "2026-05-04T19:29:26.385628200Z",
-  "version":  "1",
+  "summary":  "Comprehensive analysis answering 5 strategic questions about Step 2a World Bible redesign. Covers: (1) What data should World Bible contain - proposes splitting into 3 domains: Historical Context, Faction Visual Bible, Environmental Visual Bible. (2) Output format recommendation - domain-based JSON for selective injection into downstream steps. (3) Input analysis - current sequence-based input is suboptimal, should use cleaned_text. (4) Character costume analysis - faction-level costumes belong here, individual costumes belong in Step 2b, proposes role_variants as bridge. (5) API call splitting - recommends 2-call architecture (Identify then Describe) for quality. Includes demand mapping table showing exactly which downstream step needs which field.",
+  "updatedAt":  "2026-05-04T19:41:09.082621400Z",
+  "version":  "2",
   "requestFeedback":  true
 }
