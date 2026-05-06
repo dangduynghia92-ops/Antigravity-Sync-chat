@@ -1,0 +1,88 @@
+============================================================
+CHARACTER LABELS COMPARISON
+============================================================
+
+NEW (video_prompt): 5 characters
+  - Ayyubid-Prince-A-Child
+  - Ayyubid-Commander-A
+  - Ayyubid-Commander-B
+  - Seljuk-Noble-A
+  - Seljuk-Commander-B
+
+OLD (V2): 4 characters
+  - Ayyubid-Prince-A-Child
+  - Ayyubid-Patriarch-A
+  - Ayyubid-Warrior-A
+  - Seljuk-Governor-A
+
+============================================================
+FLAT_PROMPT COMPARISON (first 5 scenes)
+============================================================
+
+--- NEW | SEQ_01_SCN_01 ---
+A stylized historical animation illustration with thick dark outlines depicting a wide night scene on the turbulent Tigris River. In the center, [Ayyubid-Prince-A-Child] is a tiny infant bundle with an oversized round pure white face, swaddled tightly in a heavy indigo wool blanket with dark green Kurdish motifs and a silver amulet. The raft of rough-hewn logs pitches violently on pitch-black, white-capped water. In the background, a [civilian_man] with a compact stylized body and wrapped linen 
+
+--- NEW | SEQ_01_SCN_02 ---
+A stylized historical animation illustration with thick dark outlines depicting a medium shot on a raft at night. [Ayyubid-Prince-A-Child], swaddled in a damp indigo wool blanket with dark green geometric motifs, slides across the wet, dark timber of the raft as it tilts sharply. The infant has an oversized round pure white face and a compact stylized body. In the misty background, the silhouette of a [civilian_man] laborer with a compact stylized body leans against a punting pole. The immediate
+
+--- NEW | SEQ_01_SCN_03 ---
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Ayyubid-Prince-A-Child] at night. The infant features an oversized round pure white face with thin twitching eyebrows and a small open mouth, wearing a small undyed linen skullcap. The character is wrapped in a damp indigo wool blanket, where a silver protective amulet glints under harsh, flickering orange torchlight. The background consists of the richly painted, wet texture of poplar logs and frayed 
+
+--- NEW | SEQ_01_SCN_04 ---
+A stylized historical animation illustration with thick dark outlines depicting a medium night scene on the river. [Ayyubid-Prince-A-Child] is swaddled in an indigo wool blanket with dark green motifs, now visibly soaked with river spray, showing a compact stylized body and an oversized round pure white face. Beside the bundle, a [civilian_man] with a compact stylized body and bare chest leans his full weight into a wooden punting pole to steer. The background features churning black water and w
+
+--- NEW | SEQ_01_SCN_05 ---
+A stylized historical animation illustration with thick dark outlines depicting a wide shot of the Tigris River at night. [Ayyubid-Prince-A-Child] is a small dark indigo shape on a raft of poplar trunks, steered by the dark silhouette of a [civilian_man]. The raft moves into the pitch-blackness of the turbulent river. High above, the towering sandstone walls of Tikrit Citadel recede, their richly painted stone textures illuminated by the flickering orange glare of distant torches. The sky is a c
+
+--- OLD | SEQ_01_SCN_01 ---
+A stylized historical animation illustration with thick dark outlines depicting a makeshift timber raft lashed with hemp rope as it tilts violently on the pitch-black, white-capped current of the Tigris River at night. In the background, the towering mud-brick walls of Tikrit Citadel loom through a freezing mist, where rows of identical stylized soldiers with round white faces and iron skullcaps hold flickering orange torches. The richly painted background shows the textured masonry of the fortr
+
+--- OLD | SEQ_01_SCN_02 ---
+A stylized historical animation illustration with thick dark outlines depicting [Ayyubid-Prince-A-Child] with an oversized round pure white face, small oval dot eyes, and a tiny open mouth, bundled in a heavy deep green wool swaddling cloth. The infant lies on the rough-hewn timber logs of a raft at night, with the silver-threaded Kurdish eagle motif glistening on the damp, darkened fabric. The immediate environment features the detailed painterly texture of waterlogged wood and the spray of the
+
+--- OLD | SEQ_01_SCN_03 ---
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Ayyubid-Prince-A-Child] with an oversized round pure white face, his small oval dot eyes squeezed shut and his tiny mouth open in a silent cry. He wears a small dark indigo linen cap peeking from the green swaddle, with flickering orange light from distant citadel torches catching the edges of his smooth white face against the pitch-black night. The background is a painterly blur of dark water and whit
+
+--- OLD | SEQ_01_SCN_04 ---
+A stylized historical animation illustration with thick dark outlines depicting [Ayyubid-Patriarch-A] with an oversized round pure white face and a thick black beard, leaning his broad frame over [Ayyubid-Prince-A-Child] to shield him from the freezing spray. [Ayyubid-Patriarch-A] wears a heavy dark green wool kaftan and indigo turban, his mitten-shaped hand gripping the rough timber edge where a brass signet ring glints faintly. The background features the violent, rushing black water of the Ti
+
+--- OLD | SEQ_01_SCN_05 ---
+A stylized historical animation illustration with thick dark outlines depicting [Ayyubid-Warrior-A] with an oversized round pure white face and a jagged scar, straining as he pushes a long wooden punting pole into the dark river. He is dressed in hardened leather lamellar armor over a dark indigo kaftan, with the towering, richly painted brick face of Tikrit Citadel looming behind him under the orange glow of the night sky. On the distant battlements, rows of identical stylized guards with white
+
+============================================================
+[civilian_man] OCCURRENCES IN NEW RUN
+============================================================
+
+  SEQ_01_SCN_01: ... water. In the background, a [civilian_man] with a compact stylized body and wrapped linen headcloth struggles...
+
+  SEQ_01_SCN_02: ...kground, the silhouette of a [civilian_man] laborer with a compact stylized body leans against a punting pole....
+
+  SEQ_01_SCN_04: ...e face. Beside the bundle, a [civilian_man] with a compact stylized body and bare chest leans his full weight ...
+
+  SEQ_01_SCN_05: ... by the dark silhouette of a [civilian_man]. The raft moves into the pitch-blackness of the turbulent river. H...
+
+  SEQ_03_SCN_01: ...motifs. In the background, a [civilian_man] with shaggy dark hair and a coarse brown wool tunic strains agains...
+
+  SEQ_03_SCN_06: ...Child]. In the background, a [civilian_man] laborer leans his full weight into a wooden punting pole. The back...
+
+
+============================================================
+[civilian_man] IN STEP 3 SCENES
+============================================================
+
+  SEQ_01_SCN_01: [civilian_man]: Laborer — Head: wrapped linen cloth to keep sweat off. Upper: bare chest with a coarse linen vest. Lower: rough brown linen trousers rolled to the knees. Feet: barefoot. Acc: rope belt, heavy wooden punting pole.
+
+  SEQ_01_SCN_02: [civilian_man]: Laborer — variant Laborer, silhouetted in the background, struggling to keep the raft steady with a wooden pole.
+
+  SEQ_01_SCN_04: [civilian_man]: Laborer — variant Laborer, leaning his full weight into the punting pole to steer through the current.
+
+  SEQ_01_SCN_05: [civilian_man]: Laborer — variant Laborer, a dark silhouette against the churning water.
+
+  SEQ_03_SCN_01: A [civilian_man]: Laborer with shaggy dark hair and a coarse brown wool tunic stands at the rear, straining against a heavy wooden punting pole.
+
+  SEQ_03_SCN_06: A [civilian_man]: Laborer is visible in the background, leaning his full weight into the punting pole.
+
+  SEQ_05_SCN_02: One [civilian_man] Laborer with a shaggy dark head and a coarse wool tunic stands in the background, gripping a rope.
+
+  SEQ_05_SCN_03: The [soldier] Scouts and [civilian_man] Laborer are positioned around the raft, maintaining balance in the current.
+
