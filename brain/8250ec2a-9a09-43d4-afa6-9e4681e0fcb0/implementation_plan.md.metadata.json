@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to refactor Step 3 (Scene Director) and Step 4 (Prompt Writer) in the video pipeline. Step 3 will be simplified to only handle scene structure decisions (camera, timing, action, characters). Visual detail fields (costume_note, lighting_and_atmosphere, background_and_extras) will be removed from Step 3 and handled entirely by Step 4 using existing reference data (character sheets, World Bible, locations). Includes two open questions about crowd type hints and special lighting cases.",
-  "updatedAt":  "2026-05-06T07:50:43.493137500Z",
-  "version":  "9",
+  "summary":  "Final plan: Step 3 simplified to only structural decisions (camera, timing, action, has_crowd). Three visual detail fields removed. Step 4 gets new thinking fields (costume, lighting, background, extras) that it derives from reference data before writing flat_prompt. Code changes in STEP3_SYSTEM_PROMPT, both STEP4 templates, scenes_text_parts builder, and final prompt dict.",
+  "updatedAt":  "2026-05-06T08:10:51.620450200Z",
+  "version":  "11",
   "requestFeedback":  true
 }

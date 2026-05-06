@@ -1,0 +1,83 @@
+# Refactor Step 3 & Step 4: Tách vai trò Scene Director vs Prompt Writer
+
+## Bối cảnh
+
+Step 3 và Step 4 nhận cùng data tham chiếu (character sheets, locations, World Bible). Step 3 không có thông tin đặc biệt nào mà Step 4 không có — nên việc Step 3 viết chi tiết visual (trang phục, ánh sáng, background) là thừa.
+
+## Proposed Changes
+
+### Step 3 — Scene Director
+
+**Bỏ hoàn toàn** 3 field:
+- `costume_note` — Step 4 tự lấy từ character sheet + physical_action context
+- `lighting_and_atmosphere` — Step 4 tự suy từ time_of_day + location
+- `background_and_extras` — Step 4 tự viết từ World Bible crowd_archetypes + location
+
+**Thêm**: `has_crowd: true/false` — cho Step 4 biết cảnh có nhân vật quần chúng không
+
+**Output JSON mới** của Step 3:
+```json
+{
+  "global_scene_id": "SEQ_01_SCN_01",
+  "duration": 4.0,
+  "audio_sync": "original text",
+  "character_labels": [],
+  "shot_type": "Wide Shot",
+  "roll_type": "B-Roll",
+  "camera_motion": "Slow Pan",
+  "time_of_day": "night",
+  "physical_action": "...",
+  "has_crowd": true
+}
+```
+
+---
+
+### Sửa cụ thể trong code
+
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+
+**1. `STEP3_SYSTEM_PROMPT`** (~line 438-570):
+- Bỏ Rule 6 (Costume Note)
+- Bỏ Rule 7 (Background & Extras) → thay bằng: `has_crowd` = true nếu cảnh có nhân vật quần chúng
+- Output schema: bỏ `costume_note`, `lighting_and_atmosphere`, `background_and_extras` → thêm `has_crowd`
+
+**2. `STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE`** (~line 575-688):
+- Bỏ rules liên quan "from costume_note", "from background_and_extras", "from lighting_and_atmosphere"
+- Thêm rules:
+  - Costume: tra character reference, chọn phù hợp với action/context
+  - Lighting: suy từ time_of_day + location data
+  - Environment: suy từ location + World Bible
+  - Extras: nếu `has_crowd = true` → mô tả dùng crowd_archetypes từ visual reference
+
+**3. `_process_sequence_step4()` — scenes_text_parts** (~line 1883-1896):
+- Bỏ 3 lines:
+  ```python
+  f"  Costume: {scene.get('costume_note', 'default')}\n"
+  f"  Background: {scene.get('background_and_extras', '')}\n"
+  f"  Lighting: {scene.get('lighting_and_atmosphere', '')}"
+  ```
+- Thêm:
+  ```python
+  f"  Crowd: {'yes' if scene.get('has_crowd') else 'no'}"
+  ```
+
+**4. Final prompt dict** (~line 1946-1960):
+- Bỏ `crowd_description` field (thinking field không cần lưu)
+
+---
+
+## Không cần sửa
+
+- `_validate_scenes()` — chỉ validate timing
+- `_export_excel()` — chỉ export `flat_prompt`, `character_info`, `location` (không export 3 field bị bỏ)
+- `_build_visual_reference()` — giữ nguyên, vẫn truyền cho cả Step 3 và Step 4
+
+---
+
+## Verification Plan
+
+1. Syntax check: `python -c "import ast; ast.parse(...)"`
+2. Xóa checkpoint Step 3 + Step 4 của chapter test → chạy lại pipeline
+3. So sánh flat_prompt mới: kiểm tra costume/lighting/background có đầy đủ và chính xác
+4. Trích xuất lại prompts folder để review

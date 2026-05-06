@@ -1,116 +1,66 @@
-# Refactor Step 3 & Step 4: Tách vai trò Scene Director vs Prompt Writer
+# Refactor Step 3 & Step 4
 
-## Bối cảnh
+## Step 3: chỉ giữ quyết định cấu trúc cảnh
 
-Step 3 hiện tại vừa chia cảnh (camera cuts) vừa viết mô tả visual chi tiết (trang phục, ánh sáng, background). Những mô tả chi tiết này thuộc về Step 4 (Prompt Writer) vì Step 4 đã có đầy đủ data tham chiếu (character sheet, World Bible, location).
+**Bỏ** 3 field: `costume_note`, `lighting_and_atmosphere`, `background_and_extras`  
+**Thêm**: `has_crowd` (boolean)
 
-## Thay đổi đề xuất
+Output JSON mới:
+```json
+{
+  "global_scene_id": "SEQ_01_SCN_01",
+  "duration": 4.0,
+  "audio_sync": "...",
+  "character_labels": [],
+  "shot_type": "Wide Shot",
+  "roll_type": "B-Roll",
+  "camera_motion": "Slow Pan",
+  "time_of_day": "night",
+  "physical_action": "...",
+  "has_crowd": true
+}
+```
 
-### Step 3 — Scene Director (chỉ quyết định cảnh)
+## Step 4: thêm thinking fields, tự tra reference data
 
-Fields **giữ lại**:
-| Field | Vai trò |
+Step 4 **tự viết** chi tiết visual từ reference:
+
+| Thinking field | Nguồn |
 |---|---|
-| `global_scene_id` | ID cảnh |
-| `duration` | Thời lượng |
-| `audio_sync` | Text voiceover |
-| `character_labels` | Nhân vật có mặt |
-| `shot_type` | Wide / Medium / Close-up |
-| `roll_type` | A-Roll / B-Roll |
-| `camera_motion` | Static / Pan / Tracking / Zoom |
-| `time_of_day` | dawn / morning / midday / afternoon / dusk / night |
-| `physical_action` | Hành động vật lý |
-| `has_crowd` | boolean — cảnh có nhân vật quần chúng hay không |
+| `costume` | Character sheet + action context |
+| `lighting` | time_of_day + location data |
+| `background` | Location bible_description + shot_type |
+| `extras` | Crowd archetypes từ World Bible (chỉ khi `has_crowd = true`), mô tả hành động, không cần tả trang phục chi tiết |
+| `character_blocking` | character_labels + shot_type |
+| `emotion` | Nhân vật + context |
+| `key_props` | Action context |
+| `camera_angle` | Shot context |
+| `effects` | Scene context |
+| `flat_prompt` | Tổng hợp tất cả trên |
 
-Fields **bỏ khỏi Step 3**:
-| Field | Lý do bỏ | Chuyển đi đâu |
-|---|---|---|
-| `costume_note` | Step 4 tự lấy từ character sheet + context | Step 4 tự xử lý |
-| `lighting_and_atmosphere` | Suy ra từ `time_of_day` + location | Step 4 tự xử lý |
-| `background_and_extras` | Chi tiết visual — Step 4 viết dựa trên World Bible | Step 4 tự xử lý |
-
-> [!IMPORTANT]
-> `has_crowd` thay thế `background_and_extras` ở Step 3 — chỉ cho Step 4 biết cảnh này cần mô tả extras hay không, không mô tả chi tiết.
-
----
-
-### Step 4 — Prompt Writer (viết chi tiết visual)
-
-Step 4 nhận data đơn giản hơn từ Step 3 và **tự tra cứu** chi tiết từ:
-- **Character sheet** (visual_description) → trang phục, ngoại hình
-- **Location data** (bible_description) → background chi tiết
-- **World Bible** (crowd_archetypes) → extras khi `has_crowd = true`
-- **time_of_day** → ánh sáng phù hợp
-
-Step 4 template RULES cập nhật:
-- Bỏ rule "Include the specific COSTUME from costume_note" → thay bằng "Determine appropriate COSTUME from character reference based on scene context"
-- Bỏ rule "describe environment based on background_and_extras" → thay bằng "describe environment based on Location reference and World Bible"
-
----
-
-## Open Questions
-
-> [!IMPORTANT]
-> **Q1**: `has_crowd` là boolean đơn giản. Có cần thêm text mô tả ngắn (ví dụ "soldiers on battlements") để Step 4 biết loại crowd cần dùng? Hay Step 4 tự suy từ `physical_action` + context?
-
-> [!IMPORTANT]  
-> **Q2**: `lighting_and_atmosphere` bỏ khỏi Step 3 → Step 4 tự suy từ `time_of_day` + location. Nhưng có trường hợp ánh sáng đặc biệt (lửa cháy, sét đánh) mà Step 3 Director mới biết. Giữ lại field `lighting_note` ngắn cho trường hợp đặc biệt hay bỏ hoàn toàn?
-
----
-
-## Proposed Changes
-
-### Step 3 Prompt
+## Sửa code cụ thể
 
 #### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
 
-1. **`STEP3_SYSTEM_PROMPT`** (line ~438-570):
-   - Bỏ Rule 6 (`costume_note`) 
-   - Bỏ Rule 7 (`background_and_extras` + crowd archetypes)
-   - Output JSON schema: bỏ `costume_note`, `lighting_and_atmosphere`, `background_and_extras` → thêm `has_crowd: true/false`
+**1. `STEP3_SYSTEM_PROMPT`** (~line 438-570):
+- Bỏ Rule 6 (Costume Note)
+- Bỏ Rule 7 (Background & Extras) → thay: `has_crowd = true/false`
+- Output schema: bỏ 3 field cũ, thêm `has_crowd`
 
----
+**2. `STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE`** (~line 575-688):
+- Bỏ rules cũ (from costume_note, from background_and_extras, from lighting_and_atmosphere)
+- Thêm thinking fields mới: `costume`, `lighting`, `background`, `extras`
+- Rules mới: tra character reference cho costume, suy lighting từ time_of_day + location, viết background từ location data + shot_type, mô tả extras action khi has_crowd = true
 
-### Step 4 Template + Code
+**3. scenes_text_parts builder** (~line 1883-1896):
+- Bỏ: `Costume:`, `Background:`, `Lighting:` 
+- Thêm: `Crowd: yes/no`
 
-#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+**4. Final prompt dict** (~line 1946-1960):
+- Thêm fields mới: `costume`, `lighting`, `background`, `extras`
+- Bỏ: `crowd_description`
 
-2. **`STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE`** (line ~575-688):
-   - Rules: bỏ "from costume_note", "from background_and_extras", "from lighting_and_atmosphere"
-   - Thêm rules: tự tra cứu costume từ character reference, environment từ location + World Bible, lighting từ time_of_day
-   - Thinking fields: bỏ `crowd_description` (không còn source field riêng)
-
-3. **`_process_sequence_step4()`** — scenes_text_parts builder (line ~1883-1896):
-   - Bỏ lines build `Costume:`, `Background:`, `Lighting:` từ Step 3 data
-   - Thêm `has_crowd: {scene.get('has_crowd', False)}`
-
-4. **Final prompt dict assembly** (line ~1946-1960):
-   - Bỏ `crowd_description` field (thinking field không cần lưu)
-
----
-
-### Step 3 Output Validation
-
-5. **`_validate_scenes()`** (line ~1591):
-   - Không cần sửa — chỉ validate timing, không liên quan fields bị bỏ
-
----
-
-### Excel Export
-
-6. **`_export_excel()`** (line ~2092):
-   - Không cần sửa columns — Excel chỉ export `flat_prompt`, `character_info`, `location`, etc.
-   - Các field bị bỏ (`costume_note`, `background_and_extras`, `lighting_and_atmosphere`) chưa bao giờ xuất riêng trong Excel
-
----
-
-## Verification Plan
-
-### Automated Tests
-1. `python -c "import ast; ast.parse(...)"` — syntax check
-2. Chạy pipeline trên chapter test (Saladin ch_01) với Step 3 + 4 checkpoint xóa
-3. So sánh output mới vs cũ: flat_prompt có đầy đủ chi tiết không
-
-### Manual Verification
-- Xem flat_prompt mới có đúng costume/lighting/background từ reference thay vì từ Step 3 data không
-- Kiểm tra `has_crowd` truyền đúng qua Step 4
+## Verification
+1. Syntax check
+2. Xóa checkpoint Step 3 + 4 → chạy lại chapter test
+3. So sánh flat_prompt mới vs cũ
