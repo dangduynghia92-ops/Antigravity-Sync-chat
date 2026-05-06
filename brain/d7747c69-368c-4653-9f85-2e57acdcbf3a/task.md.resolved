@@ -1,13 +1,10 @@
-# Anti-Copy Extension Tasks
+# Tasks
 
-- [x] Strip `author_rhetoric` from outline input
-- [x] Strip `myths_misconceptions` from outline input
-- [x] Strip `thesis_angle` from outline input (when Keep Thesis OFF)
-- [x] Fix rhetoric merge race condition (post-Step-5 merge)
-- [x] Fix Retry checkpoint detection
-- [x] Fix Resume subfolder search
-- [ ] Extend [rhetoric_transform](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#4852-4880) to rewrite `myths_misconceptions.reality`
-- [ ] Extend [rhetoric_transform](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/script_creation_tab.py#4852-4880) to rewrite `comparisons.data`  
-- [ ] Update transform prompt to handle new fields
-- [ ] Update post-Step-5 merge to replace `myths_misconceptions` and `comparisons`
-- [ ] Commit and verify
+## Hook Diversity
+- [x] Outline prompt: 1 GOOD example → 5 diverse examples
+- [x] Writer prompt: diversify framework-specific hook focus
+- [x] Style JSON: add `data_surprise_opener` hook method (now 6 total)
+
+## Blueprint Filtering (data repetition fix)
+- [x] Implement `data_focus` filtering in `write_review_chapter` (rewriter.py)
+- [ ] Verify: run .22 LR video, check no data repetition across chapters

@@ -1,77 +1,64 @@
-# Fix: Hook luôn lặp cùng 1 pattern
+# Fix: Data lặp across chapters (Deep Dive)
 
 ## Root Cause
 
-LLM là máy match pattern. Khi hệ thống chỉ cho nó **1 mẫu tham khảo** cho "good hook", nó sẽ copy mẫu đó mỗi lần.
+**Prompt nói dối code.**
 
-Cụ thể:
-- Outline prompt: **1** GOOD example duy nhất → AI copy pattern đó vào mọi depth_focus
-- hook_methods: **3** methods, cùng 1 hướng aggressive → AI không có lựa chọn khác
-- Writer prompt: **4/4** framework focus đều dùng cùng hướng "wrong/incomplete" → AI chỉ biết 1 cách mở
+- Prompt line 1: `"You receive a FILTERED BLUEPRINT containing ONLY the data fields relevant to this specific chapter"`
+- Prompt line 37: `"FILTERED BLUEPRINT (only your chapter's data)"`
+- **Code thực tế** (rewriter.py line 7573): gửi `blueprint_json = json.dumps(_bp_sanitized)` — **FULL blueprint**, không filter gì.
 
-## Fix: Mở rộng reference — cho AI nhiều lựa chọn
+→ AI thấy toàn bộ 22 field groups mỗi chapter → pick data "hay" bất kể thuộc chapter nào → "0.004 inch", "fuerza centrífuga", "5 fallos/1000" lặp ở ch2, ch6, ch7, ch8.
 
-### 1. [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+**Bằng chứng**:
 
-**Line 26-28** — Thêm nhiều GOOD example đa dạng (thay vì chỉ 1):
+| Data point | Xuất hiện ở |
+|-----------|-------------|
+| 0.004 inch (borde de latón) | ch2, ch6, ch8 |
+| fuerza centrífuga | ch2, ch3, ch6, ch7 |
+| 5 fallos/1000 | ch2, ch6, ch7, ch8 |
 
-```diff
-  depth_focus for hook must be a PROVOCATIVE ANGLE or THESIS — never a technical explanation or mechanism comparison. The hook creates curiosity, not education.
-    BAD depth_focus:  "The difference between direct blowback and delayed systems"
--   GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
-+   GOOD depth_focus examples (each uses a DIFFERENT approach — pick the one that fits the blueprint):
-+   - Data surprise: "One $400 entry outperforms three guns at triple the price — the reason has nothing to do with specs"
-+   - Scenario: "At 3 AM in a narrow hallway, the spec sheet advantage disappears — something else decides the outcome"
-+   - Contrast: "The gun every forum dismisses sits at the top of one critical metric"
-+   - Deception reveal: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
-+   - Bold question: "Is the most popular caliber in America actually the worst choice for its most common use case?"
+Trong khi outline phân chia data_focus rõ ràng:
+- ch2: `casing, origin_history` — đúng chỗ cho "0.004 inch"
+- ch6: `real_world_performance, compatible_platforms` — **không** nên nhắc lại "0.004 inch"
+
+## Proposed Fix
+
+### [MODIFY] [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py)
+
+**Line ~7573**: Thêm logic filter blueprint theo `data_focus` trước khi gửi cho writer.
+
+```python
+# ── Filter blueprint by data_focus for body/topic_block chapters ──
+ch_data_focus = chapter_outline.get("data_focus", [])
+if ch_data_focus and chapter_type in ("body", "topic_block", "criterion"):
+    _filtered_products = []
+    for product in _bp_sanitized.get("product_evaluation", []):
+        filtered_product = {}
+        # Always keep identity fields
+        for key in ("product_name", "product_type", "category", "key_specs"):
+            if key in product:
+                filtered_product[key] = product[key]
+        # Only include field groups matching data_focus
+        for field_group in ch_data_focus:
+            fg_lower = field_group.lower().strip()
+            for key, value in product.items():
+                if fg_lower in key.lower():
+                    filtered_product[key] = value
+        _filtered_products.append(filtered_product)
+    _filtered_bp = {**_bp_sanitized, "product_evaluation": _filtered_products}
+    blueprint_json = json.dumps(_filtered_bp, ensure_ascii=False, indent=2)
 ```
 
-Giữ nguyên "deception reveal" như 1 trong 5 options — không ban, nhưng AI giờ có 4 lựa chọn khác ngang giá trị.
+**Logic**: 
+- `data_focus: ["casing", "origin_history"]` → blueprint chỉ chứa `casing` + `origin_history` fields
+- AI không thấy `real_world_performance` hay `internal_ballistics` → không lặp data từ field khác
+- Giữ `product_name`, `key_specs` để AI biết context cơ bản
 
----
-
-### 2. [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
-
-**Line 80-84** — Đa dạng hóa framework focus (mỗi framework gợi ý 1 hướng KHÁC nhau):
-
-```diff
-  FRAMEWORK-SPECIFIC HOOK FOCUS:
--- Ranking: Tease the surprising winner/loser and why the conventional ranking wisdom is wrong.
--- Catalog: Establish the category's relevance and why the viewer's current knowledge is incomplete.
--- Head-to-Head: Frame the central matchup tension — why this comparison matters and what's at stake.
--- Deep Dive: Establish what the consensus gets wrong about this single product/topic.
-+- Ranking: Create tension around which product earns which position — and why the order will surprise.
-+- Catalog: Show why this category matters right now and what most buyers overlook.
-+- Head-to-Head: Set up the central matchup — what each side brings and why the outcome isn't obvious.
-+- Deep Dive: Reveal the one thing about this product that changes how you evaluate it.
-```
-
-Mỗi framework giờ gợi ý 1 hướng khác nhau (surprise, relevance, matchup, revelation) thay vì tất cả cùng hướng "wrong".
-
----
-
-### 3. [MODIFY] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
-
-**A. Thêm 2 hook_methods** (line 127, trước `hook_writing_rules`) — cho AI thêm lựa chọn:
-
-```json
-"scenario_cold_open": {
-  "description": "Drop the viewer into a vivid real-world moment where the topic matters.",
-  "structure": "Vivid scenario (2-3 sentences) → Why this moment matters → What we're about to discover",
-  "rule": "Scenario must use real-world context from blueprint data."
-},
-"data_surprise_opener": {
-  "description": "Lead with a single counter-intuitive number or comparison that reframes the topic.",
-  "structure": "Surprising data point → Why it contradicts expectations → Set up analysis",
-  "rule": "Number must come from blueprint data. No invented stats."
-}
-```
-
-Tổng hook_methods: 3 → 5. AI giờ có 5 cách mở khác nhau thay vì 3 cách cùng hướng.
+> [!IMPORTANT]  
+> **Chỉ filter cho body/topic_block/criterion** — hook đã có slim riêng, end chapter cần full data để tổng kết.
 
 ## Verification Plan
 
-- Chạy lại 2 video đã test (AR-9, 20 vs 12 Gauge)
-- Kiểm tra depth_focus trong `_review_outline.json` có đa dạng không
-- Kiểm tra `ch_01_Intro.txt` có đa dạng cách mở không
+- Chạy lại video .22 LR với code mới
+- Search "0.004" / "centrífuga" / "fallos" trong output → chỉ xuất hiện ở chapter có data_focus tương ứng

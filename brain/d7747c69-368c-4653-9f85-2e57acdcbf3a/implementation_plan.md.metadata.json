@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Root cause fix for hook repetition. Problem: AI has only 1 reference example so it copies that pattern every time. Fix: diversify reference material across 3 files (more GOOD examples, more hook_methods, diverse framework focus). No banning needed.",
-  "updatedAt":  "2026-05-06T14:47:15.314021Z",
-  "version":  "15",
+  "summary":  "Root cause analysis and fix for data repetition in Deep Dive chapters. Core issue: code sends FULL blueprint to every chapter despite prompt claiming it's filtered by data_focus. Fix: actually filter the blueprint in rewriter.py before sending to AI.",
+  "updatedAt":  "2026-05-06T21:40:31.905861700Z",
+  "version":  "16",
   "requestFeedback":  true
 }
