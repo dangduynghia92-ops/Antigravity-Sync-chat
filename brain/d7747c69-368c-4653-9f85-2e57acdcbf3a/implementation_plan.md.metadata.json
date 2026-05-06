@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Deep root cause analysis of why all hooks open with 'mentira/lie' pattern, tracing the full pipeline from style JSON → blueprint extraction → outline generation → chapter writing. Identifies 5 systemic sources across 3 layers and proposes targeted fixes for each.",
-  "updatedAt":  "2026-05-06T14:08:05.576880300Z",
-  "version":  "13",
+  "summary":  "Root cause fix for hook repetition. Problem: AI has only 1 reference example so it copies that pattern every time. Fix: diversify reference material across 3 files (more GOOD examples, more hook_methods, diverse framework focus). No banning needed.",
+  "updatedAt":  "2026-05-06T14:47:15.314021Z",
+  "version":  "15",
   "requestFeedback":  true
 }

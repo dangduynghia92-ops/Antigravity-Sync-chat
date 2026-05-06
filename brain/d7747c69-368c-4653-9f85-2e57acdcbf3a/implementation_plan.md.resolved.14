@@ -1,0 +1,111 @@
+# Fix: Hook luôn mở bằng "mentira / lời nói dối"
+
+## Scope: CHỈ sửa hook — không đụng body chapters
+
+## Root Cause (hook-only)
+
+Hook output bị lặp pattern "lie/deception" do **3 nguồn trực tiếp**:
+
+| # | File | Vị trí | Nội dung gây lặp |
+|---|------|--------|-------------------|
+| 1 | Outline prompt | Line 28 | GOOD example: `"The market sells a $2,000 illusion"` → AI copy pattern vào mọi depth_focus |
+| 2 | Writer prompt | Line 80-84 | 4/4 framework hook focus dùng "wrong/incomplete/gets wrong" |
+| 3 | Style JSON | Line 112-136 | 3/3 hook_methods đều aggressive, không có method trung tính |
+
+**Bằng chứng**: 5/5 outline outputs gần nhất có depth_focus chứa "ilusión/falsa premisa", 6/6 hook outputs mở bằng "mentira".
+
+## Proposed Changes (3 files, chỉ hook sections)
+
+### 1. [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+
+**Line 26-28** — thay GOOD example + thêm BANNED + diversity list:
+
+```diff
+- depth_focus for hook must be a PROVOCATIVE ANGLE or THESIS — never a technical explanation or mechanism comparison. The hook creates curiosity, not education.
+-   BAD depth_focus:  "The difference between direct blowback and delayed systems"
+-   GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
++ depth_focus for hook must be a COMPELLING ANGLE — never a technical explanation. The hook creates curiosity, not education.
++   BAD: "The difference between direct blowback and delayed systems" (technical lecture)
++   BAD: Any depth_focus using lie/illusion/deception framing (e.g., "the market sells a lie/illusion", "you've been deceived")
++   GOOD: "One $400 entry outperforms three guns at triple the price — the reason has nothing to do with specs"
++   GOOD: "At 3 AM in a narrow hallway, the spec sheet advantage disappears"
++   GOOD: "The gun every forum dismisses sits at the top of one critical metric"
++   
++   HOOK ANGLE VARIETY (choose ONE per video — never repeat across videos):
++   - Surprising data point: a number that contradicts expectations
++   - Real-world scenario: a moment where the topic truly matters
++   - Unexpected comparison: two things nobody expected to compete
++   - Bold question: a question that divides the community
++   - Historical context: a backstory that changes perception
+```
+
+---
+
+### 2. [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
+
+**Line 80-84** — bỏ "wrong/incomplete/gets wrong":
+
+```diff
+ FRAMEWORK-SPECIFIC HOOK FOCUS:
+-- Ranking: Tease the surprising winner/loser and why the conventional ranking wisdom is wrong.
+-- Catalog: Establish the category's relevance and why the viewer's current knowledge is incomplete.
+-- Head-to-Head: Frame the central matchup tension — why this comparison matters and what's at stake.
+-- Deep Dive: Establish what the consensus gets wrong about this single product/topic.
++- Ranking: Create tension around which product earns which position — and why the order will surprise.
++- Catalog: Show why this category matters right now and what most buyers overlook.
++- Head-to-Head: Set up the central matchup — what each side brings and why the outcome isn't obvious.
++- Deep Dive: Reveal the one thing about this product that changes how you evaluate it.
+```
+
+**Thêm sau line 84** — VARIETY RULE cấm pattern lặp:
+
+```
+BANNED HOOK OPENINGS:
+  - "You've been lied to / they sold you a lie / the market deceived you"
+  - "Everything you think you know is wrong"
+  - Any variation of "te han mentido / te vendieron una mentira / una ilusión"
+  
+VARIETY RULE: The hook MUST follow the depth_focus angle from the outline.
+  Do NOT override it with a deception/lie framing regardless of what depth_focus says.
+```
+
+---
+
+### 3. [MODIFY] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
+
+**A. Thêm 2 hook_methods trung tính** (line 127, trước `hook_writing_rules`):
+
+```json
+"scenario_cold_open": {
+  "description": "Drop the viewer into a vivid real-world moment where the topic matters.",
+  "structure": "Vivid scenario (2-3 sentences) → Why this moment matters → What we're about to discover",
+  "rule": "Scenario must use real-world context from blueprint data."
+},
+"data_surprise_opener": {
+  "description": "Lead with a single counter-intuitive number or comparison that reframes the topic.",
+  "structure": "Surprising data point → Why it contradicts expectations → Set up analysis",
+  "rule": "Number must come from blueprint data. No invented stats."
+}
+```
+
+**B. Thêm banned_patterns** cho hook (line 130-135):
+
+```diff
+ "banned_patterns": [
+     "We will analyze/compare/review X guns",
+     "Our ranking is based on X criteria",
+     "Today we examine/review/look at",
+-    "Let's dive in / Let's get started"
++    "Let's dive in / Let's get started",
++    "The market/industry has lied to you / sold you a lie",
++    "You've been deceived/misled/tricked",
++    "Everything you know/think is wrong",
++    "Te han mentido / te vendieron una mentira"
+ ]
+```
+
+## Verification Plan
+
+- Chạy lại 2 video đã test (AR-9, 20 vs 12 Gauge)
+- Kiểm tra `_review_outline.json` → depth_focus không còn "illusion/lie"
+- Kiểm tra `ch_01_Intro.txt` → câu mở đầu đa dạng, không "mentira"
