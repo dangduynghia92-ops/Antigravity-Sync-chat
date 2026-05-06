@@ -1,0 +1,50 @@
+=== STEP 3: SEQ_01_SCN_05 ===
+{
+  "global_scene_id": "SEQ_01_SCN_05",
+  "duration": 3.0,
+  "audio_sync": "yet your bloodline carries a sudden death sentence.",
+  "character_labels": [
+    "Ayyubid-Warrior-A"
+  ],
+  "shot_type": "Medium Shot",
+  "roll_type": "A-Roll",
+  "camera_motion": "Slow Tracking",
+  "time_of_day": "night",
+  "costume_note": "Ayyubid-Warrior-A wears hardened leather lamellar armor over a dark indigo wool kaftan and a dark indigo turban.",
+  "lighting_and_atmosphere": "The scene is lit by the orange glow of the citadel above, casting long shadows across the raft.",
+  "background_and_extras": "The towering, sheer brick face of Tikrit Citadel looms in the background, with several [soldier]: Heavy Guard figures standing motionless on the battlements.",
+  "physical_action": "Ayyubid-Warrior-A strains against a long wooden punting pole, pushing the raft away from the muddy banks and into the deep central channel.",
+  "locked_location": "",
+  "location_anchor": "A rain-soaked timber raft on the pitch-black Tigris River at night, 1138 AD, beneath the towering mud-brick walls of Tikrit Citadel."
+}
+
+=== STEP 4: SEQ_01_SCN_05 ===
+{
+  "global_scene_id": "SEQ_01_SCN_05",
+  "duration": 3.0,
+  "characters": "Ayyubid-Warrior-A",
+  "character_info": "[Ayyubid-Warrior-A] = Shirkuh, uncle: BODY: Stocky and powerful build, approximately 4.5 heads tall, with simplified mitten-shaped hands. FACE: Oversized round pure white face with no nose, fierce slanted dot eyes, and a bushy black beard. COSTUME (MAIN): Hardened leather lamellar armor (jawshan) worn over a dark indigo wool kaftan. COSTUME (DETAIL): Steel vambraces (bazu-band), dark brown leather riding boots, and a dark indigo turban; flat cel-shading. IDENTIFYING MARK: A jagged vertical scar running through the left eye area of his white mask-face.",
+  "location": "A rain-soaked timber raft on the pitch-black Tigris River at night, 1138 AD, beneath the towering mud-brick walls of Tikrit Citadel.",
+  "chapter": "ch_01_Level_1__Vulnerability",
+  "character_blocking": "[Ayyubid-Warrior-A] is positioned on the right side of the raft, straining with a pole; the citadel walls are visible in the upper background.",
+  "emotion": "[Ayyubid-Warrior-A]: fierce slanted oval eyes, clenched teeth line, furrowed eyebrows",
+  "key_props": [
+    "long wooden punting pole",
+    "hardened leather lamellar armor"
+  ],
+  "camera_angle": "eye-level",
+  "effects": "orange glow, long shadows, mist",
+  "crowd_description": "identical stylized heavy guards with white faces standing motionless on the distant battlements",
+  "flat_prompt": "A stylized historical animation illustration with thick dark outlines depicting [Ayyubid-Warrior-A] with an oversized round pure white face and a jagged scar, straining as he pushes a long wooden punting pole into the dark river. He is dressed in hardened leather lamellar armor over a dark indigo kaftan, with the towering, richly painted brick face of Tikrit Citadel looming behind him under the orange glow of the night sky. On the distant battlements, rows of identical stylized guards with white faces stand as silent silhouettes against the smoky torchlight. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. Stylized historical animation illustration, oversized round pure white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions, thick uniform dark outlines, flat cel-shading on characters, detailed painterly backgrounds, historically accurate clothing armor and props, simplified mitten hands, uniform crowd rendering, scene-driven natural palette, scene-driven lighting, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio.",
+  "index": 5,
+  "negative_prompt": "Avoid chibi, super deformed, bobble head, tiny body, photorealism, realistic human faces, detailed facial features, nose on characters, anime eyes, stick figures, 3D CGI, smooth digital rendering, concept art, Artstation style, neon colors, forced fixed palette, forced amber glow, thick oil impasto, watercolor transparency, pencil sketch, individual finger details, realistic hand anatomy, sketchy uneven lines, wobbly outlines, octane render, unreal engine, ultra HD, 8K resolution, borders, text overlays, watermarks."
+}
+
+=== FLAT PROMPT (full) ===
+A stylized historical animation illustration with thick dark outlines depicting [Ayyubid-Warrior-A] with an oversized round pure white face and a jagged scar, straining as he pushes a long wooden punting pole into the dark river. He is dressed in hardened leather lamellar armor over a dark indigo kaftan, with the towering, richly painted brick face of Tikrit Citadel looming behind him under the orange glow of the night sky. On the distant battlements, rows of identical stylized guards with white faces stand as silent silhouettes against the smoky torchlight. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. Stylized historical animation illustration, oversized round pure white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions, thick uniform dark outlines, flat cel-shading on characters, detailed painterly backgrounds, historically accurate clothing armor and props, simplified mitten hands, uniform crowd rendering, scene-driven natural palette, scene-driven lighting, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+=== FLAT PROMPT: SEQ_01_SCN_01 ===
+A stylized historical animation illustration with thick dark outlines depicting a makeshift timber raft lashed with hemp rope as it tilts violently on the pitch-black, white-capped current of the Tigris River at night. In the background, the towering mud-brick walls of Tikrit Citadel loom through a freezing mist, where rows of identical stylized soldiers with round white faces and iron skullcaps hold flickering orange torches. The richly painted background shows the textured masonry of the fortress walls, while the churning black water reflects the harsh, trembling orange light of the distant fires. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. Stylized historical animation illustration, oversized round pure white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions, thick uniform dark outlines, flat cel-shading on characters, detailed painterly backgrounds, historically accurate clothing armor and props, simplified mitten hands, uniform crowd rendering, scene-driven natural palette, scene-driven lighting, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+=== FLAT PROMPT: SEQ_01_SCN_03 ===
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Ayyubid-Prince-A-Child] with an oversized round pure white face, his small oval dot eyes squeezed shut and his tiny mouth open in a silent cry. He wears a small dark indigo linen cap peeking from the green swaddle, with flickering orange light from distant citadel torches catching the edges of his smooth white face against the pitch-black night. The background is a painterly blur of dark water and white foam, emphasizing the high-contrast lighting of the freezing river escape. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. Stylized historical animation illustration, oversized round pure white faces with oval dot eyes and expressive eyebrows and mouth shapes and no nose, compact stylized body proportions, thick uniform dark outlines, flat cel-shading on characters, detailed painterly backgrounds, historically accurate clothing armor and props, simplified mitten hands, uniform crowd rendering, scene-driven natural palette, scene-driven lighting, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio.
