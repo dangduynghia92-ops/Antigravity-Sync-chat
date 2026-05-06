@@ -1,0 +1,30 @@
+=== Faction: Ayyubid Family ===
+  crowd_archetypes:
+    soldier: Retainer Guard — Head: iron skullcap worn over a padded cotton coif. Upper: riveted iron chainmail shirt over a padded brown linen gambeson. Lower: baggy olive wool trousers. Feet: worn leather riding boots. Acc: leather sword belt, quiver of arrows, woolen cloak.
+    soldier: Scout — Head: dark green wool turban wrapped around face to block wind. Upper: short brown leather jerkin over a grey wool tunic. Lower: grey wool trousers wrapped with leather puttees. Feet: soft-soled leather shoes. Acc: leather baldric, small hunting knife, leather waterskin.
+    soldier: Archer — Head: conical felt cap with a sheepskin brim. Upper: padded canvas tunic with vertical stitching. Lower: loose brown wool trousers. Feet: calf-high leather boots. Acc: leather archer's thumb ring, woven sash, quiver and bow case.
+    civilian_man: Laborer — Head: bare head with shaggy dark hair. Upper: coarse brown wool tunic with frayed hem. Lower: tunic to knees over bare legs. Feet: barefoot. Acc: braided rope belt, heavy wooden oars.
+    civilian_man: Craftsman — Head: small grey wool turban. Upper: rust-colored linen tunic with rolled sleeves. Lower: loose grey linen trousers. Feet: woven reed sandals. Acc: leather tool belt, iron hammer, small leather pouch.
+    civilian_man: Townsman — Head: neatly wrapped blue cotton turban. Upper: dark brown wool kaftan with simple geometric embroidery. Lower: dark brown wool trousers. Feet: black leather shoes. Acc: woven wool sash, wooden walking stick.
+    civilian_woman: Common — Head: dark blue linen headscarf draped over shoulders. Upper: long brown wool dress with long sleeves. Lower: dress extends to ankles over linen trousers. Feet: simple leather sandals. Acc: woven wool belt, bronze shawl pin.
+    civilian_woman: Market woman — Head: rust-colored wool hijab wrapped tightly. Upper: layered green and brown linen robes. Lower: robes to ankles. Feet: sturdy leather shoes. Acc: large woven reed basket, cloth money pouch.
+    civilian_woman: Wealthy — Head: fine black silk veil over a gold-embroidered headband. Upper: dark purple silk kaftan with silver thread embroidery. Lower: loose silk trousers gathered at the ankles. Feet: soft embroidered leather slippers. Acc: silver bracelets, wide silk sash, velvet pouch.
+    child: Head: bare head with fine dark hair, wrapped in a wool blanket hood. Upper: swaddled tightly in layers of unbleached linen and heavy grey sheepskin. Lower: swaddling extends past feet. Feet: barefoot inside swaddling. Acc: small silver protective amulet pinned to the outer blanket.
+    noble: Head: tall conical hat of brown felt with a wrapped silk band. Upper: rich indigo wool coat lined with sable fur over a silk tunic. Lower: baggy indigo wool trousers. Feet: polished black leather riding boots. Acc: gold-hilted dagger, silver signet ring, leather document pouch.
+    clergy: Head: large white cotton turban. Upper: heavy black wool cloak over a white cotton robe. Lower: robe to ankles. Feet: dark leather sandals. Acc: leather-bound Quran, wooden prayer beads, silver ring.
+
+=== Faction: Seljuk Authorities and Tikrit Garrison ===
+  crowd_archetypes:
+    soldier: Heavy Cavalry — Head: steel conical helmet with nasal guard and chainmail neck protection. Upper: iron lamellar cuirass over a padded blue cotton tunic. Lower: blue cotton trousers with iron splint greaves. Feet: heavy leather riding boots. Acc: leather weapon belt, quiver, composite bow case.
+    soldier: Spearman — Head: iron skullcap with a padded rim. Upper: iron chainmail shirt over a red linen tunic. Lower: loose red linen trousers. Feet: ankle-high leather boots. Acc: leather baldric, wooden canteen, iron-tipped spear.
+    soldier: Archer — Head: pointed leather cap with ear flaps. Upper: thick quilted canvas armor (kazaghand) dyed dark blue. Lower: dark blue wool trousers. Feet: soft leather shoes. Acc: leather thumb ring, quiver of arrows, spare bowstring in a small pouch.
+    civilian_man: Laborer — Head: wrapped linen cloth to keep sweat off. Upper: bare chest with a coarse linen vest. Lower: rough brown linen trousers rolled to the knees. Feet: barefoot. Acc: rope belt, heavy wooden crate.
+    civilian_man: Craftsman — Head: brown felt skullcap. Upper: tan linen tunic with leather apron. Lower: tan linen trousers. Feet: wooden clogs. Acc: leather belt, iron tongs, soot-stained hands.
+    civilian_man: Townsman — Head: white cotton turban. Upper: light blue linen kaftan with white trim. Lower: white linen trousers. Feet: brown leather sandals. Acc: woven cloth sash, small bronze knife.
+    civilian_woman: Common — Head: white linen veil covering hair and neck. Upper: simple undyed wool dress. Lower: dress to ankles. Feet: woven reed sandals. Acc: rope belt, clay water jug.
+    civilian_woman: Market woman — Head: yellow cotton headscarf. Upper: layered red and orange linen robes. Lower: robes to ankles. Feet: sturdy leather shoes. Acc: leather belt, large woven basket of flatbreads.
+    civilian_woman: Wealthy — Head: sheer silk veil over a silver-threaded cap. Upper: emerald green silk dress with wide, embroidered sleeves. Lower: green silk trousers. Feet: red leather slippers. Acc: gold necklace, silver anklets, silk sash.
+    child: Head: small red felt cap. Upper: miniature blue linen tunic. Lower: loose blue linen trousers. Feet: barefoot. Acc: wooden toy horse, small cloth belt.
+    noble: Head: tall white silk turban. Upper: crimson velvet kaftan with gold trim. Lower: crimson silk trousers. Feet: black leather riding boots. Acc: jeweled sword belt, gold rings, silk coin purse.
+    clergy: Head: neat white cotton turban. Upper: long white wool robe with a black wool overcoat. Lower: white robe to ankles. Feet: black leather sandals. Acc: wooden prayer beads, leather satchel with religious texts.
+
