@@ -1,0 +1,77 @@
+# Fix: Hook luôn mở bằng "mentira / lời nói dối"
+
+## Vấn đề
+
+6/6 hook outputs đều mở bằng "mentira/trampa/ilusión". Mở bằng kiểu đó không sai — sai là prompt **đẩy AI chỉ viết theo kiểu đó**.
+
+## Root Cause
+
+Prompt dùng ngôn ngữ thiên lệch → AI hiểu hook = phải "vạch trần sai lầm":
+
+| File | Đoạn gây bias | Tại sao bias |
+|------|---------------|--------------|
+| Outline prompt L28 | `GOOD: "The market sells a $2,000 illusion"` | AI copy pattern "illusion" vào mọi depth_focus |
+| Writer prompt L81 | `"why the conventional ranking wisdom is wrong"` | Mọi framework dùng từ "wrong/incomplete/gets wrong" |
+| Writer prompt L82 | `"why the viewer's current knowledge is incomplete"` | Cùng hướng: viewer bị sai/thiếu |
+| Writer prompt L84 | `"what the consensus gets wrong"` | Cùng hướng |
+| Style JSON L113 | `"damning_verdict_first"` là method đầu tiên, mạnh nhất | AI ưu tiên chọn method này |
+
+**Bằng chứng**: 5/5 outline outputs có depth_focus chứa "ilusión", "falsa premisa", "paradoja".
+
+## Proposed Changes
+
+Nguyên tắc: **Bỏ ngôn ngữ thiên lệch, thay bằng ngôn ngữ trung tính**. Không thêm bất kỳ rule "DO NOT" nào.
+
+---
+
+### [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+
+**Line 27-28** — Thay GOOD example. Example hiện tại dùng "illusion" → AI copy. Đổi sang example trung tính:
+
+```diff
+   BAD depth_focus:  "The difference between direct blowback and delayed systems"
+-  GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
++  GOOD depth_focus: "One $400 entry outperforms three guns at triple the price — the reason has nothing to do with specs"
+```
+
+---
+
+### [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
+
+**Line 80-84** — Rewrite framework focus. Bỏ "wrong/incomplete/gets wrong", thay bằng ngôn ngữ mô tả trung tính:
+
+```diff
+ FRAMEWORK-SPECIFIC HOOK FOCUS:
+-- Ranking: Tease the surprising winner/loser and why the conventional ranking wisdom is wrong.
+-- Catalog: Establish the category's relevance and why the viewer's current knowledge is incomplete.
+-- Head-to-Head: Frame the central matchup tension — why this comparison matters and what's at stake.
+-- Deep Dive: Establish what the consensus gets wrong about this single product/topic.
++- Ranking: Create tension around which product earns which position — and why the order will surprise.
++- Catalog: Show why this category matters right now and what most buyers overlook.
++- Head-to-Head: Set up the central matchup — what each side brings and why the outcome isn't obvious.
++- Deep Dive: Reveal the one thing about this product that changes how you evaluate it.
+```
+
+---
+
+### [MODIFY] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
+
+**Line 112-136** — Thêm 2 hook methods mới để AI có thêm lựa chọn, không chỉ default vào "damning_verdict":
+
+```json
+"scenario_cold_open": {
+    "description": "Drop the viewer into a specific real-world situation where the topic matters.",
+    "structure": "Vivid scenario → Why this moment matters → What we're about to find out",
+    "rule": "Scenario must be grounded in real use-case from blueprint data."
+},
+"contrast_opener": {
+    "description": "Juxtapose two extremes — price, performance, or reputation — to create immediate tension.",
+    "structure": "Extreme A vs Extreme B → The gap is the story → Tease the answer",
+    "rule": "Both extremes must reference real products or data from blueprint."
+}
+```
+
+## Verification Plan
+
+- Chạy 2-3 video test, kiểm tra `_review_outline.json` xem depth_focus có đa dạng hơn chưa.
+- So sánh hook output — mục tiêu là thấy ít nhất 2/3 video mở khác kiểu.

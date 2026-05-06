@@ -1,0 +1,137 @@
+# Fix: AI luôn hội tụ về 1 pattern (mentira/vạch trần)
+
+## Vấn đề hệ thống
+
+6/6 hook gần nhất đều mở bằng "mentira/trampa/ilusión". Nhưng đây không phải lỗi hook riêng — đây là **lỗi hệ thống** xuyên suốt prompt pipeline khiến AI chỉ viết theo 1 hướng.
+
+## Root Cause: 5 nguồn cùng đẩy AI về hướng "vạch trần"
+
+### Nguồn 1 — Identity (GỐC RỄ CHÍNH)
+**File**: `Review_firearms_v2.json` line 48
+
+```json
+"identity": "You challenge mainstream consensus and marketing hype, revealing 'brutal truths'..."
+```
+
+→ Bản sắc AI = "vạch trần sự thật phũ phàng". **Mọi thứ AI viết** — hook, body, conclusion — đều theo hướng này vì đây là **danh tính** của nó.
+
+### Nguồn 2 — Outline example
+**File**: `system_review_outline_firearms_v2.txt` line 28
+
+```
+GOOD depth_focus: "The market sells a $2,000 illusion..."
+```
+
+→ Example duy nhất cho depth_focus dùng "illusion" → AI copy vào mọi outline.
+
+### Nguồn 3 — Writer framework focus
+**File**: `system_write_review_firearms_v2.txt` line 80-84
+
+4/4 frameworks đều dùng ngôn ngữ "sai/thiếu": `wrong`, `incomplete`, `what's at stake`, `gets wrong`.
+
+### Nguồn 4 — Hook methods bias
+**File**: `Review_firearms_v2.json` line 112-136
+
+3 hook methods đều confrontational:
+- `damning_verdict_first`: "shocking verdict that **breaks consensus**"
+- `stress_test_cold_open`: "violent, visceral"
+- `provocative_caliber_question`: "most divisive debates"
+
+Không có method trung tính (scenario, contrast, question, etc.)
+
+### Nguồn 5 — Angle presets
+**File**: `Review_firearms_v2.json` line 191-193
+
+```json
+"myth_busting": {
+    "thesis_direction": "Debunking common beliefs — what everyone gets wrong"
+}
+```
+
+→ Angle "myth_busting" = bản chất là "vạch trần". Khi AI chọn angle này (hoặc AI mặc định nghiêng về nó do identity), output luôn là "mentira".
+
+## Tóm tắt: Chuỗi nhân quả
+
+```
+Identity ("reveal brutal truths")
+    → AI luôn chọn confrontational tone
+    → Outline tạo depth_focus kiểu "illusion/lie" (copy từ GOOD example)
+    → Writer nhận depth_focus + framework focus ("wrong/incomplete")
+    → Hook methods chỉ có confrontational options
+    → Output: "te ha vendido una mentira" mọi lần
+```
+
+## Proposed Changes
+
+Nguyên tắc: **Mở rộng phổ**, không thu hẹp bằng "DO NOT". Mỗi nguồn bias được sửa để trung tính hơn, cho phép nhiều hướng.
+
+---
+
+### 1. [MODIFY] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
+
+#### Line 48 — `core_rules.identity`
+
+Hiện tại chỉ 1 chiều: "challenge consensus, brutal truths". Cần thêm các chiều khác để AI có thể chọn.
+
+```diff
+-"identity": "You are a pragmatic, authoritative expert with an insider's perspective. You challenge mainstream consensus and marketing hype, revealing 'brutal truths' and hidden value to empower your audience. You are not a salesperson; you are a trusted guide offering privileged, data-driven analysis."
++"identity": "You are a pragmatic, authoritative expert with deep hands-on knowledge. Your role is to cut through noise and deliver analysis the viewer cannot get elsewhere — whether that means exposing overlooked value, challenging popular assumptions, or revealing what the data actually shows. You are not a salesperson; you are a trusted guide offering data-driven analysis."
+```
+
+Thay đổi: Bỏ "brutal truths" + "marketing hype". Thêm "exposing overlooked value" và "revealing what the data actually shows" — trung tính hơn, cho phép nhiều hướng.
+
+#### Line 112-136 — `hook_methods`
+
+Thêm 2 methods trung tính:
+
+```json
+"scenario_cold_open": {
+    "description": "Drop the viewer into a specific real-world situation where the topic matters.",
+    "structure": "Vivid scenario → Why this moment matters → What we're about to find out",
+    "rule": "Scenario must be grounded in real use-case from blueprint data."
+},
+"contrast_opener": {
+    "description": "Juxtapose two extremes — price, performance, or reputation — to create immediate tension.",
+    "structure": "Extreme A vs Extreme B → The gap is the story → Tease the answer",
+    "rule": "Both extremes must reference real products or data from blueprint."
+}
+```
+
+---
+
+### 2. [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+
+#### Line 28 — depth_focus example
+
+Thay example "illusion" bằng example trung tính:
+
+```diff
+-  GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
++  GOOD depth_focus: "One $400 entry outperforms three guns at triple the price — the reason has nothing to do with specs"
+```
+
+---
+
+### 3. [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
+
+#### Line 80-84 — Framework-specific hook focus
+
+Bỏ ngôn ngữ thiên lệch "wrong/incomplete/gets wrong":
+
+```diff
+-- Ranking: Tease the surprising winner/loser and why the conventional ranking wisdom is wrong.
+-- Catalog: Establish the category's relevance and why the viewer's current knowledge is incomplete.
+-- Head-to-Head: Frame the central matchup tension — why this comparison matters and what's at stake.
+-- Deep Dive: Establish what the consensus gets wrong about this single product/topic.
++- Ranking: Create tension around which product earns which position — and why the order will surprise.
++- Catalog: Show why this category matters right now and what most buyers overlook.
++- Head-to-Head: Set up the central matchup — what each side brings and why the outcome isn't obvious.
++- Deep Dive: Reveal the one thing about this product that changes how you evaluate it.
+```
+
+## Verification Plan
+
+- Chạy 2-3 video test sau khi sửa
+- Kiểm tra `_review_outline.json` → depth_focus có đa dạng chưa
+- So sánh hook output — mục tiêu: không phải mọi hook đều mở bằng "mentira"
+- Kiểm tra body chapters — tone có đa dạng hơn không (vì identity đã thay đổi)
