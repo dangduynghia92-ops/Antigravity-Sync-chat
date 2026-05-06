@@ -1,6 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to fix two bugs in firearms H2H pipeline: (1) Filter alternative_rhetoric by chapter data_focus to prevent same metaphor broadcast to all chapters, (2) Pass next_chapter_topic from outline to writer prompt for accurate transitions. Changes in rewriter.py and writer prompt.",
-  "updatedAt":  "2026-04-25T14:38:14.972559100Z",
-  "version":  "9"
+  "summary":  "Plan to fix the systemic 'mentira' (lie/deception) pattern in hook generation. Root cause analysis across 3 prompt files and proposed changes to eliminate the repetitive opening.",
+  "updatedAt":  "2026-05-06T13:14:00.481708100Z",
+  "version":  "10",
+  "requestFeedback":  true
 }

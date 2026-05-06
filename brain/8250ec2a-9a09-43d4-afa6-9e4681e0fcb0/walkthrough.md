@@ -1,50 +1,74 @@
-# Walkthrough: Location Reference Toggle
+# Quality Review — Pipeline Run (ch_01)
 
-## What Changed
+## Step 1: Sequences ✅
 
-### 1. UI — [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
+| Seq | Dur | Location | Subject |
+|---|---|---|---|
+| SEQ_01 | 20.2s | Tigris River, raft | Newborn on a raft escaping |
+| SEQ_02 | 13.9s | Inside walls of Tikrit | Shirkuh's assassination triggers flight |
+| SEQ_03 | 21.3s | Tigris River, raft | Father straining to navigate raft |
+| SEQ_04 | 13.4s | Tigris River banks | Guards with torches searching |
+| SEQ_05 | 19.6s | Tigris River, far bank | Reaching the far bank, exile |
 
-render_diffs(file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
+**Đánh giá**: Tốt — phân đoạn logic, subject factual, characters đúng.
 
-- Added `Location Ref` checkbox (default **ON**) next to Safety/Quality/Historical
-- Tooltip: "ON = tạo location reference file (Step 2c) / OFF = mô tả location inline trong prompt"
-- Passed as `constraints["location_ref"]` to pipeline
+---
 
-### 2. Pipeline — [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+## Step 3: Scene Director ✅
 
-render_diffs(file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+**Ưu điểm**:
+- `has_crowd: false` đúng cho tất cả cảnh (chỉ có 2-3 nhân vật chính, không có quần chúng)
+- `physical_action` chi tiết, cụ thể, visible: "Kurdish-Noble-B turns his shoulder to block the water from hitting the wool bundle"
+- Camera progression hợp lý: Wide → Medium → Close-up → Wide (không stuck 1 angle)
+- `visual_event` factual, không bịa: "Najm ad-Din Ayyub kneels on a violently rocking timber raft..."
 
-**6 change points:**
+**Vấn đề phát hiện**:
 
-| # | Where | What |
-|---|---|---|
-| 1 | `run()` | Skip Step 2c → mark "Skipped (inline mode)" |
-| 2 | `STEP4_USER_TEMPLATE_INLINE` | New template — no `[Location-Label]`, environment described per shot type |
-| 3 | `_process_sequence_step3()` | Runtime `.replace()` on Step 3 prompt: `location_anchor` instead of `locked_location` |
-| 4 | `_build_mini_bible()` | Skip location refs when inline mode |
-| 5 | `_process_sequence_step4()` | Select template + use `location_anchor` for location field |
-| 6 | (auto) | Sheet 2 location rows auto-skipped (empty `locations_data`) |
+> [!WARNING]
+> **SEQ_01 `locked_location` trống**: `loc=` — thiếu location label. Kiểm tra lại output JSON.
 
-## Behavior Summary
+> [!WARNING]
+> **SEQ_03_SCN_05**: `camera_motion: Extreme Slow Zoom In` trên `Close-up` — Rule 7 cấm Pan on Close-up, nhưng Zoom In trên Close-up có thể chấp nhận. Cần review nếu muốn strict.
 
-| | `Location Ref = ON` | `Location Ref = OFF` |
-|---|---|---|
-| Step 2c | Runs → creates location labels | **Skipped** |
-| Step 3 | `locked_location` = label ref | `location_anchor` = descriptive text |
-| Step 4 prompt | `[Tigris River - Mid-Stream]` bracket | Natural prose: "turbulent black river water beneath rough timber logs" |
-| Step 4 template | `STEP4_USER_TEMPLATE` | `STEP4_USER_TEMPLATE_INLINE` |
-| Excel Sheet 1 Location col | Label | Descriptive anchor |
-| Excel Sheet 2 | Character + Location rows | Character rows only |
+---
 
-## Key Design Decision
+## Step 4: Prompt Writer ✅
 
-The inline template instructs LLM to **adapt environment description to shot type**:
-- **Wide Shot** → full panorama (landscape, architecture, sky)
-- **Medium Shot** → immediate surroundings (walls, objects, ground)
-- **Close-up** → only what camera sees (texture, object surface) + subtle ambient hints
+**Ưu điểm mới (so với phiên bản cũ)**:
+1. **`characters_detail` per-character**: Mỗi nhân vật có costume/blocking/emotion/action riêng biệt ✅
+   - SEQ_03_SCN_03: cả [Kurdish-Noble-B] (leaning forward, pulling bundle) VÀ [Kurdish-Noble-A] (wrapped, resting motionless) đều được mô tả riêng
+   - SEQ_03_SCN_04: Father turning shoulder to block spray, infant tucked under chin — 2 nhân vật có 2 vị trí, 2 hành động khác nhau
 
-This avoids the current problem where every scene (including close-ups) gets the same generic `[Location-Label]`.
+2. **`lighting` tự suy**: Từ `time_of_day: night` + location → "Harsh orange torchlight from below", "flickering orange glow" — chính xác, phong phú
 
-## Testing
-- Both files pass syntax check ✅
-- Feature is backward-compatible: default = ON = current behavior unchanged
+3. **`background` theo shot_type**: 
+   - Wide Shot → "wide view of the violent Tigris River... dark muddy banks and dense reeds"
+   - Close-up → "textured, damp surface of the charcoal wool blanket" — đúng logic camera
+
+4. **Costume từ character sheet**: "crimson silk thobe, charcoal wool cloak (aba), black silk hijab" — phù hợp với character reference, không bịa
+
+5. **Không còn `[civilian_man]` label bug** ✅
+
+**Vấn đề phát hiện**:
+
+> [!WARNING]
+> **flat_prompt lặp style text**: Nhiều prompt có "In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI." — đây là nội dung thuộc Mandatory Style, đáng ra LLM không nên repeat vì code đã append. **Token lãng phí**.
+
+> [!NOTE]
+> **SEQ_05_SCN_01 + SEQ_05_SCN_04**: B-Roll prompts thêm "NO characters, NO people, NO figures — empty scene only." — LLM tự thêm rule này, không xấu nhưng hơi dài.
+
+> [!NOTE]
+> **SEQ_05_SCN_07 camera_angle**: `"wide shot"` — đây phải là góc camera (eye-level/low-angle/high-angle), không phải shot type. LLM nhầm 2 field.
+
+---
+
+## Tóm tắt
+
+| Hạng mục | Đánh giá |
+|---|---|
+| Step 3 schema mới (bỏ 3 field, thêm has_crowd) | ✅ Hoạt động đúng |
+| Step 4 characters_detail per-character | ✅ Rất tốt, mô tả từng nhân vật riêng |
+| Step 4 tự suy lighting/background/costume | ✅ Chính xác, phong phú |
+| `[civilian_man]` bug | ✅ Đã sửa |
+| flat_prompt lặp style text | ⚠️ Cần thêm rule cấm lặp |
+| `locked_location` trống | ⚠️ Cần điều tra |

@@ -1,136 +1,112 @@
-# Fix: Lặp Vocabulary + Transition Sai Topic
+# Fix: Hook luôn mở bằng "mentira / lời nói dối"
 
-## Bối cảnh
+## Vấn đề
 
-Hai bug trong Head-to-Head pipeline:
-1. **Lặp metaphor**: "atleta de contacto" xuất hiện 3 chapter (1/3/4) vì `alternative_rhetoric` gắn theo product, không theo chapter
-2. **Transition sai**: 3/6 transition nhắc topic đã cover (Ch5/6/7) vì writer không biết chapter tiếp theo
+6/6 hook outputs gần nhất đều mở bằng pattern "lie/deception":
+- "te ha vendido una **mentira**" (3 lần)
+- "es una **trampa**"
+- "La **falsa** premisa"
+- "La **ilusión** de $2,000"
+
+## Root Cause Analysis
+
+Chuỗi tạo hook: **Outline prompt** → tạo `depth_focus` → **Writer prompt** nhận `depth_focus` → viết hook.
+
+### Nguồn gốc 1: Outline prompt (system_review_outline_firearms_v2.txt line 28)
+```
+GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
+```
+→ AI outline **copy pattern "illusion/lie"** vào mọi depth_focus.
+
+**Bằng chứng**: 5/5 outline outputs có depth_focus chứa "ilusión", "falsa premisa", hoặc "paradoja".
+
+### Nguồn gốc 2: Writer prompt (system_write_review_firearms_v2.txt line 80-84)
+```
+- Ranking: ...why the conventional ranking wisdom is wrong.
+- Catalog: ...why the viewer's current knowledge is incomplete.
+- Head-to-Head: ...why this comparison matters and what's at stake.
+- Deep Dive: ...what the consensus gets wrong about this single product/topic.
+```
+→ Mọi framework đều dùng ngôn ngữ "sai/thiếu/wrong" → AI hiểu hook = phải vạch trần sai lầm.
+
+### Nguồn gốc 3: Style JSON hook_methods (Review_firearms_v2.json line 113)
+```json
+"damning_verdict_first": {
+    "description": "Deliver a shocking verdict that breaks consensus..."
+}
+```
+→ AI ưu tiên chọn method này vì nó aggressive nhất.
+
+## Proposed Changes
+
+### [MODIFY] [system_review_outline_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_review_outline_firearms_v2.txt)
+
+**Line 26-28**: Thay example "illusion" bằng example trung tính + thêm BAD example chặn pattern lừa dối:
+
+```diff
+- GOOD depth_focus: "The market sells a $2,000 illusion — the data exposes which platforms actually deliver"
++ BAD depth_focus: "The market sells a $2,000 illusion" (cliché — NEVER use lie/deception/illusion framing)
++ GOOD depth_focus: "One $400 entry outperforms three guns at triple the price — and the reason has nothing to do with specs"
+```
 
 ---
 
-## Fix 1: Alternative Rhetoric — Lọc theo `data_focus`
+### [MODIFY] [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt)
 
-### Nguyên nhân
-`alternative_rhetoric` nằm ở cấp product. Trong H2H, mọi chapter cover cả 2 products → mọi chapter nhận **toàn bộ** alternatives → writer copy y nguyên.
-
-### Phương án
-
-**Code change** trong [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#6700-7006) ở [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) (line 6912-6928):
-
-Thay vì broadcast tất cả alternatives, **lọc** chỉ alternatives có `data_source` liên quan đến `data_focus` của chapter hiện tại.
+**Line 80-84**: Rewrite framework-specific focus — bỏ ngôn ngữ "wrong/incomplete/gets wrong":
 
 ```diff
- # ── Build alternative_rhetoric block for writer ──
- alt_rhetoric_lines = []
-+ch_data_focus = set(chapter_outline.get("data_focus", []))
- for prod_name in (products if products else []):
--    for prod in _bp_sanitized.get("product_evaluation", []):
-+    for prod in blueprint.get("product_evaluation", []):
-         if prod.get("product_name") == prod_name:
-             alts = prod.get("alternative_rhetoric", [])
-             if alts:
--                alt_rhetoric_lines.append(f"[{prod_name}]")
-+                relevant_alts = []
-                 for alt in alts:
-                     if isinstance(alt, dict):
--                        alt_type = alt.get("type", "")
--                        alt_text = alt.get("alternative", "")
--                        if alt_text:
--                            alt_rhetoric_lines.append(f"  - ({alt_type}) USE: {alt_text}")
-+                        ds = (alt.get("data_source") or "").lower()
-+                        # Match if any data_focus field appears in data_source
-+                        if ch_data_focus and not any(f in ds for f in ch_data_focus):
-+                            continue  # Skip — not relevant to this chapter
-+                        alt_type = alt.get("type", "")
-+                        alt_text = alt.get("alternative", "")
-+                        if alt_text:
-+                            relevant_alts.append(f"  - ({alt_type}) DIRECTION: {alt_text}")
-+                if relevant_alts:
-+                    alt_rhetoric_lines.append(f"[{prod_name}]")
-+                    alt_rhetoric_lines.extend(relevant_alts)
-             break
+ FRAMEWORK-SPECIFIC HOOK FOCUS:
+-- Ranking: Tease the surprising winner/loser and why the conventional ranking wisdom is wrong.
+-- Catalog: Establish the category's relevance and why the viewer's current knowledge is incomplete.
+-- Head-to-Head: Frame the central matchup tension — why this comparison matters and what's at stake.
+-- Deep Dive: Establish what the consensus gets wrong about this single product/topic.
++- Ranking: Create tension around which product earns which position — and why the order will surprise.
++- Catalog: Show why this category matters right now and what most buyers overlook.
++- Head-to-Head: Set up the central matchup — what each side brings and why the outcome isn't obvious.
++- Deep Dive: Reveal the one thing about this product that changes how you evaluate it.
 ```
 
-**Logic**: Mỗi `alternative_rhetoric` entry có `data_source` (vd: `"energía_boca (300-400 ft-lb)"`). Mỗi chapter có `data_focus` (vd: `["cost_economics"]`). Chỉ show alternatives có `data_source` match `data_focus`.
+**Thêm VARIETY RULE** (sau line 84) — cấm rõ ràng pattern lặp:
+
+```
+VARIETY RULE: Do NOT open with "you've been lied to", "they sold you a lie", or any deception/illusion framing.
+  The hook can open with: a scenario, a question, a contrast, a bold claim, a story, or a provocation.
+  Choose the approach that fits THIS specific topic — never default to the same formula.
+```
+
+---
+
+### [MODIFY] [Review_firearms_v2.json](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/styles/Review_firearms_v2.json)
+
+**Line 112-136**: Thêm thêm hook methods mới (scenario, question) để AI không chỉ chọn "damning_verdict_first":
+
+```diff
+ "hook_methods": {
+     "damning_verdict_first": { ... },
+     "stress_test_cold_open": { ... },
+     "provocative_caliber_question": { ... },
++    "scenario_cold_open": {
++      "description": "Drop the viewer into a specific real-world situation where the topic matters.",
++      "structure": "Vivid scenario → Why this moment matters → What we're about to find out",
++      "rule": "Scenario must be grounded in real use-case from blueprint data."
++    },
++    "contrast_opener": {
++      "description": "Juxtapose two extremes — price, performance, reputation — to create immediate tension.",
++      "structure": "Extreme A vs Extreme B → The gap is the story → Tease the answer",
++      "rule": "Both extremes must reference real products or data from blueprint."
++    },
+     "hook_writing_rules": { ... }
+ }
+```
+
+## Open Questions
 
 > [!IMPORTANT]
-> Cần dùng **blueprint gốc** (chưa sanitize) để đọc `data_source`, vì `_bp_sanitized` đã xóa `data_source` ở line 6823.
-
-**Prompt change** trong [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt) (line 45):
-
-```diff
--You MUST NOT replicate these angles. Use ALTERNATIVE angles instead.
-+You MUST NOT replicate these angles. Use the DIRECTION hints below to create your OWN ORIGINAL phrasing.
-+NEVER copy these directions verbatim — they are STARTING POINTS, not scripts.
-```
-
-Và đổi label từ `USE:` → `DIRECTION:` trong code (đã thể hiện ở diff trên).
-
----
-
-## Fix 2: Transition — Truyền `next_chapter_topic`
-
-### Nguyên nhân
-Writer prompt nói "tease next criterion" nhưng writer không biết chapter tiếp theo cover topic gì → đoán mò.
-
-### Phương án
-
-**Code change** trong [write_review_chapter()](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#6700-7006) ở [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py):
-
-Hàm đã nhận `full_outline` (JSON string). Parse nó, tìm chapter `chapter_number + 1`, lấy [title](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py#1783-1791) + `primary_criterion`:
-
-```python
-# ── Extract next chapter topic for transition accuracy ──
-next_topic = "N/A"
-try:
-    _outline_data = json.loads(full_outline) if isinstance(full_outline, str) else (full_outline or {})
-    _chapters_list = _outline_data.get("chapters", [])
-    for _ch in _chapters_list:
-        if _ch.get("chapter_number") == chapter_number + 1:
-            _next_title = _ch.get("title", "")
-            _next_crit = _ch.get("primary_criterion", "")
-            next_topic = f"{_next_title} ({_next_crit})" if _next_crit else _next_title
-            break
-except Exception:
-    pass
-system_prompt = system_prompt.replace("{next_chapter_topic}", next_topic)
-```
-
-**Prompt change** — thêm placeholder vào [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt):
-
-Sau `{previous_context}`, thêm:
-
-```
-NEXT CHAPTER: {next_chapter_topic}
-```
-
-Và update H2H transition rule (line 172):
-
-```diff
--H. COMEBACK TRANSITION: "But can [loser] take it back on [next criterion]?"
--   Build suspense. If the loser has been losing multiple rounds, acknowledge it
-+H. COMEBACK TRANSITION: Reference the NEXT CHAPTER topic shown above.
-+   "But can [loser] take it back on [next criterion from NEXT CHAPTER]?"
-+   RULE: ONLY reference the topic listed in {next_chapter_topic}. Do NOT reference topics from earlier chapters.
-+   If next chapter is "end"/verdict, build toward a final reckoning instead.
-```
-
----
-
-## Tổng hợp thay đổi
-
-| File | Thay đổi |
-|------|----------|
-| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) line 6912-6928 | Lọc `alternative_rhetoric` theo `data_focus` match; đổi label `USE:` → `DIRECTION:` |
-| [rewriter.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/core/rewriter.py) (sau line 6910) | Thêm block parse `full_outline` → extract `next_chapter_topic` |
-| [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt) line 45 | Đổi instruction "Use ALTERNATIVE" → "Use DIRECTION hints, NEVER copy" |
-| [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt) line 58 | Thêm `NEXT CHAPTER: {next_chapter_topic}` |
-| [system_write_review_firearms_v2.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/prompts/system_write_review_firearms_v2.txt) line 172 | Update H2H transition rule reference `{next_chapter_topic}` |
+> Ngoài 3 thay đổi trên, có cần thêm banned_patterns cụ thể cho tiếng Tây Ban Nha không? (ví dụ: "te ha vendido una mentira", "el mercado te ha engañado", etc.)
 
 ## Verification Plan
 
-### Manual Test
-Chạy lại pipeline cho video `.22 LR vs 9mm` (Head-to-Head framework):
-1. Kiểm tra `_prompts_dump` — mỗi chapter phải có `DIRECTION:` thay vì `USE:` với alternatives khác nhau
-2. Grep "atleta" trong output → phải xuất hiện **tối đa 1 lần**
-3. Kiểm tra transition cuối mỗi chapter → phải match topic của chapter tiếp theo
+### Manual Verification
+- Chạy lại 2-3 video đã test trước đó, so sánh hook output trước/sau.
+- Kiểm tra depth_focus trong `_review_outline.json` có còn chứa "illusion/mentira/lie" không.

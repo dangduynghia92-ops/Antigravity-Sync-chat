@@ -1,0 +1,489 @@
+======================================================================
+STEP 1: SEQUENCES (all)
+======================================================================
+
+SEQ_01 | dur=20.21s | loc=Tigris River, makeshift raft
+  subject: A newborn baby wrapped in damp wool experiencing a desperate escape on a raft
+  chars: ['child Yusuf ibn Ayyub']
+  text: Black water rushes beneath a makeshift raft. The wind off the Tigris River is freezing, biting through the damp wool wrapped around your fragile frame...
+
+SEQ_02 | dur=13.92s | loc=Inside the walls of Tikrit
+  subject: Shirkuh assassinating an official, triggering the governor's wrath and the family's flight
+  chars: ['Shirkuh, uncle']
+  text: Hours ago, your uncle Shirkuh drove a blade into a high-ranking Seljuk official inside the walls of Tikrit. The local governor demands immediate retri...
+
+SEQ_03 | dur=21.26s | loc=Tigris River, makeshift raft
+  subject: Najm ad-Din Ayyub physically straining to navigate the raft while shielding his newborn
+  chars: ['Najm ad-Din Ayyub, father', 'child Yusuf ibn Ayyub']
+  text: The raft groans against the heavy current. Your father, Najm ad-Din Ayyub, kneels on the lashed timber. He clutches your bundled form tightly against ...
+
+SEQ_04 | dur=13.38s | loc=Tigris River banks
+  subject: Guards with torches sweeping the riverbanks in search of the fleeing family
+  chars: []
+  text: Behind you, torches ignite along the fortress walls. The governor’s guards sweep the riverbanks. The water roars, drowning out the shouts of the hunti...
+
+SEQ_05 | dur=19.58s | loc=Tigris River, far bank
+  subject: The father pushing the raft to the far bank, securing their escape into exile
+  chars: ['child Yusuf ibn Ayyub', 'Najm ad-Din Ayyub, father']
+  text: You do not cry. The rhythmic heave of your father’s chest is your only anchor in the crushing black. He drives a wooden pole into the riverbed, pushin...
+
+
+======================================================================
+STEP 2b: CHARACTERS
+======================================================================
+
+  [PROTAGONIST] Kurdish-Noble-A = child Yusuf ibn Ayyub
+    age: child
+    visual: BODY: Compact infant build, approximately 3 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Small oval dot eyes (closed), thin expressive black eyebrows, small neutral mou
+
+  [NAMED] Kurdish-Noble-B = Najm ad-Din Ayyub, father
+    age: mature_adult
+    visual: BODY: Broad-shouldered and sturdy build, approximately 5 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Thick, well-groomed black beard and mustache, heavy furrowed black
+
+  [NAMED] Kurdish-Commander-A = Shirkuh, uncle
+    age: mature_adult
+    visual: BODY: Stocky and powerful warrior build, approximately 5 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Short, dense black beard, sharp angled eyebrows, grim expression. 
+
+
+======================================================================
+STEP 3: SCENES (SEQ_01, SEQ_03, SEQ_05)
+======================================================================
+
+--- SEQ_01 | loc= ---
+  visual_event: A newborn wrapped in damp charcoal wool lies on a rough timber raft pitching violently on the dark, fast-flowing Tigris river at night.
+
+  SEQ_01_SCN_01 | Wide Shot | Slow Pan | 4.0s | B-Roll
+    time: night
+    chars: []
+    action: Fast-flowing black water with white-capped spray crashes against the rough-hewn timber logs of a low-sitting raft.
+    has_crowd: False
+
+  SEQ_01_SCN_02 | Medium Shot | Static | 3.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A']
+    action: A small bundle of thick charcoal wool swaddling blankets rests on the wet timber logs, shifting slightly as wind blows the loose fabric edges.
+    has_crowd: False
+
+  SEQ_01_SCN_03 | Close-up | Static | 3.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A']
+    action: The pure white round face of the infant is visible inside the crimson linen under-cap, oval dot eyes tightly closed against the freezing spray.
+    has_crowd: False
+
+  SEQ_01_SCN_04 | Wide Shot | Static | 3.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A']
+    action: The timber raft tilts sharply upward on a large wave, causing the bundled infant to slide slightly across the wet logs before settling.
+    has_crowd: False
+
+  SEQ_01_SCN_05 | Close-up | Static | 3.0s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A']
+    action: Simplified mitten-shaped hands twitch and pull tightly at the edges of the damp charcoal wool blanket, drawing it closer to the face.
+    has_crowd: False
+
+  SEQ_01_SCN_06 | Medium Shot | Static | 2.71s | B-Roll
+    time: night
+    chars: []
+    action: The dark expanse of the fast-flowing river dominates the view, with harsh, flickering orange torchlight reflecting on the black water from the distant shore.
+    has_crowd: False
+
+--- SEQ_03 | loc= ---
+  visual_event: Najm ad-Din Ayyub kneels on a violently rocking timber raft in the dark, tightly clutching his swaddled newborn to his chest to shield him from the freezing water spray while straining to balance the craft.
+
+  SEQ_03_SCN_01 | Wide Shot | Slow Pan | 3.5s | B-Roll
+    time: night
+    chars: []
+    action: A rough-hewn timber raft pitches violently up and down on the dark, choppy water of the river.
+    has_crowd: False
+
+  SEQ_03_SCN_02 | Medium Shot | Static | 3.0s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B']
+    action: Kurdish-Noble-B kneels heavily on the wet logs, his hands gripping the coarse hemp ropes binding the raft.
+    has_crowd: False
+
+  SEQ_03_SCN_03 | Close-up | Static | 3.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B', 'Kurdish-Noble-A']
+    action: Kurdish-Noble-B pulls the charcoal wool bundle containing Kurdish-Noble-A tightly against his chest.
+    has_crowd: False
+
+  SEQ_03_SCN_04 | Close-up | Static | 3.0s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B', 'Kurdish-Noble-A']
+    action: White water splashes over the raft; Kurdish-Noble-B turns his shoulder to block the water from hitting the wool bundle.
+    has_crowd: False
+
+  SEQ_03_SCN_05 | Close-up | Extreme Slow Zoom In | 3.0s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B']
+    action: Kurdish-Noble-B's jaw clenches tightly, his thick black eyebrows furrowed deeply as he breathes heavily.
+    has_crowd: False
+
+  SEQ_03_SCN_06 | Medium Shot | Static | 2.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B']
+    action: The raft tilts sharply to one side; Kurdish-Noble-B throws his weight in the opposite direction to keep it from flipping.
+    has_crowd: False
+
+  SEQ_03_SCN_07 | Wide Shot | Static | 2.76s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B', 'Kurdish-Noble-A']
+    action: The raft plunges forward through the dark waves, Kurdish-Noble-B remaining anchored in the center holding the bundle.
+    has_crowd: False
+
+--- SEQ_05 | loc= ---
+  visual_event: Kurdish-Noble-B holds the swaddled infant Kurdish-Noble-A tightly on a timber raft, using a wooden pole to push across the dark river until they reach the muddy far bank.
+
+  SEQ_05_SCN_01 | Wide Shot | Slow Pan | 3.0s | B-Roll
+    time: night
+    chars: []
+    action: A rough timber raft floats on the pitch-black, fast-flowing Tigris River, surrounded by freezing white-capped spray.
+    has_crowd: False
+
+  SEQ_05_SCN_02 | Close-up | Static | 3.0s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A', 'Kurdish-Noble-B']
+    action: Kurdish-Noble-B holds the swaddled Kurdish-Noble-A tightly against his chest, his broad chest rising and falling steadily in the darkness.
+    has_crowd: False
+
+  SEQ_05_SCN_03 | Medium Shot | Slow Tracking | 3.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B']
+    action: Kurdish-Noble-B grips a long wooden pole with his mitten-shaped hands, driving it down into the dark water with heavy physical exertion.
+    has_crowd: False
+
+  SEQ_05_SCN_04 | Wide Shot | Static | 2.5s | B-Roll
+    time: night
+    chars: []
+    action: The timber raft glides further into the deep river channel, leaving the distant, torch-lit mudbrick walls of the citadel behind.
+    has_crowd: False
+
+  SEQ_05_SCN_05 | Medium Shot | Static | 2.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-B']
+    action: The rough-hewn logs of the raft slide onto the muddy, reed-covered riverbank, causing Kurdish-Noble-B to bend his knees and brace his legs.
+    has_crowd: False
+
+  SEQ_05_SCN_06 | Close-up | Extreme Slow Zoom In | 2.5s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A', 'Kurdish-Noble-B']
+    action: Kurdish-Noble-B looks down at the bundled Kurdish-Noble-A, his thick black eyebrows drawn together tightly.
+    has_crowd: False
+
+  SEQ_05_SCN_07 | Wide Shot | Static | 2.58s | A-Roll
+    time: night
+    chars: ['Kurdish-Noble-A', 'Kurdish-Noble-B']
+    action: Kurdish-Noble-B steps off the raft onto the wet alluvial soil, carrying Kurdish-Noble-A into the sparse date palms.
+    has_crowd: False
+
+
+======================================================================
+STEP 4: PROMPTS (SEQ_01, SEQ_03, SEQ_05)
+======================================================================
+
+--- SEQ_01_SCN_01 ---
+  lighting: Pitch-black winter night with cold, white-capped spray providing the only highlights on the water.
+  background: A wide view of the violent Tigris River at night, with dark muddy banks and dense reeds visible in the distance under a starless sky.
+  extras: none
+  key_props: ['makeshift timber raft', 'hemp ropes', 'date palm logs']
+  camera_angle: low-angle
+  effects: freezing white-capped spray, fast-flowing water currents
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a wide shot of the pitch-black Tigris River at night. Fast-flowing black water with white-capped spray crashes violently against a low-sitting makeshift raft made of rough-hewn date palm logs lashed with coarse hemp rope. The background features a richly painted landscape of dark, muddy riverbanks and dense reeds under a pitch-black winter sky. The scene is lit by the cold, white foam of the churning water. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_01_SCN_02 ---
+  lighting: Dark night lighting with subtle highlights on the wet logs and the texture of the charcoal wool.
+  background: The immediate surface of the timber raft with wet, dark wood grain and the dark, churning river water just beyond the edge.
+  extras: none
+  key_props: ['charcoal wool swaddling blanket', 'wet timber logs']
+  camera_angle: eye-level
+  effects: wind blowing loose fabric edges, water droplets on the wood
+  CHAR [Kurdish-Noble-A]:
+    costume: Wrapped tightly in a thick charcoal wool swaddling blanket over a small crimson silk tunic; a small crimson linen under-cap covers the head.
+    blocking: Centered on the raft, lying on the wet timber logs.
+    emotion: eyes closed, neutral mouth, thin expressive eyebrows
+    action: Resting as a small bundle, shifting slightly with the movement of the raft.
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-A] as a small bundle resting on wet timber logs at night. [Kurdish-Noble-A] has an oversized round pure white face, small oval dot eyes closed, thin expressive eyebrows, and a small neutral mouth with no nose, wrapped tightly in a thick charcoal wool swaddling blanket over a crimson silk tunic and a crimson linen under-cap. The background shows the immediate surroundings of the rough-hewn timber raft pitching on the dark water. Flat cel-shading and thick outlines define the character. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_01_SCN_03 ---
+  lighting: Dim night lighting focusing on the pure white face, with soft shadows in the folds of the crimson cap.
+  background: The textured, damp surface of the charcoal wool blanket surrounding the infant's head.
+  extras: none
+  key_props: ['crimson linen under-cap', 'indigo fabric tie']
+  camera_angle: close-up
+  effects: fine mist of freezing spray on the fabric
+  CHAR [Kurdish-Noble-A]:
+    costume: Crimson linen under-cap secured with a soft indigo fabric tie, charcoal wool blanket visible at the edges.
+    blocking: Tight close-up on the face.
+    emotion: eyes tightly closed, thin expressive eyebrows, small neutral mouth
+    action: Lying still with eyes shut against the elements.
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Noble-A] at night. [Kurdish-Noble-A] has an oversized round pure white face, small oval dot eyes tightly closed, thin expressive black eyebrows, and a small neutral mouth with no nose, framed by a crimson linen under-cap secured with a soft indigo tie. The background is a detailed painterly view of the damp, textured charcoal wool blanket. Flat cel-shading and thick outlines define the face. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_01_SCN_04 ---
+  lighting: Dramatic night lighting with the raft silhouetted against the white foam of a large wave.
+  background: A wide shot of the violent Tigris, with the raft tilting sharply upward against a massive, dark wave under a pitch-black sky.
+  extras: none
+  key_props: ['makeshift timber raft', 'large river wave']
+  camera_angle: low-angle
+  effects: violent pitching motion, heavy water spray
+  CHAR [Kurdish-Noble-A]:
+    costume: Default charcoal wool swaddling and crimson linen under-cap.
+    blocking: Sliding across the wet logs as the raft tilts.
+    emotion: eyes closed, thin eyebrows
+    action: Sliding slightly across the raft's surface due to the violent pitch of the wave.
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a wide shot of the Tigris River at night. [Kurdish-Noble-A] is a compact infant bundle with an oversized round pure white face and no nose, wrapped in charcoal wool, sliding across the wet logs of a timber raft as it tilts sharply on a large wave. The background is a richly painted environment of violent, pitch-black water and distant sandstone bluffs under a dark sky. Flat cel-shading and thick outlines define the character. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_01_SCN_05 ---
+  lighting: Low-key night lighting highlighting the texture of the damp wool and the white mitten-shaped hands.
+  background: The immediate texture of the damp charcoal wool and the rough, wet surface of the date palm logs.
+  extras: none
+  key_props: ['charcoal wool blanket']
+  camera_angle: close-up
+  effects: dampness on the wool, subtle movement of the fabric
+  CHAR [Kurdish-Noble-A]:
+    costume: Damp charcoal wool blanket and crimson silk tunic.
+    blocking: Focus on the hands at the edge of the blanket.
+    emotion: not applicable (focus on hands)
+    action: Twitching and pulling the blanket closer to the face with mitten-shaped hands.
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Noble-A] at night. [Kurdish-Noble-A] has simplified mitten-shaped hands twitching and pulling at the edges of a damp charcoal wool swaddling blanket near their oversized round pure white face with no nose. The background is the richly painted texture of the damp wool and the rough timber logs of the raft. Flat cel-shading and thick outlines define the hands and fabric. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_01_SCN_06 ---
+  lighting: Pitch-black night sky contrasted with the harsh, flickering orange glow of torches reflecting on the black water.
+  background: A medium shot of the fast-flowing Tigris River, with the distant shore showing silhouettes of reeds and the orange light of a hunting party.
+  extras: none
+  key_props: ['distant torches']
+  camera_angle: eye-level
+  effects: orange light reflections on black water, atmospheric haze
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a medium shot of the fast-flowing Tigris River at night. The dark expanse of pitch-black water is illuminated by the harsh, flickering orange glow of torches reflecting from the distant shore. The background features a detailed painterly landscape of muddy banks and dense river reeds under a pitch-black winter sky. No characters are present. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_01 ---
+  lighting: Pitch-black night with harsh, flickering orange light from distant torches reflecting off the churning water.
+  background: A wide view of the violent Tigris River at night. The water is pitch-black and fast-flowing, churning with freezing white-capped spray and deep central channels.
+  extras: none
+  key_props: ['makeshift timber raft of date palm trunks', 'coarse hemp ropes']
+  camera_angle: low-angle
+  effects: heavy white water spray, mist, turbulent water ripples
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a makeshift timber raft constructed from date palm trunks pitching violently on the pitch-black, fast-flowing Tigris River at night. The scene features detailed painterly water with freezing white-capped spray and deep, dark channels. The background shows the faint, dark silhouettes of sandstone bluffs under a pitch-black winter sky. The lighting is dominated by the harsh, flickering orange glow of distant torches reflecting off the wet wood and churning river. This is a professional animation frame with rich textures on the timber and water, in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_02 ---
+  lighting: Low-key lighting with orange torchlight glinting off the wet logs and the character's crimson silk thobe.
+  background: Medium shot focusing on the surface of the raft. The timber logs show rich painterly grain and wet textures, lashed with thick hemp ropes.
+  extras: none
+  key_props: ['hemp ropes', 'date palm logs']
+  camera_angle: eye-level
+  effects: water droplets on clothing, slight mist
+  CHAR [Kurdish-Noble-B]:
+    costume: Long crimson silk thobe, heavy charcoal wool cloak (aba), and a black silk hijab draped over a crimson under-cap.
+    blocking: Center frame, kneeling low on the wet timber logs.
+    emotion: determined: heavy furrowed black eyebrows, set mouth, small oval dot eyes
+    action: gripping the coarse hemp ropes of the raft with simplified mitten-shaped hands
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] kneeling heavily on the wet logs of a pitching raft. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, heavy furrowed black eyebrows, a thick black beard, and no nose. He wears a crimson silk thobe and a charcoal wool cloak with thick dark outlines and flat cel-shading. He grips coarse hemp ropes with simplified mitten-shaped hands. The background is a detailed painterly depiction of the wet, rough-hewn timber logs of the raft surrounded by the dark, churning Tigris at night. The lighting is a flickering orange glow against the deep shadows of the river. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_03 ---
+  lighting: Dramatic torchlight from the side, creating high-contrast shadows on the charcoal wool and crimson silk.
+  background: Close-up of the characters. The background is a blur of dark, painterly river water and white spray.
+  extras: none
+  key_props: ['charcoal wool swaddling blanket']
+  camera_angle: eye-level
+  effects: spray of white water in the periphery
+  CHAR [Kurdish-Noble-B]:
+    costume: Crimson silk thobe and charcoal wool cloak, wet from river spray.
+    blocking: Center, leaning forward protectively.
+    emotion: focused: sharp angled eyebrows, small determined mouth
+    action: pulling the swaddled bundle of [Kurdish-Noble-A] tightly against his chest
+  CHAR [Kurdish-Noble-A]:
+    costume: Wrapped in a thick charcoal wool swaddling blanket with a small crimson linen under-cap visible.
+    blocking: Held securely in [Kurdish-Noble-B]'s arms.
+    emotion: peaceful: small oval dot eyes closed, thin eyebrows, neutral mouth
+    action: resting motionless within the swaddle
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] pulling a charcoal wool bundle containing [Kurdish-Noble-A] tightly to his chest. [Kurdish-Noble-B] has an oversized round pure white face, thick black beard, furrowed eyebrows, and no nose. [Kurdish-Noble-A] is an infant with a pure white face and closed oval dot eyes, wrapped in charcoal wool. Both characters have compact stylized bodies with flat cel-shading and thick dark outlines. The background is a richly painted, dark, and atmospheric river scene with white-capped spray. The lighting is a warm, flickering orange against the cold black night. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_04 ---
+  lighting: The orange glow of torches is partially obscured by the wall of white water spray.
+  background: Close-up focusing on the impact of the water. The background shows the dark, violent Tigris and the texture of the wet charcoal wool cloak.
+  extras: none
+  key_props: ['charcoal wool cloak']
+  camera_angle: low-angle
+  effects: dynamic splash of white-capped river water, droplets flying through the air
+  CHAR [Kurdish-Noble-B]:
+    costume: Charcoal wool cloak and black silk hijab, drenched with water.
+    blocking: Turning his back toward the camera to shield the bundle.
+    emotion: intense: clenched teeth line, deeply furrowed eyebrows
+    action: hunching his shoulder to block a massive splash of white river water
+  CHAR [Kurdish-Noble-A]:
+    costume: Charcoal wool swaddling blanket.
+    blocking: Tucked under [Kurdish-Noble-B]'s chin and shoulder.
+    emotion: eyes closed
+    action: shielded from the spray
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a wall of white water splashing over a raft. [Kurdish-Noble-B], with an oversized round pure white face, thick black beard, and no nose, turns his shoulder sharply to block the freezing spray from hitting the bundle he carries. He wears a charcoal wool cloak and crimson thobe with flat cel-shading. Tucked in his arms is [Kurdish-Noble-A], an infant with a pure white face and closed eyes. The background is a painterly, dark river environment with atmospheric depth. The lighting is a harsh, flickering orange clashing with the white foam of the splash. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_05 ---
+  lighting: Harsh orange torchlight from below, highlighting the lower half of the round white face and the texture of the black beard.
+  background: Out-of-focus dark river night, very minimal detail to keep focus on the face.
+  extras: none
+  key_props: ['none']
+  camera_angle: eye-level
+  effects: mist and fine water droplets on the face and beard
+  CHAR [Kurdish-Noble-B]:
+    costume: Black silk hijab and charcoal wool cloak collar visible.
+    blocking: Extreme close-up on the face.
+    emotion: fury and strain: deeply furrowed V-shaped eyebrows, clenched teeth line, small oval dot eyes
+    action: breathing heavily, jaw clenched in physical exertion
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines in an extreme close-up of [Kurdish-Noble-B]. He has an oversized round pure white face, small oval black dot eyes, deeply furrowed V-shaped eyebrows, a clenched teeth line, and no nose. His thick black beard and mustache are rendered as a flat dark shape. The face surface is clean and smooth white. The lighting is a harsh orange glow from below, casting a single shadow tone across his face. The background is a dark, painterly night sky. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_06 ---
+  lighting: Flickering orange light shifting across the character as the raft moves violently.
+  background: Medium shot of the tilting raft. The date palm logs are slick with water, and the dark Tigris waves are visible in the background.
+  extras: none
+  key_props: ['tilting timber raft', 'hemp ropes']
+  camera_angle: dutch-angle
+  effects: heavy river spray, turbulent motion lines
+  CHAR [Kurdish-Noble-B]:
+    costume: Crimson thobe, charcoal cloak, and indigo wool sash.
+    blocking: Leaning hard to the left side of the frame as the raft tilts right.
+    emotion: strained: raised worried eyebrows, clenched mouth
+    action: throwing his body weight to counter-balance the tilting timber raft
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] on a tilting timber raft. The raft is angled sharply, and [Kurdish-Noble-B] throws his weight in the opposite direction to stabilize it. He has an oversized round pure white face, small oval dot eyes, worried eyebrows, and no nose. He wears a crimson thobe and charcoal cloak with flat cel-shading. The background is a richly painted scene of the violent, pitch-black Tigris at night with white-capped waves. The camera angle is a tilted dutch-angle to emphasize the chaos. Lighting is a flickering, scene-driven orange torchlight. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_03_SCN_07 ---
+  lighting: The scene is lit by the distant, harsh orange glow of torches from the citadel walls, casting long reflections on the black water.
+  background: Wide shot of the raft plunging through the dark waves of the Tigris. In the distance, the steep sandstone bluffs and the faint outline of a citadel are visible under the pitch-black sky.
+  extras: none
+  key_props: ['makeshift timber raft']
+  camera_angle: high-angle
+  effects: white-capped spray, atmospheric depth, dark mist
+  CHAR [Kurdish-Noble-B]:
+    costume: Full Kurdish noble attire, charcoal cloak billowing slightly.
+    blocking: Center of the raft, anchored and low.
+    emotion: determined: furrowed eyebrows
+    action: holding the bundle of [Kurdish-Noble-A] securely while the raft plunges through waves
+  CHAR [Kurdish-Noble-A]:
+    costume: Charcoal wool swaddling.
+    blocking: Held in [Kurdish-Noble-B]'s arms.
+    emotion: eyes closed
+    action: motionless
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting a wide shot of the makeshift timber raft plunging forward through the dark waves of the Tigris River. [Kurdish-Noble-B] is anchored in the center, a compact stylized figure with an oversized round pure white face and no nose, holding the swaddled [Kurdish-Noble-A]. The background is a detailed painterly landscape of the pitch-black river and the looming sandstone bluffs of Tikrit. The lighting is a distant, harsh orange glow from the citadel above, piercing the winter night. The characters feature flat cel-shading and thick dark outlines. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_01 ---
+  lighting: Pitch-black winter night with freezing white-capped spray reflecting a faint, distant orange glow.
+  background: A wide view of the fast-flowing Tigris River with deep central channels and violent, churning water.
+  extras: none
+  key_props: ['makeshift timber raft of date palm trunks', 'hemp ropes']
+  camera_angle: eye-level
+  effects: freezing white-capped spray, heavy water mist
+  FLAT_PROMPT:
+    Stylized historical animation illustration, detailed painterly background of the Tigris River at night, rich texture and atmospheric depth on the churning pitch-black water, freezing white-capped spray crashing against a makeshift timber raft made of date palm trunks lashed with hemp ropes. The scene is illuminated by a faint, distant orange glow against a pitch-black winter sky, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_02 ---
+  lighting: Low-light night scene with harsh, flickering orange highlights from a nearby torch catching the edges of the characters.
+  background: The dark, textured surface of the timber raft and the deep black void of the river behind them.
+  extras: none
+  key_props: ['charcoal wool swaddling blanket', 'charcoal wool aba']
+  camera_angle: eye-level
+  effects: subtle mist, flickering torchlight shadows
+  CHAR [Kurdish-Noble-A]:
+    costume: wrapped tightly in a thick charcoal wool swaddling blanket over a crimson silk tunic, with a small crimson linen under-cap
+    blocking: held tightly against the chest of [Kurdish-Noble-B]
+    emotion: peaceful: small oval dot eyes closed, thin neutral eyebrows, small neutral mouth
+    action: sleeping soundly while being held
+  CHAR [Kurdish-Noble-B]:
+    costume: heavy charcoal wool cloak (aba) over a crimson silk thobe, black silk hijab over a crimson under-cap
+    blocking: center frame, holding the infant
+    emotion: determined: thick black beard, heavy furrowed black eyebrows, firm mouth
+    action: holding [Kurdish-Noble-A] tightly with mitten-shaped hands, chest rising and falling with heavy breath
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] holding [Kurdish-Noble-A] tightly. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, heavy furrowed black eyebrows, a thick black beard, and no nose, wearing a charcoal wool aba and black silk hijab. [Kurdish-Noble-A] has an oversized round pure white face, closed oval dot eyes, thin eyebrows, and no nose, wrapped in a charcoal wool swaddling blanket. Both have compact stylized bodies, thick dark outlines, and flat cel-shading. The background is a richly painted night scene on a timber raft with dark water spray. Lighting is a flickering orange torchlight glow against the dark. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_03 ---
+  lighting: Night lighting, dark and atmospheric with the cold white spray of the river catching the light.
+  background: The edge of the timber raft and the fast-moving, pitch-black water of the Tigris.
+  extras: none
+  key_props: ['rough-hewn wooden punting pole', 'timber raft logs']
+  camera_angle: low-angle
+  effects: water ripples, splashing spray
+  CHAR [Kurdish-Noble-B]:
+    costume: crimson silk thobe with gold embroidery, heavy charcoal wool cloak, wide indigo and charcoal wool sash
+    blocking: leaning forward, driving the pole into the water
+    emotion: strained: heavy furrowed black eyebrows, clenched teeth line, small oval dot eyes
+    action: gripping a long wooden punting pole with mitten-shaped hands and pushing it into the dark river
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] driving a long wooden pole into the water. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, heavy furrowed black eyebrows, a thick black beard, and no nose, wearing a crimson silk thobe and charcoal cloak with a wide woven sash. He has a compact stylized body, mitten-shaped hands gripping the pole, thick dark outlines, and flat cel-shading. The background is a richly painted dark river at night with visible water texture and white-capped spray. Lighting is natural night-time darkness with cold highlights on the water. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_04 ---
+  lighting: Pitch-black night with the distant, flickering orange glow of torches along the citadel walls.
+  background: A wide view of the deep Tigris river channel with the distant, torch-lit mudbrick walls and battlements of the Tikrit citadel receding into the darkness.
+  extras: none
+  key_props: ['timber raft', 'mudbrick citadel walls']
+  camera_angle: high-angle
+  effects: distant torch smoke, river mist
+  FLAT_PROMPT:
+    Stylized historical animation illustration, detailed painterly background of a deep river channel at night, rich texture on the mudbrick walls of a distant citadel illuminated by flickering orange torches. A rough timber raft glides across the pitch-black water, leaving the fortress behind. The sky is a pitch-black winter night with atmospheric depth and river mist, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_05 ---
+  lighting: Dark night lighting with the muddy bank reflecting the dim, cold light of the sky.
+  background: A muddy, reed-covered riverbank with dense Phragmites reeds and wet alluvial soil.
+  extras: none
+  key_props: ['timber raft logs', 'river reeds']
+  camera_angle: low-angle
+  effects: mud splashing, reeds swaying
+  CHAR [Kurdish-Noble-B]:
+    costume: heavy charcoal wool cloak, crimson thobe, soft brown leather khuff (boots)
+    blocking: legs braced, knees bent as the raft hits the bank
+    emotion: focused: heavy furrowed black eyebrows, small oval dot eyes, determined mouth
+    action: bracing his body against the impact of the raft hitting the muddy shore
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] bracing his legs on a raft. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, heavy furrowed black eyebrows, a thick black beard, and no nose, wearing a charcoal cloak and leather boots. He has a compact stylized body with bent knees, thick dark outlines, and flat cel-shading. The background is a richly painted muddy riverbank with dense green reeds and wet, textured alluvial soil. Lighting is a dark night scene with subtle reflections on the mud. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_06 ---
+  lighting: Soft, dim night lighting focusing on the faces of the characters.
+  background: The dark, textured charcoal wool of the cloak and the blurry dark reeds in the distance.
+  extras: none
+  key_props: ['swaddling blanket']
+  camera_angle: close-up
+  effects: none
+  CHAR [Kurdish-Noble-A]:
+    costume: charcoal wool swaddling, crimson linen under-cap with indigo tie
+    blocking: cradled in the arms of [Kurdish-Noble-B]
+    emotion: peaceful: closed oval dot eyes, thin neutral eyebrows
+    action: resting quietly
+  CHAR [Kurdish-Noble-B]:
+    costume: black silk hijab, charcoal wool cloak
+    blocking: looking down toward the infant
+    emotion: protective and worried: thick black eyebrows drawn together tightly, small oval dot eyes, neutral mouth
+    action: gazing down at the bundled infant
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines in a close-up of [Kurdish-Noble-B] looking at [Kurdish-Noble-A]. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, thick black eyebrows drawn together, a thick black beard, and no nose. [Kurdish-Noble-A] has an oversized round pure white face, closed oval dot eyes, and no nose, wrapped in charcoal wool. Both have thick dark outlines and flat cel-shading. The background is a richly painted texture of dark wool and a dim night atmosphere. Lighting is soft and low-key for a night scene. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+--- SEQ_05_SCN_07 ---
+  lighting: Pitch-black night with deep shadows among the trees.
+  background: A wide view of the muddy riverbank with sparse date palms and low scrub brush under a black winter sky.
+  extras: none
+  key_props: ['timber raft', 'date palms', 'scrub brush']
+  camera_angle: wide shot
+  effects: mist among the palms
+  CHAR [Kurdish-Noble-B]:
+    costume: charcoal wool cloak, crimson thobe, brown leather boots, carrying the swaddled infant
+    blocking: walking away from the raft into the trees
+    emotion: determined: heavy black eyebrows, small oval dot eyes, firm mouth
+    action: stepping off the raft onto the muddy bank and walking into the palms
+  CHAR [Kurdish-Noble-A]:
+    costume: charcoal wool swaddling blanket
+    blocking: tucked under the arm of [Kurdish-Noble-B]
+    emotion: peaceful: closed oval dot eyes
+    action: being carried
+  FLAT_PROMPT:
+    A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-B] carrying [Kurdish-Noble-A] into the trees. [Kurdish-Noble-B] has an oversized round pure white face, small oval dot eyes, thick black eyebrows, and no nose, wearing a charcoal cloak and crimson thobe. [Kurdish-Noble-A] is a swaddled bundle with a round white face and closed eyes. Both have compact stylized bodies, thick dark outlines, and flat cel-shading. The background is a richly painted night landscape of a muddy riverbank with sparse date palms and low scrub brush under a pitch-black sky. Lighting is dark and atmospheric with deep shadows. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.

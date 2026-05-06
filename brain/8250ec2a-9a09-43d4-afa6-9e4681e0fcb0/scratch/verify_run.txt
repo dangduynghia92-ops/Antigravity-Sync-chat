@@ -1,0 +1,121 @@
+============================================================
+ALL OUTPUT FILES
+============================================================
+  ch_01_Level_1__Vulnerability_step0_sentences.json (6078 bytes)
+  ch_01_Level_1__Vulnerability_step1_sequences.json (3864 bytes)
+  ch_01_Level_1__Vulnerability_step2_characters.json (4764 bytes)
+  ch_01_Level_1__Vulnerability_step2_world_bible.json (12816 bytes)
+  ch_01_Level_1__Vulnerability_step3_scenes.json (25331 bytes)
+  ch_01_Level_1__Vulnerability_step4_prompts.json (85938 bytes)
+
+============================================================
+STEP 3: FIELD CHECK (first 3 scenes)
+============================================================
+
+--- ch_01_Level_1__Vulnerability_step3_scenes.json ---
+
+  SEQ_01_SCN_01:
+    costume_note: ✅ removed
+    lighting_and_atmosphere: ✅ removed
+    background_and_extras: ✅ removed
+    has_crowd: ✅ False
+    physical_action: Fast-flowing black water with white-capped spray crashes against the rough-hewn 
+    shot_type: Wide Shot
+    time_of_day: night
+
+  SEQ_01_SCN_02:
+    costume_note: ✅ removed
+    lighting_and_atmosphere: ✅ removed
+    background_and_extras: ✅ removed
+    has_crowd: ✅ False
+    physical_action: A small bundle of thick charcoal wool swaddling blankets rests on the wet timber
+    shot_type: Medium Shot
+    time_of_day: night
+
+  SEQ_02_SCN_01:
+    costume_note: ✅ removed
+    lighting_and_atmosphere: ✅ removed
+    background_and_extras: ✅ removed
+    has_crowd: ✅ False
+    physical_action: Kurdish-Commander-A stands in the center of the stone hall, breathing heavily as
+    shot_type: Wide Shot
+    time_of_day: night
+
+  SEQ_02_SCN_02:
+    costume_note: ✅ removed
+    lighting_and_atmosphere: ✅ removed
+    background_and_extras: ✅ removed
+    has_crowd: ✅ False
+    physical_action: Harsh orange torchlight flickers against the rough limestone wall, casting the l
+    shot_type: Wide Shot
+    time_of_day: night
+
+============================================================
+STEP 4: FIELD CHECK (first 5 prompts)
+============================================================
+
+--- ch_01_Level_1__Vulnerability_step4_prompts.json ---
+
+  SEQ_01_SCN_01:
+    characters_detail: ✅ 0 chars
+    extras: ✅ none
+    lighting: ✅
+    background: ✅
+    character_blocking (OLD): ✅ removed
+    emotion (OLD): ✅ removed
+    crowd_description (OLD): ✅ removed
+    flat_prompt: A stylized historical animation illustration with thick dark outlines depicting a wide shot of the pitch-black Tigris Ri...
+
+  SEQ_01_SCN_02:
+    characters_detail: ✅ 1 chars
+      - [Kurdish-Noble-A]: costume=Wrapped tightly in a thick charcoal wool, blocking=Centered on the raft, lying on, action=Resting as a small bundle, shifting slig
+    extras: ✅ none
+    lighting: ✅
+    background: ✅
+    character_blocking (OLD): ✅ removed
+    emotion (OLD): ✅ removed
+    crowd_description (OLD): ✅ removed
+    flat_prompt: A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Noble-A] as a small bundle rest...
+
+  SEQ_01_SCN_03:
+    characters_detail: ✅ 1 chars
+      - [Kurdish-Noble-A]: costume=Crimson linen under-cap secured with a s, blocking=Tight close-up on the face., action=Lying still with eyes shut against the e
+    extras: ✅ none
+    lighting: ✅
+    background: ✅
+    character_blocking (OLD): ✅ removed
+    emotion (OLD): ✅ removed
+    crowd_description (OLD): ✅ removed
+    flat_prompt: A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Noble-A] at night...
+
+  SEQ_01_SCN_04:
+    characters_detail: ✅ 1 chars
+      - [Kurdish-Noble-A]: costume=Default charcoal wool swaddling and crim, blocking=Sliding across the wet logs as, action=Sliding slightly across the raft's surfa
+    extras: ✅ none
+    lighting: ✅
+    background: ✅
+    character_blocking (OLD): ✅ removed
+    emotion (OLD): ✅ removed
+    crowd_description (OLD): ✅ removed
+    flat_prompt: A stylized historical animation illustration with thick dark outlines depicting a wide shot of the Tigris River at night...
+
+  SEQ_01_SCN_05:
+    characters_detail: ✅ 1 chars
+      - [Kurdish-Noble-A]: costume=Damp charcoal wool blanket and crimson s, blocking=Focus on the hands at the edge, action=Twitching and pulling the blanket closer
+    extras: ✅ none
+    lighting: ✅
+    background: ✅
+    character_blocking (OLD): ✅ removed
+    emotion (OLD): ✅ removed
+    crowd_description (OLD): ✅ removed
+    flat_prompt: A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Noble-A] at night...
+
+============================================================
+[civilian_man] CHECK IN FLAT_PROMPTS
+============================================================
+  ✅ No bracket labels for extras found
+
+============================================================
+PROMPT_SUFFIX CHECK
+============================================================
+  ch_01_Level_1__Vulnerability_step4_prompts.json: 28/28 prompts have suffix ✅
