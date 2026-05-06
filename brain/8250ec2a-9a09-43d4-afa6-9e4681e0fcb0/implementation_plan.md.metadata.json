@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to add a Location Ref checkbox to UI. When unchecked: skip Step 2c, Step 3 outputs location_anchor (descriptive) instead of locked_location (label), Step 4 uses inline environment template without [Location-Label] brackets, Sheet 2 has no location rows. When checked: everything works as current. Touches 2 files with 6 change points in pipeline.",
-  "updatedAt":  "2026-05-06T01:38:48.262352700Z",
-  "version":  "8",
+  "summary":  "Plan to refactor Step 3 (Scene Director) and Step 4 (Prompt Writer) in the video pipeline. Step 3 will be simplified to only handle scene structure decisions (camera, timing, action, characters). Visual detail fields (costume_note, lighting_and_atmosphere, background_and_extras) will be removed from Step 3 and handled entirely by Step 4 using existing reference data (character sheets, World Bible, locations). Includes two open questions about crowd type hints and special lighting cases.",
+  "updatedAt":  "2026-05-06T07:50:43.493137500Z",
+  "version":  "9",
   "requestFeedback":  true
 }
