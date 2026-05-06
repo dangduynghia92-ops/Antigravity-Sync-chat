@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Walkthrough summarizing all changes made for Step 0 SRT+TXT alignment: core functions, pipeline integration, and UI overhaul.",
-  "updatedAt":  "2026-05-05T16:34:23.451234800Z",
-  "version":  "2"
+  "summary":  "Walkthrough summarizing the Location Reference Toggle feature: UI checkbox, pipeline branching at Steps 2c/3/4, and inline environment prompt template.",
+  "updatedAt":  "2026-05-06T01:46:23.178322700Z",
+  "version":  "3"
 }

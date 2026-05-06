@@ -1,313 +1,198 @@
-# Step 0: SRT + TXT Alignment Pre-processor
+# Location Reference Toggle — Inline Environment Mode
 
-## Mục tiêu
+## Background
 
-Step 0 là **bước tiền xử lý độc lập**: nhận SRT + TXT → output ra **file kết quả** (corrected SRT) lưu trong folder riêng → các bước sau đọc file này.
+Hiện tại pipeline tạo location reference file (Step 2c) rồi dùng `[Location-Label]` bracket trong prompt. Cách này gây prompt bị gò bó — mọi scene trong 1 sequence đều nhét cùng label `[Tigris River - Mid-Stream]` bất kể shot type (Wide hay Close-up), khiến AI image gen render không tự nhiên.
 
-```
-Input:                          Output (folder aligned/):
-  ch_01.srt  +  ch_01.txt  →     ch_01.srt   ← corrected: text đúng + timing đúng + có dấu câu
-  ch_02.srt  +  ch_02.txt  →     ch_02.srt
-  ch_03.srt  +  ch_03.txt  →     ch_03.srt
-```
+**Giải pháp**: Thêm checkbox "Location Ref" trên UI. Khi **tắt** → bỏ Step 2c, Step 3 mô tả environment inline, Step 4 weave environment vào prompt thay vì dùng label.
+
+## User Review Required
 
 > [!IMPORTANT]
-> - Chỉ chạy khi có CẢ SRT + TXT pair
-> - Output là file SRT chuẩn (text đúng + timing từ SRT gốc + dấu câu từ TXT)
-> - Chapter nào pass verify → save vào `aligned/` → không chạy lại
-> - Re-run chỉ xử lý chapters chưa có trong `aligned/`
+> Khi tắt Location Ref, file Excel Sheet 2 (Reference Images) sẽ **không còn location rows** — chỉ còn character reference. Cột "Location" ở Sheet 1 sẽ hiển thị `location_anchor` (mô tả ngắn) thay vì label.
+
+## Proposed Changes
+
+### UI — video_prompt_tab.py
+
+#### [MODIFY] [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
+
+**Thêm checkbox `Location Ref`** vào config area (cạnh Safety/Quality/Historical):
+```python
+self.location_ref_var = QCheckBox("Location Ref")
+self.location_ref_var.setChecked(True)  # default = ON (hiện tại)
+r2.addWidget(self.location_ref_var)
+```
+
+**Truyền vào constraints dict:**
+```python
+constraints = {
+    "safety": self.safety_var.isChecked(),
+    "quality": self.quality_var.isChecked(),
+    "historical": self.historical_var.isChecked(),
+    "location_ref": self.location_ref_var.isChecked(),  # NEW
+}
+```
+
+Không cần thay đổi gì ở pipeline constructor — constraints đã được pass sẵn.
 
 ---
 
-## Phase 1: UI — Scan & Pair
+### Pipeline — video_pipeline.py
 
-### [MODIFY] [video_prompt_tab.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/ui/video_prompt_tab.py)
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
 
-#### Tree Widget: 4 cột mới
+**6 điểm sửa:**
 
-```
-| Chapter Name                    | SRT         | TXT         | Status      |
-|---------------------------------|-------------|-------------|-------------|
-| ch_01_Level_1__Vulnerability    | ✅ .srt     | ✅ .txt     | Ready       |
-| ch_02_Level_2__Resignation      | ✅ .srt     | ❌ missing  | Missing TXT |
-| ch_03_Level_3__Endurance        | ✅ .srt     | ✅ .txt     | Ready       |
-```
-
-- Bỏ cột **Style** (dùng combo ở config area)
-- Bỏ cột **Progress** (dùng log)
-- Bỏ buttons **Apply Style**, **Apply All**
-
-#### Scan Logic
+##### 1. `run()` — Skip Step 2c khi `location_ref=False`
 
 ```python
-def _scan_folder(self):
-    # 1. Scan tất cả *.srt
-    srt_files = {basename: path for *.srt in folder}
-    
-    # 2. Với mỗi SRT, tìm *.txt cùng basename
-    for basename, srt_path in srt_files:
-        txt_path = srt_path.replace('.srt', '.txt')
-        has_txt = os.path.exists(txt_path)
-        
-        # 3. Thêm vào tree
-        add_row(basename, srt="✅", txt="✅" or "❌", status="Ready" or "Missing TXT")
-```
+# Trong run(), thay step chain:
+use_loc_ref = self.constraints.get("location_ref", True)
 
-#### Run Validation
-
-```python
-def _run_all(self):
-    missing = [row for row in rows if not row.has_txt]
-    if missing:
-        log(f"Cannot run: {len(missing)} chapter(s) missing TXT pair")
-        return  # KHÔNG chạy
-```
-
-#### Data truyền vào pipeline
-
-```python
-chapter_pairs = [
-    {"srt_path": "ch_01.srt", "txt_path": "ch_01.txt"},
-    {"srt_path": "ch_02.srt", "txt_path": "ch_02.txt"},
-    ...
+steps = [
+    ("step0", self._run_step0),
+    ("step1", self._run_step1),
+    ("step2a", self._run_step2a),
+    ("step2b", self._run_step2b),
 ]
+if use_loc_ref:
+    steps.append(("step2c", self._run_step2c))
+else:
+    # Mark step2c as skipped in UI
+    steps.append(("_skip_2c", lambda: (
+        self._update_step("step2c", "done", "Skipped (inline mode)"),
+        self._log("[Step 2c] ⏭ Skipped — inline location mode"),
+        True
+    )[-1]))
+
+steps.extend([
+    ("_labels", lambda: (self._extract_valid_labels(), True)[1]),
+    ("step3", self._run_step3),
+    ("step4", self._run_step4),
+    ("step5", self._run_step5),
+])
 ```
 
----
+##### 2. `_extract_valid_labels()` — Không extract location labels khi inline
 
-## Phase 2: LLM Correct (per-chapter)
+Giữ nguyên logic, nhưng khi `location_ref=False`, `valid_labels["locations"]` sẽ tự động rỗng (vì `locations_data` rỗng).
 
-### [MODIFY] [srt_sentence_parser.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_sentence_parser.py)
+→ **Không cần sửa** — tự hoạt động.
 
-Thêm function `correct_srt_with_txt(srt_cues, txt_content, api_client, tier)`:
+##### 3. `_build_labels_block()` — Bỏ location labels
 
-#### LLM Input
+Giữ nguyên logic — khi `valid_labels["locations"]` rỗng, block tự không in location.
 
+→ **Không cần sửa**.
+
+##### 4. Step 3: `STEP3_SYSTEM_PROMPT` + `_build_visual_reference()` + `_process_sequence_step3()`
+
+**Rule 1 (Label Lock)** — thay đổi khi inline mode:
+
+Hiện tại:
 ```
-=== ORIGINAL SCRIPT (correct spelling, has punctuation) ===
-Black water rushes beneath a makeshift raft. The wind off the Tigris River
-is freezing, biting through the damp wool wrapped around your fragile frame...
+### Rule 1: Label Lock (CRITICAL)
+`locked_location` must match a location label.
+```
 
-=== SRT CUES (correct timing, may have wrong spelling, no punctuation) ===
-1|0.000|2.800|black water rushes beneath a makeshift raft
-2|3.166|5.266|the wind off the Tigris River is freezing
-3|5.266|8.400|biting through the damp wool wrapped around your fragile frame
+Inline mode thêm:
+```
+### Rule 1: Label Lock (CRITICAL)
+`character_labels` must match character labels.
+IF location labels are provided in === AVAILABLE LABELS ===, `locked_location` must match.
+IF NO location labels provided, write `location_anchor` — a one-sentence description 
+of the PHYSICAL PLACE where this sequence happens (era-specific, filmable).
+```
+
+**Output format** — thêm `location_anchor`:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "locked_location": "",              // empty khi inline mode
+  "location_anchor": "Makeshift timber raft crossing the Tigris River at night, 1138 AD",
+  "visual_event": "...",
+  "scenes": [...]
+}
+```
+
+**`_build_visual_reference()`** — khi inline mode, bỏ VISUAL REFERENCE: LOCATIONS section (vì `locations_data` rỗng, tự bỏ).
+
+→ **Không cần sửa** — đã handle `self.locations_data` rỗng.
+
+**`_validate_scene_labels()`** — khi `valid_labels["locations"]` rỗng, bỏ qua location validation.
+
+→ **Không cần sửa** — code hiện tại kiểm tra `loc not in valid_labels["locations"]`, nếu list rỗng thì skip.
+
+##### 5. Step 4: `STEP4_USER_TEMPLATE` + `_build_mini_bible()` + `_process_sequence_step4()`
+
+**`STEP4_USER_TEMPLATE`** — thay đổi rule cho location:
+
+Hiện tại:
+```
+Location: [{location}]
 ...
-
-=== TASK ===
-For each SRT cue:
-1. Fix spelling to match the ORIGINAL SCRIPT
-2. Add punctuation (. , ! ?) from the ORIGINAL SCRIPT at correct positions
-3. Fix capitalization to match the ORIGINAL SCRIPT
-Return ONLY corrected text per cue. Keep SAME number of cues. Do NOT merge or split cues.
-
-Return JSON array:
-[
-  {"id": 1, "text": "Black water rushes beneath a makeshift raft."},
-  {"id": 2, "text": "The wind off the Tigris River is freezing,"},
-  ...
-]
+- flat_prompt MUST contain the [Location-Label] from the sequence — NEVER omit it
 ```
 
-#### Code ghép timing
-
-```python
-for original_cue, llm_item in zip(srt_cues, llm_output):
-    corrected = SRTSegment(
-        index=original_cue.index,
-        start_time=original_cue.start_time,   # ← giữ nguyên từ SRT
-        end_time=original_cue.end_time,         # ← giữ nguyên từ SRT
-        text=llm_item["text"],                   # ← text đã sửa từ LLM
-    )
+Inline mode:
 ```
+Location Context: {location}
+...
+- flat_prompt MUST describe the environment naturally based on the scene's 
+  background_and_extras and lighting_and_atmosphere fields.
+  For Wide/Medium shots: describe the full environment.
+  For Close-ups: describe only what the camera sees (surface texture, object detail) 
+  with subtle environmental hints.
+- Do NOT use [bracket] notation for locations.
+```
+
+→ Cần **2 template**: `STEP4_USER_TEMPLATE` (hiện tại) và `STEP4_USER_TEMPLATE_INLINE`.
+
+**`_build_mini_bible()`** — khi inline mode:
+- Bỏ phần location reference
+- Giữ character reference + World Bible compact
+
+**`_process_sequence_step4()`**:
+- Chọn template dựa trên `location_ref` flag
+- `location` field trong output = `location_anchor` (descriptive) thay vì label
+
+##### 6. Step 5: `_export_excel()` — Sheet 2 bỏ location rows
+
+Khi `location_ref=False`:
+- Sheet 1 cột "Location" hiển thị `location_anchor`
+- Sheet 2 **không output location reference images** (vì không có `locations_data`)
+
+→ **Không cần sửa** — code hiện tại loop `self.locations_data.get("locations", [])`, rỗng thì skip.
 
 ---
 
-## Phase 3: Code Verify
-
-### [MODIFY] [srt_sentence_parser.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/srt_sentence_parser.py)
-
-Thêm function `verify_corrected_srt(corrected_cues, original_srt_cues, txt_content)`:
-
-#### Check 1: Cue count
-```python
-if len(corrected) != len(original):
-    return VerifyResult(ok=False, error="cue_count", 
-                        detail=f"Expected {len(original)}, got {len(corrected)}")
-```
-
-#### Check 2: Timecode integrity
-```python
-for cue in corrected:
-    if cue.end_time <= cue.start_time:
-        return VerifyResult(ok=False, error="bad_timing", detail=f"Cue {cue.id}")
-```
-
-#### Check 3: Text coverage (word count ratio ±10%)
-```python
-corrected_words = count_words(join(all corrected texts))
-original_words = count_words(txt_content)
-ratio = corrected_words / original_words
-if not (0.9 <= ratio <= 1.1):
-    return VerifyResult(ok=False, error="word_count", 
-                        detail=f"Ratio {ratio:.0%}, expected ~100%")
-```
-
-#### Check 4: Key name preservation
-```python
-# Lấy tên riêng từ TXT (viết hoa, > 1 từ)
-proper_nouns = extract_proper_nouns(txt_content)  # ["Shirkuh", "Najm ad-Din Ayyub", ...]
-corrected_full = join(all corrected texts)
-missing = [name for name in proper_nouns if name not in corrected_full]
-if missing:
-    return VerifyResult(ok=False, error="missing_names", detail=missing)
-```
-
-### Verify Fail → LLM Retry
-
-```
-Verify fail
-    ↓
-Gửi LẠI cho LLM: kết quả cũ + danh sách lỗi cụ thể
-    ↓
-"Here is your previous output and the errors found:
- - Cue 15 missing: expected 33 cues, got 32
- - Name 'Shirkuh' not found in output
- Please fix ONLY the problematic cues and return the corrected JSON."
-    ↓
-LLM trả partial fix → Code merge vào kết quả cũ
-    ↓
-Re-verify
-    ↓
-Pass → save  |  Fail lần 2 → DỪNG pipeline + log chi tiết
-```
-
----
-
-## Phase 4: Output & Checkpoint
-
-### Output folder structure
-
-```
-project_folder/
-├── ch_01.srt                    ← input SRT gốc
-├── ch_01.txt                    ← input TXT gốc
-├── ch_02.srt
-├── ch_02.txt
-├── ...
-└── aligned/                     ← OUTPUT folder
-    ├── ch_01.srt                ← corrected SRT (text đúng + timing đúng)
-    ├── ch_02.srt
-    ├── ch_03.srt
-    └── ...
-```
-
-#### File corrected SRT format (chuẩn SRT):
-```
-1
-00:00:00,000 --> 00:00:02,800
-Black water rushes beneath a makeshift raft.
-
-2
-00:00:03,166 --> 00:00:05,266
-The wind off the Tigris River is freezing,
-
-3
-00:00:05,266 --> 00:00:08,400
-biting through the damp wool wrapped around your fragile frame.
-```
-
-#### Per-chapter checkpoint logic
-
-```python
-def _run_step0(self):
-    aligned_dir = os.path.join(project_folder, "aligned")
-    
-    for chapter in chapter_pairs:
-        basename = os.path.splitext(os.path.basename(chapter["srt_path"]))[0]
-        output_path = os.path.join(aligned_dir, f"{basename}.srt")
-        
-        # Skip nếu đã có file aligned
-        if os.path.exists(output_path):
-            self._log(f"[Step 0] ⏭ {basename}: already aligned")
-            continue
-        
-        # Process: LLM correct → verify → save
-        corrected = correct_srt_with_txt(...)
-        result = verify_corrected_srt(...)
-        
-        if result.ok:
-            save_as_srt(corrected, output_path)
-            self._log(f"[Step 0] ✅ {basename}: saved to aligned/")
-        else:
-            # Retry logic...
-    
-    # Sau khi tất cả chapters aligned → pipeline đọc từ aligned/ folder
-    aligned_files = sorted(glob(aligned_dir + "/*.srt"))
-    # Parse aligned SRTs → sentences (giờ có punctuation → tách đúng)
-```
-
----
-
-## Phase 5: Pipeline Integration
-
-### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
-
-#### Constructor mới
-
-```python
-def __init__(self, ..., chapter_pairs: List[dict] = None, ...):
-    self.chapter_pairs = chapter_pairs or []
-    # chapter_pairs = [{"srt_path": "...", "txt_path": "..."}, ...]
-```
-
-#### Step 0 Flow
-
-```
-1. Tạo aligned/ folder
-2. Per-chapter:
-   a. Check aligned/ đã có → skip
-   b. Parse SRT gốc → cues
-   c. Read TXT gốc → clean text
-   d. LLM correct (1 API call, tier_user)
-   e. Code verify
-   f. Fail → LLM retry with error details → re-verify
-   g. Pass → save corrected SRT to aligned/
-3. Đọc TẤT CẢ aligned/*.srt → parse_srt_to_sentences() (existing code)
-4. Output: self.sentences, self.cleaned_text (giống hiện tại)
-```
-
-> [!NOTE]
-> Từ bước 3 trở đi, flow **hoàn toàn giống hiện tại**. `parse_srt_to_sentences()` nhận corrected SRT (có punctuation) → tách sentences đúng. Steps 1-5 không thay đổi.
-
----
-
-## Files Modified
+## Tóm tắt Files Changed
 
 | File | Thay đổi |
 |---|---|
-| `ui/video_prompt_tab.py` | Tree 4 cột mới, scan logic pair SRT↔TXT, bỏ Style column/buttons, validation trước run |
-| `core/srt_sentence_parser.py` | Thêm `correct_srt_with_txt()`, `verify_corrected_srt()`, `save_as_srt()` |
-| `core/video_pipeline.py` | Constructor nhận `chapter_pairs`, Step 0 flow mới (aligned/ folder + per-chapter checkpoint) |
+| `video_prompt_tab.py` | +1 checkbox, +1 constraint |
+| `video_pipeline.py` | Skip Step 2c, Step 3 prompt alt rule, Step 4 new template + mini_bible branch |
+
+## Chi tiết impact per step
+
+| Step | `location_ref=True` (mặc định) | `location_ref=False` (inline) |
+|---|---|---|
+| 2a | Không đổi | Không đổi |
+| 2b | Không đổi | Không đổi |
+| 2c | Chạy bình thường | **Skip** (done + skipped message) |
+| Labels | Chars + Locations | Chars only |
+| 3 | `locked_location` = label | `location_anchor` = description, `locked_location` = "" |
+| 4 | `[Label]` bracket + location ref | Inline environment weave, no brackets |
+| 5 | Location rows in Sheet 2 | No location rows |
 
 ## Verification Plan
 
-### Test 1: UI
-- Scan folder có 3 SRT + 2 TXT → 1 row hiện "Missing TXT" → Run bị chặn
+### Automated Tests
+1. Syntax check 3 files
+2. Run pipeline với `location_ref=False` trên ch_01 test data
+3. So sánh output prompt: kiểm tra không còn `[Location-Label]` bracket
 
-### Test 2: Alignment
-- Ch_01 Saladin SRT+TXT → verify aligned/ch_01.srt có:
-  - "Najm ad-Din Ayyub" (không phải "Najmad Dina Yub")
-  - Dấu câu đúng vị trí
-  - 33 cues giữ nguyên
-  - Timing giữ nguyên
-
-### Test 3: Verify Retry
-- Nếu LLM trả 32 cues → retry gửi lỗi lên → LLM fix → 33 cues → pass
-
-### Test 4: Checkpoint
-- Chạy 15 chapters, fail ở ch_08 → aligned/ có 7 files
-- Re-run → skip 7 files đã có, chỉ chạy 8-15
-
-### Test 5: Full Pipeline
-- Aligned/ 15 files → Step 1 nhận ~488 sentences (không phải 15) → pipeline hoàn thành
+### Manual Verification
+- So sánh 2 bản Excel output (ref vs inline) trên cùng chapter
+- Kiểm tra prompt tự nhiên hơn, environment mô tả phù hợp shot type

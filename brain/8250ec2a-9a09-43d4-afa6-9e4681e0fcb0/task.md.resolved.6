@@ -1,0 +1,15 @@
+# Location Reference Toggle — Task Tracker
+
+## Phase 1: UI
+- [ ] Add `Location Ref` checkbox to config area
+- [ ] Pass to constraints dict
+
+## Phase 2: Pipeline — video_pipeline.py
+- [ ] `run()`: skip Step 2c when `location_ref=False`
+- [ ] Step 3 prompt: alt rule for `location_anchor`
+- [ ] Step 4 template: `STEP4_USER_TEMPLATE_INLINE`
+- [ ] Step 4 `_build_mini_bible()`: branch for inline mode
+- [ ] Step 4 `_process_sequence_step4()`: select template + location field
+
+## Phase 3: Verify
+- [ ] Syntax check all files

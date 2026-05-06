@@ -1,6 +1,6 @@
 {
   "artifactType":  "ARTIFACT_TYPE_TASK",
-  "summary":  "Task tracker updated: all phases completed. Core functions, pipeline integration, and UI changes are done. Ready for testing.",
-  "updatedAt":  "2026-05-05T16:33:59.572955600Z",
-  "version":  "5"
+  "summary":  "All tasks completed for location reference toggle feature.",
+  "updatedAt":  "2026-05-06T01:46:01.696031600Z",
+  "version":  "7"
 }
