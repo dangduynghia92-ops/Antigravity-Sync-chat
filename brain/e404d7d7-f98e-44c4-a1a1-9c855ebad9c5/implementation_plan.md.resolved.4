@@ -1,0 +1,199 @@
+# CapCut Assembler Tab — Implementation Plan
+
+Tạo tab mới trong app PyQt để tự động ghép ảnh + audio + SRT thành draft CapCut.
+
+## Kiến trúc tổng quan
+
+```
+Pipeline hiện tại:
+Script (.txt) → TTS Audio (.mp3) → SRT (Whisper+Verify) → AI Image Gen
+
+Tab mới nối tiếp:
+SRT + Audio + Ảnh  →  CapCut Assembler Tab  →  Draft folder  →  CapCut
+```
+
+---
+
+## Confirmed Parameters
+
+| Item | Value |
+|------|-------|
+| **CapCut Drafts Folder** | `C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\` |
+| **Resolution** | 1920×1080 (YouTube landscape) |
+| **Environment** | CapCut (not Jianying) |
+
+---
+
+## Matching Logic: Ảnh ↔ SRT
+
+### Data Flow
+
+Pipeline hiện tại đã tạo `step3_scenes.json` với trường `audio_sync` — chính là text của câu narration:
+
+```json
+{
+  "global_scene_id": "SEQ_01_SCN_02",
+  "duration": 3.5,
+  "audio_sync": "The wind off the Tigris River is freezing,"   ← KEY
+}
+```
+
+SRT cũng có text tương ứng:
+```
+2
+00:00:03,267 --> 00:00:05,090
+The wind off the Tigris River is freezing,
+```
+
+### Matching Strategy
+
+```
+step3_scenes.json          SRT                    Ảnh
+─────────────────          ───                    ───
+audio_sync text    ←match→  SRT text    →  timecode
+global_scene_id                         →  image filename
+```
+
+**1 scene = 1 ảnh = 1 SRT segment** (27 scenes = 27 ảnh = ~25 SRT segments)
+
+> [!NOTE]
+> SRT có thể gộp 2 câu ngắn thành 1 segment. Matching dùng fuzzy text match (hoặc substring) — nếu SRT text chứa `audio_sync` text → match.
+
+### File Mapping: Scene → Image
+
+Ảnh được tạo từ `step4_prompts.json`, mỗi ảnh tên theo `global_scene_id`:
+```
+SEQ_01_SCN_01.png
+SEQ_01_SCN_02.png
+...
+SEQ_05_SCN_07.png
+```
+
+> [!IMPORTANT]
+> **Cần xác nhận**: Ảnh AI gen hiện tại đặt tên theo format nào? Có phải `SEQ_01_SCN_01.png` hay format khác?
+
+---
+
+## UI Layout
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  📁 Input                                                │
+│  ┌─────────────────────────────────────────────┐        │
+│  │ Project folder:                   [Browse]   │        │
+│  │ (auto-detect SRT, audio, images, scenes.json)│        │
+│  └─────────────────────────────────────────────┘        │
+│                                                          │
+│  ⚙ Settings                                             │
+│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐     │
+│  │ Resolution   │ │ Transition   │ │ Bg Blur      │     │
+│  │ [1920x1080▼] │ │ [Dissolve ▼] │ │ [Level 2  ▼] │     │
+│  └─────────────┘ └──────────────┘ └──────────────┘     │
+│  ☑ Ken Burns (slow zoom 1.0→1.1)                        │
+│  ☑ Include subtitle track                               │
+│  ☑ Include audio track                                  │
+│                                                          │
+│  📋 Preview — auto-populated from scenes.json + SRT     │
+│  ┌──────────────────────────────────────────────┐       │
+│  │ #  │ Scene ID        │ Timecode      │ Image │       │
+│  │ 1  │ SEQ_01_SCN_01   │ 00:00→00:03   │ ✅    │       │
+│  │ 2  │ SEQ_01_SCN_02   │ 00:03→00:05   │ ✅    │       │
+│  │ 3  │ SEQ_01_SCN_03   │ 00:05→00:08   │ ⚠️    │       │
+│  └──────────────────────────────────────────────┘       │
+│  ✅ 25/27 images found   ⚠️ 2 missing                   │
+│                                                          │
+│  [🔨 Assemble Draft]                    [⏹ Stop]        │
+│                                                          │
+│  📝 Log + Progress                                       │
+│  ┌─────────────────────────────────────────────┐        │
+│  │ [10:30:01] Matched 25/27 scenes to SRT       │        │
+│  │ [10:30:02] Adding image 1/25: SEQ_01_SCN_01  │        │
+│  │ [10:30:03] Adding audio: ch_01...mp3          │        │
+│  │ [10:30:04] Adding 25 subtitle entries         │        │
+│  │ [10:30:05] ✅ Draft saved → CapCut Drafts     │        │
+│  └─────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Available Features (from pyJianYingDraft API)
+
+### Core — Mặc định bật
+
+| Feature | Mô tả |
+|---------|--------|
+| **Image track** | Mỗi scene → 1 ảnh trên video track, timecode từ SRT |
+| **Audio track** | Import file mp3 narration |
+| **Subtitle track** | Import từ SRT file |
+| **Auto Ken Burns** | Zoom nhẹ 1.0→1.05 suốt mỗi ảnh (cinematic feel) |
+
+### Enhancement — Dropdown/Checkbox
+
+| Feature | Options | Default |
+|---------|---------|---------|
+| **Transition** | Dissolve, Fade, Move Up/Down/Left/Right, Compress | Dissolve |
+| **Transition duration** | 0.3s, 0.5s, 0.7s, 1.0s | 0.5s |
+| **Intro animation** | Fade In, Zoom In, Zoom Out, None | Fade In |
+| **Outro animation** | Fade Out, Zoom Out, None | None |
+| **Background blur** | None, Level 1-4 | None |
+| **Image scale mode** | Fit (letterbox), Fill (crop), Stretch | Fill |
+
+---
+
+## File Structure
+
+### [NEW] `ui/capcut_assembler_tab.py`
+- PyQt5 widget cho tab mới
+- Browse folder, preview table, settings dropdowns
+- Worker thread cho assemble
+
+### [NEW] `core/capcut_draft_builder.py`
+- Core logic hoàn toàn độc lập:
+  1. Parse SRT → list segments with timecode
+  2. Parse `step3_scenes.json` → list scenes with `audio_sync`
+  3. Match scene ↔ SRT segment (fuzzy text match)
+  4. Find image files by `global_scene_id`
+  5. Build draft: `pyJianYingDraft` → image track + audio + subtitle
+  6. Save to CapCut drafts folder
+
+### [MODIFY] `main.py`
+- Import + add tab mới vào QTabWidget
+
+---
+
+## Dependency
+
+```
+pip install pyJianYingDraft
+```
+
+> [!NOTE]
+> `pyJianYingDraft` tạo draft offline — không cần server, không cần VectCutAPI server chạy. Chỉ cần thư viện Python.
+
+---
+
+## Open Question
+
+> [!IMPORTANT]
+> **Ảnh AI gen đặt tên theo format nào?**
+> Hiện chưa thấy folder ảnh mẫu. Tên file ảnh có dạng:
+> - `SEQ_01_SCN_01.png`?
+> - `001.png`?
+> - `ch_01_Level_1__Vulnerability_01.png`?
+> 
+> Nếu chưa tạo ảnh, tab sẽ hỗ trợ cả 3 format + auto-detect.
+
+---
+
+## Verification Plan
+
+### Automated
+- `python -m py_compile ui/capcut_assembler_tab.py`
+- `python -m py_compile core/capcut_draft_builder.py`
+- Test: tạo draft với SRT + ảnh mẫu → verify output folder structure
+
+### Manual
+- Copy draft folder vào CapCut Drafts → mở CapCut
+- Verify: ảnh đúng timecode, audio sync, subtitle hiển thị
+- Export video → playback test

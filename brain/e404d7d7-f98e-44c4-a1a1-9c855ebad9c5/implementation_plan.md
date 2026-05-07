@@ -1,18 +1,52 @@
-# CapCut Assembler Tab — Implementation Plan
+# CapCut Assembler Tab — Final Implementation Plan
 
-Tạo tab mới trong app PyQt để tự động ghép ảnh + audio + SRT thành draft CapCut, sử dụng thư viện `pyJianYingDraft`.
+## Tổng quan
 
-## Kiến trúc tổng quan
+Tab mới trong app PyQt6 đọc file `*_assembly.json` → tạo draft CapCut offline (không cần server).
 
 ```
-Pipeline hiện tại:
-Script (.txt) → TTS Audio (.mp3) → SRT (Whisper) → AI Verify
-
-Tab mới nối tiếp:
-SRT + Audio + Ảnh  →  CapCut Assembler Tab  →  Draft folder
-                                                    ↓
-                                            Copy vào CapCut → Review → Export
+[Bạn tạo riêng]                    [Tab mới build]
+step3 + SRT + ảnh                   assembly.json → CapCut draft
+    ↓                                    ↓
+assembly_manifest.json  ──input──→  CapCut Assembler Tab
+                                         ↓
+                                    Draft folder → CapCut
 ```
+
+---
+
+## Input Contract: `assembly_manifest.json`
+
+```json
+{
+  "chapter": "ch_01_Level_1__Vulnerability",
+  "tracks": [
+    {
+      "index": 1,
+      "image_file": "1_A_stylized_historical_animatio_s1.jpg",
+      "start": 0.000,
+      "end": 2.537,
+      "subtitle": "Black water rushes beneath a makeshift raft."
+    },
+    {
+      "index": 2,
+      "image_file": "2_A_stylized_historical_animatio_s1.jpg",
+      "start": 3.267,
+      "end": 8.189,
+      "subtitle": "The wind off the Tigris River is freezing, biting through the damp wool wrapped around your fragile frame."
+    }
+  ]
+}
+```
+
+| Field | Type | Bắt buộc | Mô tả |
+|-------|------|----------|--------|
+| `chapter` | string | ✅ | Tên chapter — dùng match audio file |
+| `tracks[].index` | int | ✅ | STT sắp xếp trên timeline |
+| `tracks[].image_file` | string | ✅ | Tên file ảnh (không path) |
+| `tracks[].start` | float | ✅ | Giây bắt đầu (trong chapter, từ 0) |
+| `tracks[].end` | float | ✅ | Giây kết thúc (trong chapter, từ 0) |
+| `tracks[].subtitle` | string | ❌ | Text subtitle (optional) |
 
 ---
 
@@ -20,169 +54,173 @@ SRT + Audio + Ảnh  →  CapCut Assembler Tab  →  Draft folder
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  📁 Input                                                │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ Folder chứa ảnh + audio + SRT:   [Browse]   │        │
-│  └─────────────────────────────────────────────┘        │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ Output draft folder:              [Browse]   │        │
-│  │ (mặc định = CapCut Drafts folder)            │        │
-│  └─────────────────────────────────────────────┘        │
+│  📁 Input Folders                                        │
+│  Manifest folder:  [________________________] [Browse]   │
+│  Image folder:     [________________________] [Browse]   │
+│  Audio folder:     [________________________] [Browse]   │
 │                                                          │
-│  ⚙ Settings                                             │
+│  ⚙ Project Settings                                     │
 │  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐     │
-│  │ Resolution   │ │ Transition   │ │ Animation    │     │
-│  │ [1920x1080▼] │ │ [Dissolve ▼] │ │ [Fade In ▼]  │     │
+│  │ Resolution   │ │ Transition   │ │ Trans. dur.  │     │
+│  │ [1920x1080▼] │ │ [Dissolve ▼] │ │ [0.5s     ▼] │     │
 │  └─────────────┘ └──────────────┘ └──────────────┘     │
-│  ┌────────────────┐ ┌──────────────┐                    │
-│  │ Subtitle style  │ │ Bg Blur      │                    │
-│  │ [Default    ▼]  │ │ [Level 2  ▼] │                    │
-│  └────────────────┘ └──────────────┘                    │
-│  ☑ Auto Ken Burns (zoom effect on images)               │
-│  ☑ Include subtitle from SRT                            │
-│  ☑ Include audio track                                  │
+│  ☑ Ken Burns (slow zoom)                                │
+│  ☑ Include subtitle track                               │
 │                                                          │
-│  📋 Preview                                              │
-│  ┌─────────────────────────────────────────────┐        │
-│  │ #  │ Timecode         │ Image        │ Text  │        │
-│  │ 1  │ 00:00 → 00:03    │ scene_01.png │ Blac… │        │
-│  │ 2  │ 00:03 → 00:05    │ scene_02.png │ The…  │        │
-│  │ 3  │ 00:05 → 00:08    │ scene_03.png │ biti… │        │
-│  │ ...│                   │              │       │        │
-│  └─────────────────────────────────────────────┘        │
+│  ⏱ Chapter Gap                                          │
+│  ○ Fixed:    [2.5  ] seconds                            │
+│  ● Random:   Min [2.0]s  —  Max [3.5]s                 │
+│                                                          │
+│  📋 Preview (auto-populated khi chọn folders)            │
+│  ┌──────────────────────────────────────────────┐       │
+│  │ Ch │ #  │ Image File        │ Start  │ End   │       │
+│  │ 01 │ 1  │ 1_A_stylized...   │  0.000 │ 2.537 │       │
+│  │ 01 │ 2  │ 2_A_stylized...   │  3.267 │ 8.189 │       │
+│  │ 01 │ 3  │ 4_A_stylized...   │  8.906 │15.296 │       │
+│  │ ...│    │                   │        │       │       │
+│  │ 02 │ 1  │ 1_Stylized...     │  0.000 │ 3.100 │       │
+│  └──────────────────────────────────────────────┘       │
+│  ✅ 3 chapters / 75 tracks / 73 images found            │
 │                                                          │
 │  [🔨 Assemble Draft]                    [⏹ Stop]        │
 │                                                          │
 │  📝 Log                                                  │
 │  ┌─────────────────────────────────────────────┐        │
-│  │ [10:30:01] Creating draft 1920x1080...       │        │
-│  │ [10:30:02] Adding image 1/25: scene_01.png   │        │
-│  │ [10:30:03] Adding audio track...              │        │
-│  │ [10:30:04] Adding 25 subtitle entries...      │        │
-│  │ [10:30:05] ✅ Draft saved to: dfd_xxxxx       │        │
+│  │ [10:30:01] Loaded 3 manifests               │        │
+│  │ [10:30:02] Ch1: 27 tracks, gap=2.7s         │        │
+│  │ [10:30:03] Ch2: 25 tracks, gap=3.1s         │        │
+│  │ [10:30:05] ✅ Draft → CapCut Drafts folder   │        │
 │  └─────────────────────────────────────────────┘        │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Chức năng khả dụng từ VectCutAPI
+## Multi-Chapter Offset + Gap Logic
 
-### Core (Bắt buộc)
-
-| Chức năng | API | Mô tả |
-|-----------|-----|--------|
-| Tạo draft project | `create_draft` | Tạo project CapCut mới với resolution tùy chọn |
-| Thêm ảnh vào timeline | `add_image` | Ghép ảnh theo timecode từ SRT, mỗi segment = 1 ảnh |
-| Thêm audio track | `add_audio_track` | Import file mp3 narration vào track audio |
-| Thêm subtitle | `add_subtitle` | Import SRT entries thành subtitle track |
-| Lưu draft | `save_draft` | Export thành folder draft CapCut |
-
-### Enhancement (Tùy chọn — checkbox/dropdown)
-
-| Chức năng | API | Mô tả |
-|-----------|-----|--------|
-| **Transition** giữa ảnh | `add_image(transition=...)` | Dissolve, Fade, Move, Compress... |
-| **Animation** vào/ra | `add_image(intro_animation=..., outro_animation=...)` | Zoom In, Fade In, Rotate... |
-| **Ken Burns** (zoom effect) | `add_video_keyframe` | Scale keyframe từ 1.0→1.1 suốt segment (cinematic) |
-| **Background blur** | `add_image(background_blur=...)` | Blur nền khi ảnh không full-frame (level 1-4) |
-| **Text styling** | `add_text(font_size=..., font_color=...)` | Font, màu, shadow cho subtitle |
-| **Mask** | `add_image(mask_type=...)` | Circle, Rectangle, Heart mask cho ảnh |
+```python
+offset = 0.0
+for chapter in sorted_chapters:
+    audio_duration = get_mp3_duration(chapter.audio_file)
+    
+    for track in chapter.tracks:
+        real_start = track.start + offset
+        real_end   = track.end   + offset
+        # → add image to timeline at (real_start, real_end)
+    
+    # Add audio to timeline at (offset, offset + audio_duration)
+    
+    # Gap before next chapter
+    if not last_chapter:
+        gap = random.uniform(gap_min, gap_max)  # round to 0.1
+        gap = round(gap, 1)
+        offset += audio_duration + gap
+```
 
 ---
 
-## Matching Logic: Ảnh ↔ SRT
+## Proposed Changes
 
-### Quy tắc match ảnh với segment SRT
-
-**Cách 1 — Theo tên file (ưu tiên):**
-```
-SRT segment 1 (00:00→00:03) → tìm file: scene_01.png hoặc 001.png
-SRT segment 2 (00:03→00:05) → tìm file: scene_02.png hoặc 002.png
-```
-
-**Cách 2 — Theo thứ tự file:**
-```
-Nếu không match được tên → sắp xếp ảnh theo tên → gán lần lượt
-```
-
-**Cách 3 — Theo nhóm (nhiều segment chia sẻ 1 ảnh):**
-```
-Nếu có 25 segments nhưng chỉ 10 ảnh → mỗi ảnh cover 2-3 segments liên tiếp
-Ảnh 1: segment 1-3, Ảnh 2: segment 4-6, ...
-```
-
-> [!IMPORTANT]
-> **Cần quyết định**: Dùng cách match nào? Hay hỗ trợ cả 3 với dropdown chọn?
-
----
-
-## Dependency
-
-### Thư viện cần cài
+### Dependency
 
 ```
 pip install pyJianYingDraft
 ```
 
-`pyJianYingDraft` là thư viện Python tạo draft CapCut/Jianying offline — **không cần server**, **không cần VectCutAPI server** chạy. Chỉ cần thư viện này là đủ.
+---
 
-> [!NOTE]
-> VectCutAPI repo dùng `pyJianYingDraft` dưới hood. Ta chỉ cần import thư viện đó, không cần clone cả repo VectCutAPI.
+### [NEW] `core/capcut_draft_builder.py`
+
+Core logic, hoàn toàn độc lập:
+
+```python
+class CapCutDraftBuilder:
+    def __init__(self, config):
+        """
+        config = {
+            "resolution": (1920, 1080),
+            "transition": "Dissolve",
+            "transition_duration": 0.5,
+            "ken_burns": True,
+            "include_subtitle": True,
+            "gap_mode": "random",      # "fixed" | "random"
+            "gap_fixed": 2.5,
+            "gap_min": 2.0,
+            "gap_max": 3.5,
+        }
+        """
+    
+    def build(self, manifests, image_folder, audio_folder, output_folder):
+        """
+        manifests: list of parsed assembly.json dicts, sorted by chapter
+        image_folder: path to folder containing image files
+        audio_folder: path to folder containing mp3 files
+        output_folder: CapCut drafts folder path
+        
+        Returns: path to created draft folder
+        """
+```
+
+**Responsibilities**:
+1. Sort manifests by chapter name
+2. Calculate cumulative offsets with gaps
+3. Create pyJianYingDraft script
+4. Add video track (images with timecodes)
+5. Add audio track (mp3 files)
+6. Add subtitle track (if enabled)
+7. Add transitions, Ken Burns keyframes
+8. Save draft to CapCut drafts folder
 
 ---
 
-## File Structure
+### [NEW] `ui/capcut_assembler_tab.py`
 
-### Proposed Changes
-
-#### [NEW] `ui/capcut_assembler_tab.py`
-- Widget PyQt5 cho tab mới
-- UI layout, config load/save, preview table
-- Worker thread cho assemble process
-
-#### [NEW] `core/capcut_draft_builder.py`
-- Core logic: đọc SRT + match ảnh + tạo draft
-- Gọi `pyJianYingDraft` API trực tiếp
-- Không phụ thuộc bất kỳ file nào khác trong project
-
-#### [MODIFY] `main.py` (hoặc file chứa tab manager)
-- Import và thêm tab mới vào tab widget
+PyQt6 tab widget:
+- 3 folder browse inputs
+- Settings dropdowns + checkboxes
+- Chapter gap radio + inputs
+- Preview table (QTableWidget)
+- Assemble button + progress log
+- Worker thread (QThread) for non-blocking assemble
 
 ---
 
-## Open Questions
+### [MODIFY] `ui/main_window.py`
 
-> [!IMPORTANT]
-> **1. CapCut Drafts folder**: Bạn dùng CapCut PC hay Jianying? Drafts folder ở đâu?
-> - CapCut: `C:\Users\Admin\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\`
-> - Jianying: `C:\Users\Admin\Movies\JianyingPro\User Data\Projects\com.lveditor.draft\`
+Add 2 lines:
+```python
+from ui.capcut_assembler_tab import CapCutAssemblerTab
 
-> [!IMPORTANT]  
-> **2. Matching ảnh**: Pipeline hiện tại tạo ảnh theo chapter hay theo câu? Tên file ảnh có format gì?
-> Ví dụ: `scene_01.png`, `ch01_001.png`, hay `prompt_1.png`?
+# After SRT Generator tab (line ~96)
+self._capcut_tab = CapCutAssemblerTab()
+self._tabs.addTab(self._capcut_tab, "🎬 CapCut Assembler")
+```
 
-> [!IMPORTANT]
-> **3. Resolution**: Video output thường dùng resolution gì?
-> - 1920×1080 (YouTube landscape)
-> - 1080×1920 (TikTok/Shorts portrait)  
-> - 2560×1440 (YouTube 2K)
-
-> [!IMPORTANT]
-> **4. Mỗi ảnh cover bao nhiêu segments?** 
-> - 1 ảnh = 1 câu SRT (nhiều ảnh nhất, mỗi ảnh ~3-5s)?
-> - 1 ảnh = 1 đoạn/scene (ít ảnh, mỗi ảnh ~15-30s)?
+Update `TAB_HELP_IDS` list to include `"capcut-assembler"`.
 
 ---
 
 ## Verification Plan
 
-### Automated Tests
-- `python -m py_compile ui/capcut_assembler_tab.py`
-- `python -m py_compile core/capcut_draft_builder.py`
-- Test tạo draft với file SRT + ảnh mẫu
+### Step 1: Install dependency
+```
+pip install pyJianYingDraft
+```
 
-### Manual Verification
-- Copy draft folder vào CapCut Drafts
-- Mở CapCut → verify: ảnh đúng timecode, audio đúng, subtitle đúng
-- Export video → playback test
+### Step 2: Compile check
+```
+python -m py_compile core/capcut_draft_builder.py
+python -m py_compile ui/capcut_assembler_tab.py
+```
+
+### Step 3: Test with sample data
+- Tạo 1 file `ch_01_..._assembly.json` mẫu
+- Chạy builder → verify draft folder structure
+- Copy vào CapCut Drafts → mở CapCut → verify timeline
+
+### Step 4: Manual verification in CapCut
+- Ảnh đúng timecode
+- Audio sync
+- Subtitle hiển thị
+- Transition hoạt động
+- Multi-chapter gap đúng

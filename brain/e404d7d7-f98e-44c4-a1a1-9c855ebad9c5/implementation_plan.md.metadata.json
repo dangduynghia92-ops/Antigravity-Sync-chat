@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Implementation plan for a new CapCut Assembler tab that uses VectCutAPI/pyJianYingDraft to automatically assemble images, audio, and SRT subtitles into a CapCut draft project. Covers UI layout, available features from the API, architecture decisions, and step-by-step execution plan.",
-  "updatedAt":  "2026-05-07T03:26:22.133021100Z",
-  "version":  "3",
+  "summary":  "Finalized implementation plan for CapCut Assembler tab. Uses assembly_manifest.json as sole input contract. UI provides folder browsing for images/audio/manifests, settings for resolution/transition/chapter gaps. Core builder reads manifests, calculates multi-chapter offsets with random gaps, and generates CapCut draft folders using pyJianYingDraft. Three new files: ui/capcut_assembler_tab.py, core/capcut_draft_builder.py, plus one line added to ui/main_window.py.",
+  "updatedAt":  "2026-05-07T03:56:15.162008200Z",
+  "version":  "5",
   "requestFeedback":  true
 }
