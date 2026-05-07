@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to optimize the Audio-to-SRT pipeline with:\n1. Per-file sequential pipeline (Match→Transcribe→Verify for each file) instead of batch steps\n2. Checkpoint system using file existence as implicit checkpoints\n3. Skip-on-error strategy (continue to next file on failure)\n4. Smart resume (skip completed steps based on existing output files)\n5. Status tracking per file in the tree UI",
-  "updatedAt":  "2026-05-07T01:14:36.156294900Z",
-  "version":  "2",
+  "summary":  "Implementation plan for a new CapCut Assembler tab that uses VectCutAPI/pyJianYingDraft to automatically assemble images, audio, and SRT subtitles into a CapCut draft project. Covers UI layout, available features from the API, architecture decisions, and step-by-step execution plan.",
+  "updatedAt":  "2026-05-07T03:26:22.133021100Z",
+  "version":  "3",
   "requestFeedback":  true
 }
