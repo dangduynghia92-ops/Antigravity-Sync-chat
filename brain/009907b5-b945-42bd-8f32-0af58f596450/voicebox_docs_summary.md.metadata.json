@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Tổng hợp toàn bộ tài liệu Voicebox (docs.voicebox.sh) bằng tiếng Việt. Bao gồm:\n- Giới thiệu: Voicebox là gì, vòng lặp Voice I/O\n- 7 tính năng chính: Voice Cloning, 7 TTS Engines, Dictation, Voice Personalities, Stories Editor, MCP Server, Remote Mode\n- Bảng so sánh 7 engine TTS (Qwen3, LuxTTS, Chatterbox, TADA, Kokoro...)\n- Hướng dẫn cài đặt Windows + GPU CUDA setup\n- Kiến trúc kỹ thuật (Tauri + React + FastAPI + 7 backends)\n- REST API endpoints và ví dụ gọi API\n- Tips tối ưu chất lượng giọng và chọn engine phù hợp\n- Đề xuất tích hợp vào pipeline content creation hiện tại của user",
+  "updatedAt":  "2026-05-07T05:14:43.900905100Z",
+  "requestFeedback":  true
+}
