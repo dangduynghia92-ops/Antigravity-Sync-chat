@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Complete implementation plan for Audio-to-SRT tab with:\n1. Full Whisper model comparison table (6 models from tiny to large-v3-turbo)\n2. Auto-detect language support\n3. Output path with empty = save alongside audio\n4. AI verification step using Gemini API to cross-check SRT text against original script text, following the pattern from video_prompt_tab.py",
-  "updatedAt":  "2026-05-06T23:45:33.692733800Z",
-  "version":  "1",
+  "summary":  "Plan to optimize the Audio-to-SRT pipeline with:\n1. Per-file sequential pipeline (Match→Transcribe→Verify for each file) instead of batch steps\n2. Checkpoint system using file existence as implicit checkpoints\n3. Skip-on-error strategy (continue to next file on failure)\n4. Smart resume (skip completed steps based on existing output files)\n5. Status tracking per file in the tree UI",
+  "updatedAt":  "2026-05-07T01:14:36.156294900Z",
+  "version":  "2",
   "requestFeedback":  true
 }
