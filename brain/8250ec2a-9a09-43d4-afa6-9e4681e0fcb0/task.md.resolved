@@ -1,13 +1,13 @@
-# Step 3.1/3.2 Implementation
+# Per-Sentence Visual Interpreter Implementation
 
-- [x] Add STEP3_1 prompt constant
-- [x] Add STEP3_2 prompt constant (modify current STEP3 - remove Phase 1, Rule 8, audio_sync)
-- [x] Add `_run_step3_1()` method
-- [x] Add `_process_sequence_step3_1()` method
-- [x] Add `_overlay_audio()` static method
-- [x] Modify `_process_sequence_step3()` → use visual_treatment instead of full_text
-- [x] Add audio overlay in `_run_step3()` after scene generation
-- [x] Update pipeline flow (steps list) - step3_1 before step3
-- [x] Update step statuses dict (step3_1 entry)
-- [x] Add `visual_treatments` data holder
-- [x] Syntax check - ALL OK
+- [x] Replace STEP3_1_SYSTEM_PROMPT with per-sentence checklist
+- [x] Add character label mapping helper (`_map_raw_to_labels`)
+- [x] Modify `_process_sequence_step3_1()` — send sentences + labels
+- [x] Modify `_run_step3_1()` — save filmable_scenes
+- [x] Modify `_process_sequence_step3()` — flatten filmable_scenes → visual_treatment for Step 3.2
+- [x] Modify `_run_step3()` — assign audio_sync from original_text (per-sentence)
+- [x] Remove `_overlay_audio()` 
+- [x] Replace `visual_treatments` → `filmable_scenes` data holder
+- [x] Remove `visual_event` from Step 4 templates
+- [x] Syntax check — OK
+- [x] Clean check — no stale references

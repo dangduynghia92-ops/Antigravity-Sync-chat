@@ -1,0 +1,10 @@
+# Per-Sentence Visual Interpreter Implementation
+
+- [/] Replace STEP3_1_SYSTEM_PROMPT with per-sentence checklist
+- [ ] Add character label mapping helper
+- [ ] Modify _process_sequence_step3_1() - send sentences + labels
+- [ ] Modify _run_step3_1() - save filmable_scenes
+- [ ] Modify _process_sequence_step3() - receive filmable_scenes for Step 3.2
+- [ ] Modify _run_step3() - assign audio_sync from original_text
+- [ ] Remove _overlay_audio() call
+- [ ] Syntax check

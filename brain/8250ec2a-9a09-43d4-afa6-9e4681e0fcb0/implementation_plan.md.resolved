@@ -40,6 +40,7 @@ Không bao giờ 1 scene chứa nửa câu A + nửa câu B.
   "sequence_id": "SEQ_01",
   "total_duration": 17.81,
   "characters": ["Kurdish-Leader-A", "Kurdish-Prince-A"],
+  "characters_raw": ["child Yusuf ibn Ayyub, newborn"],
   "location": "Tigris-River-Raft-Night",
   "sentences": [
     {"id": 1, "text": "Black water rushes beneath a makeshift raft.", "duration": 2.54},
@@ -254,7 +255,7 @@ characters: []
 Step 1 → sequences (sentence_ids, characters, location)
 Step 3.1 → filmable_scenes per sequence (sentence-aligned)
 Step 3.2 → scenes with camera specs + audio_sync (code-assigned)
-Step 4 → prompts (dùng visual_treatment từ filmable_scenes)
+Step 4 → prompts (dùng physical_action per scene, không cần visual_treatment)
 ```
 
 ---
@@ -266,3 +267,14 @@ Step 4 → prompts (dùng visual_treatment từ filmable_scenes)
 4. Tất cả scenes có characters khi Q2=YES
 5. audio_sync = original_text (không cắt giữa câu)
 6. Step 3.2 scenes có shot variety (không toàn Medium Shot)
+
+---
+
+## Audit Findings (đã fix)
+
+| # | Vấn đề | Trạng thái |
+|---|---|---|
+| 1 | characters dùng tên gốc vs label | Cần map label từ Step 2b vào input Step 3.1 |
+| 2 | `physical_action` cho Step 4 | Step 3.2 gán `physical_action` = `visual` từ Step 3.1 |
+| 3 | `visual_treatment` empty ở Step 4 | ✅ Đã bỏ khỏi template (code đã sửa) |
+| 4 | `_overlay_audio()` thừa | Bỏ hoặc không gọi |
