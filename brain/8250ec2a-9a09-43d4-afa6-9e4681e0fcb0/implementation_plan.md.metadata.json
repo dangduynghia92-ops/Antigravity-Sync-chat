@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Final plan: Step 3 simplified to only structural decisions (camera, timing, action, has_crowd). Three visual detail fields removed. Step 4 gets new thinking fields (costume, lighting, background, extras) that it derives from reference data before writing flat_prompt. Code changes in STEP3_SYSTEM_PROMPT, both STEP4 templates, scenes_text_parts builder, and final prompt dict.",
-  "updatedAt":  "2026-05-06T08:10:51.620450200Z",
-  "version":  "11",
+  "summary":  "Plan to split current Step 3 into Step 2.5 (Visual Director - creative scene design) and Step 3 (Camera Tech - technical camera specs). Includes input/output schemas, prompt design, audio sync solution, and code changes needed.",
+  "updatedAt":  "2026-05-07T11:45:44.374264900Z",
+  "version":  "12",
   "requestFeedback":  true
 }

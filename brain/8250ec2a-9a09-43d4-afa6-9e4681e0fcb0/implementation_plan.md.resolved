@@ -1,66 +1,92 @@
-# Refactor Step 3 & Step 4
+# Tách Step 3 → Step 2.5 (Visual Director) + Step 3 (Camera Tech)
 
-## Step 3: chỉ giữ quyết định cấu trúc cảnh
+## Mục tiêu
+Tách 1 bước làm 2 việc thành 2 bước chuyên biệt:
+- **Step 2.5**: Đọc narrative → thiết kế visual arc (CÁI GÌ quay)
+- **Step 3**: Nhận visual arc → gán kỹ thuật camera (CÁCH quay)
 
-**Bỏ** 3 field: `costume_note`, `lighting_and_atmosphere`, `background_and_extras`  
-**Thêm**: `has_crowd` (boolean)
+## Audio Sync
+`covers_sentences` trong mỗi beat link về sentence gốc → `duration` = tổng duration các sentences → timing luôn khớp audio. Text gốc giữ nguyên cho `audio_sync`.
 
-Output JSON mới:
+---
+
+## Step 2.5 — Visual Director
+
+### Input
+Sequences từ Step 1, mỗi sequence gồm: `sequence_id`, `full_text`, `total_duration`, `characters`, `location`, `sentences[]` (id, text, duration).
+
+### Output
 ```json
 {
-  "global_scene_id": "SEQ_01_SCN_01",
-  "duration": 4.0,
-  "audio_sync": "...",
-  "character_labels": [],
-  "shot_type": "Wide Shot",
-  "roll_type": "B-Roll",
-  "camera_motion": "Slow Pan",
-  "time_of_day": "night",
-  "physical_action": "...",
-  "has_crowd": true
+  "sequence_id": "SEQ_01",
+  "visual_concept": "Tóm tắt 1 câu: cảnh gì, cảm xúc gì",
+  "mood_arc": "dread → struggle → determination",
+  "beats": [
+    {
+      "beat_id": "BEAT_01",
+      "type": "ESTABLISH | ACTION | INTIMATE | CLIMAX | CONTEXT",
+      "covers_sentences": [1, 2],
+      "visual": "Mô tả filmable: ai làm gì ở đâu",
+      "characters_in_beat": ["Label-A"],
+      "is_broll": false,
+      "translation_note": "(nếu dịch metaphor) ghi lại lý do"
+    }
+  ]
 }
 ```
 
-## Step 4: thêm thinking fields, tự tra reference data
+### Prompt rules
+1. Đọc toàn bộ `full_text` → hiểu arc cảm xúc → thiết kế chuỗi beats
+2. Mỗi beat = 1 khoảnh khắc visual mạch lạc, có thể gom nhiều sentences
+3. `visual` phải filmable: chủ thể + hành động vật lý + bối cảnh
+4. Metaphor/abstract → dịch thành CHARACTER REACTION hoặc ATMOSPHERIC DETAIL
+5. KHÔNG mô tả shot_type, camera_motion — đó là việc Step 3
+6. `covers_sentences` PHẢI bao hết tất cả sentences, không bỏ sót, không trùng
 
-Step 4 **tự viết** chi tiết visual từ reference:
+### Beat types
+| Type | Dùng khi | Gợi ý framing |
+|---|---|---|
+| ESTABLISH | Mở đầu sequence, giới thiệu không gian | Wide |
+| ACTION | Hành động chính diễn ra | Medium/Wide |
+| INTIMATE | Khoảnh khắc cá nhân, cảm xúc | Close-up |
+| CLIMAX | Đỉnh điểm tension | Medium + Zoom |
+| CONTEXT | Narrator commentary, background info | B-Roll hoặc Reaction |
 
-| Thinking field | Nguồn |
-|---|---|
-| `costume` | Character sheet + action context |
-| `lighting` | time_of_day + location data |
-| `background` | Location bible_description + shot_type |
-| `extras` | Crowd archetypes từ World Bible (chỉ khi `has_crowd = true`), mô tả hành động, không cần tả trang phục chi tiết |
-| `character_blocking` | character_labels + shot_type |
-| `emotion` | Nhân vật + context |
-| `key_props` | Action context |
-| `camera_angle` | Shot context |
-| `effects` | Scene context |
-| `flat_prompt` | Tổng hợp tất cả trên |
+---
 
-## Sửa code cụ thể
+## Step 3 — Camera Tech (giản lược)
 
-#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+### Input
+Beats từ Step 2.5 + sentence timing + available labels.
 
-**1. `STEP3_SYSTEM_PROMPT`** (~line 438-570):
-- Bỏ Rule 6 (Costume Note)
-- Bỏ Rule 7 (Background & Extras) → thay: `has_crowd = true/false`
-- Output schema: bỏ 3 field cũ, thêm `has_crowd`
+### Việc cần làm
+- Map beat.type → shot_type (ESTABLISH→Wide, INTIMATE→Close-up, ...)
+- Tính `duration` = sum(sentences[covers_sentences].duration)
+- Chọn `camera_motion` theo rules (opening=Pan, moving=Track, climax=Zoom, else=Static)
+- Gán `audio_sync` = gộp text gốc của covers_sentences
+- Enforce technical rules (adjacent motions, adjacent close-ups, B-Roll limits)
 
-**2. `STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE`** (~line 575-688):
-- Bỏ rules cũ (from costume_note, from background_and_extras, from lighting_and_atmosphere)
-- Thêm thinking fields mới: `costume`, `lighting`, `background`, `extras`
-- Rules mới: tra character reference cho costume, suy lighting từ time_of_day + location, viết background từ location data + shot_type, mô tả extras action khi has_crowd = true
+### Output
+Giữ nguyên format hiện tại (scenes[]).
 
-**3. scenes_text_parts builder** (~line 1883-1896):
-- Bỏ: `Costume:`, `Background:`, `Lighting:` 
-- Thêm: `Crowd: yes/no`
+---
 
-**4. Final prompt dict** (~line 1946-1960):
-- Thêm fields mới: `costume`, `lighting`, `background`, `extras`
-- Bỏ: `crowd_description`
+## Thay đổi code
+
+### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+
+1. Thêm `STEP2_5_VISUAL_DIRECTOR_PROMPT` (prompt mới)
+2. Thêm method `_run_step2_5()` — gọi LLM cho mỗi sequence, output beats
+3. Sửa `_run_step3_single_sequence()` — nhận beats thay vì full_text, bỏ Phase 1 (visual_event)
+4. Sửa `STEP3_SYSTEM_PROMPT` — bỏ Phase 1, nhận beats làm input
+
+### UI
+- Thêm status cho step2.5 trong progress display
+
+---
 
 ## Verification
-1. Syntax check
-2. Xóa checkpoint Step 3 + 4 → chạy lại chapter test
-3. So sánh flat_prompt mới vs cũ
+1. Chạy pipeline trên chapter test hiện có
+2. So sánh output Step 3 cũ vs mới → visual arc có mạch lạc hơn không
+3. Kiểm tra timing: sum(beat durations) == total_sequence_duration
+4. Kiểm tra coverage: mọi sentence_id đều nằm trong ít nhất 1 beat
