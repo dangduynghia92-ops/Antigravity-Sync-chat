@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Updated plan: Step 2.5 renamed to Step 3.1 (Visual Treatment), Step 3 renamed to Step 3.2 (Camera Cuts). Added anti-repeat rules for both steps and contrapuntal editing note. Complete with prompt text, audio overlay algorithm, and code changes.",
-  "updatedAt":  "2026-05-07T12:14:45.963880Z",
-  "version":  "14",
+  "summary":  "Expert plan for per-sentence Visual Interpreter approach. Step 3.1 processes each sentence with a 4-point checklist (Filmable? Character? Continuity? Split?), outputs sentence-aligned filmable scenes. Step 3.2 assigns camera specs. Audio sync is automatic. Includes data analysis from real Saladin chapter, prompt design, edge case handling, and risk mitigation.",
+  "updatedAt":  "2026-05-07T14:00:48.672916400Z",
+  "version":  "15",
   "requestFeedback":  true
 }
