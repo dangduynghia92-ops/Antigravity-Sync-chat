@@ -1,67 +1,110 @@
-# Audit: Step 4 (Prompt Writer) — Output Quality
+# Nghiên cứu: Chuyển ngôn ngữ văn chương → điện ảnh cho AI pipeline
 
-## Tổng quan
-- 26 scenes, flat_prompt avg 769 chars (min 619, max 1029)
-- Style prefix ✅ — tất cả đều bắt đầu bằng "A stylized historical animation..."
-- Style denial suffix ✅ — "NOT photorealistic, NOT anime..." (đây là **ĐÚNG**, không phải lỗi)
+## Vấn đề hiện tại
+
+Pipeline đang gửi **văn bản gốc** (POV narrative) thẳng vào Step 3 (Scene Director):
+
+```
+"Nỗi sợ hãi bao trùm lấy anh, bóng tối nuốt chửng linh hồn"
+                    ↓ (Step 3 nhận trực tiếp)
+        → LLM phải vừa hiểu metaphor vừa dựng scene
+        → Dễ sai: vẽ "bóng tối nuốt người" theo nghĩa đen
+```
+
+Step 3 hiện cố giải quyết bằng Rule 8 (Visual Translation Strategy), nhưng LLM phải làm **2 việc cùng lúc**: hiểu ý nghĩa + dựng cảnh.
 
 ---
 
-## Phân loại Issues
+## 3 Phương án
 
-### ✅ FALSE POSITIVES (không phải lỗi)
-**STYLE BAN: "anime", "stick figure", "3d cgi", "photorealistic"** — 88 hits
+### Phương án A: Giữ nguyên (embedded trong Step 3)
+**Hiện tại**: `visual_event` field = LLM tóm tắt visual event trước khi dựng cảnh
 
-Đây là **style denial suffix** theo yêu cầu của style file (line 40):
+- ✅ Không thêm API call
+- ❌ LLM phải vừa dịch ngữ vừa dựng cảnh → cognitive load cao
+- ❌ Không kiểm tra được bước dịch ngữ riêng
+
+### Phương án B: Thêm Step riêng (Step 2.5)
+Tạo bước trung gian: **Visual Scene Decomposition**
+
 ```
-"...NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI."
+Step 1 output: "Nỗi sợ bao trùm, bóng tối nuốt chửng linh hồn"
+    ↓
+Step 2.5: Rewrite thành "filmable action lines"
+    ↓
+Output: "Nhân vật đứng run trong phòng tối. Tay nắm chặt thành ghế. 
+         Ngọn nến cuối cùng chập chờn rồi tắt."
+    ↓
+Step 3: Scene Director nhận bản đã clean → dựng cảnh chính xác hơn
 ```
-→ Đây là tính năng, **KHÔNG PHẢI lỗi**. LLM đang tuân thủ style file.
+
+- ✅ Tách biệt rõ: 1 LLM dịch ngữ, 1 LLM dựng cảnh
+- ✅ Debug dễ — xem bước nào sai
+- ❌ Thêm 1 API call/sequence → tăng chi phí + thời gian
+- ❌ Có thể mất context nếu rewrite quá xa bản gốc
+
+### Phương án C: Prompt Chaining (nâng cấp Step 3)
+Giữ nguyên Step 3 nhưng **buộc LLM viết bản dịch trước khi dựng cảnh**:
+
+```json
+{
+  "visual_event": "tóm tắt sự kiện visual (đã có)",
+  "filmable_actions": [          ← MỚI
+    "Nhân vật đứng run trong phòng tối",
+    "Tay nắm chặt thành ghế",
+    "Ngọn nến tắt"
+  ],
+  "scenes": [...]                ← dựng cảnh từ filmable_actions
+}
+```
+
+- ✅ Không thêm API call — cùng 1 request
+- ✅ Buộc LLM "nghĩ trước khi làm" (chain-of-thought)
+- ✅ Debug được: xem filmable_actions có đúng không
+- ❌ Vẫn 1 LLM làm 2 việc, nhưng tách bước rõ hơn
 
 ---
 
-### ⚠️ REAL ISSUES (cần fix)
+## So sánh
 
-#### Issue 1: "tanned" vẫn leak vào flat_prompt (2 scenes)
-```
-SEQ_01_SCN_06: "Kurdish-Leader-A's tanned, mitten-shaped hand..."
-SEQ_03_SCN_04: "Kurdish-Leader-A's tanned, mitten-shaped hands..."
-```
-**Nguyên nhân**: Character sheet cũ có "tanned skin on hands" → Step 4 copy vào flat_prompt.
-**Fix**: Đã fix ở Step 2b (bỏ skin tone). Chạy lại sẽ hết.
-
-#### Issue 2: "identical" trong crowd descriptions (2 scenes)
-```
-SEQ_02_SCN_01: "rows of identical stylized guards"
-SEQ_04_SCN_01: "a row of identical Seljuk guards"
-```
-**Nguyên nhân**: Style file line 11 nói "identical or near-identical stylized figures". LLM copy từ style.
-**Fix**: Đã discuss trước — bỏ "identical" khỏi style file. Thay bằng "uniformed" hoặc "matching".
-
-#### Issue 3: B-Roll mô tả guards nhưng append "NO characters"
-```
-SEQ_04_SCN_01 flat_prompt: "...guards with round white faces stand watch..."
-                          + "NO characters, NO people, NO figures — empty scene only."
-```
-**Xung đột nghiêm trọng**: Prompt vừa mô tả guards vừa nói "NO people" → AI sẽ bối rối.
-
-**Root cause**: Code line 2186 check `if not p.get("characters", "").strip()` — crowd scenes có `characters=""` (vì guards không phải named characters) → code auto-append "NO characters" → sai!
-
-**Fix cần**: Khi `has_crowd=true`, KHÔNG append "NO characters" suffix.
-
-#### Issue 4: Label `[Seljuk-Guard-Generic]` tạo nhưng không có trong flat_prompt
-```
-SEQ_04_SCN_03: characters_detail có [Seljuk-Guard-Generic] nhưng flat_prompt không mention label
-```
-**Nguyên nhân**: LLM tự tạo label "Seljuk-Guard-Generic" cho crowd → không nằm trong AVAILABLE LABELS list. Label này sẽ không match character sheet nào.
-
----
-
-## Đề xuất Fix
-
-| # | Fix | Mức độ | File |
+| Tiêu chí | A (hiện tại) | B (Step riêng) | C (Prompt Chain) |
 |---|---|---|---|
-| 1 | "tanned" — đã fix ở Step 2b prompt | ✅ Done | pipeline |
-| 2 | "identical" → thay bằng "uniformed" trong style file | Minor | style file |
-| 3 | Code: khi `has_crowd=true`, không append "NO characters" | **Critical** | pipeline code |
-| 4 | Label validation: warn nếu LLM tạo label ngoài AVAILABLE LABELS | Low | pipeline code |
+| Chi phí API | Không đổi | +1 call/seq | Không đổi |
+| Độ chính xác | Trung bình | Cao nhất | Cao |
+| Debug | Khó | Dễ nhất | Dễ |
+| Tốc độ | Nhanh | Chậm hơn | Không đổi |
+| Complexity | Đã có | Thêm step mới | Sửa prompt |
+
+---
+
+## Đề xuất: Phương án C (Prompt Chaining)
+
+**Lý do**: Không tốn thêm API call, nhưng bắt LLM tách rõ 2 giai đoạn trong 1 request.
+
+### Cách thực hiện
+
+Trong Step 3, thêm field `filmable_actions` vào **Phase 1** (trước khi dựng scenes):
+
+```
+### Phase 1 — Visual Event Synthesis
+1. Read full_text → write visual_event (đã có)
+2. NEW: Break visual_event into filmable_actions:
+   - Mỗi action = 1 hành động camera có thể quay được
+   - Cấm metaphor/abstract → phải chuyển thành physical action
+   - Mỗi action bắt đầu bằng "[Ai] [làm gì]"
+   
+   BAD: "Darkness consumed his soul"
+   GOOD: "Character stands trembling in dark room, gripping chair edge"
+   
+   BAD: "His kingdom crumbled before his eyes"
+   GOOD: "Character's hands drop the scroll, shoulders slump forward"
+
+### Phase 2 — Camera Cuts
+Based on filmable_actions (NOT full_text), create camera angles...
+```
+
+### Lợi ích
+1. LLM buộc phải **viết lại** text thành filmable trước khi dựng
+2. `filmable_actions` nằm trong JSON output → **kiểm tra được**
+3. Step 4 (Prompt Writer) cũng nhận được filmable_actions → prompt chính xác hơn
+4. Không tốn thêm tiền/thời gian
