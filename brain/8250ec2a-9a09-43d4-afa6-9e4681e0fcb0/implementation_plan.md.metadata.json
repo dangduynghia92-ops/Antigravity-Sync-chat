@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Detailed plan to split Step 3 using 'Tách Track' method. Step 2.5 writes ONE continuous Visual Treatment for the whole time block. Step 3 cuts into camera shots. Audio is overlaid by timing math in code. Includes exact prompt text, data flow, algorithm, and code change locations.",
-  "updatedAt":  "2026-05-07T11:58:01.492263Z",
-  "version":  "13",
+  "summary":  "Updated plan: Step 2.5 renamed to Step 3.1 (Visual Treatment), Step 3 renamed to Step 3.2 (Camera Cuts). Added anti-repeat rules for both steps and contrapuntal editing note. Complete with prompt text, audio overlay algorithm, and code changes.",
+  "updatedAt":  "2026-05-07T12:14:45.963880Z",
+  "version":  "14",
   "requestFeedback":  true
 }

@@ -1,31 +1,31 @@
-# Tách Track: Step 2.5 (Visual Treatment) + Step 3 (Camera Cuts)
+# Tách Track: Step 3.1 (Visual Treatment) + Step 3.2 (Camera Cuts)
 
 ## Nguyên lý
-Coi mỗi Sequence là 1 **khối thời gian** (Time Block). Audio và Video là 2 track song song:
+Mỗi Sequence = 1 **khối thời gian**. Audio và Video là 2 track song song:
 - **Audio Track** = voiceover gốc (cố định, từ SRT)
-- **Video Track** = chuỗi hình liên tục (Step 2.5 viết, Step 3 cắt)
+- **Video Track** = chuỗi hình liên tục (Step 3.1 viết, Step 3.2 cắt)
 
 ```
-Step 2.5: Đọc toàn bộ text → viết 1 đoạn Visual Treatment liên tục
-Step 3:   Nhận Visual Treatment → cắt thành shots + gán kỹ thuật camera
-Code:     Rải audio lên shots bằng toán timing
+Step 3.1: Đọc toàn bộ text → viết 1 Visual Treatment liên tục
+Step 3.2: Nhận Visual Treatment → cắt thành shots + gán kỹ thuật camera
+Code:     Rải audio lên shots bằng toán timing (contrapuntal editing tự nhiên)
 ```
 
 ---
 
-## Step 2.5 — Visual Treatment Writer
+## Step 3.1 — Visual Treatment Writer
 
 ### Vai trò
-Đọc narrative text → viết **1 đoạn mô tả hành động liên tục** (kéo dài bằng duration của sequence). Không quan tâm từng câu. Chỉ lấy tổng ý nghĩa.
+Đọc narrative text → viết **1 đoạn mô tả hành động liên tục** cho cả sequence. Không quan tâm từng câu. Chỉ lấy tổng ý nghĩa.
 
-### Input (mỗi sequence)
+### Input
 ```json
 {
   "sequence_id": "SEQ_01",
   "total_duration": 17.81,
   "characters": ["Kurdish-Leader-A", "Kurdish-Prince-A"],
   "location": "Tigris-River-Raft-Night",
-  "full_text": "Black water rushes beneath a makeshift raft. The wind off the Tigris River is freezing, biting through the damp wool wrapped around your fragile frame. You are a newborn, blind to the darkness, but your very first sensation is the violent pitch of a desperate escape. You are born into a prominent Kurdish family, yet your bloodline carries a sudden death sentence."
+  "full_text": "Black water rushes beneath a makeshift raft..."
 }
 ```
 
@@ -37,12 +37,13 @@ Code:     Rải audio lên shots bằng toán timing
 }
 ```
 
-### Prompt (STEP2_5_SYSTEM_PROMPT)
+### Prompt (STEP3_1_SYSTEM_PROMPT)
+
 ```
 You are a Visual Treatment Writer for cinematic production.
 
 ## YOUR JOB
-Read the narrative text of a sequence. Write ONE continuous visual description 
+Read the narrative text of a sequence. Write ONE continuous visual description
 that covers the ENTIRE duration as a flowing cinematic moment.
 
 ## RULES
@@ -54,13 +55,17 @@ that covers the ENTIRE duration as a flowing cinematic moment.
    - Metaphor/philosophy → CHARACTER REACTION (body language, gesture)
    - Abstract concept → CONCRETE OBJECT or ENVIRONMENTAL DETAIL
    - Past/future commentary → ATMOSPHERIC DETAIL (light, wind, stillness)
-6. Do NOT describe camera angles, shot types, or editing — that's not your job
+6. Do NOT describe camera angles, shot types, or editing — that is Step 3.2's job
 7. Do NOT copy the narration word-for-word. REWRITE into visual action
-8. The treatment must feel like ONE CONTINUOUS MOMENT, not a list of disconnected images
-9. Include enough physical detail for the given duration:
-   - <10s: 2-3 actions
-   - 10-20s: 4-6 actions
-   - 20-30s: 6-8 actions
+8. The treatment must feel like ONE CONTINUOUS MOMENT, not a list of images
+
+## ACTION DENSITY (CRITICAL)
+Each action must describe a DIFFERENT physical movement.
+Do NOT write one long flowing action — write multiple short distinct actions.
+Required density based on duration:
+   - <10s: 2-3 distinct actions
+   - 10-20s: 4-6 distinct actions
+   - 20-30s: 6-8 distinct actions
 
 ## CONTENT SAFETY
 FORBIDDEN: blood, wounds, graphic injury, self-harm, weapons piercing bodies.
@@ -77,17 +82,13 @@ Return ONLY the JSON, no explanation.
 
 ---
 
-## Step 3 — Camera Cuts (sửa lại)
+## Step 3.2 — Camera Cuts
 
-### Thay đổi so với hiện tại
-| Hiện tại | Mới |
-|---|---|
-| Nhận `full_text` (narrative gốc) | Nhận `visual_treatment` (đã filmable) |
-| Phase 1: LLM tự tổng hợp visual_event | **Bỏ Phase 1** — đã có sẵn |
-| LLM gán `audio_sync` | **Bỏ** — code tính sau |
-| LLM lo cả creative + technical | Chỉ lo **technical** (shot, motion, timing) |
+### Vai trò
+Nhận visual_treatment (đã filmable) → cắt thành camera shots + gán kỹ thuật.
+**Chỉ lo kỹ thuật camera**, không cần đọc narrative gốc.
 
-### Input mới
+### Input
 ```json
 {
   "sequence_id": "SEQ_01",
@@ -98,7 +99,7 @@ Return ONLY the JSON, no explanation.
 }
 ```
 
-### Output (giữ nguyên format, bỏ `audio_sync`)
+### Output (giữ format hiện tại, bỏ `audio_sync` — code tính sau)
 ```json
 {
   "sequence_id": "SEQ_01",
@@ -112,78 +113,79 @@ Return ONLY the JSON, no explanation.
       "roll_type": "A-Roll",
       "camera_motion": "Slow Pan",
       "time_of_day": "night",
-      "physical_action": "Raft pitches on churning water, father kneels holding baby",
+      "physical_action": "Raft pitches on churning water, father kneels shielding baby",
       "has_crowd": false
-    },
-    ...
+    }
   ]
 }
 ```
 
-### Prompt sửa
-- Bỏ Phase 1 (Visual Event Synthesis) — đã có `visual_treatment`
-- Bỏ Rule 8 (Visual Translation) — đã dịch ở Step 2.5
-- Bỏ `audio_sync` khỏi output format
-- Thêm: "Decompose the `visual_treatment` into camera angles"
-- Giữ nguyên: Rule 2 (Time Math), Rule 3-7 (shot/motion/safety rules)
+### Thay đổi prompt so với Step 3 hiện tại
+| Bỏ | Lý do |
+|---|---|
+| Phase 1 (Visual Event Synthesis) | Đã có visual_treatment |
+| Rule 8 (Visual Translation Strategy) | Đã dịch ở Step 3.1 |
+| `audio_sync` trong output | Code tính bằng toán |
+| `visual_event` trong output | Đã có visual_treatment |
+
+| Giữ nguyên | |
+|---|---|
+| Rule 1: Label Lock | |
+| Rule 2: Time Math | |
+| Rule 3: A-Roll / B-Roll | |
+| Rule 4: Shot Types (3 loại) | |
+| Rule 5: Physical Action Only | |
+| Rule 6: Has Crowd | |
+| Rule 7: Camera Motion | |
+| Rule 9: Content Safety | |
+
+| Thêm mới | |
+|---|---|
+| Anti-Repeat Rule | "Do NOT repeat the same physical action across multiple scenes. If actions from visual_treatment run out, use environment detail or character's lingering expression for B-Roll." |
+| Input instruction | "Decompose the visual_treatment into camera angles. Each scene = a different angle of the SAME continuous event." |
 
 ---
 
-## Audio Overlay — Thuần code, không LLM
+## Audio Overlay — Code (không LLM)
 
 ### Thuật toán
 ```python
-def overlay_audio(scenes, sentences):
-    """Rải audio lên scenes bằng timing math."""
-    # 1. Tính cumulative time cho scenes
-    scene_start = 0.0
-    for scene in scenes:
-        scene['start_time'] = scene_start
-        scene['end_time'] = scene_start + scene['duration']
-        scene_start += scene['duration']
-    
-    # 2. Tính cumulative time cho sentences
-    sent_start = 0.0
+def overlay_audio(scenes: list, sentences: list) -> list:
+    """Rải audio lên scenes bằng timing overlap."""
+    # Cumulative time cho scenes
+    t = 0.0
+    for sc in scenes:
+        sc['start_time'] = t
+        sc['end_time'] = t + sc['duration']
+        t += sc['duration']
+
+    # Cumulative time cho sentences
+    t = 0.0
     for sent in sentences:
-        sent['start_time'] = sent_start
-        sent['end_time'] = sent_start + sent['duration']
-        sent_start += sent['duration']
-    
-    # 3. Cho mỗi scene, tìm sentences overlap
-    for scene in scenes:
-        overlapping = []
+        sent['start_time'] = t
+        sent['end_time'] = t + sent['duration']
+        t += sent['duration']
+
+    # Overlap: sentence thuộc scene nếu có giao thời gian
+    for sc in scenes:
+        parts = []
         for sent in sentences:
-            # Overlap nếu: sent_start < scene_end AND sent_end > scene_start
-            if sent['start_time'] < scene['end_time'] and sent['end_time'] > scene['start_time']:
-                overlapping.append(sent['text'])
-        scene['audio_sync'] = ' '.join(overlapping)
-    
+            if sent['start_time'] < sc['end_time'] and sent['end_time'] > sc['start_time']:
+                parts.append(sent['text'])
+        sc['audio_sync'] = ' '.join(parts)
+
     return scenes
 ```
 
-### Ví dụ thực tế (SEQ_01)
+### Lưu ý: Contrapuntal Editing
+Audio và visual **không cần khớp nghĩa đen**:
 ```
-Sentences:
-  S1: [0.0 - 2.54] "Black water rushes beneath a makeshift raft."
-  S2: [2.54 - 4.36] "The wind off the Tigris River is freezing,"
-  S3: [4.36 - 7.26] "biting through the damp wool..."
-  S4: [7.26 - 9.39] "You are a newborn..."
-  S5: [9.39 - 13.10] "but your very first sensation..."
-  S6: [13.10 - 15.17] "You are born into a prominent Kurdish family,"
-  S7: [15.17 - 17.81] "yet your bloodline carries a sudden death sentence."
+🎧 "Black water rushes beneath a raft"
+🎬 Close-up mặt em bé
 
-Scenes (Step 3 output):
-  SCN_01: [0.0 - 5.0] Wide Shot
-  SCN_02: [5.0 - 9.0] Medium Shot
-  SCN_03: [9.0 - 13.0] Close-up
-  SCN_04: [13.0 - 17.81] Medium Shot
-
-Audio overlay result:
-  SCN_01 audio_sync = S1 + S2 + S3(bắt đầu)  ← overlap [0-5]
-  SCN_02 audio_sync = S3(tiếp) + S4            ← overlap [5-9]
-  SCN_03 audio_sync = S5                        ← overlap [9-13]
-  SCN_04 audio_sync = S6 + S7                   ← overlap [13-17.81]
+→ Hiệu ứng montage: nghe nguy hiểm + thấy mong manh = tension
 ```
+Đây là kỹ thuật voiceover chuẩn trong phim tài liệu/tiểu sử. Tách Track tạo hiệu ứng này **tự nhiên**.
 
 ---
 
@@ -192,24 +194,25 @@ Audio overlay result:
 ### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
 
 #### Thêm mới
-- `STEP2_5_VISUAL_TREATMENT_PROMPT` — prompt constant
-- `_run_step2_5()` — gọi LLM cho mỗi sequence, lưu visual_treatment
-- `_overlay_audio()` — hàm thuần code rải audio lên scenes
+- `STEP3_1_VISUAL_TREATMENT_PROMPT` — prompt constant (~800 chars)
+- `_run_step3_1()` — gọi LLM cho mỗi sequence, lưu visual_treatment vào `self.visual_treatments`
+- `overlay_audio(scenes, sentences)` — hàm thuần code
 
 #### Sửa
-- `_run_step3()` — inject visual_treatment vào input thay vì full_text
-- `STEP3_SYSTEM_PROMPT` — bỏ Phase 1, bỏ audio_sync, bỏ Rule 8
+- `STEP3_SYSTEM_PROMPT` → `STEP3_2_SYSTEM_PROMPT` — bỏ Phase 1, bỏ Rule 8, bỏ audio_sync, thêm Anti-Repeat
+- `_run_step3()` → `_run_step3_2()` — inject visual_treatment thay full_text
 - `_process_sequence_step3()` — user message dùng visual_treatment
-- Pipeline flow: step2c → **step2.5** → step3
+- Pipeline flow: step2c → **step3.1** → **step3.2** → step4
+- Sau Step 3.2: gọi `overlay_audio()` để tính audio_sync
 
 #### UI
-- Thêm step2.5 progress indicator
+- Thêm step3.1 progress indicator (giữa step2c và step3.2)
 
 ---
 
 ## Verification
-1. Chạy pipeline test → so sánh output cũ vs mới
-2. Kiểm tra: sum(scene.duration) == total_sequence_duration
-3. Kiểm tra: audio overlay bao phủ tất cả sentences (không bỏ sót)
-4. Kiểm tra: visual_treatment có đủ filmable actions cho duration
-5. Kiểm tra: Step 3 scenes có mạch lạc hơn (không còn 1:1 slideshow)
+1. Chạy pipeline test → so sánh scenes cũ vs mới
+2. visual_treatment: đủ filmable actions cho duration
+3. Step 3.2: không còn 1:1 slideshow
+4. Audio overlay: tất cả sentences được cover (không bỏ sót)
+5. Timing: sum(scene.duration) == total_sequence_duration
