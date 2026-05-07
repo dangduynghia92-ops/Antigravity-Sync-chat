@@ -1,0 +1,82 @@
+# Tạo Tab "🎙 Audio → SRT" — Chuyển audio thành phụ đề SRT
+
+## Mô tả
+Thêm tab mới vào app PyQt cho phép chuyển file audio (MP3, WAV, etc.) thành file phụ đề SRT bằng **Faster-Whisper** (chạy local, miễn phí).
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Cần cài thêm dependency**: `faster-whisper` (~50MB, sẽ tự tải model lần đầu chạy ~1.5GB cho model `medium`)
+> 
+> **Yêu cầu phần cứng**: 
+> - CPU mode: bất kỳ máy nào cũng chạy được, model `small` (~2GB RAM) hoặc `medium` (~5GB RAM)
+> - GPU mode (NVIDIA): nhanh gấp 5-10x, cần CUDA
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Model size mặc định**: `small` (nhanh, ~2GB) hay `medium` (chính xác hơn, ~5GB)? Khuyến nghị: `medium` vì máy bạn đủ RAM.
+> 2. **Ngôn ngữ mặc định**: `vi` (Tiếng Việt) hay `en` (English)? Sẽ có dropdown để chọn.
+> 3. **Output location**: Lưu file SRT cạnh file audio gốc, hay chọn thư mục riêng?
+
+## Proposed Changes
+
+### Dependencies
+
+#### [MODIFY] [requirements.txt](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/requirements.txt)
+- Thêm `faster-whisper>=1.0.0`
+
+---
+
+### Core Module
+
+#### [NEW] core/audio_to_srt.py
+- Function `transcribe_to_srt(audio_path, language, model_size, output_path, callback)`:
+  - Load Whisper model (cache sau lần đầu)
+  - Transcribe audio → segments với timestamps
+  - Format thành SRT chuẩn → ghi file
+- Hỗ trợ: MP3, WAV, M4A, FLAC, OGG
+- Thread-safe, có `stop_check` callback để cancel
+- Progress callback cho UI
+
+---
+
+### UI Tab
+
+#### [NEW] ui/srt_generator_tab.py
+Tab UI theo pattern giống `tts_tab.py`:
+
+**Layout:**
+- Row 1: `Add Files` | `Add Folder` | Language dropdown | Model size dropdown | Device (CPU/CUDA)
+- Row 2: Output path + Browse
+- Tree view: danh sách audio files (tên, duration, status)
+- Action buttons: All | None | Clear | Remove | **Generate** | Stop | Open
+- Log panel
+
+**Tính năng:**
+- Scan folder lấy tất cả file audio (`.mp3`, `.wav`, `.m4a`, `.flac`)
+- Chọn language: Vietnamese, English, Spanish, Chinese, Japanese, Auto-detect
+- Chọn model: tiny, base, small, medium, large-v3
+- Chọn device: CPU, CUDA (auto-detect GPU)
+- Multi-thread processing (từng file tuần tự vì Whisper dùng nhiều RAM)
+- Progress tracking per file
+- Output SRT cạnh file audio hoặc vào folder riêng
+- Retry failed files
+
+---
+
+### Main Window
+
+#### [MODIFY] [main_window.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/2.Script_Split_Chapter/ui/main_window.py)
+- Import `SRTGeneratorTab`
+- Thêm tab `"🎙 Audio → SRT"` vào tab widget (đặt sau TTS Cleanup)
+- Cập nhật `TAB_HELP_IDS`
+
+## Verification Plan
+
+### Automated Tests
+- Chạy app, kiểm tra tab hiển thị đúng
+- Test với 1 file MP3 ngắn → verify SRT output format chuẩn
+
+### Manual Verification
+- User thêm file audio → nhấn Generate → kiểm tra file SRT sinh ra

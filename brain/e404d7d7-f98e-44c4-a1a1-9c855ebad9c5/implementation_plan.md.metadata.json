@@ -1,0 +1,7 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Complete implementation plan for Audio-to-SRT tab with:\n1. Full Whisper model comparison table (6 models from tiny to large-v3-turbo)\n2. Auto-detect language support\n3. Output path with empty = save alongside audio\n4. AI verification step using Gemini API to cross-check SRT text against original script text, following the pattern from video_prompt_tab.py",
+  "updatedAt":  "2026-05-06T23:45:33.692733800Z",
+  "version":  "1",
+  "requestFeedback":  true
+}

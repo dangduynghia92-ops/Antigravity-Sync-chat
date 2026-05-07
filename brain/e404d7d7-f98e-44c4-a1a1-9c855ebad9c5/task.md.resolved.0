@@ -1,0 +1,8 @@
+# Task: Audio → SRT Tab
+
+- [ ] Install dependency: `faster-whisper`
+- [ ] Create `core/audio_to_srt.py` — transcribe + verify + rename logic
+- [ ] Create `ui/srt_generator_tab.py` — PyQt tab UI
+- [ ] Modify `ui/main_window.py` — register tab
+- [ ] Modify `requirements.txt` — add faster-whisper
+- [ ] Test: run app, verify tab works
