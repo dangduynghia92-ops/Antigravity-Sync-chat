@@ -1,0 +1,6 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary":  "Tư vấn chi tiết về Voicebox cho cấu hình máy cụ thể của user (RTX 2070 8GB, 32GB RAM). Bao gồm:\n- Phát hiện VẤN ĐỀ NGHIÊM TRỌNG: GPU chưa được bật (đang chạy CPU)\n- Hướng dẫn cài CUDA Backend\n- So sánh 6 engines cho English+Spanish → khuyên Qwen3-TTS 1.7B\n- Giải thích Voice Personalities (Compose vs Speak in Character)\n- Ước tính thời gian generate (GPU vs CPU)\n- Khẳng định vẫn dùng máy bình thường khi generate\n- Checklist tối ưu chất lượng: audio sample, text formatting, caching\n- Bảng hành động ưu tiên",
+  "updatedAt":  "2026-05-07T05:25:26.244708200Z",
+  "requestFeedback":  true
+}
