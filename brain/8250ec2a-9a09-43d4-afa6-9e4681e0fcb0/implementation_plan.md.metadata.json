@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
-  "summary":  "Plan to split current Step 3 into Step 2.5 (Visual Director - creative scene design) and Step 3 (Camera Tech - technical camera specs). Includes input/output schemas, prompt design, audio sync solution, and code changes needed.",
-  "updatedAt":  "2026-05-07T11:45:44.374264900Z",
-  "version":  "12",
+  "summary":  "Detailed plan to split Step 3 using 'Tách Track' method. Step 2.5 writes ONE continuous Visual Treatment for the whole time block. Step 3 cuts into camera shots. Audio is overlaid by timing math in code. Includes exact prompt text, data flow, algorithm, and code change locations.",
+  "updatedAt":  "2026-05-07T11:58:01.492263Z",
+  "version":  "13",
   "requestFeedback":  true
 }
