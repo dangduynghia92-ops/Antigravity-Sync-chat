@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Deep quality analysis of 3 issues: B-Roll prompts generating unwanted characters, scene construction evaluation for 3 sequences, and character count inconsistency between pipeline runs.",
-  "updatedAt":  "2026-05-07T08:19:58.417553100Z",
-  "version":  "5",
+  "summary":  "Full audit of character sheet prompt based on industry standards for animation model sheets. Identifies 6 issues in current Step 2b prompt and proposes a complete rewrite.",
+  "updatedAt":  "2026-05-07T09:04:24.970233400Z",
+  "version":  "6",
   "requestFeedback":  true
 }

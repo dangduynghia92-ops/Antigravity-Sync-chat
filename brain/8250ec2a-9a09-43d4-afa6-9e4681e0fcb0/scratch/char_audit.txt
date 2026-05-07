@@ -1,0 +1,75 @@
+============================================================
+LABEL: Kurdish-Prince-A
+NAME: child Yusuf ibn Ayyub, newborn
+GROUP: PROTAGONIST
+AGE: child
+
+VISUAL_DESCRIPTION:
+BODY: A tiny newborn infant, approximately 1 head tall in this stylized form. Features a round, pure white mask-like face with small black dot eyes and thin, soft eyebrows. SKIN: Pure white face, mitten-shaped hands. HAIR: A small tuft of dark hair peeking from a cap. FACE: Eyes closed in a peaceful expression, absolutely no nose. COSTUME (MAIN): Wrapped tightly in a thick, heavy undyed brown wool swaddling cloth that is visibly damp from river spray. COSTUME (DETAIL): A small madder red wool knit cap; the bundle is secured with a thin leather cord.
+
+BODY_LANGUAGE:
+Motionless and fragile, cradled tightly against a chest.
+
+SHEET_PROMPT:
+Character reference sheet on clean white background. Bold text '[Kurdish-Prince-A]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. A tiny newborn infant, approximately 1 head tall in this stylized form. Features a round, pure white mask-like face with small black dot eyes and thin, soft eyebrows. Pure white face, mitten-shaped hands. A small tuft of dark hair peeking from a cap. Eyes closed in a peaceful expression, absolutely no nose. Wrapped tightly in a thick, heavy undyed brown wool swaddling cloth that is visibly damp from river spray. A small madder red wool knit cap; the bundle is secured with a thin leather cord.
+
+============================================================
+LABEL: Kurdish-Leader-A
+NAME: Najm ad-Din Ayyub, father
+GROUP: PROTAGONIST
+AGE: mature_adult
+
+VISUAL_DESCRIPTION:
+BODY: A tall, broad-shouldered man, 5 heads tall. Pure white mask-like face, tanned skin on hands. HAIR: Short black hair hidden under headwear. FACE: Thick, well-groomed black beard and mustache, bold expressive eyebrows, small dot eyes, no nose. COSTUME (MAIN): Heavy dark green wool kaftan worn over a wet white linen tunic, featuring a subtle Kurdish eagle motif in madder red on the chest. COSTUME (DETAIL): Dark wool turban wrapped around a padded cap, wide brown leather belt with a silver-hilted Kurdish dagger (khanjar), knee-high heavy brown leather riding boots.
+
+BODY_LANGUAGE:
+Protective and strained posture, muscles tensed from physical exertion.
+
+SHEET_PROMPT:
+Character reference sheet on clean white background. Bold text '[Kurdish-Leader-A]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. A tall, broad-shouldered man, 5 heads tall. Pure white mask-like face, tanned skin on hands. Short black hair hidden under headwear. Thick, well-groomed black beard and mustache, bold expressive eyebrows, small dot eyes, no nose. Heavy dark green wool kaftan worn over a wet white linen tunic, featuring a subtle Kurdish eagle motif in madder red on the chest. Dark wool turban wrapped around a padded cap, wide brown leather belt with a silver-hilted Kurdish dagger (khanjar), knee-high heavy brown leather riding boots.
+
+============================================================
+LABEL: Kurdish-Warrior-A
+NAME: Shirkuh, uncle
+GROUP: NAMED
+AGE: mature_adult
+
+VISUAL_DESCRIPTION:
+BODY: Stocky and powerful build, 5 heads tall. Pure white mask-like face, mitten-shaped hands. HAIR: Dark hair mostly covered. FACE: Rugged, thick black beard, fierce and determined eyebrows, dot eyes, no nose. COSTUME (MAIN): Thick brown camel-hair cloak (aba) worn over a blood-stained white linen tunic. COSTUME (DETAIL): Crimson wool turban slightly unraveled, thick leather weapon belt with an empty wooden scabbard, black leather riding boots stained with mud.
+
+BODY_LANGUAGE:
+Aggressive and alert, moving with the heavy steps of a soldier.
+
+SHEET_PROMPT:
+Character reference sheet on clean white background. Bold text '[Kurdish-Warrior-A]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. Stocky and powerful build, 5 heads tall. Pure white mask-like face, mitten-shaped hands. Dark hair mostly covered. Rugged, thick black beard, fierce and determined eyebrows, dot eyes, no nose. Thick brown camel-hair cloak (aba) worn over a blood-stained white linen tunic. Crimson wool turban slightly unraveled, thick leather weapon belt with an empty wooden scabbard, black leather riding boots stained with mud.
+
+============================================================
+LABEL: Seljuk-Governor-A
+NAME: local governor
+GROUP: NAMED
+AGE: mature_adult
+
+VISUAL_DESCRIPTION:
+BODY: Upright and imposing posture, 5 heads tall. Pure white mask-like face. HAIR: Not visible. FACE: Sharp, thin black beard, high-arched angry eyebrows, small dot eyes, no nose. COSTUME (MAIN): Long crimson silk robe with intricate gold thread embroidery at the collar and cuffs. COSTUME (DETAIL): Massive white silk turban wrapped around a tall red felt cap, wide gold brocade sash, pointed red leather shoes, heavy gold signet ring on a mitten-shaped hand.
+
+BODY_LANGUAGE:
+Stiff and authoritative, gestures with commanding entitlement.
+
+SHEET_PROMPT:
+Character reference sheet on clean white background. Bold text '[Seljuk-Governor-A]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. Upright and imposing posture, 5 heads tall. Pure white mask-like face. Not visible. Sharp, thin black beard, high-arched angry eyebrows, small dot eyes, no nose. Long crimson silk robe with intricate gold thread embroidery at the collar and cuffs. Massive white silk turban wrapped around a tall red felt cap, wide gold brocade sash, pointed red leather shoes, heavy gold signet ring on a mitten-shaped hand.
+
+============================================================
+LABEL: Seljuk-Official-A
+NAME: high-ranking Seljuk official
+GROUP: NAMED
+AGE: mature_adult
+
+VISUAL_DESCRIPTION:
+BODY: Average build, 5 heads tall. Pure white mask-like face. HAIR: Not visible. FACE: Surprised expression with wide eyebrows, small dot eyes, no nose. COSTUME (MAIN): Turquoise silk kaftan worn under a steel lamellar cuirass (jawshan) of laced steel plates. COSTUME (DETAIL): Conical steel helmet with a gold finial and chainmail drape (aventail), wide leather belt with gold plaques, knee-high black leather boots with silver spurs.
+
+BODY_LANGUAGE:
+Formal but currently depicted in a state of shock or collapse.
+
+SHEET_PROMPT:
+Character reference sheet on clean white background. Bold text '[Seljuk-Official-A]' centered at the top of the image with a thin horizontal line below it. Three neutral standing views arranged left to right: front view, 3/4 angle, side profile. Hands relaxed at sides, NOT holding any weapons or objects. Average build, 5 heads tall. Pure white mask-like face. Not visible. Surprised expression with wide eyebrows, small dot eyes, no nose. Turquoise silk kaftan worn under a steel lamellar cuirass (jawshan) of laced steel plates. Conical steel helmet with a gold finial and chainmail drape (aventail), wide leather belt with gold plaques, knee-high black leather boots with silver spurs.
+
