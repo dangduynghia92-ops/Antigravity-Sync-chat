@@ -1,0 +1,84 @@
+# Audit: Step 3 (Scene Director) — Prompt & Output
+
+## Tổng quan
+- 5 sequences, 26 scenes tổng
+- Timing: **100% chính xác** — tất cả sequences sum = target (0% error)
+
+---
+
+## Vấn đề phát hiện
+
+### 1. ✅ Opening scene có nhân vật (fix trước đã áp dụng)
+Run mới này, SEQ_01/02/03/05 mở đầu bằng A-Roll Wide Shot **có nhân vật** — đúng rule mới.
+
+### 2. ⚠️ Adjacent non-static motions (Rule 7 vi phạm)
+Rule 7 cấm "Two opposing motions adjacent", nhưng LLM vẫn vi phạm:
+
+| Sequence | Vị trí | Motion liên tiếp |
+|---|---|---|
+| SEQ_01 | SCN_05 → SCN_06 | Slow Tracking → Extreme Slow Zoom In |
+| SEQ_02 | SCN_03 → SCN_04 | Extreme Slow Zoom In → Slow Tracking |
+
+**Nguyên nhân**: Rule 7 chỉ nói "FORBIDDEN: Two opposing motions adjacent" — LLM hiểu "opposing" = ngược hướng, nhưng Tracking → Zoom In không phải ngược hướng, chỉ là 2 motion liên tiếp. Rule cần rõ hơn.
+
+### 3. ⚠️ Adjacent Close-ups
+| Sequence | Vị trí |
+|---|---|
+| SEQ_03 | SCN_03 (Close-up) → SCN_04 (Close-up) |
+
+2 Close-up liên tiếp tạo cảm giác nhàm chán, thiếu rhythm camera. Nên xen Medium Shot giữa.
+
+### 4. ⚠️ SEQ_04: A-Roll nhưng không có character_labels
+3/4 scenes trong SEQ_04 là A-Roll nhưng `character_labels = []`:
+- SCN_01: "guards standing watch" → has_crowd=True nhưng no labels
+- SCN_02: "guards march down embankment" → has_crowd=True nhưng no labels 
+- SCN_03: "a guard's face" → Close-up trên nhân vật không có label!
+
+**Vấn đề**: Guards là crowd, không phải named characters → A-Roll hay B-Roll?
+
+> [!IMPORTANT]
+> **Root cause**: Rule 3 nói "A-Roll = Character action driving story", nhưng crowd actions (guards searching) cũng drive story. Prompt không phân biệt rõ: crowd-driven scenes nên A-Roll hay B-Roll?
+> 
+> **Đề xuất**: A-Roll khi có named character labels. Crowd-only scenes = B-Roll có `has_crowd=true`.
+
+### 5. ⚠️ "tanned" vẫn xuất hiện trong physical_action
+```
+SEQ_01_SCN_06: "Kurdish-Leader-A's tanned, mitten-shaped hand..."
+SEQ_03_SCN_04: "Kurdish-Leader-A's tanned, mitten-shaped hands..."
+```
+Step 3 đang copy từ character sheet (chưa được re-run với prompt mới) → "tanned" vẫn leak vào scenes.
+
+### 6. ⚠️ Biểu cảm trong physical_action
+```
+SEQ_02_SCN_03: "glares downward with high-arched angry eyebrows"
+SEQ_05_SCN_06: "bold eyebrows drawn together in a solemn expression"
+SEQ_03_SCN_03: "bold eyebrows furrow deeply"
+```
+Step 3 mô tả biểu cảm cụ thể trong physical_action — đây **ĐÚNG** vì Step 3 mô tả scene (cần emotion), khác với character sheet (phải neutral). Tuy nhiên, "angry eyebrows" lấy từ character sheet cũ → nên chỉ viết "eyebrows furrowed" mà không thêm "angry".
+
+---
+
+## Đánh giá chất lượng prompt Step 3
+
+| Hạng mục | Đánh giá |
+|---|---|
+| Timing math | ✅ Perfect (0% error all) |
+| visual_event factual | ✅ Tốt — không bịa |
+| Anti 1:1 progression | ✅ Tốt — action tiến triển theo thời gian |
+| Shot variety | ✅ Wide → Medium → Close-up hợp lý |
+| Physical action cụ thể | ✅ Visible, filmable |
+| Content safety | ✅ Không vi phạm |
+| Camera motion | ⚠️ 2 lần adjacent non-static |
+| Adjacent Close-ups | ⚠️ 1 lần liên tiếp |
+| Crowd vs Named distinction | ⚠️ Không rõ ràng |
+| Style leaking (tanned, angry) | ⚠️ Copy từ character sheet cũ |
+
+---
+
+## Đề xuất fix (nếu cần)
+
+| # | Fix | Mức độ |
+|---|---|---|
+| 1 | Rule 7: "FORBIDDEN: Two NON-STATIC motions in a row" (rõ hơn "opposing") | Minor |
+| 2 | Thêm rule: "Do NOT place two Close-ups adjacent" | Minor |
+| 3 | Rule 3: "Crowd-only scenes (no named characters) = B-Roll with has_crowd=true" | Medium |

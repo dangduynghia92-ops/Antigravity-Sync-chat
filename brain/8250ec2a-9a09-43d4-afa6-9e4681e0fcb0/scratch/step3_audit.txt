@@ -1,0 +1,338 @@
+
+======================================================================
+SEQUENCE: SEQ_01
+total_duration: 20.21s
+locked_location: ''
+location_anchor: 'A makeshift raft of rough-hewn date palm trunks pitching violently on the turbulent, freezing black waters of the Tigris River at night.'
+visual_event: A Kurdish leader desperately steers a pitching raft through freezing, turbulent river waters at night while protectively clutching a newborn baby wrapped in damp wool.
+scenes: 6 | sum_dur: 20.21s | error: 0.0%
+
+  --- SEQ_01_SCN_01 ---
+  duration: 3.0s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Slow Pan
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A stands on the pitching palm-trunk raft, bracing against the wind while holding the tightly wrapped wool bundle containing Kurdish-Prince-A.
+  audio_sync: Black water rushes beneath a makeshift raft....
+
+  --- SEQ_01_SCN_02 ---
+  duration: 3.0s
+  shot_type: Wide Shot
+  roll_type: B-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: []
+  has_crowd: False
+  physical_action: Freezing white spray kicks up from the turbulent black river, crashing over the rough-hewn timber of the moving raft.
+  audio_sync: The wind off the Tigris River is freezing,...
+
+  --- SEQ_01_SCN_03 ---
+  duration: 3.5s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Slow Tracking
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A leans forward as the raft moves, his heavy dark green kaftan dripping with water as he shields the damp brown wool bundle.
+  audio_sync: biting through the damp wool wrapped around your fragile frame....
+
+  --- SEQ_01_SCN_04 ---
+  duration: 3.5s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Prince-A's pure white mask-like face is visible inside the damp wool, eyes tightly closed beneath a small red knit cap.
+  audio_sync: You are a newborn, blind to the darkness,...
+
+  --- SEQ_01_SCN_05 ---
+  duration: 4.0s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Slow Tracking
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: The raft lurches violently over a large wave; Kurdish-Leader-A shifts his weight to maintain balance, pulling the bundle closer to his chest.
+  audio_sync: but your very first sensation is the violent pitch of a desperate escape....
+
+  --- SEQ_01_SCN_06 ---
+  duration: 3.21s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Extreme Slow Zoom In
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A's tanned, mitten-shaped hand grips the thin leather cord securing Kurdish-Prince-A's swaddling cloth, his knuckles tightening protectively.
+  audio_sync: You are born into a prominent Kurdish family, yet your bloodline carries a sudde...
+
+  SEQUENCE ISSUES:
+  !! Adjacent non-static motions: Slow Tracking -> Extreme Slow Zoom In
+
+======================================================================
+SEQUENCE: SEQ_02
+total_duration: 13.92s
+locked_location: ''
+location_anchor: 'Inside a dim stone hall of Tikrit Citadel, illuminated by harsh flickering orange torchlight reflecting off pale limestone walls.'
+visual_event: Kurdish-Warrior-A strikes down Seljuk-Official-A in a stone hall, prompting Seljuk-Governor-A to angrily order his guards forward, while Kurdish-Leader-A flees down a dark corridor carrying the newborn Kurdish-Prince-A.
+scenes: 4 | sum_dur: 13.92s | error: 0.0%
+
+  --- SEQ_02_SCN_01 ---
+  duration: 3.5s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Slow Pan
+  time_of_day: night
+  character_labels: ['Kurdish-Warrior-A', 'Seljuk-Official-A']
+  has_crowd: True
+  physical_action: Kurdish-Warrior-A lunges forward, swinging his arm forcefully toward Seljuk-Official-A, who stumbles backward in shock, dropping his hands.
+  audio_sync: Hours ago, your uncle Shirkuh drove a blade into a high-ranking Seljuk official...
+
+  --- SEQ_02_SCN_02 ---
+  duration: 3.0s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Warrior-A', 'Seljuk-Official-A']
+  has_crowd: False
+  physical_action: Seljuk-Official-A collapses motionless onto the stone floor. Kurdish-Warrior-A stands over him, his chest heaving, clutching a dagger tightly by his side.
+  audio_sync: inside the walls of Tikrit....
+
+  --- SEQ_02_SCN_03 ---
+  duration: 3.0s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Extreme Slow Zoom In
+  time_of_day: night
+  character_labels: ['Seljuk-Governor-A']
+  has_crowd: True
+  physical_action: Seljuk-Governor-A glares downward with high-arched angry eyebrows, raising a mitten-shaped hand and pointing a finger sharply to issue a command.
+  audio_sync: The local governor demands immediate retribution. The decree is absolute....
+
+  --- SEQ_02_SCN_04 ---
+  duration: 4.42s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Slow Tracking
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A runs urgently through a dark stone corridor, clutching the tightly wrapped wool bundle of Kurdish-Prince-A protectively against his chest.
+  audio_sync: To survive the night of your birth, your family must vanish....
+
+  SEQUENCE ISSUES:
+  !! Adjacent non-static motions: Extreme Slow Zoom In -> Slow Tracking
+
+======================================================================
+SEQUENCE: SEQ_03
+total_duration: 21.26s
+locked_location: ''
+location_anchor: 'A makeshift timber raft tossing on the turbulent, freezing black waters of the Tigris River at night, 1138 AD.'
+visual_event: Najm ad-Din Ayyub kneels on a makeshift timber raft in the dark, turbulent Tigris River, physically straining to balance the craft while tightly holding his newborn son, Yusuf, shielding him from the freezing water spray.
+scenes: 6 | sum_dur: 21.26s | error: 0.0%
+
+  --- SEQ_03_SCN_01 ---
+  duration: 4.0s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Slow Pan
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A kneels on the rough timber raft, clutching a thick wool bundle tightly against his chest as the raft rocks violently on the turbulent black water.
+  audio_sync: The raft groans against the heavy current....
+
+  --- SEQ_03_SCN_02 ---
+  duration: 3.0s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A leans forward, pressing the damp wool bundle against his heavy dark green kaftan to block the splashing river spray.
+  audio_sync: Your father, Najm ad-Din Ayyub, kneels on the lashed timber....
+
+  --- SEQ_03_SCN_03 ---
+  duration: 3.0s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A's bold eyebrows furrow deeply, his pure white mask-like face turning slightly as he braces his shoulders against the wind.
+  audio_sync: He clutches your bundled form tightly against his chest,...
+
+  --- SEQ_03_SCN_04 ---
+  duration: 3.5s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A's tanned, mitten-shaped hands wrap securely around Kurdish-Prince-A, whose tiny white face and closed eyes peek out from beneath a madder red cap.
+  audio_sync: shielding your face from the freezing spray....
+
+  --- SEQ_03_SCN_05 ---
+  duration: 4.0s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A shifts his weight heavily on his knees, his body swaying side to side to balance the unsteady timber craft over the churning waves.
+  audio_sync: His muscles strain. He balances the unsteady craft in total darkness,...
+
+  --- SEQ_03_SCN_06 ---
+  duration: 3.76s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A remains anchored firmly on the lashed logs, holding the bundle securely as the raft plunges forward through the dark, rushing river.
+  audio_sync: navigating the treacherous waters by sheer physical force....
+
+  SEQUENCE ISSUES:
+  !! Adjacent Close-ups: SEQ_03_SCN_03 + SEQ_03_SCN_04
+
+======================================================================
+SEQUENCE: SEQ_04
+total_duration: 13.38s
+locked_location: ''
+location_anchor: 'The steep, rocky sandstone embankments of the Tigris River at night, beneath the massive mudbrick walls of Tikrit Citadel illuminated by harsh orange torchlight.'
+visual_event: Seljuk guards ignite torches along the citadel walls and sweep the rocky riverbanks, while the turbulent Tigris River churns violently in the dark.
+scenes: 4 | sum_dur: 13.38s | error: 0.0%
+
+  --- SEQ_04_SCN_01 ---
+  duration: 3.5s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Slow Pan
+  time_of_day: night
+  character_labels: []
+  has_crowd: True
+  physical_action: Torches flare to life along the high mudbrick battlements of the citadel, casting harsh orange light on a row of Seljuk guards in conical helmets standing watch.
+  audio_sync: Behind you, torches ignite along the fortress walls....
+  !! A-Roll but no character_labels!
+
+  --- SEQ_04_SCN_02 ---
+  duration: 3.5s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: []
+  has_crowd: True
+  physical_action: Seljuk guards in steel lamellar armor march down the rocky embankment, their mitten-shaped hands thrusting burning torches forward to illuminate the dense river reeds.
+  audio_sync: The governor’s guards sweep the riverbanks....
+  !! A-Roll but no character_labels!
+
+  --- SEQ_04_SCN_03 ---
+  duration: 3.0s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: []
+  has_crowd: False
+  physical_action: A guard's pure white, mask-like face with angry dot eyes and bold eyebrows turns sharply, his mouth open in a shout as wind whips his chainmail aventail.
+  audio_sync: The water roars, drowning out the shouts of the hunting party....
+  !! A-Roll but no character_labels!
+
+  --- SEQ_04_SCN_04 ---
+  duration: 3.38s
+  shot_type: Wide Shot
+  roll_type: B-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: []
+  has_crowd: False
+  physical_action: The turbulent, freezing black water of the Tigris River churns violently, crashing heavy white spray against the jagged sandstone rocks in the pitch-black night.
+  audio_sync: One slip, one broken rope, and the river will swallow your family whole....
+
+======================================================================
+SEQUENCE: SEQ_05
+total_duration: 19.58s
+locked_location: ''
+location_anchor: 'A makeshift timber raft on the dark, turbulent Tigris River at night, 1138 AD.'
+visual_event: Kurdish-Leader-A punts a makeshift timber raft across the dark, turbulent Tigris River while holding the swaddled newborn Kurdish-Prince-A against his chest, eventually scraping onto the muddy far bank.
+scenes: 6 | sum_dur: 19.58s | error: 0.0%
+
+  --- SEQ_05_SCN_01 ---
+  duration: 3.5s
+  shot_type: Wide Shot
+  roll_type: A-Roll
+  camera_motion: Slow Pan
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A stands on a makeshift timber raft on the dark river, holding the swaddled Kurdish-Prince-A with one arm while gripping a heavy wooden punting pole with the other.
+  audio_sync: You do not cry....
+
+  --- SEQ_05_SCN_02 ---
+  duration: 3.0s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: The swaddled bundle of Kurdish-Prince-A rests securely against the heavy dark green wool kaftan of Kurdish-Leader-A, rising and falling with his breathing.
+  audio_sync: The rhythmic heave of your father’s chest is your only anchor in the crushing bl...
+
+  --- SEQ_05_SCN_03 ---
+  duration: 3.5s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Slow Tracking
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A thrusts the heavy wooden pole down into the dark, churning water, pushing his weight forward to propel the raft.
+  audio_sync: He drives a wooden pole into the riverbed, pushing the raft into the deep channe...
+
+  --- SEQ_05_SCN_04 ---
+  duration: 3.0s
+  shot_type: Wide Shot
+  roll_type: B-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: []
+  has_crowd: False
+  physical_action: The dark, turbulent waters of the Tigris River churn violently, with the faint, torch-lit stone walls of Tikrit Citadel receding into the pitch-black distance.
+  audio_sync: away from the only home your family has known....
+
+  --- SEQ_05_SCN_05 ---
+  duration: 3.5s
+  shot_type: Medium Shot
+  roll_type: A-Roll
+  camera_motion: Static
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: The rough timber raft jolts and scrapes against the muddy, rocky shoreline; Kurdish-Leader-A bends his knees to steady himself, holding Kurdish-Prince-A tightly.
+  audio_sync: The timber scrapes against the far bank....
+
+  --- SEQ_05_SCN_06 ---
+  duration: 3.08s
+  shot_type: Close-up
+  roll_type: A-Roll
+  camera_motion: Extreme Slow Zoom In
+  time_of_day: night
+  character_labels: ['Kurdish-Leader-A', 'Kurdish-Prince-A']
+  has_crowd: False
+  physical_action: Kurdish-Leader-A looks down at the tiny white face of Kurdish-Prince-A, his bold eyebrows drawn together in a solemn expression as he steps off the raft into the mud.
+  audio_sync: You are named Yusuf ibn Ayyub. Your life begins in permanent exile....

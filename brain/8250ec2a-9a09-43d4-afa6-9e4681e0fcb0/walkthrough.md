@@ -1,80 +1,67 @@
-# Audit: Character Sheet (Step 2b) — So sánh với chuẩn ngành
+# Audit: Step 4 (Prompt Writer) — Output Quality
 
-## Character Sheet là gì?
-
-Theo chuẩn animation, **character model sheet** (turnaround) là **bản thiết kế kỹ thuật** để đảm bảo nhân vật nhất quán qua mọi frame. Nó PHẢI:
-
-| ✅ Phải có | ❌ Không được có |
-|---|---|
-| Nhiều góc nhìn (front, 3/4, side) | Biểu cảm/cảm xúc |
-| Neutral pose (đứng thẳng, tay buông) | Dynamic/action poses |
-| Tỷ lệ cơ thể rõ ràng | Backstory, tính cách |
-| Trang phục chi tiết | Skin tone (khi art style quyết định) |
-| Đặc điểm nhận dạng cố định (râu, sẹo, tóc) | Shading/rendering phức tạp |
-| Nền trắng sạch | Bối cảnh/background |
+## Tổng quan
+- 26 scenes, flat_prompt avg 769 chars (min 619, max 1029)
+- Style prefix ✅ — tất cả đều bắt đầu bằng "A stylized historical animation..."
+- Style denial suffix ✅ — "NOT photorealistic, NOT anime..." (đây là **ĐÚNG**, không phải lỗi)
 
 ---
 
-## 6 Lỗi trong output hiện tại
+## Phân loại Issues
 
-### Lỗi 1: Biểu cảm trong visual_description
-```
-Seljuk-Official-A: "Surprised expression with wide eyebrows"
-Seljuk-Governor-A: "high-arched angry eyebrows"
-Kurdish-Warrior-A: "fierce and determined eyebrows"
-Kurdish-Prince-A: "Eyes closed in a peaceful expression"
-```
-❌ Sheet phải NEUTRAL — biểu cảm thuộc về scene prompt
+### ✅ FALSE POSITIVES (không phải lỗi)
+**STYLE BAN: "anime", "stick figure", "3d cgi", "photorealistic"** — 88 hits
 
-### Lỗi 2: "tanned skin on hands"
+Đây là **style denial suffix** theo yêu cầu của style file (line 40):
 ```
-Kurdish-Leader-A: "Pure white mask-like face, tanned skin on hands"
+"...NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI."
 ```
-❌ Xung đột: mặt trắng nhưng tay rám nắng? Art style cartoon = tất cả trắng
-
-### Lỗi 3: body_language mô tả tâm trạng
-```
-"Aggressive and alert, moving with heavy steps of a soldier"
-"Protective and strained posture, muscles tensed"
-"depicted in a state of shock or collapse"
-```
-❌ body_language trong sheet chỉ nên là posture mặc định (đứng thẳng, vai mở, v.v.) — không nên mô tả trạng thái cảm xúc
-
-### Lỗi 4: "Not visible" cho HAIR
-```
-Seljuk-Governor-A HAIR: "Not visible"
-Seljuk-Official-A HAIR: "Not visible"
-```
-❌ Nếu tóc bị turban che, nên viết "covered by turban" — "Not visible" không cung cấp thông tin gì
-
-### Lỗi 5: sheet_prompt dump raw text
-```
-"...Not visible. Surprised expression with wide eyebrows, small dot eyes..."
-```
-❌ Sheet prompt chỉ copy/paste visual_description nguyên xi — bao gồm cả lỗi emotion
-
-### Lỗi 6: SKIN section thừa
-```
-Kurdish-Prince-A: "SKIN: Pure white face, mitten-shaped hands"
-```
-❌ Prompt yêu cầu 4 mục (BODY, FACE, COSTUME MAIN, COSTUME DETAIL) nhưng LLM tự thêm "SKIN" — field không tồn tại trong schema
+→ Đây là tính năng, **KHÔNG PHẢI lỗi**. LLM đang tuân thủ style file.
 
 ---
 
-## Đề xuất sửa Step 2b prompt
+### ⚠️ REAL ISSUES (cần fix)
 
-Cần rewrite `visual_description` để:
-1. **Bỏ emotion/expression** — chỉ permanent features
-2. **Bỏ skin tone** — để style file quyết định  
-3. **Tách rõ 4 section** với label bắt buộc
-4. **body_language** → rename thành **default_stance** — chỉ posture trung tính
-5. **sheet_prompt** → template cứng, không copy raw visual_description
+#### Issue 1: "tanned" vẫn leak vào flat_prompt (2 scenes)
+```
+SEQ_01_SCN_06: "Kurdish-Leader-A's tanned, mitten-shaped hand..."
+SEQ_03_SCN_04: "Kurdish-Leader-A's tanned, mitten-shaped hands..."
+```
+**Nguyên nhân**: Character sheet cũ có "tanned skin on hands" → Step 4 copy vào flat_prompt.
+**Fix**: Đã fix ở Step 2b (bỏ skin tone). Chạy lại sẽ hết.
 
-### Proposed structure:
+#### Issue 2: "identical" trong crowd descriptions (2 scenes)
 ```
-visual_description phải có ĐÚNG 4 section:
-  BODY: [chiều cao (heads), build, tóc (style + màu)]
-  FACE: [đặc điểm nhận dạng cố định: râu, sẹo, hình dạng mắt — KHÔNG biểu cảm]
-  COSTUME: [trang phục chính + chi tiết, màu sắc cụ thể]
-  ACCESSORIES: [headwear, belt, boots, weapons, trang sức]
+SEQ_02_SCN_01: "rows of identical stylized guards"
+SEQ_04_SCN_01: "a row of identical Seljuk guards"
 ```
+**Nguyên nhân**: Style file line 11 nói "identical or near-identical stylized figures". LLM copy từ style.
+**Fix**: Đã discuss trước — bỏ "identical" khỏi style file. Thay bằng "uniformed" hoặc "matching".
+
+#### Issue 3: B-Roll mô tả guards nhưng append "NO characters"
+```
+SEQ_04_SCN_01 flat_prompt: "...guards with round white faces stand watch..."
+                          + "NO characters, NO people, NO figures — empty scene only."
+```
+**Xung đột nghiêm trọng**: Prompt vừa mô tả guards vừa nói "NO people" → AI sẽ bối rối.
+
+**Root cause**: Code line 2186 check `if not p.get("characters", "").strip()` — crowd scenes có `characters=""` (vì guards không phải named characters) → code auto-append "NO characters" → sai!
+
+**Fix cần**: Khi `has_crowd=true`, KHÔNG append "NO characters" suffix.
+
+#### Issue 4: Label `[Seljuk-Guard-Generic]` tạo nhưng không có trong flat_prompt
+```
+SEQ_04_SCN_03: characters_detail có [Seljuk-Guard-Generic] nhưng flat_prompt không mention label
+```
+**Nguyên nhân**: LLM tự tạo label "Seljuk-Guard-Generic" cho crowd → không nằm trong AVAILABLE LABELS list. Label này sẽ không match character sheet nào.
+
+---
+
+## Đề xuất Fix
+
+| # | Fix | Mức độ | File |
+|---|---|---|---|
+| 1 | "tanned" — đã fix ở Step 2b prompt | ✅ Done | pipeline |
+| 2 | "identical" → thay bằng "uniformed" trong style file | Minor | style file |
+| 3 | Code: khi `has_crowd=true`, không append "NO characters" | **Critical** | pipeline code |
+| 4 | Label validation: warn nếu LLM tạo label ngoài AVAILABLE LABELS | Low | pipeline code |

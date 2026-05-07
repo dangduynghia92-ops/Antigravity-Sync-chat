@@ -1,0 +1,787 @@
+
+======================================================================
+SCENE: SEQ_01_SCN_01 | dur: 3.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: Heavy dark green wool kaftan with a subtle red eagle motif, wet white linen tunic, dark wool turban, and brown leather r
+    blocking: Standing centrally on the raft, legs braced wide for balance, holding a bundle against his chest.
+    emotion: determined expression: furrowed eyebrows, firm straight-line mouth, small oval dot eyes
+    action: bracing against the wind and the motion of the raft, protectively clutching the infant bundle.
+  [[Kurdish-Prince-A]]
+    costume: Wrapped in a thick, damp, undyed brown wool swaddling cloth with a small madder red knit cap.
+    blocking: Held securely in the arms of [Kurdish-Leader-A].
+    emotion: peaceful expression: eyes closed as thin curved lines, calm mouth, no nose
+    action: resting motionless inside the swaddled bundle.
+extras: none
+lighting: Pitch black winter night with harsh, flickering orange highlights from distant torches reflecting off the wet surfaces.
+background: A wide view of the turbulent Tigris River at night, showing the rushing black water churning with white spray and the dark, steep sandstone embankment
+key_props: ['makeshift raft of date palm trunks', 'swaddling cloth', 'leather cord']
+camera_angle: eye-level
+effects: heavy river spray, wind-blown clothing
+
+flat_prompt (883 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] standing on a pitching palm-trunk raft on the turbulent Tigris River at night. [Kurdish-Leader-A] has an oversized round pure white face, small oval dot eyes, determined furrowed eyebrows, a firm line mouth, and no nose, wearing a wet dark green kaftan and dark turban. He holds [Kurdish-Prince-A], a tiny infant with a round white face and closed eyes in a red knit cap, wrapped in damp brown wool. The background is a richly painted night scene of rushing black water and distant rocky embankments under a pitch-black sky. The characters feature flat cel-shading and thick uniform dark outlines in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_01_SCN_02 | dur: 3.0s
+characters (0):
+extras: none
+lighting: Dramatic night lighting with flickering orange glare from off-screen torches illuminating the white river spray.
+background: The rough-hewn date palm trunks and scrap timber of the moving raft as it cuts through the water, with the turbulent black river rushing past.
+key_props: ['date palm trunks', 'palm-fiber rope']
+camera_angle: low-angle
+effects: freezing white spray, splashing water, churning foam
+
+flat_prompt (715 chars):
+Stylized historical animation illustration, detailed painterly background of freezing white spray crashing over the rough-hewn date palm trunks of a moving raft. The Tigris River is a rushing black expanse churning with white foam under a pitch-black winter night sky. Harsh flickering orange light from off-screen torches catches the droplets of water. Rich texture on the wood and atmospheric depth in the spray, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. NO characters, NO people, NO figures — empty scene only. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+======================================================================
+SCENE: SEQ_01_SCN_03 | dur: 3.5s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: Dripping dark green wool kaftan over a wet white linen tunic, dark turban.
+    blocking: Leaning forward in a protective crouch, filling the left side of the frame.
+    emotion: focused expression: intensely furrowed eyebrows, clenched teeth line, small dot eyes
+    action: leaning into the wind to shield the bundle from the freezing spray.
+  [[Kurdish-Prince-A]]
+    costume: Damp undyed brown wool swaddling cloth, red knit cap.
+    blocking: Tucked under the arm and kaftan of [Kurdish-Leader-A].
+    emotion: sleeping expression: closed eyes, calm mouth
+    action: shielded from the elements by the leader's body.
+extras: none
+lighting: Dim night light with wet-look specular highlights on the green wool and white linen.
+background: The immediate surface of the raft with its coarse palm-fiber ropes and the dark, blurred rushing water of the river behind.
+key_props: ['wet kaftan', 'swaddling bundle']
+camera_angle: eye-level
+effects: water droplets flying through the air, mist
+
+flat_prompt (762 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] leaning forward on a raft at night. [Kurdish-Leader-A] has an oversized round pure white face, small oval dot eyes, intensely furrowed eyebrows, and no nose, his thick black beard wet with spray. He wears a dripping dark green kaftan and shields [Kurdish-Prince-A], who is wrapped in damp brown wool. The background is a detailed painterly depiction of the wet palm-trunk raft surface and rushing dark river water. Characters have compact stylized bodies and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_01_SCN_04 | dur: 3.5s
+characters (1):
+  [[Kurdish-Prince-A]]
+    costume: Heavy undyed brown wool swaddling cloth, visibly damp; small madder red wool knit cap.
+    blocking: Centered in the frame, viewed from above.
+    emotion: peaceful expression: eyes tightly closed as thin black arcs, small calm mouth, no nose
+    action: sleeping soundly despite the chaos.
+extras: none
+lighting: Soft, low-key night lighting focusing on the texture of the wool and the white face of the infant.
+background: The dark, textured folds of the damp wool swaddling cloth and a glimpse of the leader's dark green garment.
+key_props: ['red knit cap', 'wool swaddling']
+camera_angle: high-angle
+effects: subtle glisten on the damp wool
+
+flat_prompt (692 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Prince-A]. The infant has an oversized round pure white face, eyes tightly closed in a peaceful expression, and no nose, wearing a small madder red knit cap. The character is wrapped in a thick, damp, undyed brown wool swaddling cloth. The background shows the rich painterly texture of the heavy wool folds and the dark green fabric of the leader's cloak. Clean vector-like lines and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_01_SCN_05 | dur: 4.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: Dark green wool kaftan, dark turban, leather belt.
+    blocking: Mid-motion, shifting his weight to the right, torso twisted slightly.
+    emotion: strained expression: sharply angled eyebrows, wide open mouth in a gasp, small dot eyes
+    action: lurching as the raft hits a wave, pulling the infant bundle tighter to his chest with both arms.
+  [[Kurdish-Prince-A]]
+    costume: Damp brown wool swaddling.
+    blocking: Pressed firmly against the leader's chest.
+    emotion: peaceful expression: eyes closed
+    action: being pulled closer by the leader.
+extras: none
+lighting: Dynamic, high-contrast night lighting with orange torchlight catching the edges of the characters.
+background: The pitching raft tilted at an angle, with a large wave of black water and white foam rising in the background.
+key_props: ['palm-trunk raft', 'swaddling bundle']
+camera_angle: dutch-angle
+effects: motion blur on the water, heavy spray
+
+flat_prompt (749 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] lurching on a tilted raft at night. [Kurdish-Leader-A] has an oversized round pure white face, small oval dot eyes, sharply angled eyebrows, and no nose, pulling the bundle of [Kurdish-Prince-A] closer to his chest. The raft of palm trunks is pitching violently over a large wave of black water. The background is a richly painted scene of the turbulent Tigris with atmospheric depth and white foam. Characters feature flat cel-shading and thick uniform outlines in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_01_SCN_06 | dur: 3.21s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: Dark green wool kaftan sleeve visible.
+    blocking: His hand is the primary focus, gripping the bundle.
+    emotion: not applicable (focus on hand)
+    action: tightening his grip on the leather cord of the swaddling.
+  [[Kurdish-Prince-A]]
+    costume: Damp brown wool swaddling cloth secured with a thin leather cord.
+    blocking: The side of the bundle is visible.
+    emotion: not applicable
+    action: being held tightly.
+extras: none
+lighting: Focused night light highlighting the tension in the hand and the texture of the wet leather cord.
+background: The detailed, painterly texture of the damp undyed wool swaddling cloth.
+key_props: ['thin leather cord', 'damp wool swaddling']
+camera_angle: low-angle
+effects: none
+
+flat_prompt (619 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Leader-A]'s tanned, mitten-shaped hand. The hand is gripping the thin leather cord that secures the damp brown wool swaddling of [Kurdish-Prince-A]. The background is the richly painted, textured surface of the undyed wool cloth. The scene is set at night with cold light glinting off the wet leather. Professional animation style with clean consistent design and flat cel-shading. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! SKIN TONE: 'tanned'
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_02_SCN_01 | dur: 3.5s
+characters (2):
+  [[Kurdish-Warrior-A]]
+    costume: thick brown camel-hair cloak worn over a white linen tunic, crimson wool turban slightly unraveled, thick leather weapon
+    blocking: center-left, lunging forward with momentum
+    emotion: fierce and determined eyebrows, small dot eyes, clenched teeth line
+    action: swinging his arm forcefully in a striking motion toward the official
+  [[Seljuk-Official-A]]
+    costume: turquoise silk kaftan under a steel lamellar cuirass, conical steel helmet with chainmail drape, wide leather belt
+    blocking: center-right, reeling backward
+    emotion: raised worried eyebrows, small open mouth of shock, wide dot eyes
+    action: stumbling backward with hands dropped in surprise
+extras: rows of identical stylized Seljuk guards with round white faces and steel helmets standing in the shadows of the hall
+lighting: harsh, flickering orange torchlight casting long, dramatic shadows across the stone floor
+background: a wide stone hall of Tikrit Citadel with pale limestone walls, heavy stone pillars, and iron torch brackets
+key_props: ['iron wall torches', 'lamellar armor', 'stone pillars']
+camera_angle: eye-level
+effects: flickering orange light, subtle dust motes in the torch beams
+
+flat_prompt (977 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Warrior-A] lunging forward with a fierce expression, his oversized round pure white face featuring determined eyebrows and a clenched mouth, as he strikes toward [Seljuk-Official-A]. [Seljuk-Official-A] has a round white face with shocked eyebrows and an open mouth, stumbling back in his turquoise kaftan and steel armor. In the background, rows of identical stylized guards stand in a dim stone hall of Tikrit Citadel. The scene is lit by harsh flickering orange torchlight reflecting off pale limestone walls. Characters have compact stylized bodies, mitten-shaped hands, and no noses, rendered with flat cel-shading. The background is a richly painted stone interior with visible texture. This is in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+  !! 'identical' found
+
+======================================================================
+SCENE: SEQ_02_SCN_02 | dur: 3.0s
+characters (2):
+  [[Kurdish-Warrior-A]]
+    costume: brown camel-hair cloak, white linen tunic, crimson turban, leather belt with empty scabbard
+    blocking: standing center, looking down
+    emotion: furrowed eyebrows, heavy-lidded dot eyes, thin straight mouth
+    action: standing over the fallen official with his chest heaving, clutching a dagger tightly in a mitten-shaped hand
+  [[Seljuk-Official-A]]
+    costume: turquoise silk kaftan, steel lamellar armor, conical helmet
+    blocking: lying motionless on the stone floor at the warrior's feet
+    emotion: eyes closed, neutral mouth
+    action: lying completely still on the floor
+extras: none
+lighting: dim night lighting with a single strong orange light source from the side
+background: the immediate stone floor of the hall and the base of a textured limestone wall
+key_props: ['silver-hilted dagger', 'textured stone floor']
+camera_angle: high-angle looking down at the fallen official
+effects: none
+
+flat_prompt (813 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Warrior-A] standing over the motionless form of [Seljuk-Official-A] on a stone floor. [Kurdish-Warrior-A] has an oversized round pure white face with furrowed eyebrows and no nose, his compact body draped in a brown cloak. [Seljuk-Official-A] lies still in his turquoise and steel armor. The background features the rich painterly texture of the citadel's stone floor and lower walls. The scene is lit by a single flickering torch, creating deep shadows. Characters are rendered with flat cel-shading and thick uniform outlines. This is in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_02_SCN_03 | dur: 3.0s
+characters (1):
+  [[Seljuk-Governor-A]]
+    costume: long crimson silk robe with gold embroidery, massive white silk turban over a red cap, gold brocade sash
+    blocking: filling the frame, looking downward
+    emotion: high-arched angry eyebrows, wide open shouting mouth, sharp thin black beard
+    action: raising a mitten-shaped hand and pointing a finger sharply forward to give an order
+extras: blurred shapes of armored Seljuk guards in the background
+lighting: dramatic under-lighting from torches, highlighting the underside of the turban and the jawline
+background: close-up view with a blurred background of stone arches and flickering firelight
+key_props: ['gold signet ring', 'massive white turban']
+camera_angle: low-angle looking up at the Governor to make him imposing
+effects: none
+
+flat_prompt (795 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Seljuk-Governor-A] with an oversized round pure white face, high-arched angry eyebrows, and a shouting mouth. He has no nose and a sharp black beard. He wears a massive white silk turban and a crimson robe with gold embroidery, pointing a mitten-shaped hand sharply to issue a command. The background is a painterly, blurred stone hall with the warm glow of torches. The lighting is dramatic and directional, casting shadows upward. The character features flat cel-shading and clean vector-like outlines. This is in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_02_SCN_04 | dur: 4.42s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool kaftan, wet white linen tunic, dark wool turban, leather riding boots
+    blocking: center frame, running toward the camera
+    emotion: raised worried eyebrows, small oval dot eyes, tight determined mouth
+    action: running urgently, clutching a thick wool bundle protectively against his chest
+  [[Kurdish-Prince-A]]
+    costume: thick undyed brown wool swaddling cloth, small madder red wool knit cap
+    blocking: held tightly in the leader's arms
+    emotion: eyes closed, peaceful expression
+    action: resting motionless inside the swaddle
+extras: none
+lighting: very dim night lighting with pools of orange light from wall-mounted torches in the corridor
+background: a dark, narrow stone corridor with receding arches and textured limestone walls
+key_props: ['swaddled bundle', 'leather cord']
+camera_angle: eye-level, tracking the movement
+effects: motion blur on the background to suggest speed
+
+flat_prompt (794 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] running urgently through a dark stone corridor. He has an oversized round pure white face with worried eyebrows and no nose, clutching the small bundle of [Kurdish-Prince-A] to his chest. [Kurdish-Prince-A] is wrapped in brown wool with a tiny red cap. The background is a richly painted, dim corridor with stone arches and flickering orange light pools on the walls. The characters have compact stylized bodies and are rendered with flat cel-shading. The scene captures a sense of desperate flight. This is in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_01 | dur: 4.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: heavy dark green wool kaftan over a wet white linen tunic, dark wool turban, and heavy leather riding boots
+    blocking: center frame, kneeling low on the raft
+    emotion: determined: downward-angled furrowed eyebrows, thin pressed mouth line
+    action: kneeling on the rough timber logs, clutching a thick wool bundle tightly to his chest
+  [[Kurdish-Prince-A]]
+    costume: wrapped in a thick, damp undyed brown wool swaddling cloth with a small madder red knit cap
+    blocking: held securely against the chest of [Kurdish-Leader-A]
+    emotion: peaceful: closed eyes, tiny calm mouth line
+    action: resting motionless inside the swaddle
+extras: none
+lighting: pitch black winter night with cold, dim ambient light reflecting off the churning white river spray
+background: wide view of the turbulent Tigris River as a rushing black expanse, with steep rocky sandstone embankments visible in the distance under a heavy, oppr
+key_props: ['makeshift timber raft of palm trunks', 'palm-fiber ropes', 'swaddling bundle']
+camera_angle: eye-level
+effects: heavy river spray, mist, and splashing water
+
+flat_prompt (860 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] with an oversized round pure white face, small oval dot eyes, determined furrowed eyebrows, and no nose, kneeling on a makeshift raft of palm logs. He has a compact stylized body in a wet dark green kaftan and turban, holding [Kurdish-Prince-A] who is a tiny bundle with a round white face and a madder red cap. The scene is set at night on the turbulent black Tigris River. The background is a richly painted landscape of rushing water with white spray and dark, rocky riverbanks under an oppressive night sky. Lighting is dark and moody with cold highlights on the water. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_02 | dur: 3.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool kaftan with a subtle eagle motif, wet white linen tunic visible at the collar
+    blocking: medium shot, leaning forward toward the left of the frame
+    emotion: protective: intensely furrowed eyebrows, focused dot eyes
+    action: leaning his torso forward to shield the bundle from the splashing water
+  [[Kurdish-Prince-A]]
+    costume: brown wool swaddle damp with spray, madder red cap
+    blocking: tucked under the arm and chest of [Kurdish-Leader-A]
+    emotion: sleeping: closed eyes, no nose
+    action: cradled protectively
+extras: none
+lighting: dark night lighting with sharp highlights on the wet textures of the clothing and the splashing water droplets
+background: immediate surroundings of the raft showing the rough texture of date palm trunks and the churning black water of the river right at the edge of the lo
+key_props: ['lashed palm logs', 'wet wool swaddle']
+camera_angle: low-angle
+effects: water droplets flying through the air, motion blur on the rushing river
+
+flat_prompt (708 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] in a medium shot, his oversized round pure white face showing intensely furrowed eyebrows and no nose as he leans forward. He has a compact stylized body in a dark green kaftan, shielding [Kurdish-Prince-A], a tiny swaddled infant in a red cap. The background features the richly painted texture of wet palm logs and the churning black water of the Tigris at night. Flat cel-shading defines the folds of his wet garments. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_03 | dur: 3.0s
+characters (1):
+  [[Kurdish-Leader-A]]
+    costume: dark wool turban wrapped around a padded cap, dark green kaftan collar
+    blocking: close-up on the face, slightly angled
+    emotion: strained: deeply V-shaped furrowed eyebrows, clenched teeth line, small oval eyes fixed forward
+    action: bracing his shoulders and turning his head against the biting wind
+extras: none
+lighting: stark, high-contrast night lighting, casting deep shadows on one side of the white face and highlighting the texture of 
+background: blurred dark background of the night sky and distant river spray to emphasize the character's expression
+key_props: ['turban']
+camera_angle: eye-level
+effects: wind-blown fabric, atmospheric mist
+
+flat_prompt (620 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Leader-A]. He has an oversized round pure white face with deeply V-shaped furrowed eyebrows, a clenched teeth line, and no nose. His head is wrapped in a detailed dark wool turban. The background is a painterly, dark, and blurred night scene of the Tigris River. The character features clean, thick outlines and flat cel-shading. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_04 | dur: 3.5s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool sleeves of the kaftan
+    blocking: tanned mitten-shaped hands entering from the sides to frame the baby
+    emotion: not visible
+    action: wrapping his large hands securely around the small bundle
+  [[Kurdish-Prince-A]]
+    costume: brown wool swaddle, madder red knit cap
+    blocking: center frame, close-up
+    emotion: peaceful: closed eyes, tiny soft eyebrows, small calm mouth
+    action: peeking out from the swaddle
+extras: none
+lighting: soft, dim light focusing on the baby's white face, surrounded by the dark tones of the father's hands and clothing
+background: the dark, textured wool of [Kurdish-Leader-A]'s kaftan acting as the immediate backdrop
+key_props: ['red knit cap', 'leather cord on swaddle']
+camera_angle: high-angle
+effects: none
+
+flat_prompt (645 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Prince-A]. The infant has a tiny, oversized round pure white face with closed eyes, soft eyebrows, and no nose, wearing a madder red cap. Tanned, mitten-shaped hands of [Kurdish-Leader-A] wrap securely around the brown wool swaddle. The background is the richly painted dark green fabric of a kaftan. Clean lines and flat cel-shading are used throughout. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! SKIN TONE: 'tanned'
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_05 | dur: 4.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green kaftan, wide brown leather belt with a silver-hilted dagger, riding boots
+    blocking: medium shot, centered on the raft
+    emotion: concentrated: lowered eyebrows, small dot eyes
+    action: shifting his weight on his knees, swaying to maintain balance on the rocking logs
+  [[Kurdish-Prince-A]]
+    costume: brown wool swaddle
+    blocking: held tightly against the chest
+    emotion: sleeping: closed eyes
+    action: moving with the father's body
+extras: none
+lighting: flickering, dim night light with reflections from the churning water below
+background: the surface of the raft made of date palm trunks, with dark, churning waves of the Tigris visible in the mid-ground
+key_props: ['timber raft', 'silver-hilted dagger']
+camera_angle: eye-level
+effects: swaying motion effect, water spray
+
+flat_prompt (717 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] in a medium shot, balancing on a rocking timber raft. He has an oversized round pure white face with concentrated eyebrows and no nose, wearing a dark green kaftan and a leather belt with a dagger. He holds [Kurdish-Prince-A] tightly. The raft is made of detailed, painterly palm trunks lashed with rope, surrounded by the churning black water of the Tigris at night. The character has thick uniform outlines and flat cel-shading. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_03_SCN_06 | dur: 3.76s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green kaftan, turban, and heavy cloak
+    blocking: small figure in the center of the wide river
+    emotion: determined: furrowed eyebrows
+    action: anchored firmly on the logs, bracing for the river's current
+  [[Kurdish-Prince-A]]
+    costume: brown swaddle bundle
+    blocking: held in [Kurdish-Leader-A]'s arms
+    emotion: not visible
+    action: secured in the bundle
+extras: none
+lighting: dark, atmospheric night lighting with the river appearing as a deep black void and white foam highlights
+background: wide shot of the vast, rushing Tigris River at night, with the raft appearing small against the powerful current and the dark silhouette of the riverb
+key_props: ['makeshift raft']
+camera_angle: high-angle
+effects: heavy mist, rushing water foam, motion blur on the river
+
+flat_prompt (744 chars):
+A stylized historical animation illustration with thick dark outlines depicting a wide shot of [Kurdish-Leader-A] on a makeshift raft at night. He is a compact stylized figure with a round white face, holding the bundle of [Kurdish-Prince-A]. The raft plunges through the vast, rushing black expanse of the Tigris River. The background is a richly painted environment with atmospheric depth, showing white foam on the waves and dark, distant shorelines under a pitch-black sky. Clean vector-like outlines on the characters contrast with the textured water. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_04_SCN_01 | dur: 3.5s
+characters (0):
+extras: A row of identical Seljuk guards standing at attention along the battlements, wearing pointed steel helmets and holding 
+lighting: Harsh, flickering orange torchlight casting long shadows against the deep black of a winter night.
+background: The massive, textured mudbrick walls and crenelated battlements of Tikrit Citadel, rendered with painterly detail showing weathering and mortar lines.
+key_props: ['iron torch cages', 'pitch-soaked rags', 'spears']
+camera_angle: low-angle
+effects: flickering orange light, rising smoke from torches
+
+flat_prompt (770 chars):
+A stylized historical animation illustration with thick dark outlines depicting the high mudbrick battlements of Tikrit Citadel at night. Along the walls, a row of identical stylized Seljuk guards with oversized round pure white faces, small oval dot eyes, and no nose stand watch in pointed steel helmets and turquoise kaftans. Torches flare to life in iron cages, casting a harsh orange glare against the pitch-black sky. The background features richly painted stone architecture with visible texture and atmospheric depth. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+  !! 'identical' found
+
+======================================================================
+SCENE: SEQ_04_SCN_02 | dur: 3.5s
+characters (0):
+extras: A group of identical Seljuk guards in steel lamellar armor marching down the rocky slope, holding burning torches to sea
+lighting: Dynamic orange pools of light from hand-held torches illuminating the sandstone and reeds.
+background: Steep, rocky sandstone embankments dropping toward the river, with dense thickets of tall river reeds in the foreground.
+key_props: ['wooden torches', 'lamellar armor', 'river reeds']
+camera_angle: eye-level
+effects: flickering torchlight, moving shadows
+
+flat_prompt (758 chars):
+A stylized historical animation illustration with thick dark outlines depicting a group of Seljuk guards marching down a steep sandstone embankment at night. The guards have oversized round pure white faces, small dot eyes, and no nose, wearing steel lamellar armor over turquoise silk. Their mitten-shaped hands thrust burning wooden torches forward to illuminate dense thickets of tall river reeds. The background is a detailed painterly landscape of rocky terrain and atmospheric depth under a pitch-black sky. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_04_SCN_03 | dur: 3.0s
+characters (1):
+  [Seljuk-Guard-Generic]
+    costume: pointed steel helmet with a steel mail aventail, turquoise silk kaftan with a high collar
+    blocking: close-up, centered, head and shoulders visible
+    emotion: angry expression: furrowed V-shaped eyebrows, wide open shouting mouth, small oval dot eyes
+    action: turning his head sharply toward the camera as the wind whips his mail aventail
+extras: none
+lighting: Intense, directional orange light from a nearby torch hitting one side of the face, leaving the other in deep shadow.
+background: Blurred dark rocky textures of the riverbank in the deep night.
+key_props: ['pointed steel helmet', 'mail aventail']
+camera_angle: eye-level
+effects: wind-blown mail links, flickering light
+
+flat_prompt (743 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of a Seljuk guard on a windy night. The guard has an oversized round pure white face, small oval black dot eyes, furrowed V-shaped eyebrows, and a wide open shouting mouth, with absolutely no nose. He wears a pointed steel helmet with a chainmail aventail that whips in the wind. The lighting is a harsh orange glare from a nearby torch. The background is a dark, blurred painterly texture of the riverbank. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+  !! Label [Seljuk-Guard-Generic] NOT in flat_prompt
+
+======================================================================
+SCENE: SEQ_04_SCN_04 | dur: 3.38s
+characters (0):
+extras: none
+lighting: Pitch-black night with faint, cold highlights on the white water spray and dark sandstone edges.
+background: The turbulent Tigris River churning violently, with heavy white spray crashing against jagged sandstone rocks.
+key_props: ['jagged rocks', 'churning water']
+camera_angle: low-angle
+effects: water spray, mist, rushing water motion
+
+flat_prompt (759 chars):
+Stylized historical animation illustration, detailed painterly background of the turbulent Tigris River at night. The freezing black water churns violently, crashing heavy white spray against jagged sandstone rocks under a pitch-black winter sky. Rich texture and atmospheric depth, scene-driven natural palette, scene-driven lighting, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. NO characters, NO people, NO figures — empty scene only. In the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_05_SCN_01 | dur: 3.5s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: heavy dark green wool kaftan with a subtle red eagle motif, wet white linen tunic, dark wool turban, wide leather belt, 
+    blocking: standing center-frame on a timber raft, leaning into a punting pole
+    emotion: determined: focused dot eyes, flat line mouth, concentrated straight eyebrows
+    action: gripping a heavy wooden pole with one hand while cradling a bundle with his other arm
+  [[Kurdish-Prince-A]]
+    costume: wrapped in thick damp undyed brown wool swaddling with a small madder red knit cap
+    blocking: cradled against the chest of [Kurdish-Leader-A]
+    emotion: peaceful: closed eyes, soft thin eyebrows, tiny calm mouth
+    action: sleeping soundly within the damp wool bundle
+extras: none
+lighting: pitch black winter night illuminated by the distant, harsh orange glare of torches from the receding shoreline
+background: wide shot of the turbulent black Tigris River with white spray, the raft is a small platform of date palm trunks lashed with rope, dark silhouettes of
+key_props: ['makeshift timber raft', 'wooden punting pole', 'swaddled infant']
+camera_angle: eye-level
+effects: river spray, atmospheric mist, flickering orange light reflections on the black water
+
+flat_prompt (1029 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] standing on a makeshift timber raft on the dark river. [Kurdish-Leader-A] has an oversized round pure white face, small oval dot eyes, concentrated straight eyebrows, a flat line mouth, and no nose; he wears a dark green wool kaftan and a dark turban. He holds the swaddled [Kurdish-Prince-A], who has a tiny oversized round pure white face with closed eyes and no nose, wrapped in damp brown wool. The scene is set on a pitch black winter night with a painterly background of the turbulent, fast-flowing Tigris River churning with white spray. The raft is made of rough date palm trunks. The lighting is a harsh, flickering orange glare from distant torches. Characters have compact stylized bodies, thick dark outlines, and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_05_SCN_02 | dur: 3.0s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: heavy dark green wool kaftan with visible fabric texture and wet patches
+    blocking: torso visible, providing a backdrop for the infant
+    emotion: not visible
+    action: breathing steadily, causing his chest to rise and fall
+  [[Kurdish-Prince-A]]
+    costume: thick undyed brown wool swaddling cloth, damp with river spray, secured with a thin leather cord, red knit cap
+    blocking: center-frame, nestled against the dark green fabric
+    emotion: peaceful: closed eyes, soft thin eyebrows, no nose
+    action: resting securely in the bundle
+extras: none
+lighting: low-key night lighting, faint orange highlights catching the edges of the wool and the white face of the infant
+background: close-up focus on the textures of the clothing and swaddling; the dark green wool of the kaftan fills the background
+key_props: ['damp wool swaddling', 'leather cord']
+camera_angle: eye-level
+effects: subtle glisten of water droplets on the wool
+
+flat_prompt (733 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Prince-A] resting against [Kurdish-Leader-A]. [Kurdish-Prince-A] has a tiny oversized round pure white face, closed eyes, soft thin eyebrows, and no nose, wearing a small red cap and wrapped in damp brown wool swaddling. The background is the textured dark green wool kaftan of [Kurdish-Leader-A]. The lighting is dim night light with faint orange highlights. Characters have compact stylized bodies, thick dark outlines, and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_05_SCN_03 | dur: 3.5s
+characters (1):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool kaftan, wet white linen tunic, dark turban, leather belt
+    blocking: side profile, leaning forward with effort
+    emotion: strained: furrowed V-shaped eyebrows, clenched teeth line, focused dot eyes
+    action: thrusting a heavy wooden punting pole deep into the dark water
+extras: none
+lighting: dramatic night lighting, orange torchlight from the shore casting long shadows across the raft
+background: medium shot of the raft's rough timber surface and the churning black water of the Tigris with white foam
+key_props: ['wooden punting pole', 'lashed timber raft']
+camera_angle: low-angle
+effects: water splashing around the pole, motion blur on the water surface
+
+flat_prompt (796 chars):
+A stylized historical animation illustration with thick dark outlines depicting [Kurdish-Leader-A] thrusting a heavy wooden pole into the water. [Kurdish-Leader-A] has an oversized round pure white face, small oval dot eyes, furrowed V-shaped eyebrows, a clenched teeth line, and no nose; he wears a dark green kaftan and turban. The background is a detailed painterly medium shot of the rough date palm logs of the raft and the churning black water of the Tigris. The lighting is dramatic night light with orange highlights. Characters have compact stylized bodies, thick dark outlines, and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_05_SCN_04 | dur: 3.0s
+characters (0):
+extras: none
+lighting: pitch black night with distant, flickering orange pinpricks of light from the citadel walls
+background: wide shot of the turbulent, fast-flowing Tigris River; in the distant background, the stone walls and battlements of Tikrit Citadel are visible as a d
+key_props: ['distant stone battlements']
+camera_angle: high-angle
+effects: churning white water spray, thick atmospheric darkness
+
+flat_prompt (709 chars):
+Stylized historical animation illustration, detailed painterly background of the turbulent black waters of the Tigris River churning violently with white spray. In the far distance, the stone walls and battlements of Tikrit Citadel recede into the pitch-black night, illuminated only by faint, flickering orange torchlight on the ramparts. Rich texture on the water and stone architecture, atmospheric depth, night sky palette, professional animation quality, clean consistent design, full frame, no border, no text, no watermark, 16:9 aspect ratio. NO characters, NO people, NO figures. NO characters, NO people, NO figures — empty scene only. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+======================================================================
+SCENE: SEQ_05_SCN_05 | dur: 3.5s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool kaftan, dark turban, heavy leather riding boots
+    blocking: crouched low on the raft as it hits the shore
+    emotion: alert: raised arc eyebrows, small open mouth of surprise, wide dot eyes
+    action: bending knees to absorb the impact of the raft hitting the bank while clutching the infant
+  [[Kurdish-Prince-A]]
+    costume: brown wool swaddling, red knit cap
+    blocking: held tightly against the chest of [Kurdish-Leader-A]
+    emotion: peaceful: closed eyes, no nose
+    action: remaining still during the jolt
+extras: none
+lighting: dim moonlight mixed with the orange glow of distant fires, reflecting off the wet mud of the riverbank
+background: medium shot of the muddy, rocky shoreline with thickets of tall river reeds and the front of the timber raft jolting against the earth
+key_props: ['muddy riverbank', 'river reeds', 'timber raft']
+camera_angle: low-angle
+effects: mud splashing, reeds swaying from the impact
+
+flat_prompt (822 chars):
+A stylized historical animation illustration with thick dark outlines depicting the raft jolting against the muddy shore. [Kurdish-Leader-A] has an oversized round pure white face, wide dot eyes, raised arc eyebrows, a small open mouth, and no nose; he is crouched low, holding the swaddled [Kurdish-Prince-A]. [Kurdish-Prince-A] has a tiny oversized round pure white face with closed eyes and no nose. The background is a detailed painterly riverbank with wet mud, rocks, and tall river reeds. The lighting is dim night light with orange reflections. Characters have compact stylized bodies, thick dark outlines, and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+======================================================================
+SCENE: SEQ_05_SCN_06 | dur: 3.08s
+characters (2):
+  [[Kurdish-Leader-A]]
+    costume: dark green wool kaftan, dark turban, wet linen tunic
+    blocking: head and shoulders visible, looking downward
+    emotion: solemn: bold eyebrows drawn together, small downward curve mouth, soft dot eyes
+    action: stepping off the raft into the mud while looking down at the infant
+  [[Kurdish-Prince-A]]
+    costume: brown wool swaddling, red knit cap
+    blocking: visible in the lower part of the frame
+    emotion: peaceful: closed eyes, no nose
+    action: sleeping
+extras: none
+lighting: soft, directional orange light from the side, highlighting the white faces against the dark night
+background: close-up focus on the characters; the dark, out-of-focus river and reeds are visible behind them
+key_props: ['swaddled infant']
+camera_angle: high-angle looking down at the infant
+effects: none
+
+flat_prompt (802 chars):
+A stylized historical animation illustration with thick dark outlines depicting a close-up of [Kurdish-Leader-A] looking down at [Kurdish-Prince-A]. [Kurdish-Leader-A] has an oversized round pure white face, soft dot eyes, bold eyebrows drawn together in a solemn expression, a small downward curve mouth, and no nose. [Kurdish-Prince-A] has a tiny oversized round pure white face with closed eyes and no nose. The background is a richly painted but dark and out-of-focus river scene. The lighting is soft directional orange light. Characters have compact stylized bodies, thick dark outlines, and flat cel-shading in the style of a professional historical animation. This is NOT photorealistic, NOT anime, NOT stick figures, NOT 3D CGI. full frame, no border, no text, no watermark, 16:9 aspect ratio.
+
+  ISSUES:
+  !! STYLE BAN: 'anime'
+  !! STYLE BAN: 'stick figure'
+  !! STYLE BAN: '3d cgi'
+  !! STYLE BAN: 'photorealistic'
+
+
+======================================================================
+SUMMARY
+======================================================================
+Total scenes: 26
+Total issues: 101
+
+All issues:
+  SEQ_01_SCN_01: STYLE BAN: 'anime'
+  SEQ_01_SCN_01: STYLE BAN: 'stick figure'
+  SEQ_01_SCN_01: STYLE BAN: '3d cgi'
+  SEQ_01_SCN_01: STYLE BAN: 'photorealistic'
+  SEQ_01_SCN_03: STYLE BAN: 'anime'
+  SEQ_01_SCN_03: STYLE BAN: 'stick figure'
+  SEQ_01_SCN_03: STYLE BAN: '3d cgi'
+  SEQ_01_SCN_03: STYLE BAN: 'photorealistic'
+  SEQ_01_SCN_04: STYLE BAN: 'anime'
+  SEQ_01_SCN_04: STYLE BAN: 'stick figure'
+  SEQ_01_SCN_04: STYLE BAN: '3d cgi'
+  SEQ_01_SCN_04: STYLE BAN: 'photorealistic'
+  SEQ_01_SCN_05: STYLE BAN: 'anime'
+  SEQ_01_SCN_05: STYLE BAN: 'stick figure'
+  SEQ_01_SCN_05: STYLE BAN: '3d cgi'
+  SEQ_01_SCN_05: STYLE BAN: 'photorealistic'
+  SEQ_01_SCN_06: SKIN TONE: 'tanned'
+  SEQ_01_SCN_06: STYLE BAN: 'anime'
+  SEQ_01_SCN_06: STYLE BAN: 'stick figure'
+  SEQ_01_SCN_06: STYLE BAN: '3d cgi'
+  SEQ_01_SCN_06: STYLE BAN: 'photorealistic'
+  SEQ_02_SCN_01: STYLE BAN: 'anime'
+  SEQ_02_SCN_01: STYLE BAN: 'stick figure'
+  SEQ_02_SCN_01: STYLE BAN: '3d cgi'
+  SEQ_02_SCN_01: STYLE BAN: 'photorealistic'
+  SEQ_02_SCN_01: 'identical' found
+  SEQ_02_SCN_02: STYLE BAN: 'anime'
+  SEQ_02_SCN_02: STYLE BAN: 'stick figure'
+  SEQ_02_SCN_02: STYLE BAN: '3d cgi'
+  SEQ_02_SCN_02: STYLE BAN: 'photorealistic'
+  SEQ_02_SCN_03: STYLE BAN: 'anime'
+  SEQ_02_SCN_03: STYLE BAN: 'stick figure'
+  SEQ_02_SCN_03: STYLE BAN: '3d cgi'
+  SEQ_02_SCN_03: STYLE BAN: 'photorealistic'
+  SEQ_02_SCN_04: STYLE BAN: 'anime'
+  SEQ_02_SCN_04: STYLE BAN: 'stick figure'
+  SEQ_02_SCN_04: STYLE BAN: '3d cgi'
+  SEQ_02_SCN_04: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_01: STYLE BAN: 'anime'
+  SEQ_03_SCN_01: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_01: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_01: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_02: STYLE BAN: 'anime'
+  SEQ_03_SCN_02: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_02: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_02: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_03: STYLE BAN: 'anime'
+  SEQ_03_SCN_03: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_03: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_03: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_04: SKIN TONE: 'tanned'
+  SEQ_03_SCN_04: STYLE BAN: 'anime'
+  SEQ_03_SCN_04: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_04: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_04: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_05: STYLE BAN: 'anime'
+  SEQ_03_SCN_05: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_05: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_05: STYLE BAN: 'photorealistic'
+  SEQ_03_SCN_06: STYLE BAN: 'anime'
+  SEQ_03_SCN_06: STYLE BAN: 'stick figure'
+  SEQ_03_SCN_06: STYLE BAN: '3d cgi'
+  SEQ_03_SCN_06: STYLE BAN: 'photorealistic'
+  SEQ_04_SCN_01: STYLE BAN: 'anime'
+  SEQ_04_SCN_01: STYLE BAN: 'stick figure'
+  SEQ_04_SCN_01: STYLE BAN: '3d cgi'
+  SEQ_04_SCN_01: STYLE BAN: 'photorealistic'
+  SEQ_04_SCN_01: 'identical' found
+  SEQ_04_SCN_02: STYLE BAN: 'anime'
+  SEQ_04_SCN_02: STYLE BAN: 'stick figure'
+  SEQ_04_SCN_02: STYLE BAN: '3d cgi'
+  SEQ_04_SCN_02: STYLE BAN: 'photorealistic'
+  SEQ_04_SCN_03: STYLE BAN: 'anime'
+  SEQ_04_SCN_03: STYLE BAN: 'stick figure'
+  SEQ_04_SCN_03: STYLE BAN: '3d cgi'
+  SEQ_04_SCN_03: STYLE BAN: 'photorealistic'
+  SEQ_04_SCN_03: Label [Seljuk-Guard-Generic] NOT in flat_prompt
+  SEQ_04_SCN_04: STYLE BAN: 'anime'
+  SEQ_04_SCN_04: STYLE BAN: 'stick figure'
+  SEQ_04_SCN_04: STYLE BAN: '3d cgi'
+  SEQ_04_SCN_04: STYLE BAN: 'photorealistic'
+  SEQ_05_SCN_01: STYLE BAN: 'anime'
+  SEQ_05_SCN_01: STYLE BAN: 'stick figure'
+  SEQ_05_SCN_01: STYLE BAN: '3d cgi'
+  SEQ_05_SCN_01: STYLE BAN: 'photorealistic'
+  SEQ_05_SCN_02: STYLE BAN: 'anime'
+  SEQ_05_SCN_02: STYLE BAN: 'stick figure'
+  SEQ_05_SCN_02: STYLE BAN: '3d cgi'
+  SEQ_05_SCN_02: STYLE BAN: 'photorealistic'
+  SEQ_05_SCN_03: STYLE BAN: 'anime'
+  SEQ_05_SCN_03: STYLE BAN: 'stick figure'
+  SEQ_05_SCN_03: STYLE BAN: '3d cgi'
+  SEQ_05_SCN_03: STYLE BAN: 'photorealistic'
+  SEQ_05_SCN_05: STYLE BAN: 'anime'
+  SEQ_05_SCN_05: STYLE BAN: 'stick figure'
+  SEQ_05_SCN_05: STYLE BAN: '3d cgi'
+  SEQ_05_SCN_05: STYLE BAN: 'photorealistic'
+  SEQ_05_SCN_06: STYLE BAN: 'anime'
+  SEQ_05_SCN_06: STYLE BAN: 'stick figure'
+  SEQ_05_SCN_06: STYLE BAN: '3d cgi'
+  SEQ_05_SCN_06: STYLE BAN: 'photorealistic'
+
+flat_prompt stats:
+  min: 619 chars
+  max: 1029 chars
+  avg: 769 chars

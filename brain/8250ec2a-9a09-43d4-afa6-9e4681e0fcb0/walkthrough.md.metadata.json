@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Full audit of character sheet prompt based on industry standards for animation model sheets. Identifies 6 issues in current Step 2b prompt and proposes a complete rewrite.",
-  "updatedAt":  "2026-05-07T09:04:24.970233400Z",
-  "version":  "6",
+  "summary":  "Comprehensive audit of Step 4 Prompt Writer. Identifies 4 real issues and separates them from false positives (style denial words). Includes recommendations.",
+  "updatedAt":  "2026-05-07T09:27:44.094884300Z",
+  "version":  "8",
   "requestFeedback":  true
 }
