@@ -1,0 +1,75 @@
+============================================================
+SRT FORMAT CHECK
+============================================================
+Total SRT blocks: 25
+  OK: All blocks properly formatted
+  Total SRT duration: 91.880s
+
+============================================================
+STEP 0 OUTPUT CHECK
+============================================================
+Total sentences: 23
+
+  [1] 0.000s - 2.799s (2.8s)
+    text: Black water rushes beneath a makeshift raft.
+  [2] 3.165s - 8.400s (5.24s)
+    text: The wind off the Tigris River is freezing, biting through the damp wool wrapped around your fragile frame.
+  [3] 8.800s - 15.566s (6.77s)
+    text: You are a newborn, blind to the darkness, but your very first sensation is the violent pitch of a desperate escape.
+  [4] 15.800s - 21.199s (5.4s)
+    text: You are born into a prominent Kurdish family, yet your bloodline carries a sudden death sentence.
+  [5] 21.600s - 28.065s (6.46s)
+    text: Hours ago, your uncle Shirkuh drove a blade into a high-ranking Seljuk official inside the walls of Tikrit.
+  [6] 28.300s - 30.932s (2.63s)
+    text: The local governor demands immediate retribution.
+  [7] 31.065s - 32.317s (1.25s)
+    text: The decree is absolute.
+  [8] 32.374s - 35.957s (3.58s)
+    text: To survive the night of your birth, your family must vanish.
+  [9] 36.026s - 38.932s (2.91s)
+    text: The raft groans against the heavy current.
+  [10] 39.033s - 43.165s (4.13s)
+    text: Your father, Najm ad-Din Ayyub, kneels on the lashed timber.
+  [11] 43.365s - 49.000s (5.63s)
+    text: He clutches your bundled form tightly against his chest, shielding your face from the freezing spray.
+  [12] 49.200s - 50.550s (1.35s)
+    text: His muscles strain.
+  [13] 50.625s - 57.865s (7.24s)
+    text: He balances the unsteady craft in total darkness, navigating the treacherous waters by sheer physical force.
+  [14] 58.200s - 61.339s (3.14s)
+    text: Behind you, torches ignite along the fortress walls.
+  [15] 61.393s - 63.732s (2.34s)
+    text: The governor’s guards sweep the riverbanks.
+  [16] 63.799s - 67.000s (3.2s)
+    text: The water roars, drowning out the shouts of the hunting party.
+  [17] 67.033s - 71.733s (4.7s)
+    text: One slip, one broken rope, and the river will swallow your family whole.
+  [18] 71.766s - 72.683s (0.92s)
+    text: You do not cry.
+  [19] 72.748s - 77.700s (4.95s)
+    text: The rhythmic heave of your father’s chest is your only anchor in the crushing black.
+  [20] 77.900s - 85.066s (7.17s)
+    text: He drives a wooden pole into the riverbed, pushing the raft into the deep channel, away from the only home your family has known.
+  [21] 85.265s - 87.533s (2.27s)
+    text: The timber scrapes against the far bank.
+  [22] 87.700s - 89.599s (1.9s)
+    text: You are named Yusuf ibn Ayyub.
+  [23] 89.799s - 92.165s (2.37s)
+    text: Your life begins in permanent exile.
+
+  Total Step0 duration: 88.35s
+  SRT duration: 91.880s
+  Difference: 3.530s (3.8%)
+
+============================================================
+MERGE QUALITY
+============================================================
+  SRT word count: 253
+  Step0 word count: 253
+  MISMATCH: Words differ!
+    First diff at word 162: SRT='governor's' vs Step0='governor’s'
+
+============================================================
+TIMING CONTINUITY
+============================================================
+  OK: No major timing gaps

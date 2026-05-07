@@ -1,0 +1,267 @@
+======================================================================
+FILES IN BOTH RUNS
+======================================================================
+
+--- final2/Test ---
+  ch_01_Level_1__Vulnerability_step0_sentences.json (6078 bytes)
+  ch_01_Level_1__Vulnerability_step1_sequences.json (4015 bytes)
+  ch_01_Level_1__Vulnerability_step2_characters.json (6809 bytes)
+  ch_01_Level_1__Vulnerability_step2_world_bible.json (14067 bytes)
+  ch_01_Level_1__Vulnerability_step3_scenes.json (26131 bytes)
+  ch_01_Level_1__Vulnerability_step4_prompts.json (84577 bytes)
+
+--- final2/Test/V4 ---
+  ch_01_Level_1__Vulnerability_step0_sentences.json (6078 bytes)
+  ch_01_Level_1__Vulnerability_step1_sequences.json (3864 bytes)
+  ch_01_Level_1__Vulnerability_step2_characters.json (4764 bytes)
+  ch_01_Level_1__Vulnerability_step2_world_bible.json (12816 bytes)
+  ch_01_Level_1__Vulnerability_step3_scenes.json (25331 bytes)
+  ch_01_Level_1__Vulnerability_step4_prompts.json (85938 bytes)
+
+
+======================================================================
+ISSUE 1: PROMPTS WITHOUT CHARACTERS
+======================================================================
+
+Total prompts: 27
+With characters: 20 (74%)
+Without characters (B-Roll/environment): 7 (26%)
+
+No-character prompts detail:
+
+  SEQ_01_SCN_01 | B-Roll | Wide Shot
+    action: The makeshift timber raft pitches heavily on the dark, rushing water of the Tigr
+    prompt: A stylized historical animation illustration with thick dark outlines depicting a wide shot of a mak...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_03_SCN_01 | B-Roll | Wide Shot
+    action: A rough timber raft pitches violently on the dark, white-capped waves of the fas
+    prompt: A stylized historical animation illustration with thick dark outlines depicting a rough timber raft ...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_04_SCN_01 | B-Roll | Wide Shot
+    action: A line of orange torches flares to life along the stepped crenellations of the m
+    prompt: A stylized historical animation illustration with thick dark outlines depicting a line of orange tor...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_04_SCN_03 | B-Roll | Wide Shot
+    action: The pitch-black water of the Tigris River churns violently, white-capped spray c
+    prompt: A stylized historical animation illustration with thick dark outlines depicting the pitch-black wate...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_04_SCN_04 | B-Roll | Medium Shot
+    action: A makeshift raft of rough-hewn timber logs bobs violently in the freezing curren
+    prompt: A stylized historical animation illustration with thick dark outlines depicting a makeshift raft of ...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_05_SCN_04 | B-Roll | Wide Shot
+    action: The raft drifts further into the dark, churning water, leaving behind the faint,
+    prompt: A stylized historical animation illustration with thick dark outlines depicting an empty makeshift t...
+    WARNING: prompt mentions people despite no character_labels!
+
+  SEQ_05_SCN_05 | B-Roll | Medium Shot
+    action: The rough-hewn timber logs of the raft slide forcefully onto the muddy, reed-cov
+    prompt: A stylized historical animation illustration with thick dark outlines depicting the front of a timbe...
+    WARNING: prompt mentions people despite no character_labels!
+
+
+======================================================================
+ISSUE 2A: SEQUENCE SEGMENTATION
+======================================================================
+
+SEQ_01 | dur=20.21s | sents=[1, 2, 3, 4]
+  location: Makeshift raft, Tigris River
+  subject: A newborn baby experiences the freezing wind and violent motion of a raft escaping on the river.
+  chars: ['child Yusuf ibn Ayyub']
+  text: Black water rushes beneath a makeshift raft. The wind off the Tigris River is freezing, biting through the damp wool wrapped around your fragile frame. You are a newborn, blind to the darkness, but your very first sensation is the violent pitch of a desperate escape. You are born into a prominent Kurdish family, yet your bloodline carries a sudden death sentence.
+
+SEQ_02 | dur=13.92s | sents=[5, 6, 7, 8]
+  location: Inside the walls of Tikrit
+  subject: Uncle Shirkuh assassinates a Seljuk official, prompting the local governor to demand retribution.
+  chars: ['Shirkuh, uncle', "Shirkuh's victim, Seljuk official", "Tikrit's local governor"]
+  text: Hours ago, your uncle Shirkuh drove a blade into a high-ranking Seljuk official inside the walls of Tikrit. The local governor demands immediate retribution. The decree is absolute. To survive the night of your birth, your family must vanish.
+
+SEQ_03 | dur=21.26s | sents=[9, 10, 11, 12, 13]
+  location: Makeshift raft, Tigris River
+  subject: Najm ad-Din Ayyub struggles to balance the raft while shielding his newborn baby from the freezing water.
+  chars: ['Najm ad-Din Ayyub, father', 'child Yusuf ibn Ayyub']
+  text: The raft groans against the heavy current. Your father, Najm ad-Din Ayyub, kneels on the lashed timber. He clutches your bundled form tightly against his chest, shielding your face from the freezing spray. His muscles strain. He balances the unsteady craft in total darkness, navigating the treacherous waters by sheer physical force.
+
+SEQ_04 | dur=13.38s | sents=[14, 15, 16, 17]
+  location: Fortress walls and riverbanks, Tikrit
+  subject: Guards with torches search the riverbanks for the fleeing family.
+  chars: []
+  text: Behind you, torches ignite along the fortress walls. The governor’s guards sweep the riverbanks. The water roars, drowning out the shouts of the hunting party. One slip, one broken rope, and the river will swallow your family whole.
+
+SEQ_05 | dur=19.58s | sents=[18, 19, 20, 21, 22, 23]
+  location: Makeshift raft, Tigris River
+  subject: Najm ad-Din Ayyub pushes the raft to the far bank, securing the family's escape into exile.
+  chars: ['child Yusuf ibn Ayyub', 'Najm ad-Din Ayyub, father']
+  text: You do not cry. The rhythmic heave of your father’s chest is your only anchor in the crushing black. He drives a wooden pole into the riverbed, pushing the raft into the deep channel, away from the only home your family has known. The timber scrapes against the far bank. You are named Yusuf ibn Ayyub. Your life begins in permanent exile.
+
+
+======================================================================
+ISSUE 2B: SCENE EVALUATION (SEQ_01, SEQ_03, SEQ_04)
+======================================================================
+
+==================================================
+SEQ_01
+==================================================
+visual_event: A makeshift timber raft pitches violently on the dark, rushing waters of the Tigris River at night, where a commander shields a tightly swaddled newborn baby from the freezing wind and splashing water.
+location_anchor: A pitch-black, freezing night on the fast-flowing Tigris River, aboard a violently pitching makeshift raft of rough-hewn timber logs lashed with rope.
+target_duration: 20.21s | actual: 20.21s | scenes: 6
+
+  SEQ_01_SCN_01 | Wide Shot | Slow Pan | 3.5s | B-Roll
+    chars: []
+    action: The makeshift timber raft pitches heavily on the dark, rushing water of the Tigris River, with white-capped spray splashing over the rough-hewn logs.
+    has_crowd: False
+
+  SEQ_01_SCN_02 | Medium Shot | Static | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A', 'Ayyubid-Noble-A-Child']
+    action: Ayyubid-Commander-A kneels on the pitching raft, holding Ayyubid-Noble-A-Child tightly against his chest to shield the infant from the wind. The commander's wet wool blanket flaps wildly.
+    has_crowd: False
+
+  SEQ_01_SCN_03 | Close-up | Static | 3.0s | A-Roll
+    chars: ['Ayyubid-Noble-A-Child']
+    action: Ayyubid-Noble-A-Child is swaddled tightly in damp cream silk and indigo wool. The baby's expressive eyebrows pinch together as freezing water droplets hit the outer layer of the swaddling.
+    has_crowd: False
+
+  SEQ_01_SCN_04 | Wide Shot | Static | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A', 'Ayyubid-Noble-A-Child']
+    action: The raft lurches violently over a large swell of dark water. Ayyubid-Commander-A braces himself against the wet logs, gripping the baby sling securely as the river current pulls them rapidly downstream.
+    has_crowd: False
+
+  SEQ_01_SCN_05 | Medium Shot | Static | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A', 'Ayyubid-Noble-A-Child']
+    action: Ayyubid-Commander-A looks down at Ayyubid-Noble-A-Child, carefully adjusting the madder-red embroidered baby sling to cover the child more completely against the harsh elements.
+    has_crowd: False
+
+  SEQ_01_SCN_06 | Close-up | Extreme Slow Zoom In | 3.21s | A-Roll
+    chars: ['Ayyubid-Noble-A-Child']
+    action: Ayyubid-Noble-A-Child's pure white face is barely visible within the dark, wet wool. The baby's small dot eyes are squeezed shut, the tiny body trembling slightly in the cold as the raft rocks.
+    has_crowd: False
+
+  Roll mix: A-Roll=5, B-Roll=1
+  Shot variety: {'Wide Shot', 'Medium Shot', 'Close-up'}
+  Motion variety: {'Slow Pan', 'Static', 'Extreme Slow Zoom In'}
+
+==================================================
+SEQ_03
+==================================================
+visual_event: Najm ad-Din Ayyub kneels on a pitching timber raft in the dark, turbulent river, straining to balance the craft while tightly shielding his newborn baby from the freezing water.
+location_anchor: A rough-hewn timber raft tossing on the pitch-black, fast-flowing Tigris River at night, surrounded by freezing spray.
+target_duration: 21.26s | actual: 21.259999999999998s | scenes: 6
+
+  SEQ_03_SCN_01 | Wide Shot | Slow Pan | 4.0s | B-Roll
+    chars: []
+    action: A rough timber raft pitches violently on the dark, white-capped waves of the fast-flowing river, water splashing over the lashed logs.
+    has_crowd: False
+
+  SEQ_03_SCN_02 | Medium Shot | Static | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A']
+    action: Ayyubid-Commander-A kneels heavily on the wet logs, gripping the binding ropes with one hand while holding a bundle in his other arm.
+    has_crowd: False
+
+  SEQ_03_SCN_03 | Close-up | Static | 3.0s | A-Roll
+    chars: ['Ayyubid-Commander-A', 'Ayyubid-Noble-A-Child']
+    action: Ayyubid-Commander-A presses Ayyubid-Noble-A-Child firmly against his chest, wrapping his thick arms and wet blanket around the swaddled baby to block the wind.
+    has_crowd: False
+
+  SEQ_03_SCN_04 | Close-up | Static | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A']
+    action: Ayyubid-Commander-A's face tilts downward, his eyebrows angled sharply in effort as freezing water splashes against his back and shoulders.
+    has_crowd: False
+
+  SEQ_03_SCN_05 | Medium Shot | Slow Tracking | 3.5s | A-Roll
+    chars: ['Ayyubid-Commander-A']
+    action: The raft lurches sharply to the side; Ayyubid-Commander-A quickly shifts his weight, planting his knee firmly against the timber to keep the craft steady.
+    has_crowd: False
+
+  SEQ_03_SCN_06 | Wide Shot | Static | 3.76s | A-Roll
+    chars: ['Ayyubid-Commander-A']
+    action: Ayyubid-Commander-A remains crouched low on the raft, holding the baby tight as the small craft is swept down the pitch-black river amidst swirling currents.
+    has_crowd: False
+
+  Roll mix: A-Roll=5, B-Roll=1
+  Shot variety: {'Wide Shot', 'Medium Shot', 'Close-up'}
+  Motion variety: {'Slow Pan', 'Slow Tracking', 'Static'}
+
+==================================================
+SEQ_04
+==================================================
+visual_event: Torches flare along the massive fortress walls as a Seljuk commander and his guards search the muddy riverbanks, while a timber raft strains violently in the churning, pitch-black river.
+location_anchor: The steep, muddy banks of the Tigris River below the towering clay brick walls of Tikrit Citadel at night, illuminated by flickering torchlight.
+target_duration: 13.38s | actual: 13.379999999999999s | scenes: 4
+
+  SEQ_04_SCN_01 | Wide Shot | Slow Pan | 3.5s | B-Roll
+    chars: []
+    action: A line of orange torches flares to life along the stepped crenellations of the massive clay brick fortress walls, casting a harsh glow against the pitch-black sky.
+    has_crowd: False
+
+  SEQ_04_SCN_02 | Medium Shot | Slow Tracking | 3.5s | A-Roll
+    chars: ['Seljuk-Commander-A']
+    action: Seljuk-Commander-A strides along the muddy riverbank through dense reeds, holding a pitch-soaked torch high, followed by guards searching the rocky embankment.
+    has_crowd: True
+
+  SEQ_04_SCN_03 | Wide Shot | Static | 3.0s | B-Roll
+    chars: []
+    action: The pitch-black water of the Tigris River churns violently, white-capped spray crashing heavily against the slippery sandstone rocks below the fortress.
+    has_crowd: False
+
+  SEQ_04_SCN_04 | Medium Shot | Static | 3.38s | B-Roll
+    chars: []
+    action: A makeshift raft of rough-hewn timber logs bobs violently in the freezing current, its thick palm-fiber ropes straining tightly as dark water splashes over the wood.
+    has_crowd: False
+
+  Roll mix: A-Roll=1, B-Roll=3
+  Shot variety: {'Wide Shot', 'Medium Shot'}
+  Motion variety: {'Slow Pan', 'Slow Tracking', 'Static'}
+
+
+======================================================================
+ISSUE 3: CHARACTER COUNT COMPARISON
+======================================================================
+
+--- final2/Test/ch_01_Level_1__Vulnerability_step2_characters.json (5 characters) ---
+  [PROTAGONIST] Ayyubid-Noble-A-Child = child Yusuf ibn Ayyub
+    age: child
+    visual: A tiny newborn approximately 2 heads tall with a pure white mask-like face, small black dot eyes, and thin expressive eyebrows. He is swaddled tightly
+
+  [NAMED] Ayyubid-Commander-A = Najm ad-Din Ayyub, father
+    age: mature_adult
+    visual: A broad-shouldered man 5 heads tall with a pure white mask face, thick black beard, and determined dot eyes. Wears a dark indigo wool turban over a wh
+
+  [NAMED] Ayyubid-Commander-B = Shirkuh, uncle
+    age: mature_adult
+    visual: A stocky, powerful man 5 heads tall with a pure white mask face and a rugged black beard. Wears a conical steel helmet with a chainmail aventail. His 
+
+  [NAMED] Seljuk-Noble-A = Shirkuh's victim, Seljuk official
+    age: mature_adult
+    visual: A man 5 heads tall with a pure white mask face and a thin, elegant black mustache. Wears a tall black velvet hat trimmed with sable fur. His primary g
+
+  [NAMED] Seljuk-Commander-A = Tikrit's local governor
+    age: mature_adult
+    visual: An imposing man 5 heads tall with a pure white mask face and sharp, angled black eyebrows. Wears a fluted steel conical helmet with gold damascening a
+
+
+--- final2/Test/V4/ch_01_Level_1__Vulnerability_step2_characters.json (3 characters) ---
+  [PROTAGONIST] Kurdish-Noble-A = child Yusuf ibn Ayyub
+    age: child
+    visual: BODY: Compact infant build, approximately 3 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Small oval dot eyes (closed),
+
+  [NAMED] Kurdish-Noble-B = Najm ad-Din Ayyub, father
+    age: mature_adult
+    visual: BODY: Broad-shouldered and sturdy build, approximately 5 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Thick, well-groo
+
+  [NAMED] Kurdish-Commander-A = Shirkuh, uncle
+    age: mature_adult
+    visual: BODY: Stocky and powerful warrior build, approximately 5 heads tall. Pure white round face with simplified mitten-shaped hands. FACE: Short, dense bla
+
+
+--- Sequence comparison ---
+
+final2/Test/ch_01_Level_1__Vulnerability_step1_sequences.json: 5 sequences
+  All characters mentioned: ['Najm ad-Din Ayyub, father', "Shirkuh's victim, Seljuk official", 'Shirkuh, uncle', "Tikrit's local governor", 'child Yusuf ibn Ayyub']
+
+final2/Test/V4/ch_01_Level_1__Vulnerability_step1_sequences.json: 5 sequences
+  All characters mentioned: ['Najm ad-Din Ayyub, father', 'Shirkuh, uncle', 'child Yusuf ibn Ayyub']
