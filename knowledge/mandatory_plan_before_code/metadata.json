@@ -1,0 +1,13 @@
+{
+  "title": "MANDATORY: Plan Before Code",
+  "summary": "NEVER write or modify source code until a plan has been presented AND explicitly approved by the user. User describing a feature is a QUESTION, not an order to implement. Must present WHERE/HOW/WHAT options first, wait for explicit approval (e.g., 'làm đi', 'triển khai'), then implement.",
+  "created_at": "2026-05-09T06:17:00+07:00",
+  "updated_at": "2026-05-09T06:17:00+07:00",
+  "references": [
+    {
+      "type": "conversation",
+      "id": "8250ec2a-9a09-43d4-afa6-9e4681e0fcb0",
+      "description": "User repeatedly frustrated by premature implementation without plan approval"
+    }
+  ]
+}
