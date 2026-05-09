@@ -1,7 +1,7 @@
 {
   "artifactType":  "ARTIFACT_TYPE_WALKTHROUGH",
-  "summary":  "Deep technical analysis of adding Step 2.5 (Visual Interpreter) to the pipeline. Covers the audio sync problem, practical prompt design, and comparison with real-world filmmaking. Includes concrete examples from the Saladin test data.",
-  "updatedAt":  "2026-05-07T11:33:57.878524900Z",
-  "version":  "10",
+  "summary":  "Complete list of all bugs found and fixed in the crowd character pipeline integration, organized chronologically with root cause analysis.",
+  "updatedAt":  "2026-05-09T11:24:53.975326700Z",
+  "version":  "11",
   "requestFeedback":  true
 }

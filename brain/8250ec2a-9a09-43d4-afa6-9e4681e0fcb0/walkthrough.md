@@ -1,191 +1,40 @@
-# Phân tích: Step 2.5 — Visual Interpreter (tách riêng)
+# Crowd Pipeline — Bug Fix Log
 
-## Nguyên lý cốt lõi: Audio và Visual là 2 layer TÁCH BIỆT
+## Tổng kết: 7 bugs đã fix
 
-Trong phim thực tế, **voiceover** và **hình ảnh** KHÔNG BAO GIỜ khớp 1:1:
+Nguyên nhân gốc: tôi chỉ thêm crowd data vào **internal pipeline steps** mà không trace đến **output cuối cùng** (Excel, flat_prompt).
 
-```
-🎧 Audio (narrator nói): "Your bloodline carries a sudden death sentence."
-🎬 Visual (camera chiếu): Bàn tay người cha siết chặt đứa bé, mắt nhìn về phía bóng tối
+### Bug #1: Step 3.2 input thiếu crowd_labels
+- **Triệu chứng**: `crowd_labels: []` ở mọi scene
+- **Root cause**: `seq_for_llm` không có field `crowd_labels`
+- **Fix**: Thêm `crowd_labels` vào `seq_for_llm`
 
-→ Audio = ý nghĩa trừu tượng
-→ Visual = phản ứng cơ thể cụ thể
-→ Cả hai BỔ SUNG cho nhau, không cần khớp từng chữ
-```
+### Bug #2: Post-Step3 không propagate crowd  
+- **Triệu chứng**: Scene có crowd nhưng `crowd_labels` rỗng
+- **Root cause**: Audio_sync loop không copy `crowd_labels` từ filmable_scenes
+- **Fix**: Thêm fallback propagation
 
-> [!IMPORTANT]
-> Step 2.5 KHÔNG thay thế text gốc. Nó tạo **bản dịch visual song song**.
-> `audio_sync` vẫn giữ nguyên text gốc → không bao giờ bị lệch.
+### Bug #3: Step 3.2 Rule 6 thiếu hướng dẫn crowd_labels
+- **Triệu chứng**: LLM không biết cần fill `crowd_labels` nào
+- **Root cause**: Rule 6 chỉ nói `has_crowd = true/false`, không hướng dẫn chọn EXT-* labels
+- **Fix**: Mở rộng Rule 6
 
----
+### Bug #4: Step 4 template dùng sai tên reference
+- **Triệu chứng**: flat_prompt không mention EXT-* labels
+- **Root cause**: Prompt nói `crowd_archetypes` thay vì `[EXT-*]`
+- **Fix**: Sửa rule + extras field description
 
-## Thiết kế Step 2.5
+### Bug #5: Step 2d thiếu sheet_prompt
+- **Triệu chứng**: Không thể gen ảnh tham chiếu cho crowd
+- **Root cause**: Output format không có field `sheet_prompt`
+- **Fix**: Thêm vào JSON template
 
-### Flow hiện tại (không có Step 2.5):
-```
-Step 1 → sequences (full_text + timing)
-                ↓
-Step 3: LLM phải vừa hiểu metaphor, vừa dựng cảnh, vừa tính timing
-```
+### Bug #6: Excel Sheet 1 thiếu cột Crowd
+- **Triệu chứng**: User không thấy crowd nào ở mỗi scene
+- **Root cause**: Sheet 1 chỉ có 9 cột, không có Crowd
+- **Fix**: Thêm cột "Crowd" (cột G)
 
-### Flow mới (có Step 2.5):
-```
-Step 1 → sequences (full_text + timing)
-                ↓
-Step 2.5: Visual Interpreter
-  - Đọc full_text
-  - Chuyển MỖI CÂU thành 1 filmable action
-  - Giữ nguyên sentence_id + timing
-                ↓
-Step 3: Scene Director
-  - Nhận filmable actions (đã clean)
-  - Chỉ cần focus: camera angles, shot types, duration
-  - audio_sync = text gốc (không thay đổi)
-```
-
----
-
-### Input Step 2.5
-```json
-{
-  "sequence_id": "SEQ_01",
-  "characters": ["child Yusuf ibn Ayyub, newborn", "Najm ad-Din Ayyub, father"],
-  "location_shift": "makeshift raft on Tigris River at night",
-  "sentences": [
-    {"id": 1, "text": "Black water rushes beneath a makeshift raft.", "duration": 2.54},
-    {"id": 2, "text": "The wind off the Tigris River is freezing,", "duration": 1.82},
-    {"id": 3, "text": "biting through the damp wool wrapped around your fragile frame.", "duration": 2.90},
-    {"id": 4, "text": "You are a newborn, blind to the darkness,", "duration": 2.13},
-    {"id": 5, "text": "but your very first sensation is the violent pitch of a desperate escape.", "duration": 3.71},
-    {"id": 6, "text": "You are born into a prominent Kurdish family,", "duration": 2.07},
-    {"id": 7, "text": "yet your bloodline carries a sudden death sentence.", "duration": 2.64}
-  ]
-}
-```
-
-### Output Step 2.5
-```json
-{
-  "sequence_id": "SEQ_01",
-  "filmable_event": "A man kneels on a raft in a dark river at night, shielding a wrapped newborn from freezing spray. The raft pitches violently on black water.",
-  "visual_actions": [
-    {
-      "sentence_ids": [1],
-      "original": "Black water rushes beneath a makeshift raft.",
-      "type": "DIRECT",
-      "filmable": "Dark churning water rushes past rough-hewn logs lashed together as a raft"
-    },
-    {
-      "sentence_ids": [2, 3],
-      "original": "The wind off the Tigris River is freezing, biting through the damp wool...",
-      "type": "DIRECT",
-      "filmable": "Wind blows freezing spray over a damp wool bundle on the raft, the fabric rippling"
-    },
-    {
-      "sentence_ids": [4, 5],
-      "original": "You are a newborn, blind to the darkness, but your very first sensation is the violent pitch...",
-      "type": "DIRECT",
-      "filmable": "A tiny newborn face peeks from within the wool bundle as the raft lurches violently"
-    },
-    {
-      "sentence_ids": [6, 7],
-      "original": "You are born into a prominent Kurdish family, yet your bloodline carries a sudden death sentence.",
-      "type": "METAPHOR → REACTION",
-      "filmable": "The father's hands grip the baby tighter, his body tensing as he scans the dark riverbank behind them"
-    }
-  ]
-}
-```
-
-### Chú ý quan trọng:
-- `original` = giữ nguyên → dùng cho audio_sync
-- `filmable` = bản dịch visual → dùng cho Step 3 dựng cảnh
-- `type` = phân loại: DIRECT (đã filmable) vs METAPHOR→REACTION (cần dịch)
-- `sentence_ids` = link về câu gốc → timing vẫn chính xác
-
----
-
-## Prompt Step 2.5
-
-```
-You are a Visual Interpreter for cinematic production.
-Your job: convert literary narration into FILMABLE visual descriptions.
-
-## RULES
-1. For each sentence group, determine the TYPE:
-   - DIRECT: Text already describes a filmable physical event → keep as-is, just clarify
-   - METAPHOR → REACTION: Text uses metaphor/philosophy → translate to CHARACTER REACTION (body language, gesture, facial expression)
-   - ABSTRACT → SYMBOL: Text describes abstract concept → translate to CONCRETE VISUAL OBJECT or ENVIRONMENTAL DETAIL
-   - COMMENTARY → ATMOSPHERE: Text is narrator commentary about past/future → translate to ATMOSPHERIC B-ROLL (still environment, light change, empty space)
-
-2. filmable description MUST:
-   - Start with a visible SUBJECT (who/what)
-   - Describe a visible ACTION (what happens physically)
-   - Be grounded in the location
-   - NOT use literary language, metaphor, or emotion words
-   - NOT invent events not implied by the text
-   
-3. You may GROUP adjacent sentences if they describe the same visual moment
-4. NEVER change sentence timing or boundaries — only provide visual interpretation
-5. Keep original text in the "original" field — unchanged
-
-## BAD vs GOOD
-
-| Original | BAD filmable | GOOD filmable |
-|---|---|---|
-| "Your bloodline carries a death sentence" | "A death sentence hangs over the family" (still abstract!) | "Father's grip tightens on the baby, eyes scanning darkness behind them" |
-| "Hope flickered like a dying candle" | "A metaphorical candle flickers" (literal metaphor!) | "Character's hands tremble as he exhales, shoulders dropping" |
-| "Two years later, the kingdom fell" | "The kingdom collapsing" (future event, can't film!) | "Empty stone corridor, dust motes floating in fading sunlight through a narrow window" |
-| "Black water rushes beneath a raft" | needs no change — already filmable | "Dark churning water rushes past rough-hewn logs lashed together" |
-```
-
----
-
-## Vấn đề audio_sync — ĐÃ GIẢI QUYẾT
-
-```
-Step 2.5 output:
-  sentence_ids: [6, 7]
-  original: "You are born into a prominent Kurdish family, 
-             yet your bloodline carries a sudden death sentence."
-  filmable: "Father's hands grip the baby tighter, scanning the dark riverbank"
-
-Step 3 nhận được:
-  → Dựng scene dựa trên filmable (camera thấy: bàn tay, em bé, bờ sông)
-  → audio_sync giữ original (narrator nói: "bloodline carries a death sentence")
-
-Kết quả cuối:
-  🎧 Audio: "...your bloodline carries a sudden death sentence"
-  🎬 Visual: Close-up bàn tay siết chặt em bé
-  → KHỚP về emotion, KHÔNG cần khớp từng chữ ← đây là cách phim thực tế hoạt động
-```
-
----
-
-## Khi nào Step 2.5 CẦN THIẾT vs THỪA?
-
-| Loại text | Tần suất trong POV Bio | Step 2.5 giúp? |
-|---|---|---|
-| Physical action ("grabs arm", "runs") | ~60% | ❌ Thừa — đã filmable |
-| Metaphor ("darkness consumed him") | ~15% | ✅ Cần — dịch thành reaction |
-| Abstract ("legacy endured for centuries") | ~10% | ✅ Cần — dịch thành atmosphere |
-| Commentary ("2 years later...") | ~15% | ✅ Cần — dịch thành B-Roll |
-
-→ ~40% câu cần dịch, 60% đã sẵn filmable.
-
----
-
-## Chi phí vs Lợi ích
-
-| | Không có Step 2.5 | Có Step 2.5 |
-|---|---|---|
-| API calls | N sequences × 1 (Step 3) | N sequences × 2 (Step 2.5 + Step 3) |
-| Token usage | ~2000/seq | ~3000/seq (+50%) |
-| Visual accuracy | ⭐⭐ (metaphor bị vẽ sai) | ⭐⭐⭐ (đã dịch trước) |
-| Debug | Khó xác định lỗi ở đâu | Rõ ràng: lỗi dịch hay lỗi dựng |
-| Pipeline time | Nhanh hơn | +30-50% thời gian |
-
-> [!IMPORTANT]
-> **Câu hỏi quyết định**: Pipeline hiện tại có thường xuyên vẽ sai metaphor/abstract không? 
-> Nếu đa số text đã khá visual (như POV biography), Step 2.5 có thể **thừa**.
-> Nếu content có nhiều metaphor/philosophy, Step 2.5 sẽ **rất hữu ích**.
+### Bug #7: Excel Sheet 2 thiếu crowd reference images
+- **Triệu chứng**: Chỉ có 4 character + locations, không có crowd
+- **Root cause**: `_export_excel` chỉ loop `self.characters_data`, bỏ qua `self.crowd_data`
+- **Fix**: Thêm crowd block với Type="Crowd"
