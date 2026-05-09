@@ -1,0 +1,107 @@
+# Step 2d: Crowd Character Sheets
+
+## Problem
+Named characters get full character sheets (visual_description, sheet_prompt) → high-quality, consistent images.
+Crowd/extras get no sheets → LLM describes them vaguely → poor image quality.
+
+World Bible already has detailed `crowd_archetypes` per faction (costume descriptions), but this data is NOT converted into character sheets with labels that Step 4 LLM can reference.
+
+## Proposed Solution
+
+### New Step: Step 2d — Crowd Sheets
+
+**Position in pipeline**: After Step 2b (Characters), before Step 2b-map
+
+```
+Step 2a: World Bible       ← crowd_archetypes data exists here
+Step 2b: Characters        ← named characters (PROTAGONIST, NAMED)
+Step 2d: Crowd Sheets (NEW)← crowd archetypes → labeled sheets
+Step 2b-map: Label Mapping
+```
+
+### Labeling Convention
+
+Named characters: `Faction-Role-Letter` (e.g., `Ayyubid-Commander-A`)
+Crowd characters: `EXT-Faction-Role` prefix to distinguish:
+
+```
+EXT-Ayyubid-Soldier-Cavalry
+EXT-Ayyubid-Soldier-Infantry
+EXT-Ayyubid-Soldier-Archer
+EXT-Ayyubid-Civilian-Laborer
+EXT-Ayyubid-Civilian-Merchant
+EXT-Crusader-Knight-Heavy
+EXT-Crusader-Knight-Foot
+EXT-Assassin-Agent-Fidai
+EXT-Templar-Knight-Brother
+```
+
+- `EXT-` prefix → code immediately knows this is crowd, not named
+- No letter suffix (no `-A`, `-B`) → they're archetypes, not individuals
+- No age variant → crowd doesn't track age
+
+### Character Fields (per archetype)
+
+```json
+{
+  "label": "EXT-Ayyubid-Soldier-Cavalry",
+  "group": "CROWD",
+  "faction": "Ayyubid Army",
+  "visual_description": "BODY: 5 heads tall, stocky build. COSTUME: iron chainmail under yellow cotton tunic. ACCESSORIES: iron conical helmet with nasal guard, round wooden shield, curved steel saif.",
+  "sheet_prompt": "Character reference sheet, clean white background... Bold rounded sans-serif text 'EXT-Ayyubid-Soldier-Cavalry' at top in dark charcoal color. Three views...",
+  "default_stance": "stands at attention, shield at side, sword sheathed"
+}
+```
+
+> [!IMPORTANT]
+> FACE section is intentionally omitted — face style is controlled by `mandatory_style` and applies equally to ALL characters (named + crowd).
+
+### API Call Design
+
+**Input**: World Bible `crowd_archetypes` data per faction
+**Output**: Structured character sheets per archetype
+
+**Option A**: 1 LLM call — transform ALL crowd_archetypes from world_bible into character sheets
+- Pro: Efficient, 1 API call
+- Con: Large payload
+
+**Option B**: 1 LLM call per faction
+- Pro: Better quality per faction
+- Con: More API calls (4 calls for Saladin's story)
+
+> [!NOTE]
+> Recommend **Option A** since world_bible crowd_archetypes are already detailed. The LLM just needs to reformat into character sheet structure + generate labels + sheet_prompt.
+
+### Integration with Downstream Steps
+
+1. **`_extract_valid_labels()`**: Add crowd labels to `valid_labels["characters"]` alongside named labels
+2. **`_build_labels_block()`**: Include crowd labels in the AVAILABLE LABELS block sent to Step 3/4 LLMs
+3. **Step 3.1**: LLM can now assign `EXT-*` labels in `present_labels` for scenes with crowd
+4. **Step 4**: LLM references `EXT-*` labels in flat_prompt with full costume description
+5. **Step 5 Excel**: Crowd sheets appear in "Reference Images" sheet alongside named characters
+
+### Data Storage
+
+```
+self.crowd_data = {"characters": [...]}  # Separate from self.characters_data
+```
+
+Checkpoint: `*_step2d_crowd.json`
+
+### `has_crowd` Logic Update
+
+Currently `has_crowd` is a simple boolean. With crowd labels:
+- If `present_labels` contains any `EXT-*` label → `has_crowd = True` automatically
+- Step 4 now has specific crowd descriptions to work with instead of generic text
+
+## Open Questions
+
+1. **Số lượng archetypes per faction**: Hiện world_bible tạo ~6 loại (soldier, civilian_man, civilian_woman, child, noble, clergy). Có giới hạn lại không?
+2. **Sheet prompt cho crowd**: Có cần gen ảnh tham chiếu cho crowd characters không, hay chỉ cần text description?
+3. **Option A vs B**: Chọn 1 API call hay nhiều?
+
+## Verification
+
+1. Syntax check
+2. Dry-run: kiểm tra crowd labels xuất hiện trong valid_labels
+3. Full pipeline run → check flat_prompt references EXT-* labels

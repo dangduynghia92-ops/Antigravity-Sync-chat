@@ -1,0 +1,86 @@
+# Fix: Step 2b Map Labels Not Matching Valid Labels
+
+## Problem
+
+Step 2b map produces labels WITH age suffix (e.g., `Ayyubid-Commander-A-MatureAdult`), but `valid_labels` only contains labels WITHOUT suffix (e.g., `Ayyubid-Commander-A`).
+
+**Result**: `_map_raw_to_labels()` drops ALL characters → Step 3.1 receives `characters: []` → all 93 sentences marked `broll=True` with `present_labels=[]` → Step 4 appends "NO characters" to prompts that clearly contain people.
+
+```
+Step 2 characters:  label = "Ayyubid-Commander-A"
+Step 2b map:        value = "Ayyubid-Commander-A-MatureAdult"
+valid_labels:       ["Ayyubid-Commander-A"]
+
+_map_raw_to_labels:
+  mapped = "Ayyubid-Commander-A-MatureAdult"
+  mapped in valid_labels? → NO → DROPPED!
+```
+
+## Root Cause
+
+Step 2b prompt (line 194-197) explicitly tells LLM to add age suffixes (`-Child`, `-Teen`, `-MatureAdult`). But Step 2 characters don't have these suffixes in their labels.
+
+> [!CAUTION]
+> This bug silently drops ALL character mappings. Every downstream step (3.1, 3.2, 4) produces incorrect output.
+
+## Proposed Fix (2-layer defense)
+
+### Layer 1: Validate & normalize in `_run_step2b_map()` (line 1775)
+
+After LLM returns the map, **immediately validate** every mapped label against `valid_labels`. If a mapped label has a suffix not in valid_labels, strip known suffixes and retry match:
+
+```python
+# After parsed = _try_parse_json(raw)
+valid_chars = [c.get("label", "") for c in self.characters_data.get("characters", []) if c.get("label")]
+
+for seq_id, mapping in parsed.items():
+    for raw_name, mapped_label in list(mapping.items()):
+        if mapped_label and mapped_label not in valid_chars:
+            # Try stripping age suffix: -Child, -Teen, -YoungAdult, -MatureAdult, -Elder
+            base = re.sub(r'-(Child|Teen|YoungAdult|MatureAdult|Elder)$', '', mapped_label)
+            if base in valid_chars:
+                mapping[raw_name] = base  # Normalize to valid label
+            else:
+                mapping[raw_name] = None  # No valid match
+                self._log(f"  ⚠ {seq_id}: '{mapped_label}' not in valid labels, dropped")
+```
+
+**Why here**: This catches the problem at the earliest point. All downstream code works with clean labels.
+
+### Layer 2: Safety check in `_map_raw_to_labels()` (line 2023)
+
+Add fallback normalization in case any future step creates the same mismatch:
+
+```python
+# Current (line 2023):
+if mapped and mapped in self.valid_labels.get("characters", []):
+
+# New:
+if mapped:
+    valid_chars = self.valid_labels.get("characters", [])
+    if mapped in valid_chars:
+        labels.append(mapped)
+    else:
+        # Try stripping age suffix
+        base = re.sub(r'-(Child|Teen|YoungAdult|MatureAdult|Elder)$', '', mapped)
+        if base in valid_chars:
+            labels.append(base)
+        else:
+            # Final fallback: fuzzy match
+            closest = self._fuzzy_match(mapped, valid_chars)
+            if closest:
+                labels.append(closest)
+```
+
+### Files Changed
+
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+
+1. `_run_step2b_map()` (~line 1775): Add validation loop after LLM parse
+2. `_map_raw_to_labels()` (~line 2020-2040): Add suffix-stripping fallback
+
+## Verification
+
+1. Syntax check: `ast.parse()`
+2. Run script to simulate mapping with Test 3 data
+3. Check all debug requests would receive non-empty `characters` lists

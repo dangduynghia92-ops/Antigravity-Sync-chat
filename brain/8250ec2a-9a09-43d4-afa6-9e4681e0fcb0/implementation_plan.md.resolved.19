@@ -1,0 +1,256 @@
+# Crowd Character Pipeline — Full Integration Plan
+
+## Problem
+Crowd/extras characters (guards, soldiers, prisoners...) get no labels, no sheets, no consistent descriptions → poor image quality. Only named characters (PROTAGONIST, NAMED) are tracked.
+
+## Pipeline Changes Overview
+
+```
+Step 0:  Parse sentences           (no change)
+Step 1:  Sequences                 ← ADD crowd_types field
+Step 1b: Character Audit           ← ADD crowd audit
+Step 2a: World Bible               ← MODIFY: bỏ 6 category cứng
+Step 2b: Characters (named)        (no change)
+Step 2d: Crowd Sheets (NEW)        ← tạo EXT-* labels + sheet_prompt
+Step 2b-map: Label Mapping          ← ADD crowd label mapping
+Step 2c: Locations                 (no change)
+Step 3.1: Visual Treatment          ← ADD crowd_labels field
+Step 3.2: Camera Cuts              (has_crowd already exists)
+Step 4:  Prompt Writing             ← ADD crowd_labels to scene input
+Step 5:  Export                    (no change needed)
+```
+
+---
+
+## Detailed Changes
+
+### 1. Step 2a-2: World Bible — Bỏ giới hạn 6 crowd categories
+
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py) — `STEP2A_PEOPLE_PROMPT`
+
+**Before** (template cứng):
+```json
+"crowd_archetypes": {
+    "soldier": [...],
+    "civilian_man": [...],
+    "civilian_woman": [...],
+    "child": "...",
+    "noble": "...",
+    "clergy": "..."
+}
+```
+
+**After** (mở, từ kịch bản):
+```json
+"crowd_archetypes": {
+    "<type_from_script>": "Head: ... Upper: ... Lower: ... Feet: ... Acc: ...",
+    // Identify ALL unnamed character types from the script
+    // Examples: sentry, prisoner, boatman, market_woman, palace_guard...
+}
+```
+
+Prompt instruction: *"Read the script. Identify every UNNAMED character type that appears (soldier, guard, prisoner, merchant, etc.). Create a 5-layer costume description for each. Do NOT use fixed categories — only include types that actually appear in the script."*
+
+---
+
+### 2. Step 1: Sequences — Thêm `crowd_types` field
+
+#### [MODIFY] `STEP1_SYSTEM_PROMPT`
+
+**Current** (line 141):
+```
+- Do NOT list unnamed crowds, armies, or generic groups (e.g., "guards", "soldiers", "servants")
+```
+
+**Change**: Giữ rule trên cho `characters`, nhưng thêm field mới:
+
+```json
+{
+  "sequence_id": "SEQ_01",
+  "sentence_ids": [1, 2, 3],
+  "location_shift": "Masyaf mountain camp",
+  "characters": ["mature_adult Commander"],
+  "crowd_types": ["sentries", "soldiers", "assassin_agent"],   // NEW
+  "full_text": "..."
+}
+```
+
+Prompt addition: *"Also list crowd/extra types visible in this sequence as `crowd_types`. Use lowercase descriptive names (e.g., 'soldiers', 'guards', 'prisoners', 'merchants'). These are unnamed background people."*
+
+---
+
+### 3. Step 1b: Character Audit — Thêm crowd audit
+
+#### [MODIFY] `STEP1B_AUDIT_SYSTEM_PROMPT`
+
+Add rule: *"Also audit `crowd_types` — add any missing crowd types that are implied by the location/action (e.g., a 'palace' implies 'guards' and 'servants')."*
+
+---
+
+### 4. Step 2d: Crowd Character Sheets (NEW STEP)
+
+#### [NEW] `STEP2D_CROWD_PROMPT`
+
+**Input**:
+- All `crowd_types` from Step 1 sequences (deduplicated)
+- World Bible `crowd_archetypes` per faction
+- Era/geography context
+
+**Output**: Character sheets cho mỗi crowd type
+
+```json
+{
+  "characters": [
+    {
+      "label": "EXT-Ayyubid-Soldier-Infantry",
+      "group": "CROWD",
+      "faction": "Ayyubid Army",
+      "crowd_type": "soldier",
+      "visual_description": "BODY: 5 heads tall, stocky build. COSTUME: Head: iron conical helmet with nasal guard. Upper: iron chainmail under yellow cotton tunic. Lower: yellow wool trousers. Feet: leather boots. Acc: round wooden shield, curved steel saif.",
+      "sheet_prompt": "Character reference sheet, clean white background. Bold rounded sans-serif text 'EXT-Ayyubid-Soldier-Infantry' at top in dark charcoal color. [Front facing camera] | [3/4 facing right] | [Side profile facing right]. ..."
+    }
+  ]
+}
+```
+
+**Labeling convention**: `EXT-{Faction}-{Role}-{Variant}`
+- `EXT-` prefix → code distinguishes from named characters
+- No age variant (archetypes, not individuals)
+
+#### [NEW] `_run_step2d()` method + `self.crowd_data`
+
+---
+
+### 5. `_extract_valid_labels()` — Include crowd labels
+
+```python
+self.valid_labels = {
+    "characters": [...named labels...],
+    "crowd": [...EXT-* labels...],     # NEW
+    "locations": [...],
+}
+```
+
+---
+
+### 6. Step 3.1: Visual Treatment — Thêm `crowd_labels`
+
+#### [MODIFY] `STEP3_1_SYSTEM_PROMPT`
+
+**Input** (user data) — thêm field:
+```json
+{
+  "sequence_id": "SEQ_01",
+  "characters": ["Ayyubid-Commander-A"],
+  "crowd_types": ["sentries", "soldiers"],           // NEW from Step 1
+  "crowd_labels": ["EXT-Ayyubid-Soldier-Infantry",   // NEW mapped labels
+                   "EXT-Ayyubid-Guard-Sentry"],
+  "location": "Masyaf mountain camp",
+  "sentences": [...]
+}
+```
+
+**Output** — thêm field per sentence:
+```json
+{
+  "sentence_id": 3,
+  "present_labels": ["Ayyubid-Commander-A"],
+  "present_crowd": ["EXT-Ayyubid-Soldier-Infantry"],   // NEW
+  "is_broll": false,
+  ...
+}
+```
+
+> [!IMPORTANT]
+> Q2/Q3 prompt cần thêm rule cho crowd: *"For each sentence, also identify which crowd_labels are visible. List them in `present_crowd`. A crowd type is present if the sentence mentions or implies background people of that type."*
+
+---
+
+### 7. Step 3.2: Camera Cuts — Propagate crowd_labels
+
+#### [MODIFY] `STEP3_SYSTEM_PROMPT`
+
+`has_crowd` đã có. Thêm `crowd_labels` field vào output:
+
+```json
+{
+  "global_scene_id": "SEQ_01_SCN_03",
+  "character_labels": ["Ayyubid-Commander-A"],
+  "crowd_labels": ["EXT-Ayyubid-Soldier-Infantry"],   // NEW
+  "has_crowd": true,
+  ...
+}
+```
+
+---
+
+### 8. Step 4: Prompt Writing — Reference crowd labels
+
+#### [MODIFY] `STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE`
+
+Scene data passed to LLM now includes:
+```
+Scene: SEQ_01_SCN_03 | Wide Shot | has_crowd: true
+Characters: [Ayyubid-Commander-A]
+Crowd: [EXT-Ayyubid-Soldier-Infantry]   ← NEW
+```
+
+Step 4 LLM references crowd character sheets from VISUAL REFERENCE to describe extras accurately.
+
+**`extras` field** in output: Instead of free-text, LLM uses crowd labels:
+```json
+"extras": "[EXT-Ayyubid-Soldier-Infantry] stands at attention by the tent entrance"
+```
+
+---
+
+### 9. "NO characters" Suffix Logic — Fix
+
+Currently:
+```python
+if not p.get("characters", "").strip() and not p.get("has_crowd", False):
+    # Append "NO characters"
+```
+
+**After**: Also check `crowd_labels`:
+```python
+if (not p.get("characters", "").strip() 
+    and not p.get("has_crowd", False)
+    and not p.get("crowd_labels")):
+    # Append "NO characters"
+```
+
+---
+
+## Pipeline Order (updated)
+
+```python
+steps = [
+    ("step0", self._run_step0),
+    ("step1", self._run_step1),
+    ("step1b", self._run_step1b),
+    ("step2a", self._run_step2a),
+    ("step2b", self._run_step2b),
+    ("step2d", self._run_step2d),      # NEW: Crowd Sheets
+    ("_labels", self._extract_valid_labels),
+    ("step2b_map", self._run_step2b_map),
+    ("step2c", self._run_step2c),
+    ("step3_1", self._run_step3_1),
+    ("step3", self._run_step3),
+    ("step4", self._run_step4),
+    ("step5", self._run_step5),
+]
+```
+
+---
+
+## Verification Plan
+
+1. Syntax check: `ast.parse()`
+2. Run 3-chapter test (ch 8-10)
+3. Check:
+   - Step 1 output has `crowd_types` per sequence
+   - Step 2d output has `EXT-*` labels with sheet_prompts
+   - Step 3.1 output has `present_crowd` per sentence
+   - Step 4 flat_prompt references `EXT-*` labels with costume details
+   - "NO characters" suffix only on truly empty scenes

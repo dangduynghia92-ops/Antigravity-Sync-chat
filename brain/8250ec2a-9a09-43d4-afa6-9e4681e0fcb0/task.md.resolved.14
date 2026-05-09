@@ -1,0 +1,13 @@
+# Crowd Character Pipeline — Task List
+
+- [ ] A. Step 1: Add `crowd_types` to STEP1_SYSTEM_PROMPT + output format
+- [ ] A2. Step 1b: Add crowd audit to STEP1B_AUDIT_SYSTEM_PROMPT
+- [ ] B. Step 2a-2: Remove fixed 6 crowd categories
+- [ ] C. Step 2d: New prompt + `_run_step2d()` + data holder + step status
+- [ ] D. `_extract_valid_labels()`: Add crowd labels
+- [ ] E. Step 3.1: Rename `present_labels` → `character_labels`, add `crowd_labels`
+- [ ] F. Step 3.2: Add `crowd_labels` to output format
+- [ ] G. Step 4: Add crowd to scene data, mini_bible, prompt items
+- [ ] H. "NO characters" suffix fix
+- [ ] I. Pipeline execution order
+- [ ] J. Syntax check + commit

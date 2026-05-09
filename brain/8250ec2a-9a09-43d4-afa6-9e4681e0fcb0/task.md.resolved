@@ -1,13 +1,13 @@
-# Per-Sentence Visual Interpreter Implementation
+# Crowd Character Pipeline — Task List
 
-- [x] Replace STEP3_1_SYSTEM_PROMPT with per-sentence checklist
-- [x] Add character label mapping helper (`_map_raw_to_labels`)
-- [x] Modify `_process_sequence_step3_1()` — send sentences + labels
-- [x] Modify `_run_step3_1()` — save filmable_scenes
-- [x] Modify `_process_sequence_step3()` — flatten filmable_scenes → visual_treatment for Step 3.2
-- [x] Modify `_run_step3()` — assign audio_sync from original_text (per-sentence)
-- [x] Remove `_overlay_audio()` 
-- [x] Replace `visual_treatments` → `filmable_scenes` data holder
-- [x] Remove `visual_event` from Step 4 templates
-- [x] Syntax check — OK
-- [x] Clean check — no stale references
+- [x] A. Step 1: Add `crowd_types` to STEP1_SYSTEM_PROMPT + output format
+- [x] A2. Step 1b: Add crowd audit to STEP1B_AUDIT_SYSTEM_PROMPT
+- [x] B. Step 2a-2: Remove fixed 6 crowd categories
+- [x] C. Step 2d: New prompt + `_run_step2d()` + data holder + step status
+- [x] D. `_extract_valid_labels()`: Add crowd labels
+- [x] E. Step 3.1: Rename `present_labels` → `character_labels`, add `crowd_labels`
+- [x] F. Step 3.2: Add `crowd_labels` to output format
+- [x] G. Step 4: Add crowd to scene data, mini_bible, prompt items
+- [x] H. "NO characters" suffix fix
+- [x] I. Pipeline execution order
+- [x] J. Syntax check
