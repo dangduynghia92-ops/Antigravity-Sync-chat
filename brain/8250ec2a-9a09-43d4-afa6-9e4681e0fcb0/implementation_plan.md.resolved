@@ -1,79 +1,166 @@
-# Crowd Data Flow — Complete Trace
+# Thống nhất Character & Crowd xuyên suốt Pipeline
 
-## Tóm tắt: Mỗi Step nhận/trả gì cho crowd?
+## Vấn đề
+Crowd character được đối xử như phần phụ — thiếu costume, action, interaction trong các bước dựng cảnh và viết prompt. Character có đầy đủ thông tin LOCKED qua từng step, Crowd thì không.
 
-```mermaid
-flowchart TD
-    S1["Step 1: Script → Sequences<br/>OUTPUT: crowd_types = ['soldiers', 'guards']"]
-    S1B["Step 1b: Audit<br/>Verify crowd_types"]
-    S2D["Step 2d: Crowd Sheets<br/>INPUT: crowd_types<br/>OUTPUT: EXT-* labels + visual_description + sheet_prompt"]
-    LBL["_extract_valid_labels<br/>Registers crowd labels"]
-    S31["Step 3.1: Per-sentence Visual<br/>INPUT: crowd_labels = ['EXT-Ayyubid-Soldier-Infantry']<br/>OUTPUT: crowd_labels per sentence"]
-    S32["Step 3.2: Scene Design<br/>INPUT: crowd_labels in seq_for_llm<br/>RULE 6: pick relevant EXT-* per scene<br/>OUTPUT: crowd_labels per scene"]
-    POST["Post-Step3: Propagation<br/>Fallback: copy crowd from 3.1 → scene"]
-    S4["Step 4: Prompt Writing<br/>INPUT: mini_bible has crowd sheets<br/>INPUT: scene data shows Crowd labels<br/>RULE: use [EXT-*] in flat_prompt"]
+## Hiện trạng từng Step
 
-    S1 --> S1B --> S2D --> LBL --> S31 --> S32 --> POST --> S4
+### Data gốc (Step 2b + 2d) — ✅ Đã đủ
+Cả Character và Crowd đều có `visual_description` chi tiết (BODY, FACE, COSTUME, Acc, default_stance).
+**→ Không cần sửa.**
+
+---
+
+### Step 3.1: Visual Interpreter (Dựng cảnh từ câu)
+**Hiện tại**:
+- Character: `character_labels`, `character_interaction` ✅
+- Crowd: `crowd_labels` ✅, nhưng **không yêu cầu LLM mô tả crowd action** ❌
+
+**Sửa**: Thêm field `crowd_action` vào output schema
+
+```diff
+  "scenes": [
+    {
+      "visual": "...",
+-     "duration": 2.54
++     "duration": 2.54,
++     "crowd_action": "what the crowd extras are physically doing in this moment"
+    }
+  ]
 ```
 
-## Chi tiết từng Step
-
-### Step 1 → `crowd_types` per sequence
-| Field | Ví dụ |
-|---|---|
-| `crowd_types` | `["soldiers", "guards"]` |
-
-**Rules đã thêm**:
-- Dedup: `soldiers` = `infantry` = `foot soldiers`
-- Anti-state: `dying soldiers` → chỉ cần `soldiers`
-- Max 5 types per sequence
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+- `STEP3_1_SYSTEM_PROMPT` (~L637-660): Thêm field `crowd_action` vào JSON output schema
+- Thêm Rule: "If crowd_labels is not empty, describe what the crowd is physically doing"
 
 ---
 
-### Step 2d → Crowd Character Sheets
-| Field | Ví dụ |
-|---|---|
-| `label` | `EXT-Ayyubid-Soldier-Infantry` |
-| `visual_description` | `BODY: 4.5 heads tall. COSTUME: Head: pointed steel helmet...` |
-| `default_stance` | `stands at attention with spear` |
-| `sheet_prompt` | `Character reference sheet, clean white background...` |
+### Step 3.2: Camera Director (Cắt cảnh)
+**Hiện tại**:
+- Character: `character_labels`, `physical_action`, `character_interaction` ✅
+- Crowd: `crowd_labels`, `has_crowd` ✅, nhưng **không có `crowd_action`** ❌
 
-**Code normalize**: 26 types → 15 types (dedup + strip states)
+**Sửa**: Thêm field `crowd_action` vào output schema
 
----
+```diff
+  "scenes": [
+    {
+      "global_scene_id": "SEQ_01_SCN_01",
+      ...
+      "physical_action": "...",
++     "crowd_action": "what crowd extras are physically doing — visible pose/movement",
+      "has_crowd": true
+    }
+  ]
+```
 
-### Step 3.1 → crowd_labels per sentence
-| Input | Output |
-|---|---|
-| `crowd_labels: ["EXT-A-Soldier-Infantry", "EXT-C-Knight-Heavy"]` | Per sentence: `crowd_labels: ["EXT-A-Soldier-Infantry"]` |
-
-**Q3b rule**: LLM picks which crowd types are visible in EACH sentence
-
----
-
-### Step 3.2 → crowd_labels per scene
-| Input | Output |
-|---|---|
-| `seq_for_llm.crowd_labels` | Per scene: `crowd_labels: ["EXT-A-Soldier-Infantry"]` |
-
-**Rule 6** (UPDATED): pick ONLY visible EXT-* labels per scene
-**Fallback**: if Step 3.2 LLM leaves empty → copy from Step 3.1
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+- `STEP3_SYSTEM_PROMPT` (~L742-764): Thêm `crowd_action` vào JSON output schema
+- Rule 6 (~L710-715): Thêm yêu cầu: "When has_crowd = true, also fill `crowd_action` describing what the crowd extras are physically doing"
 
 ---
 
-### Step 4 → flat_prompt references crowd
-| Input | Effect |
-|---|---|
-| `mini_bible` includes crowd sheets | LLM can reference costume details |
-| Scene data shows `Crowd: yes — EXT-A-Soldier-Infantry` | LLM knows which crowd to describe |
-| Rule: `use [EXT-*] crowd character labels` | LLM writes crowd into flat_prompt |
+### Step 4: Prompt Writing — ĐÂY LÀ CHỖ CHÊNH LỆCH LỚN NHẤT
 
-## Bugs Found & Fixed
+**Hiện tại** (code dòng 2758-2800):
 
-| # | Step | Bug | Root Cause | Fix |
-|---|---|---|---|---|
-| 1 | Step 3.2 | `seq_for_llm` missing `crowd_labels` | Forgot to add field | ✅ Added |
-| 2 | Post-Step3 | crowd_labels not propagated from 3.1→scene | No fallback code | ✅ Added fallback |
-| 3 | Step 3.2 Rule 6 | Only says `has_crowd=true/false`, no crowd_labels guidance | LLM doesn't know to fill | ✅ Expanded rule |
-| 4 | Step 4 template | Says `crowd_archetypes` not `[EXT-*]` labels | Wrong reference name | ✅ Fixed |
-| 5 | Step 2d output | Missing `sheet_prompt` | Not in JSON template | ✅ Added |
+| Input gửi cho LLM | Character | Crowd |
+|---|---|---|
+| Label | ✅ `Characters: Ayyubid-Commander-A` | ✅ chỉ label `Crowd: yes — EXT-*` |
+| Costume LOCKED | ✅ `costume_lookup` chi tiết | ❌ **KHÔNG GỬI** |
+| Action | ✅ `physical_action` | ❌ **KHÔNG GỬI** |
+| Interaction | ✅ `character_interaction` | — |
+
+**Sửa 3 chỗ**:
+
+#### 4A. Build `crowd_costume_lookup` (giống `costume_lookup`)
+
+```python
+# Build crowd costume lookup (SAME logic as character)
+crowd_costume_lookup = {}
+for c in self.crowd_data.get("characters", []):
+    label = c.get("label", "")
+    desc = c.get("visual_description", "")
+    costume_parts = []
+    for line in desc.split("."):
+        line_s = line.strip()
+        ul = line_s.upper()
+        if any(kw in ul for kw in ["COSTUME:", "CLOTHING:", "ACCESSORIES:", "ARMOR:"]):
+            for prefix in ["COSTUME:", "CLOTHING:", "ACCESSORIES:", "ARMOR:"]:
+                if ul.startswith(prefix):
+                    line_s = line_s[len(prefix):].strip()
+                    break
+            costume_parts.append(line_s)
+    if costume_parts:
+        crowd_costume_lookup[label] = ". ".join(costume_parts)
+```
+
+#### 4B. Thêm crowd costume + crowd action vào `scenes_text_parts`
+
+```diff
+  f"  Costume (LOCKED — copy exactly):\n{costume_block}\n"
+  f"  Action: {scene.get('physical_action', '')}\n"
+  f"  Interaction: {scene.get('character_interaction', 'none')}\n"
+- f"  Crowd: {'yes' if scene.get('has_crowd') else 'no'}"
+- f"{'— ' + ', '.join(crowd_labels) if crowd_labels else ''}"
++ f"  Crowd: {'yes' if scene.get('has_crowd') else 'no'}\n"
++ f"  Crowd Labels: {', '.join(crowd_labels) if crowd_labels else 'none'}\n"
++ f"  Crowd Action: {scene.get('crowd_action', 'none')}\n"
++ f"  Crowd Costume (LOCKED — copy exactly):\n{crowd_costume_block}"
+```
+
+#### 4C. Step 4 output schema — thêm `crowd_detail` (đối xứng với `characters_detail`)
+
+Hiện tại Step 4 output có:
+```json
+{
+  "characters_detail": [{"label": "...", "costume": "...", "action": "..."}],
+  "extras": "brief text about crowd"
+}
+```
+
+Đổi thành:
+```json
+{
+  "characters_detail": [{"label": "...", "costume": "...", "action": "...", "blocking": "...", "emotion": "..."}],
+  "crowd_detail": [{"label": "[EXT-*]", "costume": "LOCKED from input", "action": "...", "blocking": "..."}],
+  "extras": "brief summary for quick reference"
+}
+```
+
+> [!IMPORTANT]
+> `extras` field vẫn giữ (backward compatible) nhưng `crowd_detail` là nguồn chính cho flat_prompt.
+
+#### [MODIFY] [video_pipeline.py](file:///f:/1.%20Edit%20Videos/8.AntiCode/1.Prompt_Image/1.Prompt_Image/core/video_pipeline.py)
+- `_process_sequence_step4` (~L2758-2800): Build crowd_costume_lookup + thêm vào scenes_text_parts
+- `STEP4_USER_TEMPLATE` + `STEP4_USER_TEMPLATE_INLINE` (~L772-894): Thêm `crowd_detail` vào output schema, update rules
+- Result builder (~L2849-2867): Lưu `crowd_detail` field
+
+---
+
+### Step 5: Excel Export — ✅ Đã sửa
+Sheet 1 có `Crowd` column, Sheet 2 có crowd entries. Không cần thay đổi thêm.
+
+---
+
+## Tóm tắt thay đổi
+
+| Bước | Thay đổi | Files |
+|---|---|---|
+| **Step 3.1** | Thêm `crowd_action` vào output schema | `STEP3_1_SYSTEM_PROMPT` |
+| **Step 3.2** | Thêm `crowd_action` vào output schema | `STEP3_SYSTEM_PROMPT` |
+| **Step 4 input** | Build `crowd_costume_lookup`, gửi LOCKED cho LLM | `_process_sequence_step4` |
+| **Step 4 template** | Thêm `crowd_detail` output schema, update rules | `STEP4_USER_TEMPLATE`, `STEP4_USER_TEMPLATE_INLINE` |
+| **Step 4 output** | Lưu `crowd_detail` field | `_process_sequence_step4` result builder |
+
+> [!WARNING]
+> Thay đổi này ảnh hưởng Step 3 + Step 4, cần **xóa checkpoint** Step 3 + 4 để chạy lại. Checkpoint Step 0-2 giữ nguyên.
+
+## Verification Plan
+1. Xóa checkpoint Step 3 + 4
+2. Chạy lại pipeline trên Test 3
+3. Kiểm tra:
+   - `_step3_scenes.json`: mỗi scene có `crowd_action`
+   - `_step4_prompts.json`: mỗi prompt có `crowd_detail` với costume LOCKED
+   - `flat_prompt`: crowd mô tả đầy đủ costume + action
+   - Excel: không thay đổi format
