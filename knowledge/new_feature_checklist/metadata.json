@@ -1,0 +1,7 @@
+{
+  "title": "New Feature Checklist",
+  "summary": "MANDATORY checklist when adding any new feature/step to the video pipeline. Must verify: data flow through ALL downstream steps, checkpoint for skip on re-run, ALL export formats (Excel sheets, Assembly JSON), format consistency with existing features, and end-to-end verification on real output files. Created after delivering crowd pipeline with 7 bugs across checkpoint, data flow, export, and formatting.",
+  "created": "2026-05-09",
+  "references": ["core/video_pipeline.py"],
+  "artifacts": ["checklist.md"]
+}
