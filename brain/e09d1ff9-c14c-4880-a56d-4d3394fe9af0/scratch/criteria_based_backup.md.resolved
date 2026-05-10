@@ -134,3 +134,24 @@ To revert from Q1-Q4 questionnaire back to criteria-based approach:
 1. chapter_plan_pov.txt: Replace lines 7~65 with FILE 1 content above
 2. validate_sub_key_pov.txt: Replace lines 22~45 with FILE 2 content above
 3. phase_plan_pov.txt: Replace lines 176~196 with FILE 3 content above
+
+To revert CHECK 6 (merge rule) back to independence test:
+
+4. validate_sub_key_pov.txt CHECK 6:
+   CHECK 6: SAME-AGE INDEPENDENCE
+     For events at the same age, verify independence using 3 criteria:
+       1. Different place?
+       2. No direct causation between them?
+       3. Different primary actors?
+     ALL 3 must be "independent" to stay separate.
+     If events at same age are CONTINUOUS (any criterion fails) → merge into 1 event.
+     If events at same age are INDEPENDENT but were merged → split into separate events.
+
+5. phase_plan_pov.txt SAME-AGE EVENTS (lines 83~111):
+   SAME-AGE EVENTS — INDEPENDENCE TEST
+     INDEPENDENCE TEST — 3 CRITERIA (ALL 3 must be "independent" to separate):
+       1. PLACE — Different locations?
+       2. CAUSATION — Does event A's ending directly cause event B's beginning?
+       3. ACTORS — Different primary actors involved?
+     ALL 3 = "independent" → SEPARATE events
+     ANY 1 = "continuous" → MERGE into 1 event
