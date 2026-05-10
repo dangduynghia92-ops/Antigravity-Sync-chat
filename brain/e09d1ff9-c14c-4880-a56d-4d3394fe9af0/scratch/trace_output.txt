@@ -1,0 +1,16 @@
+﻿=== STEP 1: Phase Plan ===
+Events: 14
+python : Traceback (most recent call last):
+At line:1 char:1
++ python -u "C:\Users\Admin\.gemini\antigravity\brain\e09d1ff9-c14c-488 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\Admin\.gemini\antigravity\brain\e09d1ff9-c14c-4880-a56d-4d3394fe9af0\scratch\trace_pipeline.py", line 
+17, in <module>
+    print(f'  event {eid}: age {age} -- {title} [{label}]')
+  File "C:\Program Files\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ed3' in position 43: character maps to <undefined>
