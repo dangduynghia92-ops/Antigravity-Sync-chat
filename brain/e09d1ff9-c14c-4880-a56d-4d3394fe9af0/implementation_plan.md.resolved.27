@@ -1,0 +1,133 @@
+# Unified Q1-Q4 Questionnaire Across Pipeline
+
+## Mục tiêu
+
+Đồng bộ tiêu chí đánh giá event ở **cả 3 bước** pipeline (phase_plan → validate → chapter_plan) bằng cùng **bộ câu hỏi Q1-Q4**. Tránh tình trạng bước validate thêm event rồi bước chapter_plan demote.
+
+## Bộ câu hỏi Q1-Q4 (chung cho cả 3 bước)
+
+```
+Q1 — AGENCY: Nhân vật có chủ động hành động không?
+Q2 — DRAMATIC TENSION: Có đối đầu, hy sinh, hay lựa chọn không thể đảo ngược?
+Q3 — CAUSAL WEIGHT: Sự kiện có trực tiếp gây ra sự kiện tiếp theo không?
+Q4 — SCENE POTENTIAL: Có đủ chất liệu để viết 1 chapter?
+
+Decision:
+  Nguồn Gốc → (Q2 OR Q3) AND Q4 → KEEP
+  Khác       → Q1 AND (Q2 OR Q3) AND Q4 → KEEP
+```
+
+## Proposed Changes
+
+### 1. chapter_plan_pov.txt ✅ ĐÃ SỬA
+
+Questionnaire Q1-Q4 + decision formula đã có (line 8-45).
+
+Cần bổ sung: **output JSON** thêm `scene_test` field.
+
+#### [MODIFY] Output format (line ~110-132)
+
+Thêm `scene_test` vào mỗi event trong `event_timeline` và `demoted_events`:
+
+```json
+"scene_test": {
+  "Q1_agency": "yes — marches army into Damascus",
+  "Q2_tension": "no",
+  "Q3_causal": "yes — enables Syrian unification",
+  "Q4_scene": "yes — entering city gates, claiming palace",
+  "decision": "KEEP"
+}
+```
+
+---
+
+### 2. validate_sub_key_pov.txt — CHECK 3
+
+#### [MODIFY] CHECK 3: MISSING MILESTONES
+
+Thay thế Q1/Q2 coverage (chỉ check Scene Test + covered) bằng **Q1-Q4 đầy đủ**:
+
+```
+CHECK 3: MISSING MILESTONES
+  Scan EVERY item in EVERY section of the blueprint.
+  Compare against existing event_timeline.
+
+  For EACH item NOT YET represented in event_timeline:
+    Answer Q1-Q4:
+      Q1 — AGENCY: Character acts?
+      Q2 — TENSION: Opposition/sacrifice/choice?
+      Q3 — CAUSAL: Directly causes next event?
+      Q4 — SCENE: Fills a chapter?
+
+    Apply decision formula:
+      Nguồn Gốc → (Q2 OR Q3) AND Q4 → ADD as new event
+      Khác       → Q1 AND (Q2 OR Q3) AND Q4 → ADD as new event
+      Otherwise  → ADD to sub_key_data of nearest related event
+
+  Do NOT re-evaluate events already in the timeline.
+  Mandatory: death_and_funeral must be covered.
+```
+
+> [!IMPORTANT]
+> Validate dùng cùng decision formula → event được thêm **pre-qualified** → chapter_plan sẽ không demote.
+
+---
+
+### 3. phase_plan_pov.txt — Coverage Checklist
+
+#### [MODIFY] COVERAGE CHECKLIST (line ~176-196)
+
+Thay Q1/Q2 bằng Q1-Q4:
+
+```
+COVERAGE CHECKLIST:
+  Scan EVERY item in EVERY section of the blueprint.
+
+  For EACH item, answer Q1-Q4:
+    Q1=yes AND (Q2=yes OR Q3=yes) AND Q4=yes → add as event
+    Otherwise but Q4=yes → add to sub_key_data
+    Q4=no → skip
+```
+
+> [!NOTE]
+> Phase plan dùng cùng tiêu chí nhưng **không cần output scene_test JSON** (giữ output nhẹ vì bước này đã có _source_map).
+
+---
+
+### 4. rewriter.py — Logging
+
+#### [MODIFY] Chapter plan parsing (function xử lý chapter_plan output)
+
+- Nếu `scene_test` field tồn tại trong demoted event → log reasoning
+- Lưu full `scene_test` data vào `_chapter_planning.json`
+- **Không thay đổi pipeline flow** — scene_test là field optional
+
+---
+
+## So sánh: Trước vs Sau
+
+| Bước | Trước (3 tiêu chí khác nhau) | Sau (Q1-Q4 thống nhất) |
+|---|---|---|
+| Phase plan | PLACE + ACTION + CONSEQUENCE | Q1-Q4 trong coverage checklist |
+| Validate | Q1 (Scene Test?) + Q2 (Covered?) | Q1-Q4 cho mỗi item thiếu |
+| Chapter plan | AGENCY + TENSION + SCENE | Q1-Q4 questionnaire |
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Có cần code validate scene_test consistency** không? (VD: AI trả Q3=yes nhưng decision=DEMOTE → code báo warning)
+> 2. **Token budget**: 3 bước đều dùng Q1-Q4 → validate output tăng ~800 tokens. OK?
+> 3. **Phase plan coverage checklist** có cần output scene_test không? Hay chỉ dùng tiêu chí mà không cần output chi tiết?
+
+## Verification Plan
+
+### Automated Tests
+- Chạy pipeline Saladin 2 lần → so sánh:
+  - Damascus phải KEEP ở cả 2 lần
+  - Jacob's Ford phải có ở cả 2 lần
+  - Số chapters ổn định (chênh lệch ≤ 1)
+- Kiểm tra `_chapter_planning.json` chứa `scene_test` reasoning
+
+### Manual Verification
+- Đọc scene_test reasoning → xác nhận AI trả lời đúng Q3
+- Kiểm tra validate KHÔNG thêm events mà chapter_plan sẽ demote

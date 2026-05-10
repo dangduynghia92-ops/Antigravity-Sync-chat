@@ -1,0 +1,90 @@
+# Questionnaire-Based Scene Test for Chapter Plan
+
+## Mục tiêu
+
+Thay thế criteria-based Scene Test (AI hay skip CAUSAL WEIGHT) bằng **bộ câu hỏi bắt buộc** (Q1-Q4). AI phải trả lời từng câu trước khi quyết định KEEP/DEMOTE. Giảm biến động, tăng tính audit.
+
+## Trạng thái hiện tại
+
+Prompt `chapter_plan_pov.txt` **đã được sửa** sang questionnaire format (Q1-Q4 + decision formula). Chưa sửa output JSON format và code.
+
+## Proposed Changes
+
+### 1. Prompt — chapter_plan_pov.txt
+
+> [!NOTE]
+> ĐÃ SỬA xong ở bước trước. Questionnaire Q1-Q4 + decision formula đã có.
+
+Cần bổ sung: **Output JSON format** thêm `scene_test` field để AI trả lời câu hỏi trực tiếp trong output.
+
+#### [MODIFY] Output JSON format (line ~110-132)
+
+Thêm `scene_test` vào mỗi event trong output:
+
+```json
+{
+  "event_timeline": [
+    {
+      "event_id": 1,
+      "scene_test": {
+        "Q1_agency": "yes — marches army into Damascus",
+        "Q2_tension": "no — peaceful entry",
+        "Q3_causal": "yes — enables Syrian unification and sets up Assassin conflict",
+        "Q4_scene": "yes — entering the city gates, claiming the palace",
+        "decision": "KEEP (Q1=yes, Q3=yes, Q4=yes)"
+      },
+      "event_title": "...",
+      "event_description": "...",
+      "event_cause": "...",
+      "sub_key_data": []
+    }
+  ],
+  "demoted_events": [
+    {
+      "original_event_id": 3,
+      "scene_test": {
+        "Q1_agency": "no — automatic legal process",
+        "Q2_tension": "no — ceremony",
+        "Q3_causal": "weak — not directly causing next event",
+        "Q4_scene": "no — thin scene material",
+        "decision": "DEMOTE (Q1=no, Q2=no, Q3=no, Q4=no)"
+      },
+      "event_title": "The King's Majority",
+      "moved_to_event_id": 5,
+      "reason": "Q1=no, Q2=no, Q3=no, Q4=no"
+    }
+  ]
+}
+```
+
+---
+
+### 2. Code — rewriter.py
+
+#### [MODIFY] Chapter plan parsing
+
+Hiện tại code parse `demoted_events` từ chapter_plan output. Cần:
+- **Không thay đổi logic hiện có** — code chỉ đọc `event_timeline` và `demoted_events`, cấu trúc này không thay đổi
+- **Thêm logging**: nếu `scene_test` field tồn tại, log decision reasoning cho mỗi event demoted
+- **Lưu scene_test data** vào `_chapter_planning.json` (đã có checkpoint save)
+
+> [!IMPORTANT]
+> Code hiện tại chỉ cần minor logging change. Không thay đổi pipeline flow. `scene_test` là field mới nhưng **optional** — code vẫn hoạt động nếu AI không trả về field này.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Có cần validate `scene_test` answers** trong code không? (VD: kiểm tra Q3=yes nhưng decision=DEMOTE → inconsistency)
+> 2. **Token budget**: scene_test cho 18 events sẽ tăng output ~500 tokens. Có OK không?
+
+## Verification Plan
+
+### Automated Tests
+- Chạy pipeline Saladin → kiểm tra Damascus không bị demote
+- Kiểm tra `_chapter_planning.json` chứa `scene_test` reasoning
+- So sánh số chapters giữa 2-3 lần chạy → kiểm tra tính ổn định
+
+### Manual Verification
+- Đọc scene_test reasoning → xác nhận AI trả lời đúng Q3 cho Damascus
