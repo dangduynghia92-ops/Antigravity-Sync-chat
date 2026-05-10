@@ -1,0 +1,10 @@
+# Task: Unified Q1-Q4 Questionnaire
+
+- [x] chapter_plan_pov.txt — Q1-Q4 questionnaire (Scene Test section)
+- [ ] chapter_plan_pov.txt — Output JSON format (add scene_test field)
+- [ ] validate_sub_key_pov.txt — CHECK 3 with Q1-Q4
+- [ ] phase_plan_pov.txt — Coverage checklist with Q1-Q4
+- [ ] rewriter.py — Logging scene_test reasoning
+- [ ] Backup — criteria_based_backup.md
+  - [x] Created
+- [ ] Test — Run pipeline
